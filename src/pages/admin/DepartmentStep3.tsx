@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "@/components/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, AlertTriangle } from "lucide-react";
+import { useAdminSetup } from "@/contexts/AdminSetupContext";
 
 const onCallShifts = [
   { name: "Night Shift (A)", baseline: "15%", value: 18 },
@@ -15,6 +16,7 @@ const standardShifts = [
 
 export default function DepartmentStep3() {
   const navigate = useNavigate();
+  const { setDepartmentComplete } = useAdminSetup();
 
   return (
     <AdminLayout title="Department Setup" subtitle="Step 3 of 3 — Distribution Targets">
@@ -101,7 +103,7 @@ export default function DepartmentStep3() {
           <Button variant="outline" size="lg" onClick={() => navigate("/admin/department/step-2")}>
             <ArrowLeft className="mr-2 h-4 w-4" />Back
           </Button>
-          <Button size="lg" onClick={() => navigate("/admin/dashboard")} className="bg-blue-600 hover:bg-blue-700">
+          <Button size="lg" onClick={() => { setDepartmentComplete(true); navigate("/admin/dashboard"); }} className="bg-blue-600 hover:bg-blue-700">
             Save Department Configuration
           </Button>
         </div>
