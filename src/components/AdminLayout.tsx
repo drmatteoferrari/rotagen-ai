@@ -14,10 +14,11 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { title: "Department Setup", url: "/admin/setup", icon: Settings, step: 1 },
-  { title: "Rota Period", url: "/admin/rota-period", icon: CalendarDays, step: 2 },
-  { title: "Roster & Invites", url: "/admin/roster", icon: Users, step: 3 },
-  { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard, step: 5 },
+  { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
+  { title: "Rota Period", url: "/admin/rota-period/step-1", icon: CalendarDays },
+  { title: "Department Setup", url: "/admin/department/step-1", icon: Settings },
+  { title: "WTR Setup", url: "/admin/wtr/step-1", icon: Stethoscope },
+  { title: "Roster & Invites", url: "/admin/roster", icon: Users },
 ];
 
 interface AdminLayoutProps {
@@ -54,7 +55,7 @@ export function AdminLayout({ children, title, subtitle }: AdminLayoutProps) {
         {/* Nav */}
         <nav className="flex-1 space-y-1 px-2 py-4">
           {navItems.map((item) => {
-            const isActive = location.pathname === item.url;
+            const isActive = location.pathname.startsWith(item.url.replace(/\/step-\d+$/, ''));
             return (
               <NavLink
                 key={item.url}
