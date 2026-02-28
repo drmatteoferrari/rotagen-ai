@@ -10,6 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CalendarIcon, Plus, Trash2, ArrowLeft } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useAdminSetup } from "@/contexts/AdminSetupContext";
 
 interface BankHoliday {
   id: string;
@@ -19,6 +20,7 @@ interface BankHoliday {
 
 export default function RotaPeriodStep2() {
   const navigate = useNavigate();
+  const { setPeriodComplete } = useAdminSetup();
   const [bankHolidays, setBankHolidays] = useState<BankHoliday[]>([
     { id: "1", date: new Date(2025, 3, 21), name: "Easter Monday" },
     { id: "2", date: new Date(2025, 4, 5), name: "Early May Bank Holiday" },
@@ -98,7 +100,7 @@ export default function RotaPeriodStep2() {
           <Button variant="outline" size="lg" onClick={() => navigate("/admin/rota-period/step-1")}>
             <ArrowLeft className="mr-2 h-4 w-4" />Back
           </Button>
-          <Button size="lg" onClick={() => navigate("/admin/dashboard")} className="bg-amber-500 hover:bg-amber-600">
+          <Button size="lg" onClick={() => { setPeriodComplete(true); navigate("/admin/dashboard"); }} className="bg-amber-500 hover:bg-amber-600">
             Save Rota Period
           </Button>
         </div>

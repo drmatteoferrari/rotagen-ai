@@ -5,9 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { ArrowLeft, Lock, CheckCircle } from "lucide-react";
+import { useAdminSetup } from "@/contexts/AdminSetupContext";
 
 export default function WtrStep4() {
   const navigate = useNavigate();
+  const { setWtrComplete } = useAdminSetup();
 
   return (
     <AdminLayout title="WTR Setup" subtitle="Step 4 of 4 — On-Call Rules">
@@ -76,7 +78,7 @@ export default function WtrStep4() {
           <Button variant="outline" size="lg" onClick={() => navigate("/admin/wtr/step-3")}>
             <ArrowLeft className="mr-2 h-4 w-4" />Back
           </Button>
-          <Button size="lg" onClick={() => navigate("/admin/dashboard")} className="bg-red-500 hover:bg-red-600">
+          <Button size="lg" onClick={() => { setWtrComplete(true); navigate("/admin/dashboard"); }} className="bg-red-500 hover:bg-red-600">
             <CheckCircle className="mr-2 h-4 w-4" />Save WTR Configuration
           </Button>
         </div>
