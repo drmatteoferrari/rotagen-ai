@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { DoctorLayout } from "@/components/DoctorLayout";
-import { ArrowLeft, ArrowRight, Clock, CalendarDays, Info } from "lucide-react";
+import { ArrowLeft, ArrowRight, Clock, CalendarDays, Info, ShieldAlert } from "lucide-react";
+import { useSurveyMode } from "@/contexts/SurveyModeContext";
 
 const wteOptions = [
   { value: "100", label: "100%", sub: "Full Time" },
@@ -13,12 +14,23 @@ const days = ["M", "T", "W", "T", "F", "S", "S"];
 
 export default function SurveyStep3() {
   const navigate = useNavigate();
+  const { isAdminMode, doctorId } = useSurveyMode();
+
+  const prevPath = isAdminMode ? `/admin/survey-override/${doctorId}/2` : "/doctor/survey/2";
+  const nextPath = isAdminMode ? `/admin/survey-override/${doctorId}/4` : "/doctor/survey/4";
 
   return (
     <DoctorLayout>
       <div className="flex flex-col min-h-full">
+        {isAdminMode && (
+          <div className="bg-amber-500/15 border-b border-amber-500/30 px-4 py-2.5 flex items-center gap-2">
+            <ShieldAlert className="h-4 w-4 text-amber-600 shrink-0" />
+            <span className="text-sm font-semibold text-amber-700">Admin Override Mode</span>
+          </div>
+        )}
+
         <header className="sticky top-0 z-10 flex items-center justify-between bg-[#f6f8f8]/95 backdrop-blur-sm p-4 pb-2">
-          <button onClick={() => navigate("/doctor/survey/2")} className="flex size-10 items-center justify-center rounded-full text-slate-900 hover:bg-slate-200 transition-colors">
+          <button onClick={() => navigate(prevPath)} className="flex size-10 items-center justify-center rounded-full text-slate-900 hover:bg-slate-200 transition-colors">
             <ArrowLeft className="h-5 w-5" />
           </button>
           <h2 className="text-lg font-bold tracking-tight text-slate-900">Step 3 of 6</h2>
@@ -41,7 +53,6 @@ export default function SurveyStep3() {
             <p className="text-slate-600 text-base leading-relaxed">Please select your Whole Time Equivalent (WTE) and preferred days off if Less Than Full Time.</p>
           </div>
 
-          {/* WTE */}
           <div className="px-6 py-4">
             <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
               <Clock className="h-5 w-5 text-teal-500" /> Whole Time Equivalent (WTE)
@@ -61,7 +72,6 @@ export default function SurveyStep3() {
             </div>
           </div>
 
-          {/* Non-Working Days */}
           <div className="px-6 py-2">
             <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
               <CalendarDays className="h-5 w-5 text-teal-500" /> Preferred Non-Working Days
@@ -81,7 +91,6 @@ export default function SurveyStep3() {
             </div>
           </div>
 
-          {/* Info */}
           <div className="px-6 py-4">
             <div className="flex items-start gap-3 p-4 bg-teal-50 rounded-lg border border-teal-500/20">
               <Info className="h-5 w-5 text-teal-500 mt-0.5 shrink-0" />
@@ -91,10 +100,8 @@ export default function SurveyStep3() {
         </main>
 
         <div className="absolute bottom-0 left-0 w-full bg-white border-t border-slate-200 p-4 pb-8 flex justify-between items-center gap-4 z-20">
-          <button onClick={() => navigate("/doctor/survey/2")} className="flex-1 py-4 rounded-xl font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 transition-colors text-center">
-            Back
-          </button>
-          <button onClick={() => navigate("/doctor/survey/4")} className="flex-[2] py-4 rounded-xl font-bold text-white bg-teal-500 hover:bg-teal-600 shadow-lg shadow-teal-500/30 flex items-center justify-center gap-2 transition-all">
+          <button onClick={() => navigate(prevPath)} className="flex-1 py-4 rounded-xl font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 transition-colors text-center">Back</button>
+          <button onClick={() => navigate(nextPath)} className="flex-[2] py-4 rounded-xl font-bold text-white bg-teal-500 hover:bg-teal-600 shadow-lg shadow-teal-500/30 flex items-center justify-center gap-2 transition-all">
             Continue <ArrowRight className="h-4 w-4" />
           </button>
         </div>

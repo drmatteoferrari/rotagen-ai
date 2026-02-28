@@ -1,22 +1,33 @@
 import { useNavigate } from "react-router-dom";
 import { DoctorLayout } from "@/components/DoctorLayout";
-import { ArrowLeft, ArrowRight, CalendarDays, GraduationCap, CalendarX, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, CalendarDays, GraduationCap, CalendarX, Plus, Trash2, ShieldAlert } from "lucide-react";
+import { useSurveyMode } from "@/contexts/SurveyModeContext";
 
 export default function SurveyStep4() {
   const navigate = useNavigate();
+  const { isAdminMode, doctorId } = useSurveyMode();
+
+  const prevPath = isAdminMode ? `/admin/survey-override/${doctorId}/3` : "/doctor/survey/3";
+  const nextPath = isAdminMode ? `/admin/survey-override/${doctorId}/5` : "/doctor/survey/5";
 
   return (
     <DoctorLayout>
       <div className="flex flex-col min-h-full">
+        {isAdminMode && (
+          <div className="bg-amber-500/15 border-b border-amber-500/30 px-4 py-2.5 flex items-center gap-2">
+            <ShieldAlert className="h-4 w-4 text-amber-600 shrink-0" />
+            <span className="text-sm font-semibold text-amber-700">Admin Override Mode</span>
+          </div>
+        )}
+
         <header className="sticky top-0 z-10 flex items-center justify-between bg-white/95 backdrop-blur-sm p-4 pb-2 border-b border-slate-100">
-          <button onClick={() => navigate("/doctor/survey/3")} className="flex size-12 items-center justify-center rounded-full text-slate-900 hover:bg-slate-50 transition-colors">
+          <button onClick={() => navigate(prevPath)} className="flex size-12 items-center justify-center rounded-full text-slate-900 hover:bg-slate-50 transition-colors">
             <ArrowLeft className="h-5 w-5" />
           </button>
           <h2 className="text-lg font-bold tracking-tight text-slate-900 flex-1 text-center pr-12">Leave & Availability</h2>
         </header>
 
         <main className="flex-1 overflow-y-auto pb-24">
-          {/* Progress */}
           <div className="flex flex-col gap-3 p-4">
             <div className="flex justify-between items-baseline">
               <p className="text-base font-medium text-slate-900">Step 4 of 6</p>
@@ -27,7 +38,6 @@ export default function SurveyStep4() {
             </div>
           </div>
 
-          {/* Annual Leave */}
           <section>
             <div className="flex items-center justify-between px-4 pt-4 pb-2">
               <h3 className="text-xl font-bold text-slate-900">Annual Leave</h3>
@@ -49,7 +59,6 @@ export default function SurveyStep4() {
             </div>
           </section>
 
-          {/* Study Leave */}
           <section>
             <div className="flex items-center justify-between px-4 pt-4 pb-2">
               <h3 className="text-xl font-bold text-slate-900">Study Leave</h3>
@@ -71,7 +80,6 @@ export default function SurveyStep4() {
             </div>
           </section>
 
-          {/* NOC Dates */}
           <section>
             <div className="flex items-center justify-between px-4 pt-4 pb-2">
               <h3 className="text-xl font-bold text-slate-900">Not-On-Call (NOC) Dates</h3>
@@ -103,10 +111,8 @@ export default function SurveyStep4() {
 
         <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-100 p-4 z-20">
           <div className="flex gap-4">
-            <button onClick={() => navigate("/doctor/survey/3")} className="flex-1 h-12 rounded-xl bg-slate-100 text-slate-900 font-bold hover:bg-slate-200 transition-colors">
-              Back
-            </button>
-            <button onClick={() => navigate("/doctor/survey/5")} className="flex-1 h-12 rounded-xl bg-teal-500 text-white font-bold shadow-lg shadow-teal-500/20 hover:bg-teal-600 transition-all flex items-center justify-center gap-2">
+            <button onClick={() => navigate(prevPath)} className="flex-1 h-12 rounded-xl bg-slate-100 text-slate-900 font-bold hover:bg-slate-200 transition-colors">Back</button>
+            <button onClick={() => navigate(nextPath)} className="flex-1 h-12 rounded-xl bg-teal-500 text-white font-bold shadow-lg shadow-teal-500/20 hover:bg-teal-600 transition-all flex items-center justify-center gap-2">
               Next Step <ArrowRight className="h-4 w-4" />
             </button>
           </div>

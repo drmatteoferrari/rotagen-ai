@@ -23,6 +23,7 @@ import SurveyStep3 from "./pages/doctor/SurveyStep3";
 import SurveyStep4 from "./pages/doctor/SurveyStep4";
 import SurveyStep5 from "./pages/doctor/SurveyStep5";
 import SurveyStep6 from "./pages/doctor/SurveyStep6";
+import SurveyOverride from "./pages/admin/SurveyOverride";
 
 const queryClient = new QueryClient();
 
@@ -46,6 +47,7 @@ const App = () => (
           <Route path="/admin/wtr/step-3" element={<WtrStep3 />} />
           <Route path="/admin/wtr/step-4" element={<WtrStep4 />} />
           <Route path="/admin/roster" element={<Roster />} />
+          <Route path="/admin/survey-override/:doctorId/:step" element={<SurveyOverride />} />
           <Route path="/doctor/survey/1" element={<SurveyStep1 />} />
           <Route path="/doctor/survey/2" element={<SurveyStep2 />} />
           <Route path="/doctor/survey/3" element={<SurveyStep3 />} />

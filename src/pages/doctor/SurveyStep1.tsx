@@ -1,14 +1,26 @@
 import { useNavigate } from "react-router-dom";
 import { DoctorLayout } from "@/components/DoctorLayout";
 import { Input } from "@/components/ui/input";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ShieldAlert } from "lucide-react";
+import { useSurveyMode } from "@/contexts/SurveyModeContext";
 
 export default function SurveyStep1() {
   const navigate = useNavigate();
+  const { isAdminMode, doctorId, doctorName, doctorEmail } = useSurveyMode();
+
+  const nextPath = isAdminMode ? `/admin/survey-override/${doctorId}/2` : "/doctor/survey/2";
 
   return (
     <DoctorLayout>
       <div className="flex flex-col min-h-full">
+        {/* Admin Override Banner */}
+        {isAdminMode && (
+          <div className="bg-amber-500/15 border-b border-amber-500/30 px-4 py-2.5 flex items-center gap-2">
+            <ShieldAlert className="h-4 w-4 text-amber-600 shrink-0" />
+            <span className="text-sm font-semibold text-amber-700">Admin Override Mode</span>
+          </div>
+        )}
+
         {/* Header */}
         <header className="sticky top-0 z-10 flex items-center justify-between bg-[#f6f8f8]/95 backdrop-blur-sm p-4 pb-2">
           <div className="size-10" />
@@ -35,11 +47,22 @@ export default function SurveyStep1() {
           <div className="space-y-5">
             <div className="space-y-2">
               <label className="block text-sm font-semibold text-slate-700">Full Name</label>
-              <Input placeholder="Dr. Jane Smith" className="bg-white border-0 shadow-sm rounded-xl py-3 px-4" />
+              <Input
+                placeholder="Dr. Jane Smith"
+                defaultValue={isAdminMode ? doctorName : ""}
+                readOnly={isAdminMode}
+                className={`bg-white border-0 shadow-sm rounded-xl py-3 px-4 ${isAdminMode ? "opacity-60 cursor-not-allowed" : ""}`}
+              />
             </div>
             <div className="space-y-2">
               <label className="block text-sm font-semibold text-slate-700">Email Address</label>
-              <Input type="email" placeholder="j.smith@nhs.net" className="bg-white border-0 shadow-sm rounded-xl py-3 px-4" />
+              <Input
+                type="email"
+                placeholder="j.smith@nhs.net"
+                defaultValue={isAdminMode ? doctorEmail : ""}
+                readOnly={isAdminMode}
+                className={`bg-white border-0 shadow-sm rounded-xl py-3 px-4 ${isAdminMode ? "opacity-60 cursor-not-allowed" : ""}`}
+              />
             </div>
             <div className="space-y-2">
               <label className="block text-sm font-semibold text-slate-700">GMC Number</label>
@@ -55,7 +78,7 @@ export default function SurveyStep1() {
         {/* Footer */}
         <div className="absolute bottom-0 left-0 w-full bg-white/95 backdrop-blur-md border-t border-slate-100 p-4 pb-6 z-20">
           <button
-            onClick={() => navigate("/doctor/survey/2")}
+            onClick={() => navigate(nextPath)}
             className="w-full flex items-center justify-center gap-2 rounded-xl bg-teal-500 py-3.5 text-white font-bold shadow-lg shadow-teal-500/25 hover:bg-teal-600 active:scale-[0.98] transition-all"
           >
             Next Step <ArrowRight className="h-4 w-4" />
