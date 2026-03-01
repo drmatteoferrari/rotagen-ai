@@ -10,12 +10,20 @@ export default function DepartmentStep3() {
   const { setDepartmentComplete } = useAdminSetup();
   const { shifts, updateShift } = useDepartmentSetup();
 
-  const total = shifts.reduce((sum, s) => sum + s.distributionPercent, 0);
-  const isValid = total === 100;
+  // Use targetOverridePct — treat null as auto-equal share
+  const getDisplayPct = (s: typeof shifts[0]) =>
+    s.targetOverridePct ?? parseFloat((100 / shifts.length).toFixed(1));
 
-  const onCallShifts = shifts.filter((s) => s.isOnCall);
-  const standardShifts = shifts.filter((s) => !s.isOnCall);
-  const onCallTotal = onCallShifts.reduce((sum, s) => sum + s.distributionPercent, 0);
+  const total = shifts.reduce((sum, s) => sum + getDisplayPct(s), 0);
+  const isValid = Math.abs(total - 100) < 0.5;
+
+  const onCallShifts = shifts.filter((s) => s.isOncall);
+  const standardShifts = shifts.filter((s) => !s.isOncall);
+  const onCallTotal = onCallShifts.reduce((sum, s) => sum + getDisplayPct(s), 0);
+
+  const handleSliderChange = (id: string, value: number) => {
+    updateShift(id, { targetOverridePct: value });
+  };
 
   return (
     <AdminLayout title="Department Setup" subtitle="Step 3 of 3 — Distribution Targets">
@@ -37,10 +45,10 @@ export default function DepartmentStep3() {
           <div className="flex items-center gap-3 rounded-2xl bg-destructive/10 border border-destructive/20 p-4">
             <AlertTriangle className="h-5 w-5 text-destructive shrink-0" />
             <div className="flex-1">
-              <p className="text-destructive font-semibold text-sm">Targets sum to {total}%</p>
+              <p className="text-destructive font-semibold text-sm">Targets sum to {total.toFixed(1)}%</p>
               <p className="text-destructive/80 text-xs mt-0.5">Please adjust shifts to total exactly 100% before saving.</p>
             </div>
-            <span className="bg-destructive/20 text-destructive text-xs font-bold px-2 py-1 rounded-full">{total}%</span>
+            <span className="bg-destructive/20 text-destructive text-xs font-bold px-2 py-1 rounded-full">{total.toFixed(1)}%</span>
           </div>
         ) : (
           <div className="flex items-center gap-3 rounded-2xl border p-4" style={{ backgroundColor: "hsl(160 84% 39% / 0.1)", borderColor: "hsl(160 84% 39% / 0.2)" }}>
@@ -53,7 +61,7 @@ export default function DepartmentStep3() {
         <div className="rounded-2xl bg-card border border-border p-6 shadow-sm">
           <div className="flex justify-between items-center mb-4">
             <label className="font-semibold text-muted-foreground">Total On-Call %</label>
-            <span className="text-2xl font-bold text-card-foreground">{onCallTotal}%</span>
+            <span className="text-2xl font-bold text-card-foreground">{onCallTotal.toFixed(1)}%</span>
           </div>
           <div className="relative h-4 w-full bg-muted rounded-full overflow-hidden">
             <div className="absolute top-0 left-0 h-full bg-primary rounded-full transition-all" style={{ width: `${Math.min(onCallTotal, 100)}%` }} />
@@ -68,7 +76,7 @@ export default function DepartmentStep3() {
             </h4>
             <div className="space-y-4">
               {onCallShifts.map((s) => (
-                <ShiftSlider key={s.id} shift={s} onUpdate={updateShift} accent="primary" />
+                <ShiftSlider key={s.id} shift={{ id: s.id, name: s.name, pct: getDisplayPct(s) }} onUpdate={handleSliderChange} accent="primary" />
               ))}
             </div>
           </div>
@@ -82,7 +90,7 @@ export default function DepartmentStep3() {
             </h4>
             <div className="space-y-4">
               {standardShifts.map((s) => (
-                <ShiftSlider key={s.id} shift={s} onUpdate={updateShift} accent="muted" />
+                <ShiftSlider key={s.id} shift={{ id: s.id, name: s.name, pct: getDisplayPct(s) }} onUpdate={handleSliderChange} accent="muted" />
               ))}
             </div>
           </div>
@@ -114,8 +122,8 @@ function ShiftSlider({
   onUpdate,
   accent,
 }: {
-  shift: { id: string; name: string; distributionPercent: number };
-  onUpdate: (id: string, u: { distributionPercent: number }) => void;
+  shift: { id: string; name: string; pct: number };
+  onUpdate: (id: string, value: number) => void;
   accent: "primary" | "muted";
 }) {
   return (
@@ -123,15 +131,16 @@ function ShiftSlider({
       <div className="flex justify-between items-start mb-3">
         <h5 className="font-semibold text-card-foreground">{shift.name}</h5>
         <span className={`font-bold text-lg ${accent === "primary" ? "text-primary" : "text-card-foreground"}`}>
-          {shift.distributionPercent}%
+          {shift.pct}%
         </span>
       </div>
       <input
         type="range"
         min={0}
         max={100}
-        value={shift.distributionPercent}
-        onChange={(e) => onUpdate(shift.id, { distributionPercent: Number(e.target.value) })}
+        step={0.5}
+        value={shift.pct}
+        onChange={(e) => onUpdate(shift.id, Number(e.target.value))}
         className={`w-full h-1.5 bg-muted rounded-lg appearance-none cursor-pointer ${accent === "primary" ? "accent-[hsl(var(--primary))]" : "accent-slate-400"}`}
       />
     </div>
