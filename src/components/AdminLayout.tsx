@@ -12,13 +12,14 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const navItems = [
   { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
   { title: "Rota Period", url: "/admin/rota-period/step-1", icon: CalendarDays },
-  { title: "Department Setup", url: "/admin/department/step-1", icon: Settings },
-  { title: "WTR Setup", url: "/admin/wtr/step-1", icon: Stethoscope },
-  { title: "Roster & Invites", url: "/admin/roster", icon: Users },
+  { title: "Department", url: "/admin/department/step-1", icon: Settings },
+  { title: "WTR", url: "/admin/wtr/step-1", icon: Stethoscope },
+  { title: "Roster", url: "/admin/roster", icon: Users },
 ];
 
 interface AdminLayoutProps {
@@ -30,6 +31,48 @@ interface AdminLayoutProps {
 export function AdminLayout({ children, title, subtitle }: AdminLayoutProps) {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
+  const isMobile = useIsMobile();
+
+  if (isMobile) {
+    return (
+      <div className="flex min-h-screen w-full flex-col bg-background">
+        {/* Header */}
+        <header className="flex h-14 items-center border-b border-border bg-card px-4">
+          <div className="flex items-center gap-2">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary">
+              <Stethoscope className="h-3.5 w-3.5 text-primary-foreground" />
+            </div>
+            <div>
+              <h1 className="text-sm font-semibold text-card-foreground leading-tight">{title}</h1>
+              {subtitle && <p className="text-[11px] text-muted-foreground">{subtitle}</p>}
+            </div>
+          </div>
+        </header>
+
+        {/* Content */}
+        <main className="flex-1 overflow-y-auto p-4 pb-20">{children}</main>
+
+        {/* Bottom Nav */}
+        <nav className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-border bg-card py-2 shadow-[0_-2px_10px_hsl(var(--foreground)/0.05)]">
+          {navItems.map((item) => {
+            const isActive = location.pathname.startsWith(item.url.replace(/\/step-\d+$/, ""));
+            return (
+              <NavLink
+                key={item.url}
+                to={item.url}
+                end
+                className="flex flex-col items-center gap-0.5 px-2 py-1 text-muted-foreground transition-colors"
+                activeClassName="text-primary"
+              >
+                <item.icon className="h-5 w-5" />
+                <span className="text-[10px] font-medium">{item.title}</span>
+              </NavLink>
+            );
+          })}
+        </nav>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen w-full bg-background">
@@ -54,25 +97,22 @@ export function AdminLayout({ children, title, subtitle }: AdminLayoutProps) {
 
         {/* Nav */}
         <nav className="flex-1 space-y-1 px-2 py-4">
-          {navItems.map((item) => {
-            const isActive = location.pathname.startsWith(item.url.replace(/\/step-\d+$/, ''));
-            return (
-              <NavLink
-                key={item.url}
-                to={item.url}
-                end
-                className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
-                  "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                  collapsed && "justify-center px-0"
-                )}
-                activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
-              >
-                <item.icon className="h-4 w-4 shrink-0" />
-                {!collapsed && <span>{item.title}</span>}
-              </NavLink>
-            );
-          })}
+          {navItems.map((item) => (
+            <NavLink
+              key={item.url}
+              to={item.url}
+              end
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
+                "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                collapsed && "justify-center px-0"
+              )}
+              activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
+            >
+              <item.icon className="h-4 w-4 shrink-0" />
+              {!collapsed && <span>{item.title}</span>}
+            </NavLink>
+          ))}
         </nav>
 
         {/* Collapse toggle */}
@@ -89,9 +129,7 @@ export function AdminLayout({ children, title, subtitle }: AdminLayoutProps) {
         <header className="flex h-16 items-center border-b border-border bg-card px-6">
           <div>
             <h1 className="text-lg font-semibold text-card-foreground">{title}</h1>
-            {subtitle && (
-              <p className="text-sm text-muted-foreground">{subtitle}</p>
-            )}
+            {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
           </div>
         </header>
         <main className="flex-1 overflow-y-auto p-6">{children}</main>

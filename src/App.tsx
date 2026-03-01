@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AdminSetupProvider } from "./contexts/AdminSetupContext";
+import { DepartmentSetupProvider } from "./contexts/DepartmentSetupContext";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Roster from "./pages/admin/Roster";
@@ -34,6 +35,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AdminSetupProvider>
+        <DepartmentSetupProvider>
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/admin/dashboard" element={<Dashboard />} />
@@ -56,6 +58,7 @@ const App = () => (
           <Route path="/doctor/survey/6" element={<SurveyStep6 />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
+        </DepartmentSetupProvider>
         </AdminSetupProvider>
       </BrowserRouter>
     </TooltipProvider>

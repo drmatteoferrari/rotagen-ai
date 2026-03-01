@@ -5,40 +5,75 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { ArrowLeft, ArrowRight, Plus, Minus, Phone, Home, X } from "lucide-react";
+import { useDepartmentSetup } from "@/contexts/DepartmentSetupContext";
 
-const days = ["M", "T", "W", "T", "F", "S", "S"];
-const activeDays = [true, true, true, true, true, false, false];
+const dayLabels = ["M", "T", "W", "T", "F", "S", "S"];
 
 export default function DepartmentStep2() {
   const navigate = useNavigate();
+  const { shifts, currentShiftIndex, setCurrentShiftIndex, updateShift } = useDepartmentSetup();
+  const shift = shifts[currentShiftIndex];
+
+  if (!shift) {
+    navigate("/admin/department/step-1");
+    return null;
+  }
+
+  const isLast = currentShiftIndex === shifts.length - 1;
+
+  const handleNext = () => {
+    if (isLast) {
+      navigate("/admin/department/step-3");
+    } else {
+      setCurrentShiftIndex(currentShiftIndex + 1);
+    }
+  };
+
+  const handleBack = () => {
+    if (currentShiftIndex === 0) {
+      navigate("/admin/department/step-1");
+    } else {
+      setCurrentShiftIndex(currentShiftIndex - 1);
+    }
+  };
 
   return (
-    <AdminLayout title="Department Setup" subtitle="Step 2 of 3 — Shifts & Staffing">
+    <AdminLayout title="Department Setup" subtitle={`Step 2 of 3 — Shift ${currentShiftIndex + 1} of ${shifts.length}`}>
       <div className="mx-auto max-w-3xl space-y-6">
         {/* Progress */}
         <div className="flex items-center justify-center gap-3">
           <div className="h-2 w-2 rounded-full bg-muted-foreground/30" />
-          <div className="h-2.5 w-2.5 rounded-full bg-blue-600 shadow-[0_0_10px_rgba(37,99,235,0.4)]" />
+          <div className="h-2.5 w-2.5 rounded-full bg-primary shadow-[0_0_10px_hsl(var(--primary)/0.4)]" />
           <div className="h-2 w-2 rounded-full bg-muted-foreground/30" />
         </div>
 
-        <h2 className="text-2xl font-bold text-foreground">Standard Day Shift</h2>
+        {/* Shift counter badge */}
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold text-foreground">{shift.name}</h2>
+          <span className="text-xs font-bold text-muted-foreground bg-muted px-3 py-1 rounded-full">
+            {currentShiftIndex + 1} / {shifts.length}
+          </span>
+        </div>
 
         {/* Shift Name */}
         <div className="space-y-2">
           <Label className="font-semibold">Shift Name</Label>
-          <Input defaultValue="Standard Day Shift" placeholder="e.g. Early Morning Ward" />
+          <Input
+            value={shift.name}
+            onChange={(e) => updateShift(shift.id, { name: e.target.value })}
+            placeholder="e.g. Early Morning Ward"
+          />
         </div>
 
         {/* Times */}
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label className="font-semibold">Start Time</Label>
-            <Input type="time" defaultValue="08:00" />
+            <Input type="time" value={shift.startTime} onChange={(e) => updateShift(shift.id, { startTime: e.target.value })} />
           </div>
           <div className="space-y-2">
             <Label className="font-semibold">End Time</Label>
-            <Input type="time" defaultValue="17:00" />
+            <Input type="time" value={shift.endTime} onChange={(e) => updateShift(shift.id, { endTime: e.target.value })} />
           </div>
         </div>
 
@@ -46,13 +81,24 @@ export default function DepartmentStep2() {
         <div className="space-y-3">
           <Label className="font-semibold">Tags & Attributes</Label>
           <div className="flex flex-wrap gap-2">
-            <span className="inline-flex items-center gap-1 rounded-full border border-orange-200 bg-orange-100 px-3 py-1.5 text-sm font-semibold text-orange-700">
-              Long Day <button className="ml-1 hover:text-orange-900"><X className="h-3 w-3" /></button>
-            </span>
-            <span className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-100 px-3 py-1.5 text-sm font-semibold text-blue-700">
-              12 Hours <button className="ml-1 hover:text-blue-900"><X className="h-3 w-3" /></button>
-            </span>
-            <button className="inline-flex items-center gap-1 rounded-full border border-dashed border-border px-3 py-1.5 text-sm font-semibold text-muted-foreground hover:border-primary hover:text-primary transition-colors">
+            {shift.tags.map((tag, i) => (
+              <span key={i} className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 text-sm font-semibold text-primary">
+                {tag}
+                <button
+                  className="ml-1 hover:text-destructive"
+                  onClick={() => updateShift(shift.id, { tags: shift.tags.filter((_, ti) => ti !== i) })}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            ))}
+            <button
+              className="inline-flex items-center gap-1 rounded-full border border-dashed border-border px-3 py-1.5 text-sm font-semibold text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+              onClick={() => {
+                const tag = prompt("Enter tag name:");
+                if (tag) updateShift(shift.id, { tags: [...shift.tags, tag] });
+              }}
+            >
               <Plus className="h-3 w-3" /> Add Tag
             </button>
           </div>
@@ -61,11 +107,11 @@ export default function DepartmentStep2() {
           <div className="space-y-3">
             <div className="flex items-center justify-between rounded-xl bg-card p-3 shadow-sm border border-border">
               <span className="font-medium text-card-foreground flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground" />On-Call</span>
-              <Switch />
+              <Switch checked={shift.isOnCall} onCheckedChange={(v) => updateShift(shift.id, { isOnCall: v })} />
             </div>
             <div className="flex items-center justify-between rounded-xl bg-card p-3 shadow-sm border border-border">
               <span className="font-medium text-card-foreground flex items-center gap-2"><Home className="h-4 w-4 text-muted-foreground" />Non-Resident</span>
-              <Switch defaultChecked />
+              <Switch checked={shift.isNonResident} onCheckedChange={(v) => updateShift(shift.id, { isNonResident: v })} />
             </div>
           </div>
         </div>
@@ -74,8 +120,16 @@ export default function DepartmentStep2() {
         <div className="space-y-3">
           <Label className="font-semibold">Active Days</Label>
           <div className="flex justify-between items-center rounded-2xl bg-card p-3 shadow-sm border border-border">
-            {days.map((day, i) => (
-              <button key={i} className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${activeDays[i] ? "bg-blue-600 text-white shadow-lg shadow-blue-600/20" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}>
+            {dayLabels.map((day, i) => (
+              <button
+                key={i}
+                onClick={() => {
+                  const newDays = [...shift.activeDays];
+                  newDays[i] = !newDays[i];
+                  updateShift(shift.id, { activeDays: newDays });
+                }}
+                className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${shift.activeDays[i] ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
+              >
                 {day}
               </button>
             ))}
@@ -84,22 +138,22 @@ export default function DepartmentStep2() {
 
         {/* Required Staff */}
         <div className="space-y-3">
-          <div className="flex justify-between items-end">
-            <Label className="font-semibold">Required Staff</Label>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground font-medium">Set Maximum</span>
-              <Switch />
-            </div>
-          </div>
+          <Label className="font-semibold">Required Staff</Label>
           <div className="flex items-center justify-between rounded-2xl bg-card p-4 shadow-sm border border-border">
-            <button className="h-12 w-12 rounded-xl bg-muted flex items-center justify-center text-muted-foreground hover:bg-muted/80 transition-colors">
+            <button
+              onClick={() => updateShift(shift.id, { requiredStaff: Math.max(1, shift.requiredStaff - 1) })}
+              className="h-12 w-12 rounded-xl bg-muted flex items-center justify-center text-muted-foreground hover:bg-muted/80 transition-colors"
+            >
               <Minus className="h-5 w-5" />
             </button>
             <div className="flex flex-col items-center">
-              <span className="text-3xl font-bold text-card-foreground">👨‍⚕️ 4</span>
+              <span className="text-3xl font-bold text-card-foreground">👨‍⚕️ {shift.requiredStaff}</span>
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Doctors</span>
             </div>
-            <button className="h-12 w-12 rounded-xl bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 transition-colors shadow-lg shadow-blue-600/20">
+            <button
+              onClick={() => updateShift(shift.id, { requiredStaff: shift.requiredStaff + 1 })}
+              className="h-12 w-12 rounded-xl bg-primary text-primary-foreground flex items-center justify-center hover:bg-primary/90 transition-colors shadow-lg shadow-primary/20"
+            >
               <Plus className="h-5 w-5" />
             </button>
           </div>
@@ -107,17 +161,13 @@ export default function DepartmentStep2() {
 
         {/* Bottom actions */}
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-between pt-4">
-          <Button variant="outline" size="lg" onClick={() => navigate("/admin/department/step-1")}>
+          <Button variant="outline" size="lg" onClick={handleBack}>
             <ArrowLeft className="mr-2 h-4 w-4" />Back
           </Button>
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <Button variant="outline" size="lg">
-              <Plus className="mr-2 h-4 w-4" />Add new shift type
-            </Button>
-            <Button size="lg" onClick={() => navigate("/admin/department/step-3")} className="bg-blue-600 hover:bg-blue-700">
-              Next Shift <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </div>
+          <Button size="lg" onClick={handleNext} className="bg-primary text-primary-foreground hover:bg-primary/90">
+            {isLast ? "Continue to Distribution" : "Next Shift"}
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
         </div>
       </div>
     </AdminLayout>
