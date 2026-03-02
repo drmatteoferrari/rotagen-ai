@@ -1,110 +1,143 @@
 
 
-# Phase 2: Global State & Dashboard Logic
+# 9 Admin Page Changes
 
 ## Overview
-Create a React context (`AdminSetupContext`) to track wizard completion status, rebuild the Dashboard page to match the uploaded mockup design, and wire the "Save" buttons on the final wizard steps to update the context.
+Implement 9 specific changes across the WTR wizard (steps 1-4), Rota Period wizard (steps 1-2), covering editable fields with WTR breach warnings, auto-calculations, UK bank holiday auto-population, and a complete step-4 rewrite.
 
-## New File: `src/contexts/AdminSetupContext.tsx`
+---
 
-A context + provider that holds four booleans:
-- `isDepartmentComplete` (default: `false`)
-- `isWtrComplete` (default: `false`)
-- `isPeriodComplete` (default: `false`)
-- `areSurveysDone` (default: `false`)
+## Change 1 -- RotaPeriodStep1: Auto-calculate rota duration
 
-Setter functions exposed: `setDepartmentComplete`, `setWtrComplete`, `setPeriodComplete`, `setSurveysDone`.
+**File:** `src/pages/admin/RotaPeriodStep1.tsx`
 
-The provider will wrap the app inside `App.tsx`, sitting inside `BrowserRouter` so it's available to all pages.
+Add a computed display below the date pickers:
+- When both `startDate` and `endDate` are set, calculate `differenceInDays(endDate, startDate)` using date-fns
+- If end < start, show red text: "End date must be after start date."
+- Otherwise show an info box: "Rota duration: X days (Y weeks)" where weeks = (days / 7).toFixed(1)
+- Render as a small rounded badge/box below the date grid, inside the CardContent
 
-## Updated File: `src/App.tsx`
+---
 
-Wrap `<Routes>` with `<AdminSetupProvider>`.
+## Change 2 -- RotaPeriodStep2: Auto-populate UK bank holidays
 
-## Updated File: `src/pages/admin/Dashboard.tsx`
+**File:** `src/pages/admin/RotaPeriodStep2.tsx`
 
-Rewrite the placeholder dashboard to match the uploaded mockup design:
+- Store the start/end dates from step 1 in a shared context or pass via URL params. Since there's no shared rota context yet, add `rotaStartDate` and `rotaEndDate` to `AdminSetupContext` with setters, and set them in Step 1 when navigating.
+- Create a hardcoded list of UK England & Wales bank holidays for 2025-2027 (covers likely rota ranges): New Year's, Good Friday, Easter Monday, Early May, Spring, Summer, Christmas, Boxing Day.
+- On mount in Step 2, filter holidays within the date range and initialize the `bankHolidays` state with those.
+- Show a count badge at the top: "X bank holidays included in this rota period."
+- Users can still delete auto-populated ones and add custom ones.
 
-**Setup Progress section** -- 4 checklist items, each reading from context:
-- "Set up department" -- green checkmark if `isDepartmentComplete`, grey circle otherwise
-- "Contract rules (WTR)" -- green checkmark if `isWtrComplete`, grey circle otherwise
-- "Set up rota period" -- green checkmark if `isPeriodComplete`, grey circle otherwise
-- "Doctor preferences" -- shows "ACTIVE" badge with "10/16 responses" (static for now since `areSurveysDone` isn't wired to real data yet)
+**File:** `src/contexts/AdminSetupContext.tsx` -- add `rotaStartDate`, `rotaEndDate` and their setters.
 
-Progress counter: shows "X/4 Completed" based on how many booleans are true.
+---
 
-**Phase 1: Pre-Rota Data section** -- a card with:
-- "Generate Pre-Rota Data" button that is **disabled** unless all three admin setup booleans (`isDepartmentComplete`, `isWtrComplete`, `isPeriodComplete`) are true
-- Placeholder status area for "Master Calendar" and "Targets" (static/mock for now)
+## Change 3 -- WtrStep1: Make Weekly Limits editable with warnings
 
-**Phase 2: Final Allocation section** -- verification checklist (static checkboxes) and "Run Allocation Algorithm" button (disabled, placeholder).
+**File:** `src/pages/admin/WtrStep1.tsx`
 
-## Updated File: `src/pages/admin/RotaPeriodStep2.tsx`
+- Add `useState` for `maxAvgWeekly` (default 48) and `maxIn7Days` (default 72)
+- Remove `disabled` and locked badges from both inputs; make them controlled inputs
+- Remove the "Locked Legal Limit" badge
+- Below each input, conditionally render:
+  - Value < threshold: green note with checkmark
+  - Value = threshold: nothing extra
+  - Value > threshold: amber warning box with triangle icon
 
-Change the "Save Rota Period" button's `onClick` to:
-1. Call `setPeriodComplete(true)` from context
-2. Navigate to `/admin/dashboard`
+---
 
-## Updated File: `src/pages/admin/WtrStep4.tsx`
+## Change 4 -- WtrStep1: Remove Shift Configuration section
 
-Change the "Save WTR Configuration" button's `onClick` to:
-1. Call `setWtrComplete(true)` from context
-2. Navigate to `/admin/dashboard`
+**File:** `src/pages/admin/WtrStep1.tsx`
 
-## Updated File: `src/pages/admin/DepartmentStep3.tsx`
+Delete lines 61-74 (the entire "Shift Configuration" card with the Max Shift Length input). Also remove the `Clock` import if no longer used.
 
-Change the "Save Department Configuration" button's `onClick` to:
-1. Call `setDepartmentComplete(true)` from context
-2. Navigate to `/admin/dashboard`
+---
+
+## Change 5 -- WtrStep2: Make limits editable with warnings
+
+**File:** `src/pages/admin/WtrStep2.tsx`
+
+- Replace the static `limits` array with `useState` for three values: `maxConsecDays` (7), `maxConsecLong` (7), `maxConsecNights` (4)
+- The +/- buttons should increment/decrement the values (min 1)
+- Below each card, show conditional warning/green note based on WTR thresholds (7, 7, 4 respectively)
+- Update subtitle for Long Shifts from "Requires approval if > 4" to just "Consecutive long shifts"
+
+---
+
+## Change 6 -- WtrStep2: Remove Local Agreement Extensions
+
+**File:** `src/pages/admin/WtrStep2.tsx`
+
+Delete lines 53-68 (the entire orange "Allow Local Agreement Extensions" section). Remove `Switch` and `AlertTriangle` imports if unused.
+
+---
+
+## Change 7 -- WtrStep3: Make Rest Requirements editable with warnings
+
+**File:** `src/pages/admin/WtrStep3.tsx`
+
+- Replace the static `restFields` array with three `useState` values:
+  - `restPostNights` (46, WTR min 46)
+  - `restPostBlock` (48, WTR min 48)
+  - `restBetweenShifts` (48, WTR min 48) -- rename "Min Rest Between Shifts" to "Rest After 7 Standard Shifts"
+- Make each input controlled
+- Below each, conditionally render:
+  - Value > min: green note
+  - Value = min: nothing
+  - Value < min: amber warning
+
+---
+
+## Change 8 -- WtrStep3: Replace Weekend Frequency control
+
+**File:** `src/pages/admin/WtrStep3.tsx`
+
+- Replace the radio button group with a single numeric input: "Maximum weekend frequency: 1 in [ ]"
+- `useState` for `weekendFreq` (default 3)
+- Validation:
+  - Value = 1: red error "A frequency of 1 in 1 would mean working every weekend -- this is not permitted."
+  - Value = 2: amber warning about authorisation required
+  - Value >= 3: no extra message
+  - Accepted range: 2-52
+
+---
+
+## Change 9 -- WtrStep4: Replace with read-only on-call rules
+
+**File:** `src/pages/admin/WtrStep4.tsx`
+
+Replace the entire card content with 4 read-only information cards. Keep the progress bar, header area, and bottom navigation (Back + Save buttons).
+
+Each card has:
+- Title, locked badge, two-column layout (Rule | Notes)
+- Same border/card styling as other WTR pages
+
+Cards are exactly as specified: Consecutive on-call periods, Day after on-call hours cap, Expected rest & shift conflict prohibition, Breaks & clinical exceptions.
+
+---
 
 ## Technical Details
 
-### Context shape
-```text
-interface AdminSetupContextType {
-  isDepartmentComplete: boolean;
-  isWtrComplete: boolean;
-  isPeriodComplete: boolean;
-  areSurveysDone: boolean;
-  setDepartmentComplete: (v: boolean) => void;
-  setWtrComplete: (v: boolean) => void;
-  setPeriodComplete: (v: boolean) => void;
-  setSurveysDone: (v: boolean) => void;
-}
-```
+### Files Modified
 
-### State persistence
-State lives in React memory only (resets on refresh). No localStorage or database wiring in this phase -- that can come later when Supabase is connected.
-
-### Dashboard UI structure (matching the mockup)
-```text
-+------------------------------------------+
-|  GENERATION COMMAND CENTER               |
-+------------------------------------------+
-|  SETUP PROGRESS          X/4 Completed   |
-|  [x] Set up department         DONE      |
-|  [x] Contract rules (WTR)     DONE      |
-|  [x] Set up rota period       DONE      |
-|  [ ] Doctor preferences       ACTIVE     |
-+------------------------------------------+
-|  Phase 1: Pre-Rota Data                  |
-|  [Generate Pre-Rota Data] (disabled/     |
-|   enabled based on 3 booleans)           |
-+------------------------------------------+
-|  Phase 2: Final Allocation               |
-|  Verification checklist (static)         |
-|  [Run Allocation Algorithm] (disabled)   |
-+------------------------------------------+
-```
-
-## Files Changed Summary
-
-| File | Action |
+| File | Changes |
 |---|---|
-| `src/contexts/AdminSetupContext.tsx` | Create (new context + provider) |
-| `src/App.tsx` | Update (wrap with provider) |
-| `src/pages/admin/Dashboard.tsx` | Rewrite (full dashboard UI from mockup) |
-| `src/pages/admin/RotaPeriodStep2.tsx` | Update (wire save button to context) |
-| `src/pages/admin/WtrStep4.tsx` | Update (wire save button to context) |
-| `src/pages/admin/DepartmentStep3.tsx` | Update (wire save button to context) |
+| `src/contexts/AdminSetupContext.tsx` | Add `rotaStartDate`, `rotaEndDate` + setters |
+| `src/pages/admin/RotaPeriodStep1.tsx` | Add duration calculation display, set dates in context |
+| `src/pages/admin/RotaPeriodStep2.tsx` | Auto-populate UK bank holidays from context dates |
+| `src/pages/admin/WtrStep1.tsx` | Editable limits with warnings, remove Shift Config section |
+| `src/pages/admin/WtrStep2.tsx` | Editable +/- limits with warnings, remove Local Agreement |
+| `src/pages/admin/WtrStep3.tsx` | Editable rest fields with warnings, numeric weekend freq input |
+| `src/pages/admin/WtrStep4.tsx` | Complete rewrite to 4 read-only on-call rule cards |
+
+### UK Bank Holidays Data
+Hardcoded array covering 2025-2027 with name + date for each. Filtered at runtime against the rota date range. This avoids external API dependencies while covering realistic rota periods.
+
+### Warning Component Pattern
+A reusable inline pattern used across changes 3, 5, 7, 8:
+- Green: `bg-green-50 border-green-200 text-green-700` with checkmark
+- Amber: `bg-amber-50 border-amber-200 text-amber-700` with triangle icon
+- Red: `bg-red-50 border-red-200 text-red-700` for errors
 
