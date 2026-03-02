@@ -7,16 +7,32 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Clock, ArrowRight } from "lucide-react";
-import { format } from "date-fns";
+import { CalendarIcon, Clock, ArrowRight, Info, AlertTriangle } from "lucide-react";
+import { format, differenceInDays } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useAdminSetup } from "@/contexts/AdminSetupContext";
 
 export default function RotaPeriodStep1() {
   const navigate = useNavigate();
-  const [startDate, setStartDate] = useState<Date>();
-  const [endDate, setEndDate] = useState<Date>();
+  const { rotaStartDate, rotaEndDate, setRotaStartDate, setRotaEndDate } = useAdminSetup();
+  const [startDate, setStartDate] = useState<Date | undefined>(rotaStartDate);
+  const [endDate, setEndDate] = useState<Date | undefined>(rotaEndDate);
   const [startTime, setStartTime] = useState("08:00");
   const [endTime, setEndTime] = useState("08:00");
+
+  const handleContinue = () => {
+    setRotaStartDate(startDate);
+    setRotaEndDate(endDate);
+    navigate("/admin/rota-period/step-2");
+  };
+
+  const durationInfo = (() => {
+    if (!startDate || !endDate) return null;
+    const days = differenceInDays(endDate, startDate);
+    if (days <= 0) return { error: true, text: "⚠️ End date must be after start date." };
+    const weeks = (days / 7).toFixed(1);
+    return { error: false, text: `Rota duration: ${days} days (${weeks} weeks)` };
+  })();
 
   return (
     <AdminLayout title="Rota Period" subtitle="Step 1 of 2 — Define the timeline">
@@ -60,6 +76,19 @@ export default function RotaPeriodStep1() {
                 </Popover>
               </div>
             </div>
+
+            {durationInfo && (
+              <div className={cn(
+                "flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium",
+                durationInfo.error
+                  ? "border-destructive/30 bg-destructive/10 text-destructive"
+                  : "border-amber-200 bg-amber-50 text-amber-800"
+              )}>
+                {durationInfo.error ? <AlertTriangle className="h-4 w-4 shrink-0" /> : <Info className="h-4 w-4 shrink-0" />}
+                {durationInfo.text}
+              </div>
+            )}
+
             <div className="grid gap-6 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label className="flex items-center gap-2"><Clock className="h-3.5 w-3.5 text-muted-foreground" />Start Time</Label>
@@ -74,7 +103,7 @@ export default function RotaPeriodStep1() {
         </Card>
 
         <div className="flex justify-end">
-          <Button size="lg" onClick={() => navigate("/admin/rota-period/step-2")} className="bg-amber-500 hover:bg-amber-600">
+          <Button size="lg" onClick={handleContinue} className="bg-amber-500 hover:bg-amber-600">
             Continue to Holidays
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
