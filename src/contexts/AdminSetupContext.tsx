@@ -9,6 +9,10 @@ interface AdminSetupContextType {
   setWtrComplete: (v: boolean) => void;
   setPeriodComplete: (v: boolean) => void;
   setSurveysDone: (v: boolean) => void;
+  rotaStartDate: Date | undefined;
+  rotaEndDate: Date | undefined;
+  setRotaStartDate: (d: Date | undefined) => void;
+  setRotaEndDate: (d: Date | undefined) => void;
 }
 
 const AdminSetupContext = createContext<AdminSetupContextType | undefined>(undefined);
@@ -18,6 +22,8 @@ export function AdminSetupProvider({ children }: { children: ReactNode }) {
   const [isWtrComplete, setWtrComplete] = useState(false);
   const [isPeriodComplete, setPeriodComplete] = useState(false);
   const [areSurveysDone, setSurveysDone] = useState(false);
+  const [rotaStartDate, setRotaStartDate] = useState<Date | undefined>();
+  const [rotaEndDate, setRotaEndDate] = useState<Date | undefined>();
 
   return (
     <AdminSetupContext.Provider
@@ -30,6 +36,10 @@ export function AdminSetupProvider({ children }: { children: ReactNode }) {
         setWtrComplete,
         setPeriodComplete,
         setSurveysDone,
+        rotaStartDate,
+        rotaEndDate,
+        setRotaStartDate,
+        setRotaEndDate,
       }}
     >
       {children}
