@@ -1,9 +1,65 @@
 
 
-# Fix: Data Persistence Across Login Sessions
+# Email Sending for Doctor Survey Invitations
 
-## Summary
-After saving surveys and logging out/in, data doesn't reload because: (1) `rota_configs` has no user identifier, (2) context resets on logout with no restoration on login. Fix by adding `owned_by` column, filtering queries by username, restoring config on login, persisting config ID in sessionStorage, and pre-populating all form contexts from restored data.
+## Current State
+
+- **No `doctors` table exists** — the Roster page uses hardcoded local state with mock data
+- **No `survey_deadline` column** on `rota_configs`
+- **No RESEND_API_KEY** secret configured
+- `rota_configs` already has `department_name` and `trust_name` columns but no UI to edit them on Dashboard
+- Roster page has send icons but they only do local state changes (no actual email)
+
+## Implementation Plan
+
+### Section 1 — Edge Function + Resend Secret
+
+- Request `RESEND_API_KEY` from the user via the `add_secret` tool
+- Create `supabase/functions/send-survey-invite/index.ts` with CORS, Resend SDK (via npm specifier `npm:resend`), reading `RESEND_API_KEY` from `Deno.env`
+- Add `[functions.send-survey-invite]` with `verify_jwt = false` to `supabase/config.toml`
+
+### Section 2 — Survey Link Construction
+
+Inside the edge function response and in the Roster frontend code, construct:
+`${appBaseUrl}/survey/doctor?id=${doctorId}`
+where `appBaseUrl` comes from `import.meta.env.VITE_APP_URL ?? window.location.origin`.
+
+### Section 3 — Edge Function Email Content
+
+The edge function accepts the POST body with `to`, `doctorName`, `doctorId`, `rotaPeriod`, `departmentName`, `hospitalName`, `surveyDeadline`, `surveyLink`. It sends an HTML email via Resend with the specified subject line, body structure, blue CTA button, grey info box, mobile-responsive layout.
+
+### Section 4 — Survey Deadline Gating
+
+In Roster, if no `surveyDeadline` is set, all send icons are disabled with a tooltip. The deadline value is formatted as "Friday, 14 March 2025" before being passed to the edge function.
+
+### Section 5 — Send Icon Behaviour
+
+Replace the existing mock send logic with:
+- Confirmation popover (using Radix Popover) on each row's send icon
+- Loading spinner during send
+- Green ✓ for 3 seconds on success
+- Red toast on error
+- Call edge function via `supabase.functions.invoke("send-survey-invite", { body: {...} })`
+
+### Section 6 — Database: `doctors` Table + Tracking Columns
+
+**Migration:** Create a `doctors` table (since none exists) with columns: `id`, `rota_config_id`, `first_name`, `last_name`, `email`, `grade`, `survey_status`, `survey_invite_sent_at`, `survey_invite_count`, `created_at`, `updated_at`. RLS: `TO public USING (true) WITH CHECK (true)`.
+
+Refactor Roster to use this table instead of local state. On successful send, update `survey_invite_sent_at` and increment `survey_invite_count`.
+
+### Section 7 — Email Column Validation
+
+Send icon disabled with tooltip if doctor has no email. Already covered by the `doctors` table having an `email` column.
+
+### Section 8 — Survey Deadline Picker + `survey_deadline` Column
+
+**Migration:** `ALTER TABLE rota_configs ADD COLUMN IF NOT EXISTS survey_deadline date;`
+
+Add a date picker (Shadcn Calendar + Popover) at the top of Roster. Min date = today, max = `rotaStartDate - 1 day`. Auto-saves to `rota_configs.survey_deadline` on change. Restores from DB on page load.
+
+### Section 9 — Dashboard Department/Hospital Fields
+
+Add a card at the top of Dashboard with two text inputs (Department name, Hospital/Trust name) and a Save button that upserts to `rota_configs.department_name` and `rota_configs.trust_name`. Pre-populate from restored config. Show inline "✓ Saved" confirmation. At send time in Roster, validate these are non-empty before allowing send.
 
 ---
 
@@ -11,46 +67,15 @@ After saving surveys and logging out/in, data doesn't reload because: (1) `rota_
 
 | File | Action |
 |---|---|
-| Migration SQL | Add `owned_by` column + index to `rota_configs` |
-| `src/lib/rotaConfig.ts` | `getCurrentRotaConfig(username)` filter by `owned_by` |
-| `src/contexts/RotaContext.tsx` | Expand to store full `RotaConfig`, use sessionStorage for `configId`, accept username for restore |
-| `src/contexts/AuthContext.tsx` | On login success, restore config from DB; on logout, clear sessionStorage + context |
-| `src/pages/admin/DepartmentStep2.tsx` | Add `owned_by` to INSERT payload |
-| `src/pages/admin/RotaPeriodStep2.tsx` | Add `owned_by` to INSERT payload |
-| `src/pages/admin/WtrStep4.tsx` | Add `owned_by` to INSERT payload |
-| `src/contexts/AdminSetupContext.tsx` | Add `restoreFromConfig(config)` to hydrate all WTR + rota period fields from a RotaConfig |
-| `src/contexts/DepartmentSetupContext.tsx` | Add `restoreFromConfig(config)` to hydrate shifts + distribution from a RotaConfig |
-| `src/pages/admin/Dashboard.tsx` | Derive ✅/○ status from restored RotaConfig instead of only volatile booleans |
+| Migration SQL | Create `doctors` table; add `survey_deadline` to `rota_configs` |
+| `supabase/functions/send-survey-invite/index.ts` | New — edge function |
+| `supabase/config.toml` | Add function config (verify_jwt = false) |
+| `src/pages/admin/Roster.tsx` | Major rewrite — DB-backed doctors, deadline picker, send popover, edge function call, status tracking |
+| `src/pages/admin/Dashboard.tsx` | Add department/hospital name fields at top |
+| `src/lib/rotaConfig.ts` | Add `surveyDeadline` to `RotaConfig` type and `getRotaConfig` |
 
----
+## Dependencies
 
-## Technical Design
-
-### Section 1 — `owned_by` column
-Migration: `ALTER TABLE rota_configs ADD COLUMN IF NOT EXISTS owned_by text NOT NULL DEFAULT 'developer1'` + index.
-
-### Section 2 — Write `owned_by` on INSERT
-In DepartmentStep2, RotaPeriodStep2, WtrStep4: add `owned_by: user.username` to the `.insert()` call (not to `.update()`). Get `user` from `useAuth()`.
-
-### Section 3 — Filter queries by user
-`getCurrentRotaConfig(username)` adds `.eq("owned_by", username)`. `useRotaConfig()` reads username from `useAuth()`.
-
-### Section 4 — Restore config on login
-Expand `RotaContext` to hold `restoredConfig: RotaConfig | null`. Add `restoreForUser(username)` async method that calls `getCurrentRotaConfig(username)`, sets `currentRotaConfigId` + `restoredConfig`, and stores ID in sessionStorage. Call this from `AuthContext` login success handler (make login async). Show "Welcome back" toast if config found.
-
-### Section 5 — Pre-populate forms
-Add `restoreFromConfig(config: RotaConfig)` methods to both `AdminSetupContext` and `DepartmentSetupContext`. These set all state fields from the config object. Call them from `RotaContext` whenever `restoredConfig` changes. Each page already reads from these contexts, so forms auto-populate.
-
-Specifically:
-- **AdminSetupContext.restoreFromConfig**: sets `rotaStartDate`, `rotaEndDate`, all WTR fields (`maxAvgWeekly`, etc.), and completion flags (`isDepartmentComplete` = shifts.length > 0, etc.)
-- **DepartmentSetupContext.restoreFromConfig**: rebuilds `shifts` array from `config.shifts`, sets `globalOncallPct`, `shiftTargetOverrides`
-- **RotaPeriodStep1**: already reads `rotaStartDate`/`rotaEndDate` from context — will auto-populate
-- **RotaPeriodStep2**: needs to check context for restored bank holidays instead of only auto-detecting — add `useEffect` that reads from `restoredConfig.rotaPeriod.bankHolidays` if available
-- **WTR steps 1-3**: already read from `AdminSetupContext` — will auto-populate
-
-### Section 6 — sessionStorage persistence
-In `RotaContext`: on every `setCurrentRotaConfigId`, write to `sessionStorage`. On mount, read from sessionStorage and validate against DB. On logout (called from AuthContext), clear sessionStorage.
-
-### Section 7 — Status indicators on Dashboard
-Dashboard already shows ✅/○ based on `isDepartmentComplete`, `isWtrComplete`, `isPeriodComplete`. The `restoreFromConfig` call in Section 5 will set these flags based on actual DB data, so Dashboard automatically reflects saved status. Add "✅ Saved" badge text when the flag is set from a restored config vs "Done" when set from a fresh save in the same session.
+- RESEND_API_KEY must be provided by user before emails can actually send
+- No npm install needed — edge function uses `npm:resend` Deno specifier
 
