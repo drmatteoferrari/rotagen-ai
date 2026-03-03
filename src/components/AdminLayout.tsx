@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { NavLink } from "@/components/NavLink";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Settings,
   CalendarDays,
@@ -9,10 +9,12 @@ import {
   Stethoscope,
   ChevronLeft,
   ChevronRight,
+  LogOut,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useAuth } from "@/contexts/AuthContext";
 
 const navItems = [
   { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
@@ -31,13 +33,20 @@ interface AdminLayoutProps {
 export function AdminLayout({ children, title, subtitle }: AdminLayoutProps) {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { user, logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login", { replace: true });
+  };
 
   if (isMobile) {
     return (
       <div className="flex min-h-screen w-full flex-col bg-background">
         {/* Header */}
-        <header className="flex h-14 items-center border-b border-border bg-card px-4">
+        <header className="flex h-14 items-center justify-between border-b border-border bg-card px-4">
           <div className="flex items-center gap-2">
             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary">
               <Stethoscope className="h-3.5 w-3.5 text-primary-foreground" />
@@ -47,6 +56,13 @@ export function AdminLayout({ children, title, subtitle }: AdminLayoutProps) {
               {subtitle && <p className="text-[11px] text-muted-foreground">{subtitle}</p>}
             </div>
           </div>
+          {user && (
+            <button onClick={handleLogout} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
+              <span>{user.username}</span>
+              <span className="text-border">|</span>
+              <span className="flex items-center gap-1">Sign out <LogOut className="h-3 w-3" /></span>
+            </button>
+          )}
         </header>
 
         {/* Content */}
@@ -126,11 +142,18 @@ export function AdminLayout({ children, title, subtitle }: AdminLayoutProps) {
 
       {/* Main Content */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        <header className="flex h-16 items-center border-b border-border bg-card px-6">
+        <header className="flex h-16 items-center justify-between border-b border-border bg-card px-6">
           <div>
             <h1 className="text-lg font-semibold text-card-foreground">{title}</h1>
             {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
           </div>
+          {user && (
+            <button onClick={handleLogout} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <span>{user.username}</span>
+              <span className="text-border">|</span>
+              <span className="flex items-center gap-1">Sign out <LogOut className="h-3.5 w-3.5" /></span>
+            </button>
+          )}
         </header>
         <main className="flex-1 overflow-y-auto p-6">{children}</main>
       </div>
