@@ -43,8 +43,8 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <AuthProvider>
         <RotaProvider>
+        <AuthProvider>
         <AdminSetupProvider>
         <DepartmentSetupProvider>
         <Routes>
@@ -71,8 +71,8 @@ const App = () => (
         </Routes>
         </DepartmentSetupProvider>
         </AdminSetupProvider>
-        </RotaProvider>
         </AuthProvider>
+        </RotaProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
