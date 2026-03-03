@@ -283,14 +283,26 @@ export default function Roster() {
                     {formattedDeadline ?? "Select deadline date"}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
+                <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
                   <Calendar
                     mode="single"
                     selected={surveyDeadline}
                     onSelect={handleDeadlineSelect}
                     disabled={(date) => {
-                      if (date < new Date(new Date().setHours(0, 0, 0, 0))) return true;
-                      if (rotaStartDate && date >= rotaStartDate) return true;
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+
+                      const picked = new Date(date);
+                      picked.setHours(0, 0, 0, 0);
+
+                      if (picked < today) return true;
+
+                      if (rotaStartDate) {
+                        const maxAllowed = subDays(rotaStartDate, 1);
+                        maxAllowed.setHours(0, 0, 0, 0);
+                        if (maxAllowed >= today && picked > maxAllowed) return true;
+                      }
+
                       return false;
                     }}
                     initialFocus
