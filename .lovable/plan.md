@@ -1,85 +1,87 @@
 
 
-# Department Setup Overhaul
+# Supabase Backend Persistence for RotaGen
 
-## Summary
-Rebuild `/admin/department/` from 3 steps to 2 steps: Step 1 becomes a collapsible card editor with inline badge logic, staffing, and day toggles. Step 2 (old step 3) gets draggable bar sliders for distribution. Step 2 (old) is deleted.
+## Field Audit Results
+
+After reading all 8 pages, here are the fields found:
+
+**DepartmentStep1 (per shift card):** name, startTime, endTime, durationHours, applicableDays {mon-sun}, isOncall, isNonRes, staffing {min, max}, badges {night, long, ooh, weekend, oncall, nonres}, badgeOverrides {same 6 keys → boolean|undefined}, oncallManuallySet
+
+**DepartmentStep2:** globalOncallPct (number 0-100), per-shift oncallOverrides and nonOncallOverrides (target percentages)
+
+**RotaPeriodStep1:** startDate, endDate (Date), startTime, endTime (HH:MM), calculated durationDays and durationWeeks
+
+**RotaPeriodStep2:** bankHolidays array [{date, name}], auto-detected flag implicit (auto-populated vs manually added)
+
+**WtrStep1:** maxAvgWeekly (default 48), maxIn7Days (default 72)
+
+**WtrStep2:** maxConsecDays (7), maxConsecLong (7), maxConsecNights (4)
+
+**WtrStep3:** restPostNights (46), restPostBlock (48), restAfter7 (48), weekendFreq (3)
+
+**WtrStep4:** Read-only locked cards — no user-editable fields. The on-call rules are fixed constants. The schema stores their default values but they are never edited by the user.
 
 ---
 
-## Files Changed
+## Implementation Plan
+
+### 1. Database Migration — 4 tables
+
+Create all tables via a single migration:
+
+**rota_configs**: id, created_at, updated_at, department_name (text, default ''), trust_name (text, default ''), contact_email (text, default ''), rota_start_date (date), rota_end_date (date), rota_duration_days (integer), rota_duration_weeks (numeric 5,1), rota_start_time (time default '08:00'), rota_end_time (time default '08:00'), global_oncall_pct (numeric 5,2 default 50), global_non_oncall_pct (numeric 5,2 default 50), status (text default 'draft')
+
+**shift_types**: All columns as specified in the prompt — id, rota_config_id (FK CASCADE), shift_key, name, start_time, end_time, duration_hours, is_oncall, is_non_res_oncall, applicable_mon-sun, badge_night/long/ooh/weekend/oncall/nonres, badge_*_manual_override (nullable boolean), oncall_manually_set (boolean default false), min_doctors, max_doctors, target_percentage, sort_order
+
+**bank_holidays**: id, rota_config_id (FK CASCADE), date, name, is_auto_added, created_at, updated_at
+
+**wtr_settings**: id, rota_config_id (FK CASCADE, UNIQUE), all WTR fields from steps 1-4 as listed in the prompt, created_at, updated_at
+
+RLS: All tables get policies allowing authenticated users full CRUD (since this is a coordinator tool, all authenticated users can manage configs). No public access.
+
+### 2. Rota Context (`src/contexts/RotaContext.tsx`)
+
+New context providing:
+- `currentRotaConfigId: string | null`
+- `setCurrentRotaConfigId: (id: string | null) => void`
+
+On mount, calls `getCurrentRotaConfig()` to restore the most recent draft/complete config ID. Wrap at app root in `App.tsx`.
+
+### 3. Save Logic — 3 save points
+
+**DepartmentStep2 save button**: Upsert rota_configs (global_oncall_pct, global_non_oncall_pct), DELETE + INSERT all shift_types. Toast on success/error.
+
+**RotaPeriodStep2 save button**: Upsert rota_configs (dates, times, duration), DELETE + INSERT all bank_holidays. Toast on success/error.
+
+**WtrStep4 save button**: Upsert rota_configs, upsert wtr_settings. Check completion status → set status='complete' if shifts exist + dates set + wtr exists. Toast on success/error.
+
+All saves use the existing `sonner` toast (already in the project via `<Sonner />`).
+
+### 4. Retrieval (`src/lib/rotaConfig.ts`)
+
+- `getRotaConfig(id)` — fetches all 4 tables, assembles typed RotaConfig object
+- `getCurrentRotaConfig()` — finds most recent draft/complete, calls getRotaConfig
+- `useRotaConfig()` hook — loading/error/refresh pattern
+
+### 5. Algorithm Input Builders (`src/lib/rotaGenInput.ts`)
+
+- `buildPreRotaInput(configId)` — transforms RotaConfig into PreRotaInput
+- `buildFinalRotaInput(configId, doctors)` — wraps PreRotaInput + doctor preferences with hard/soft constraint arrays
+- Export all types: PreRotaInput, FinalRotaInput, DoctorPreference
+
+### Files Created/Modified
 
 | File | Action |
 |---|---|
-| `src/contexts/DepartmentSetupContext.tsx` | Expand ShiftType with badge overrides, oncall manual flag, globalOncallPct; add badge auto-detection helpers |
-| `src/pages/admin/DepartmentStep1.tsx` | Full rewrite — collapsible card UI with inline editing, badge logic, day toggles, staffing |
-| `src/pages/admin/DepartmentStep2.tsx` | Delete old step-2 content, replace with distribution page (was step-3) using draggable bar sliders |
-| `src/pages/admin/DepartmentStep3.tsx` | Delete file entirely |
-| `src/App.tsx` | Remove step-3 route, update step-2 route to new distribution page |
+| Migration SQL | Create 4 tables + RLS policies |
+| `src/contexts/RotaContext.tsx` | New — config ID context |
+| `src/App.tsx` | Add RotaProvider wrapper |
+| `src/lib/rotaConfig.ts` | New — getRotaConfig, getCurrentRotaConfig, useRotaConfig |
+| `src/lib/rotaGenInput.ts` | New — buildPreRotaInput, buildFinalRotaInput, types |
+| `src/pages/admin/DepartmentStep2.tsx` | Add save logic to existing button |
+| `src/pages/admin/RotaPeriodStep2.tsx` | Add save logic to existing button |
+| `src/pages/admin/WtrStep4.tsx` | Add save logic to existing button |
 
----
-
-## Technical Design
-
-### Context Changes (`DepartmentSetupContext`)
-
-Extend `ShiftType`:
-- `badges`: add `oncall` and `nonres` booleans (6 total)
-- `badgeOverrides`: `Record<string, boolean | undefined>` — tracks manual overrides per badge key
-- `oncallManuallySet`: boolean — tracks if user manually touched the on-call radio
-- `staffing.max`: number | null (with checkbox to enable)
-
-Add to context:
-- `globalOncallPct` (default 50) + setter
-- `shiftTargetOverrides`: `Record<string, number | undefined>` — manual % overrides per shift
-- Badge auto-detection function: given a shift's times and days, compute all 6 badge values
-- `expandedShiftId` state (only one card expanded at a time)
-
-### Badge Auto-Detection Logic (pure function)
-
-```
-detectBadges(startTime, endTime, days, isOncall, isNonRes) → badges
-```
-
-- **NIGHT**: Calculate overlap of shift with 23:00–06:00 window (handling midnight crossing). ≥180 min → true
-- **LONG**: durationHours > 10
-- **OOH**: any minutes in 19:00–07:00, or Sat/Sun selected
-- **WEEKEND**: Sat or Sun selected
-- **ON-CALL**: mirrors isOncall
-- **NON-RES**: mirrors isNonRes
-
-### Step 1 — Collapsible Cards
-
-Each card renders collapsed by default showing name, time range, duration, badge row (read-only), edit/remove buttons.
-
-Expanding a card (click card or edit button) shows the full form. Collapsing any other expanded card first.
-
-Fields in expanded state:
-- Inline name input
-- Start/end time pickers + read-only duration
-- 7 day toggle buttons (M T W T F S S) — any combo, min 1
-- Resident on-call / Non-res on-call radios
-- Min doctors (0–50), optional max doctors (checkbox-gated)
-- Badge row with toggle behavior (auto ⚡ vs manual ✏️)
-- Save/Cancel buttons
-
-On every change to times/days: recalculate badges, auto-set on-call if not manually touched.
-
-### Step 2 — Distribution (replaces old step-3)
-
-**Global split bar**: A draggable horizontal bar showing on-call % vs non-on-call %. Controlled by both drag and number input.
-
-**Per-shift bars**: Two sections (on-call shifts, non-on-call shifts). Each shift gets a horizontal bar. Auto-calculated as equal share by default. Dragging overrides. Non-overridden shifts redistribute proportionally. Reset button per shift and per section.
-
-Total validation: each group must sum to 100% (±0.5).
-
-### Validation on Save (Step 2)
-- ≥1 shift exists
-- Every shift has name, start, end (start ≠ end), ≥1 day selected
-- On-call group totals 100% if any on-call shifts exist
-- Non-on-call group totals 100% if any non-on-call shifts exist
-
-### Routing Changes (App.tsx)
-- Remove `/admin/department/step-3` route and `DepartmentStep3` import
-- Keep `/admin/department/step-2` route pointing to the new distribution component (rewritten DepartmentStep2)
+No UI changes. No styling changes. Toast uses existing sonner.
 
