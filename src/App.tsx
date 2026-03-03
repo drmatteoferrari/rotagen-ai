@@ -21,12 +21,7 @@ import WtrStep1 from "./pages/admin/WtrStep1";
 import WtrStep2 from "./pages/admin/WtrStep2";
 import WtrStep3 from "./pages/admin/WtrStep3";
 import WtrStep4 from "./pages/admin/WtrStep4";
-import SurveyStep1 from "./pages/doctor/SurveyStep1";
-import SurveyStep2 from "./pages/doctor/SurveyStep2";
-import SurveyStep3 from "./pages/doctor/SurveyStep3";
-import SurveyStep4 from "./pages/doctor/SurveyStep4";
-import SurveyStep5 from "./pages/doctor/SurveyStep5";
-import SurveyStep6 from "./pages/doctor/SurveyStep6";
+import Survey from "./pages/doctor/Survey";
 import SurveyOverride from "./pages/admin/SurveyOverride";
 
 const queryClient = new QueryClient();
@@ -61,12 +56,8 @@ const App = () => (
           <Route path="/admin/wtr/step-4" element={<ProtectedRoute><WtrStep4 /></ProtectedRoute>} />
           <Route path="/admin/roster" element={<ProtectedRoute><Roster /></ProtectedRoute>} />
           <Route path="/admin/survey-override/:doctorId/:step" element={<ProtectedRoute><SurveyOverride /></ProtectedRoute>} />
-          <Route path="/doctor/survey/1" element={<ProtectedRoute><SurveyStep1 /></ProtectedRoute>} />
-          <Route path="/doctor/survey/2" element={<ProtectedRoute><SurveyStep2 /></ProtectedRoute>} />
-          <Route path="/doctor/survey/3" element={<ProtectedRoute><SurveyStep3 /></ProtectedRoute>} />
-          <Route path="/doctor/survey/4" element={<ProtectedRoute><SurveyStep4 /></ProtectedRoute>} />
-          <Route path="/doctor/survey/5" element={<ProtectedRoute><SurveyStep5 /></ProtectedRoute>} />
-          <Route path="/doctor/survey/6" element={<ProtectedRoute><SurveyStep6 /></ProtectedRoute>} />
+          {/* Doctor survey — token-based, no auth required */}
+          <Route path="/doctor/survey" element={<Survey />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
         </DepartmentSetupProvider>

@@ -79,6 +79,162 @@ export type Database = {
           },
         ]
       }
+      doctor_survey_responses: {
+        Row: {
+          additional_notes: string | null
+          additional_restrictions: string | null
+          annual_leave: Json | null
+          comp_icu: boolean | null
+          comp_icu_here: boolean | null
+          comp_ip_anaesthesia: boolean | null
+          comp_ip_anaesthesia_here: boolean | null
+          comp_obstetric: boolean | null
+          comp_obstetric_here: boolean | null
+          competencies_json: Json | null
+          confirmed_accurate: boolean | null
+          created_at: string | null
+          dates_to_avoid: string[] | null
+          doctor_id: string
+          exempt_from_nights: boolean | null
+          exempt_from_oncall: boolean | null
+          exempt_from_weekends: boolean | null
+          exemption_details: string | null
+          full_name: string | null
+          grade: string | null
+          id: string
+          last_saved_at: string | null
+          ltft_days_off: string[] | null
+          ltft_night_flexibility: Json | null
+          nhs_email: string | null
+          noc_dates: Json | null
+          other_requests: string | null
+          other_unavailability: Json | null
+          pain_session_notes: string | null
+          preferred_days_off: string[] | null
+          preferred_shift_types: string[] | null
+          rota_config_id: string
+          signoff_requirements: string | null
+          specialties_requested: Json | null
+          specialty: string | null
+          specific_days_off: string[] | null
+          status: string | null
+          study_leave: Json | null
+          submitted_at: string | null
+          updated_at: string | null
+          want_pain_sessions: boolean | null
+          want_preop: boolean | null
+          wte_other_value: number | null
+          wte_percent: number | null
+        }
+        Insert: {
+          additional_notes?: string | null
+          additional_restrictions?: string | null
+          annual_leave?: Json | null
+          comp_icu?: boolean | null
+          comp_icu_here?: boolean | null
+          comp_ip_anaesthesia?: boolean | null
+          comp_ip_anaesthesia_here?: boolean | null
+          comp_obstetric?: boolean | null
+          comp_obstetric_here?: boolean | null
+          competencies_json?: Json | null
+          confirmed_accurate?: boolean | null
+          created_at?: string | null
+          dates_to_avoid?: string[] | null
+          doctor_id: string
+          exempt_from_nights?: boolean | null
+          exempt_from_oncall?: boolean | null
+          exempt_from_weekends?: boolean | null
+          exemption_details?: string | null
+          full_name?: string | null
+          grade?: string | null
+          id?: string
+          last_saved_at?: string | null
+          ltft_days_off?: string[] | null
+          ltft_night_flexibility?: Json | null
+          nhs_email?: string | null
+          noc_dates?: Json | null
+          other_requests?: string | null
+          other_unavailability?: Json | null
+          pain_session_notes?: string | null
+          preferred_days_off?: string[] | null
+          preferred_shift_types?: string[] | null
+          rota_config_id: string
+          signoff_requirements?: string | null
+          specialties_requested?: Json | null
+          specialty?: string | null
+          specific_days_off?: string[] | null
+          status?: string | null
+          study_leave?: Json | null
+          submitted_at?: string | null
+          updated_at?: string | null
+          want_pain_sessions?: boolean | null
+          want_preop?: boolean | null
+          wte_other_value?: number | null
+          wte_percent?: number | null
+        }
+        Update: {
+          additional_notes?: string | null
+          additional_restrictions?: string | null
+          annual_leave?: Json | null
+          comp_icu?: boolean | null
+          comp_icu_here?: boolean | null
+          comp_ip_anaesthesia?: boolean | null
+          comp_ip_anaesthesia_here?: boolean | null
+          comp_obstetric?: boolean | null
+          comp_obstetric_here?: boolean | null
+          competencies_json?: Json | null
+          confirmed_accurate?: boolean | null
+          created_at?: string | null
+          dates_to_avoid?: string[] | null
+          doctor_id?: string
+          exempt_from_nights?: boolean | null
+          exempt_from_oncall?: boolean | null
+          exempt_from_weekends?: boolean | null
+          exemption_details?: string | null
+          full_name?: string | null
+          grade?: string | null
+          id?: string
+          last_saved_at?: string | null
+          ltft_days_off?: string[] | null
+          ltft_night_flexibility?: Json | null
+          nhs_email?: string | null
+          noc_dates?: Json | null
+          other_requests?: string | null
+          other_unavailability?: Json | null
+          pain_session_notes?: string | null
+          preferred_days_off?: string[] | null
+          preferred_shift_types?: string[] | null
+          rota_config_id?: string
+          signoff_requirements?: string | null
+          specialties_requested?: Json | null
+          specialty?: string | null
+          specific_days_off?: string[] | null
+          status?: string | null
+          study_leave?: Json | null
+          submitted_at?: string | null
+          updated_at?: string | null
+          want_pain_sessions?: boolean | null
+          want_preop?: boolean | null
+          wte_other_value?: number | null
+          wte_percent?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doctor_survey_responses_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doctor_survey_responses_rota_config_id_fkey"
+            columns: ["rota_config_id"]
+            isOneToOne: false
+            referencedRelation: "rota_configs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       doctors: {
         Row: {
           created_at: string | null
@@ -91,6 +247,8 @@ export type Database = {
           survey_invite_count: number | null
           survey_invite_sent_at: string | null
           survey_status: string | null
+          survey_submitted_at: string | null
+          survey_token: string | null
           updated_at: string | null
         }
         Insert: {
@@ -104,6 +262,8 @@ export type Database = {
           survey_invite_count?: number | null
           survey_invite_sent_at?: string | null
           survey_status?: string | null
+          survey_submitted_at?: string | null
+          survey_token?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -117,6 +277,8 @@ export type Database = {
           survey_invite_count?: number | null
           survey_invite_sent_at?: string | null
           survey_status?: string | null
+          survey_submitted_at?: string | null
+          survey_token?: string | null
           updated_at?: string | null
         }
         Relationships: [

@@ -1,4 +1,5 @@
 import { getRotaConfig, type RotaConfig } from "./rotaConfig";
+import { supabase } from "@/integrations/supabase/client";
 
 // SECTION 8 — Pre-rota generation input builder
 
@@ -199,6 +200,46 @@ export interface FinalRotaInput {
   };
 }
 
+// SECTION 10 — Survey response type
+export interface DoctorSurveyResponse {
+  id: string;
+  doctor_id: string;
+  rota_config_id: string;
+  full_name: string | null;
+  nhs_email: string | null;
+  grade: string | null;
+  specialty: string | null;
+  wte_percent: number;
+  ltft_days_off: string[] | null;
+  ltft_night_flexibility: any[];
+  annual_leave: any[];
+  study_leave: any[];
+  noc_dates: any[];
+  exempt_from_nights: boolean;
+  exempt_from_weekends: boolean;
+  exempt_from_oncall: boolean;
+  other_requests: string | null;
+  additional_restrictions: string | null;
+  additional_notes: string | null;
+  status: string;
+  submitted_at: string | null;
+}
+
+export async function getSurveyResponsesForConfig(configId: string): Promise<DoctorSurveyResponse[]> {
+  const { data, error } = await supabase
+    .from("doctor_survey_responses")
+    .select("*")
+    .eq("rota_config_id", configId);
+
+  if (error) {
+    console.error("Failed to fetch survey responses:", error);
+    return [];
+  }
+  return (data ?? []) as DoctorSurveyResponse[];
+}
+
+// SECTION 10 COMPLETE
+
 function expandDateRange(start: string, end: string): string[] {
   const dates: string[] = [];
   const d = new Date(start);
@@ -210,12 +251,48 @@ function expandDateRange(start: string, end: string): string[] {
   return dates;
 }
 
-export async function buildFinalRotaInput(
-  configId: string,
-  doctors: DoctorPreference[],
-): Promise<FinalRotaInput> {
+function mapResponseToPreference(resp: DoctorSurveyResponse): DoctorPreference {
+  const annualLeave = Array.isArray(resp.annual_leave) ? resp.annual_leave : [];
+  const studyLeave = Array.isArray(resp.study_leave) ? resp.study_leave : [];
+  const nocDates = Array.isArray(resp.noc_dates)
+    ? resp.noc_dates.map((n: any) => typeof n === "string" ? n : n?.date ?? "")
+    : [];
+  const ltftNightFlex = Array.isArray(resp.ltft_night_flexibility) ? resp.ltft_night_flexibility : [];
+
+  return {
+    doctorId: resp.doctor_id,
+    name: resp.full_name ?? "",
+    grade: resp.grade ?? "",
+    wtePct: resp.wte_percent ?? 100,
+    ltftDaysOff: resp.ltft_days_off ?? [],
+    ltftNightFlexibility: ltftNightFlex,
+    maxConsecNights: 4,
+    annualLeave: annualLeave.map((l: any) => ({
+      startDate: l.startDate ?? l.start_date ?? "",
+      endDate: l.endDate ?? l.end_date ?? "",
+      notes: l.notes ?? "",
+    })),
+    studyLeave: studyLeave.map((l: any) => ({
+      startDate: l.startDate ?? l.start_date ?? "",
+      endDate: l.endDate ?? l.end_date ?? "",
+      reason: l.reason ?? "",
+    })),
+    nocDates,
+    exemptFromNights: resp.exempt_from_nights ?? false,
+    exemptFromWeekends: resp.exempt_from_weekends ?? false,
+    exemptFromOncall: resp.exempt_from_oncall ?? false,
+    additionalNotes: [resp.other_requests, resp.additional_restrictions].filter(Boolean).join("\n"),
+  };
+}
+
+export async function buildFinalRotaInput(configId: string): Promise<FinalRotaInput> {
   const preRotaInput = await buildPreRotaInput(configId);
   const totalWeeks = preRotaInput.period.totalWeeks || 1;
+
+  // Fetch submitted survey responses
+  const responses = await getSurveyResponsesForConfig(configId);
+  const submittedResponses = responses.filter((r) => r.status === "submitted");
+  const doctors = submittedResponses.map(mapResponseToPreference);
 
   const totalNightSlots = preRotaInput.shiftSlots
     .filter((s) => s.badges.includes("night"))
