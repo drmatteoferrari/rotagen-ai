@@ -12,7 +12,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  Copy, Trash2, UserPlus, Send, Users, Pencil, CalendarIcon, Loader2, Check, AlertTriangle,
+  Copy, Trash2, UserPlus, Send, Users, Pencil, CalendarIcon, Loader2, Check, AlertTriangle, Link2, ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -20,6 +20,8 @@ import { format, subDays, parseISO } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useRotaContext } from "@/contexts/RotaContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { buildSurveyLink } from "@/lib/surveyLinks";
+import { SurveyResponsePanel } from "@/components/SurveyResponsePanel";
 
 // SECTION 6 — Doctor interface from DB
 interface Doctor {
@@ -32,6 +34,8 @@ interface Doctor {
   survey_status: string;
   survey_invite_sent_at: string | null;
   survey_invite_count: number;
+  survey_token: string | null;
+  survey_submitted_at: string | null;
 }
 // SECTION 6 COMPLETE
 
@@ -58,7 +62,14 @@ export default function Roster() {
   const [successId, setSuccessId] = useState<string | null>(null);
   const [popoverId, setPopoverId] = useState<string | null>(null);
 
-  // Rota period info from restored config — parse as local date to avoid UTC timezone shift
+  // SECTION 8 — Edit panel state
+  const [editDoctor, setEditDoctor] = useState<Doctor | null>(null);
+  const [editPanelOpen, setEditPanelOpen] = useState(false);
+
+  // Copy tooltip state
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  // Rota period info from restored config
   const rotaStartDate = restoredConfig?.rotaPeriod?.startDate
     ? (() => { const [y, m, d] = restoredConfig.rotaPeriod.startDate!.split("-").map(Number); return new Date(y, m - 1, d); })()
     : null;
@@ -106,7 +117,7 @@ export default function Roster() {
       last_name: lastName,
       email,
       grade: "—",
-      survey_status: "not_sent",
+      survey_status: "not_started",
     });
     if (error) { toast.error("Failed to add doctor"); console.error(error); return; }
     setFirstName(""); setLastName(""); setEmail("");
@@ -135,24 +146,16 @@ export default function Roster() {
   };
   // SECTION 8 COMPLETE
 
-  // SECTION 2 — Survey link construction
-  const buildSurveyLink = (doctorId: string) => {
-    const base = (import.meta.env.VITE_APP_URL as string | undefined) ?? window.location.origin;
-    return `${base}/survey/doctor?id=${doctorId}`;
-  };
-  // SECTION 2 COMPLETE
-
   // SECTION 4 — Formatted deadline for email
   const formattedDeadline = surveyDeadline
     ? format(surveyDeadline, "EEEE, d MMMM yyyy")
     : null;
   // SECTION 4 COMPLETE
 
-  // SECTION 5 — Send invite handler
+  // SECTION 5 — Send invite handler (SECTION 9 — uses token-based URL)
   const sendInvite = async (doctor: Doctor) => {
     setPopoverId(null);
 
-    // SECTION 9 — Validate department/hospital
     if (!departmentName || !hospitalName) {
       toast.error("Please set your department and hospital name on the Dashboard before sending invites.");
       return;
@@ -162,7 +165,8 @@ export default function Roster() {
 
     setSendingId(doctor.id);
 
-    const surveyLink = buildSurveyLink(doctor.id);
+    // SECTION 9 — Use real token-based URL
+    const surveyLink = doctor.survey_token ? buildSurveyLink(doctor.survey_token) : "";
 
     const body = {
       to: doctor.email,
@@ -189,13 +193,12 @@ export default function Roster() {
       if (error) throw error;
       if (data && !data.success) throw new Error(data.error ?? "Send failed");
 
-      // SECTION 6 — Update tracking columns
       await supabase
         .from("doctors")
         .update({
           survey_invite_sent_at: new Date().toISOString(),
           survey_invite_count: (doctor.survey_invite_count ?? 0) + 1,
-          survey_status: "pending",
+          survey_status: doctor.survey_status === "not_started" ? "not_started" : doctor.survey_status,
         })
         .eq("id", doctor.id);
 
@@ -217,24 +220,39 @@ export default function Roster() {
   // SECTION 9 COMPLETE
 
   const copyMagicLink = (doctor: Doctor) => {
-    const link = buildSurveyLink(doctor.id);
+    if (!doctor.survey_token) { toast.error("No survey token available"); return; }
+    const link = buildSurveyLink(doctor.survey_token);
     navigator.clipboard.writeText(link);
-    toast.success("Survey link copied to clipboard");
+    setCopiedId(doctor.id);
+    setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const completed = doctors.filter((d) => d.survey_status === "completed").length;
-  const pending = doctors.filter((d) => d.survey_status === "pending").length;
+  // SECTION 7 — Survey status counts
+  const submitted = doctors.filter((d) => d.survey_status === "submitted").length;
+  const inProgress = doctors.filter((d) => d.survey_status === "in_progress").length;
+  const notStarted = doctors.filter((d) => !["submitted", "in_progress"].includes(d.survey_status)).length;
 
-  const statusBadge = (status: string) => {
-    switch (status) {
-      case "completed":
-        return <Badge className="bg-emerald-500/15 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/20">✅ Completed</Badge>;
-      case "pending":
-        return <Badge className="bg-amber-500/15 text-amber-600 border-amber-500/20 hover:bg-amber-500/20">🟡 Pending</Badge>;
+  // SECTION 7 — Status badge
+  const statusBadge = (doctor: Doctor) => {
+    switch (doctor.survey_status) {
+      case "submitted":
+        return (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Badge className="bg-emerald-500/15 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/20">✅ Submitted</Badge>
+            </TooltipTrigger>
+            {doctor.survey_submitted_at && (
+              <TooltipContent>{format(parseISO(doctor.survey_submitted_at), "d MMM yyyy, HH:mm")}</TooltipContent>
+            )}
+          </Tooltip>
+        );
+      case "in_progress":
+        return <Badge className="bg-amber-500/15 text-amber-600 border-amber-500/20 hover:bg-amber-500/20">✏️ In progress</Badge>;
       default:
-        return <Badge className="bg-muted text-muted-foreground border-border hover:bg-muted">⚪ Not Sent</Badge>;
+        return <Badge className="bg-muted text-muted-foreground border-border hover:bg-muted">○ Not started</Badge>;
     }
   };
+  // SECTION 7 COMPLETE
 
   // SECTION 7 — Determine send icon state
   const getSendIconState = (doctor: Doctor): {
@@ -260,13 +278,12 @@ export default function Roster() {
     }
     return { disabled: false, tooltip: "Send survey invite", color: "", badge: null };
   };
-  // SECTION 7 COMPLETE
 
   return (
     <AdminLayout title="Roster & Invites" subtitle="Build the team and send survey invitations">
       <div className="mx-auto max-w-5xl space-y-6">
 
-        {/* SECTION 8 — Deadline picker */}
+        {/* Deadline picker */}
         <Card>
           <CardContent className="pt-6">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
@@ -295,18 +312,14 @@ export default function Roster() {
                     disabled={(date) => {
                       const today = new Date();
                       today.setHours(0, 0, 0, 0);
-
                       const picked = new Date(date);
                       picked.setHours(0, 0, 0, 0);
-
                       if (picked < today) return true;
-
                       if (rotaStartDate) {
                         const maxAllowed = subDays(rotaStartDate, 1);
                         maxAllowed.setHours(0, 0, 0, 0);
                         if (maxAllowed >= today && picked > maxAllowed) return true;
                       }
-
                       return false;
                     }}
                     initialFocus
@@ -316,18 +329,18 @@ export default function Roster() {
               </Popover>
             </div>
             <p className="text-xs text-muted-foreground mt-2">
-              Doctors will be asked to submit their preferences by this date. This date appears in all survey invite emails.
+              Doctors will be asked to submit their preferences by this date.
             </p>
             {!rotaStartDate && (
               <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
                 <AlertTriangle className="h-3 w-3" />
-                Rota start date not set — set it in Rota Period settings to restrict this date automatically.
+                Rota start date not set — set it in Rota Period settings.
               </p>
             )}
           </CardContent>
         </Card>
 
-        {/* Summary */}
+        {/* SECTION 7 — Summary with new statuses */}
         <div className="grid gap-4 sm:grid-cols-3">
           <Card>
             <CardContent className="flex items-center gap-4 pt-6">
@@ -343,26 +356,33 @@ export default function Roster() {
           <Card>
             <CardContent className="flex items-center gap-4 pt-6">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/10">
-                <Send className="h-5 w-5 text-emerald-500" />
+                <Check className="h-5 w-5 text-emerald-500" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-card-foreground">{completed}</p>
-                <p className="text-xs text-muted-foreground">Completed</p>
+                <p className="text-2xl font-bold text-card-foreground">{submitted}</p>
+                <p className="text-xs text-muted-foreground">Submitted</p>
               </div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="flex items-center gap-4 pt-6">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/10">
-                <UserPlus className="h-5 w-5 text-amber-500" />
+                <Pencil className="h-5 w-5 text-amber-500" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-card-foreground">{pending}</p>
-                <p className="text-xs text-muted-foreground">Pending</p>
+                <p className="text-2xl font-bold text-card-foreground">{inProgress}</p>
+                <p className="text-xs text-muted-foreground">In Progress</p>
               </div>
             </CardContent>
           </Card>
         </div>
+
+        {/* Aggregate summary text */}
+        {doctors.length > 0 && (
+          <p className="text-sm text-muted-foreground text-center">
+            Survey responses: <span className="font-semibold text-emerald-600">{submitted} submitted</span> / <span className="font-semibold text-amber-600">{inProgress} in progress</span> / <span className="font-semibold">{notStarted} not started</span> out of {doctors.length} doctors
+          </p>
+        )}
 
         {/* Add doctor + table */}
         <Card>
@@ -404,16 +424,17 @@ export default function Roster() {
                     const sendState = getSendIconState(doctor);
                     const isSending = sendingId === doctor.id;
                     const isSuccess = successId === doctor.id;
+                    const isCopied = copiedId === doctor.id;
 
                     return (
                       <TableRow key={doctor.id}>
                         <TableCell className="font-medium">{doctor.first_name} {doctor.last_name}</TableCell>
                         <TableCell className="text-muted-foreground">{doctor.email ?? "—"}</TableCell>
                         <TableCell>{doctor.grade}</TableCell>
-                        <TableCell>{statusBadge(doctor.survey_status)}</TableCell>
+                        <TableCell>{statusBadge(doctor)}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1">
-                            {/* SECTION 5 — Send icon with popover */}
+                            {/* Send icon with popover */}
                             {isSending ? (
                               <Button variant="ghost" size="icon" disabled>
                                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -468,43 +489,58 @@ export default function Roster() {
                                       </p>
                                     )}
                                     <div className="flex gap-2 justify-end">
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => setPopoverId(null)}
-                                      >
-                                        Cancel
-                                      </Button>
-                                      <Button
-                                        size="sm"
-                                        onClick={() => sendInvite(doctor)}
-                                      >
-                                        Send
-                                      </Button>
+                                      <Button variant="ghost" size="sm" onClick={() => setPopoverId(null)}>Cancel</Button>
+                                      <Button size="sm" onClick={() => sendInvite(doctor)}>Send</Button>
                                     </div>
                                   </div>
                                 </PopoverContent>
                               </Popover>
                             )}
 
+                            {/* SECTION 2 — Copy link with Copied! feedback */}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => copyMagicLink(doctor)}
+                                  title="Copy survey link"
+                                >
+                                  {isCopied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>{isCopied ? "Copied!" : doctor.survey_token ? buildSurveyLink(doctor.survey_token) : "No token"}</TooltipContent>
+                            </Tooltip>
+
+                            {/* SECTION 2 — Open survey in new tab */}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => doctor.survey_token && window.open(buildSurveyLink(doctor.survey_token), "_blank")}
+                                  disabled={!doctor.survey_token}
+                                  title="Open survey"
+                                >
+                                  <ExternalLink className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Open survey in new tab</TooltipContent>
+                            </Tooltip>
+                            {/* SECTION 2 COMPLETE */}
+
+                            {/* SECTION 8 — Edit button opens slide-over panel */}
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => copyMagicLink(doctor)}
-                              title="Copy survey link"
-                            >
-                              <Copy className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => navigate(`/admin/survey-override/${doctor.id}/1`)}
-                              title="Admin override — edit survey"
-                              disabled={doctor.survey_status !== "completed"}
-                              className={doctor.survey_status === "completed" ? "text-amber-600 hover:text-amber-700" : ""}
+                              onClick={() => { setEditDoctor(doctor); setEditPanelOpen(true); }}
+                              title="Edit survey responses"
+                              className={doctor.survey_status === "submitted" ? "text-amber-600 hover:text-amber-700" : ""}
                             >
                               <Pencil className="h-4 w-4" />
                             </Button>
+                            {/* SECTION 8 COMPLETE */}
+
                             <Button
                               variant="ghost"
                               size="icon"
@@ -539,6 +575,14 @@ export default function Roster() {
           </CardContent>
         </Card>
       </div>
+
+      {/* SECTION 8 — Edit panel */}
+      <SurveyResponsePanel
+        doctor={editDoctor}
+        open={editPanelOpen}
+        onClose={() => setEditPanelOpen(false)}
+        onSaved={() => loadDoctors()}
+      />
     </AdminLayout>
   );
 }
