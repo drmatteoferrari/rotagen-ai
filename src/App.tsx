@@ -13,7 +13,6 @@ import RotaPeriodStep1 from "./pages/admin/RotaPeriodStep1";
 import RotaPeriodStep2 from "./pages/admin/RotaPeriodStep2";
 import DepartmentStep1 from "./pages/admin/DepartmentStep1";
 import DepartmentStep2 from "./pages/admin/DepartmentStep2";
-import DepartmentStep3 from "./pages/admin/DepartmentStep3";
 import WtrStep1 from "./pages/admin/WtrStep1";
 import WtrStep2 from "./pages/admin/WtrStep2";
 import WtrStep3 from "./pages/admin/WtrStep3";
@@ -43,7 +42,6 @@ const App = () => (
           <Route path="/admin/rota-period/step-2" element={<RotaPeriodStep2 />} />
           <Route path="/admin/department/step-1" element={<DepartmentStep1 />} />
           <Route path="/admin/department/step-2" element={<DepartmentStep2 />} />
-          <Route path="/admin/department/step-3" element={<DepartmentStep3 />} />
           <Route path="/admin/wtr/step-1" element={<WtrStep1 />} />
           <Route path="/admin/wtr/step-2" element={<WtrStep2 />} />
           <Route path="/admin/wtr/step-3" element={<WtrStep3 />} />
