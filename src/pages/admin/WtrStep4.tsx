@@ -1,8 +1,12 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "@/components/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, CheckCircle, Lock } from "lucide-react";
 import { useAdminSetup } from "@/contexts/AdminSetupContext";
+import { useRotaContext } from "@/contexts/RotaContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const onCallCards = [
   {
@@ -30,6 +34,8 @@ const onCallCards = [
 export default function WtrStep4() {
   const navigate = useNavigate();
   const { setWtrComplete } = useAdminSetup();
+  const { currentRotaConfigId, setCurrentRotaConfigId } = useRotaContext();
+  const [saving, setSaving] = useState(false);
 
   return (
     <AdminLayout title="WTR Setup" subtitle="Step 4 of 4 — On-Call Rules">
@@ -76,8 +82,112 @@ export default function WtrStep4() {
           <Button variant="outline" size="lg" onClick={() => navigate("/admin/wtr/step-3")}>
             <ArrowLeft className="mr-2 h-4 w-4" />Back
           </Button>
-          <Button size="lg" onClick={() => { setWtrComplete(true); navigate("/admin/dashboard"); }} className="bg-red-500 hover:bg-red-600">
-            <CheckCircle className="mr-2 h-4 w-4" />Save WTR Configuration
+          <Button size="lg" disabled={saving} onClick={async () => {
+            // SECTION 6 — Save on /admin/wtr/step-4
+            setSaving(true);
+            try {
+              let configId = currentRotaConfigId;
+
+              if (!configId) {
+                const { data, error } = await supabase
+                  .from("rota_configs")
+                  .insert({})
+                  .select("id")
+                  .single();
+                if (error) throw error;
+                configId = data.id;
+                setCurrentRotaConfigId(configId);
+              } else {
+                await supabase
+                  .from("rota_configs")
+                  .update({ updated_at: new Date().toISOString() })
+                  .eq("id", configId);
+              }
+
+              // Upsert wtr_settings (all defaults from the locked on-call rules)
+              const wtrFields = {
+                rota_config_id: configId,
+                max_hours_per_week: 48,
+                max_hours_per_168h: 72,
+                max_consec_standard: 7,
+                max_consec_long: 7,
+                max_consec_nights: 4,
+                rest_after_nights_h: 46,
+                rest_after_long_h: 48,
+                rest_after_standard_h: 48,
+                weekend_frequency: 3,
+                oncall_no_consec_except_wknd: true,
+                oncall_max_per_7_days: 3,
+                oncall_local_agreement_max_consec: 7,
+                oncall_day_after_max_hours: 10,
+                oncall_rest_per_24h: 8,
+                oncall_continuous_rest_hours: 5,
+                oncall_continuous_rest_start: "22:00",
+                oncall_continuous_rest_end: "07:00",
+                oncall_if_rest_not_met_max_hours: 5,
+                oncall_no_simultaneous_shift: true,
+                oncall_break_fine_threshold_pct: 25,
+                oncall_break_reference_weeks: 4,
+                oncall_clinical_exception_allowed: true,
+                oncall_saturday_sunday_paired: true,
+                oncall_day_after_last_consec_max_h: 10,
+              };
+
+              // Check if wtr_settings exists
+              const { data: existing } = await supabase
+                .from("wtr_settings")
+                .select("id")
+                .eq("rota_config_id", configId)
+                .maybeSingle();
+
+              if (existing) {
+                const { error } = await supabase
+                  .from("wtr_settings")
+                  .update({ ...wtrFields, updated_at: new Date().toISOString() })
+                  .eq("id", existing.id);
+                if (error) throw error;
+              } else {
+                const { error } = await supabase
+                  .from("wtr_settings")
+                  .insert(wtrFields);
+                if (error) throw error;
+              }
+
+              // Check completion status
+              const { count: shiftCount } = await supabase
+                .from("shift_types")
+                .select("id", { count: "exact", head: true })
+                .eq("rota_config_id", configId);
+
+              const { data: configRow } = await supabase
+                .from("rota_configs")
+                .select("rota_start_date")
+                .eq("id", configId)
+                .single();
+
+              const isComplete = (shiftCount ?? 0) > 0 && configRow?.rota_start_date != null;
+
+              if (isComplete) {
+                await supabase
+                  .from("rota_configs")
+                  .update({ status: "complete", updated_at: new Date().toISOString() })
+                  .eq("id", configId);
+                toast.success("✓ Setup complete — all configuration saved. Ready to generate rota.");
+              } else {
+                toast.success("✓ WTR settings saved");
+              }
+
+              setWtrComplete(true);
+              navigate("/admin/dashboard");
+              // SECTION 6 COMPLETE
+            } catch (err: any) {
+              console.error("WTR save failed:", err);
+              toast.error("Save failed — please try again");
+            } finally {
+              setSaving(false);
+            }
+          }} className="bg-red-500 hover:bg-red-600">
+            <CheckCircle className="mr-2 h-4 w-4" />{saving ? "Saving…" : "Save WTR Configuration"}
           </Button>
         </div>
       </div>

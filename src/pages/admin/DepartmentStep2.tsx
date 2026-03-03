@@ -7,6 +7,9 @@ import { Label } from "@/components/ui/label";
 import { ArrowLeft, AlertTriangle, CheckCircle2, RotateCcw, Info } from "lucide-react";
 import { useAdminSetup } from "@/contexts/AdminSetupContext";
 import { useDepartmentSetup } from "@/contexts/DepartmentSetupContext";
+import { useRotaContext } from "@/contexts/RotaContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 /* ─── Draggable bar component ─── */
 function DragBar({
@@ -227,6 +230,8 @@ export default function DepartmentStep2() {
   const navigate = useNavigate();
   const { setDepartmentComplete } = useAdminSetup();
   const { shifts, globalOncallPct, setGlobalOncallPct, shiftTargetOverrides, setShiftTargetOverrides } = useDepartmentSetup();
+  const { currentRotaConfigId, setCurrentRotaConfigId } = useRotaContext();
+  const [saving, setSaving] = useState(false);
 
   const oncallShifts = useMemo(() => shifts.filter((s) => s.isOncall).map((s) => ({ id: s.id, name: s.name })), [shifts]);
   const nonOncallShifts = useMemo(() => shifts.filter((s) => !s.isOncall).map((s) => ({ id: s.id, name: s.name })), [shifts]);
@@ -321,14 +326,110 @@ export default function DepartmentStep2() {
           </Button>
           <Button
             size="lg"
-            disabled={!canSave}
-            onClick={() => {
-              setDepartmentComplete(true);
-              navigate("/admin/dashboard");
+            disabled={!canSave || saving}
+            onClick={async () => {
+              setSaving(true);
+              try {
+                // SECTION 4 — Save on /admin/department/step-2
+                const nonOncallPct = 100 - globalOncallPct;
+                let configId = currentRotaConfigId;
+
+                if (!configId) {
+                  const { data, error } = await supabase
+                    .from("rota_configs")
+                    .insert({ global_oncall_pct: globalOncallPct, global_non_oncall_pct: nonOncallPct })
+                    .select("id")
+                    .single();
+                  if (error) throw error;
+                  configId = data.id;
+                  setCurrentRotaConfigId(configId);
+                } else {
+                  const { error } = await supabase
+                    .from("rota_configs")
+                    .update({ global_oncall_pct: globalOncallPct, global_non_oncall_pct: nonOncallPct, updated_at: new Date().toISOString() })
+                    .eq("id", configId);
+                  if (error) throw error;
+                }
+
+                // Delete existing shift_types
+                await supabase.from("shift_types").delete().eq("rota_config_id", configId);
+
+                // Compute target percentages for each shift
+                const oncallShiftIds = shifts.filter(s => s.isOncall).map(s => s.id);
+                const nonOncallShiftIds = shifts.filter(s => !s.isOncall).map(s => s.id);
+
+                const getTargetPct = (shiftId: string, groupIds: string[], overrides: Record<string, number | undefined>) => {
+                  const overriddenTotal = groupIds.filter(id => overrides[id] !== undefined).reduce((sum, id) => sum + (overrides[id] ?? 0), 0);
+                  const nonOverriddenCount = groupIds.filter(id => overrides[id] === undefined).length;
+                  const remaining = Math.max(0, 100 - overriddenTotal);
+                  const autoShare = nonOverriddenCount > 0 ? remaining / nonOverriddenCount : 0;
+                  return overrides[shiftId] ?? autoShare;
+                };
+
+                // Insert shift_types
+                const shiftRows = shifts.map((s, idx) => {
+                  const isOncall = s.isOncall;
+                  const groupIds = isOncall ? oncallShiftIds : nonOncallShiftIds;
+                  const overrides = isOncall ? oncallOverrides : nonOncallOverrides;
+                  const merged = { ...s.badges };
+                  // Apply overrides to get effective badges
+                  for (const key of Object.keys(s.badgeOverrides) as Array<keyof typeof s.badgeOverrides>) {
+                    if (s.badgeOverrides[key] !== undefined) merged[key] = s.badgeOverrides[key]!;
+                  }
+
+                  return {
+                    rota_config_id: configId!,
+                    shift_key: s.id,
+                    name: s.name,
+                    start_time: s.startTime,
+                    end_time: s.endTime,
+                    duration_hours: s.durationHours,
+                    is_oncall: s.isOncall,
+                    is_non_res_oncall: s.isNonRes,
+                    applicable_mon: s.applicableDays.mon,
+                    applicable_tue: s.applicableDays.tue,
+                    applicable_wed: s.applicableDays.wed,
+                    applicable_thu: s.applicableDays.thu,
+                    applicable_fri: s.applicableDays.fri,
+                    applicable_sat: s.applicableDays.sat,
+                    applicable_sun: s.applicableDays.sun,
+                    badge_night: merged.night,
+                    badge_long: merged.long,
+                    badge_ooh: merged.ooh,
+                    badge_weekend: merged.weekend,
+                    badge_oncall: merged.oncall,
+                    badge_nonres: merged.nonres,
+                    badge_night_manual_override: s.badgeOverrides.night ?? null,
+                    badge_long_manual_override: s.badgeOverrides.long ?? null,
+                    badge_ooh_manual_override: s.badgeOverrides.ooh ?? null,
+                    badge_weekend_manual_override: s.badgeOverrides.weekend ?? null,
+                    badge_oncall_manual_override: s.badgeOverrides.oncall ?? null,
+                    badge_nonres_manual_override: s.badgeOverrides.nonres ?? null,
+                    oncall_manually_set: s.oncallManuallySet,
+                    min_doctors: s.staffing.min,
+                    max_doctors: s.staffing.max,
+                    target_percentage: getTargetPct(s.id, groupIds, overrides),
+                    sort_order: idx,
+                  };
+                });
+
+                const { error: insertError } = await supabase.from("shift_types").insert(shiftRows);
+                if (insertError) throw insertError;
+
+                toast.success("✓ Shift configuration saved");
+                setDepartmentComplete(true);
+                navigate("/admin/dashboard");
+                // SECTION 4 COMPLETE
+              } catch (err: any) {
+                console.error("Department save failed:", err);
+                toast.error("Save failed — please try again");
+              } finally {
+                setSaving(false);
+              }
             }}
             className="bg-primary text-primary-foreground hover:bg-primary/90"
           >
-            Save Department Configuration
+            {saving ? "Saving…" : "Save Department Configuration"}
           </Button>
         </div>
       </div>
