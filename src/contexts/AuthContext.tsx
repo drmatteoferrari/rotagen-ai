@@ -1,8 +1,10 @@
 import { createContext, useContext, useState, ReactNode, useCallback } from "react";
 import { useRotaContext } from "@/contexts/RotaContext";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 // SECTION 4 — Login restores config; logout clears session
+// SECTION 4 — Account settings in AuthContext
 
 interface AuthUser {
   username: string;
@@ -11,11 +13,18 @@ interface AuthUser {
   displayName: string;
 }
 
+interface AccountSettings {
+  departmentName: string | null;
+  trustName: string | null;
+}
+
 interface AuthContextType {
   user: AuthUser | null;
   isAuthenticated: boolean;
   login: (usernameOrEmail: string, password: string) => Promise<{ success: boolean; error?: { field: "username" | "password"; message: string } }>;
   logout: () => void;
+  accountSettings: AccountSettings;
+  setAccountSettings: (settings: AccountSettings) => void;
 }
 
 const HARDCODED_USER: AuthUser = {
@@ -27,10 +36,36 @@ const HARDCODED_USER: AuthUser = {
 
 const HARDCODED_PASSWORD = "developer1";
 
+const DEFAULT_ACCOUNT_SETTINGS: AccountSettings = { departmentName: null, trustName: null };
+
+// Standalone utility — can be called from login and dashboard
+export async function loadAccountSettings(
+  username: string
+): Promise<AccountSettings> {
+  const { data, error } = await supabase
+    .from("account_settings")
+    .select("department_name, trust_name")
+    .eq("owned_by", username)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Failed to load account settings:", error);
+    return { departmentName: null, trustName: null };
+  }
+
+  if (!data) return { departmentName: null, trustName: null };
+
+  return {
+    departmentName: data.department_name || null,
+    trustName: data.trust_name || null,
+  };
+}
+
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [accountSettings, setAccountSettings] = useState<AccountSettings>(DEFAULT_ACCOUNT_SETTINGS);
   const { restoreForUser, clearSession } = useRotaContext();
 
   const login = useCallback(async (usernameOrEmail: string, password: string) => {
@@ -54,6 +89,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     setUser(HARDCODED_USER);
 
+    // Load account settings before redirect
+    const settings = await loadAccountSettings(HARDCODED_USER.username);
+    setAccountSettings(settings);
+
     // Restore config from DB before redirect
     const config = await restoreForUser(HARDCODED_USER.username);
     if (config) {
@@ -65,11 +104,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(() => {
     setUser(null);
+    setAccountSettings(DEFAULT_ACCOUNT_SETTINGS);
     clearSession();
   }, [clearSession]);
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout, accountSettings, setAccountSettings }}>
       {children}
     </AuthContext.Provider>
   );

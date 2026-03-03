@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_settings: {
+        Row: {
+          created_at: string | null
+          department_name: string | null
+          id: string
+          owned_by: string
+          trust_name: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          department_name?: string | null
+          id?: string
+          owned_by: string
+          trust_name?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          department_name?: string | null
+          id?: string
+          owned_by?: string
+          trust_name?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       bank_holidays: {
         Row: {
           created_at: string | null

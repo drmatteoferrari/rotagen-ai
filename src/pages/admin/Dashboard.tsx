@@ -2,54 +2,103 @@ import { useState, useEffect } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { useAdminSetup } from "@/contexts/AdminSetupContext";
 import { useRotaContext } from "@/contexts/RotaContext";
+import { useAuth, loadAccountSettings } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { CheckCircle, Circle, Zap, Calendar, Target, Users, ShieldCheck, Lock, Building2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { CheckCircle, Circle, Zap, Calendar, Target, Users, ShieldCheck, Lock, Building2, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 
 // SECTION 7 — Status indicators on Dashboard
-// SECTION 9 — Department & Hospital fields on Dashboard
+// SECTION 2, 3, 6 — Department & Hospital fields with account_settings persistence
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const { isDepartmentComplete, isWtrComplete, isPeriodComplete, areSurveysDone, restoredFromDb } = useAdminSetup();
   const { restoredConfig, currentRotaConfigId } = useRotaContext();
+  const { user, accountSettings, setAccountSettings } = useAuth();
 
-  // SECTION 9 — Department/Hospital state
-  const [deptName, setDeptName] = useState("");
+  // SECTION 3 — Loading state
+  const [loadingSettings, setLoadingSettings] = useState(true);
+
+  // SECTION 2 — Department/Hospital state
+  const [departmentName, setDepartmentName] = useState("");
   const [trustName, setTrustName] = useState("");
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [saveError, setSaveError] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"saved" | "error" | null>(null);
 
+  // SECTION 6 — Inline validation errors
+  const [departmentError, setDepartmentError] = useState("");
+  const [trustError, setTrustError] = useState("");
+
+  // SECTION 3 — Load on mount
   useEffect(() => {
-    if (restoredConfig) {
-      setDeptName(restoredConfig.department?.departmentName ?? "");
-      setTrustName(restoredConfig.department?.trustName ?? "");
-    }
-  }, [restoredConfig]);
+    const load = async () => {
+      if (!user?.username) { setLoadingSettings(false); return; }
+      setLoadingSettings(true);
+      try {
+        const settings = await loadAccountSettings(user.username);
+        setDepartmentName(settings.departmentName || "");
+        setTrustName(settings.trustName || "");
+      } catch (error) {
+        console.error("Failed to load account settings:", error);
+      } finally {
+        setLoadingSettings(false);
+      }
+    };
+    load();
+  }, [user?.username]);
+  // SECTION 3 COMPLETE
 
-  const saveDeptInfo = async () => {
-    if (!currentRotaConfigId) return;
-    setSaving(true);
-    setSaved(false);
-    setSaveError(false);
-    const { error } = await supabase
-      .from("rota_configs")
-      .update({ department_name: deptName, trust_name: trustName, updated_at: new Date().toISOString() })
-      .eq("id", currentRotaConfigId);
-    setSaving(false);
-    if (error) {
-      setSaveError(true);
-      console.error(error);
+  // SECTION 2 — Save handler
+  const handleSaveAccountSettings = async () => {
+    setDepartmentError("");
+    setTrustError("");
+    setSaveStatus(null);
+
+    if (!departmentName.trim()) {
+      setDepartmentError("Please enter a department name");
       return;
     }
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    if (!trustName.trim()) {
+      setTrustError("Please enter a hospital or trust name");
+      return;
+    }
+    if (!user?.username) return;
+
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("account_settings")
+        .upsert(
+          {
+            owned_by: user.username,
+            department_name: departmentName.trim(),
+            trust_name: trustName.trim(),
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "owned_by" }
+        );
+
+      if (error) throw error;
+
+      // Update context immediately
+      setAccountSettings({
+        departmentName: departmentName.trim(),
+        trustName: trustName.trim(),
+      });
+
+      setSaveStatus("saved");
+      setTimeout(() => setSaveStatus(null), 3000);
+    } catch (error) {
+      console.error("Failed to save account settings:", error);
+      setSaveStatus("error");
+    } finally {
+      setSaving(false);
+    }
   };
-  // SECTION 9 COMPLETE
+  // SECTION 2 COMPLETE
 
   const completedCount = [isDepartmentComplete, isWtrComplete, isPeriodComplete, areSurveysDone].filter(Boolean).length;
   const canGeneratePreRota = isDepartmentComplete && isWtrComplete && isPeriodComplete;
@@ -69,33 +118,73 @@ export default function Dashboard() {
   return (
     <AdminLayout title="Generation Command Center" subtitle="Track setup progress and generate the rota">
       <div className="mx-auto max-w-3xl space-y-6">
-        {/* SECTION 9 — Department & Hospital */}
+        {/* SECTION 6 — Department & Hospital with loading/validation/save states */}
         <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
           <div className="flex items-center gap-2 mb-3">
             <Building2 className="h-4 w-4 text-primary" />
             <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Department & Hospital</h2>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1 block">Department name</label>
-              <Input placeholder="e.g. Anaesthetics" value={deptName} onChange={(e) => setDeptName(e.target.value)} />
+
+          {loadingSettings ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Department name</label>
+                <Skeleton className="h-10 w-full" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Hospital / Trust name</label>
+                <Skeleton className="h-10 w-full" />
+              </div>
             </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1 block">Hospital / Trust name</label>
-              <Input placeholder="e.g. Manchester University NHS Foundation Trust" value={trustName} onChange={(e) => setTrustName(e.target.value)} />
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Department name</label>
+                <Input
+                  placeholder="e.g. Anaesthetics"
+                  value={departmentName}
+                  onChange={(e) => { setDepartmentName(e.target.value); setDepartmentError(""); setSaveStatus(null); }}
+                />
+                {departmentError && <p className="text-xs text-destructive mt-1">{departmentError}</p>}
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Hospital / Trust name</label>
+                <Input
+                  placeholder="e.g. Manchester University NHS Foundation Trust"
+                  value={trustName}
+                  onChange={(e) => { setTrustName(e.target.value); setTrustError(""); setSaveStatus(null); }}
+                />
+                {trustError && <p className="text-xs text-destructive mt-1">{trustError}</p>}
+              </div>
             </div>
-          </div>
+          )}
+
           <div className="flex items-center justify-between mt-3">
             <p className="text-xs text-muted-foreground">These appear in all survey invite emails sent to doctors.</p>
-            <div className="flex items-center gap-2">
-              {saved && <span className="text-xs font-semibold text-emerald-600">✓ Saved</span>}
-              {saveError && <span className="text-xs font-semibold text-destructive">Save failed — try again</span>}
-              <Button size="sm" onClick={saveDeptInfo} disabled={saving}>
-                {saving ? "Saving…" : "Save"}
-              </Button>
-            </div>
+            <Button
+              size="sm"
+              onClick={handleSaveAccountSettings}
+              disabled={saving || saveStatus === "saved" || loadingSettings}
+              className={saveStatus === "saved" ? "bg-emerald-600 hover:bg-emerald-600" : ""}
+            >
+              {saving && <Loader2 className="mr-1.5 h-3 w-3 animate-spin" />}
+              {saving ? "Saving…" : saveStatus === "saved" ? "✓ Saved" : "Save"}
+            </Button>
           </div>
+
+          {/* Inline status messages */}
+          {saveStatus === "saved" && (
+            <p className="text-xs text-emerald-600 mt-2">
+              ✓ Saved — your department and hospital name will appear in all survey emails.
+            </p>
+          )}
+          {saveStatus === "error" && (
+            <p className="text-xs text-destructive mt-2">
+              Save failed — please try again.
+            </p>
+          )}
         </div>
+        {/* SECTION 6 COMPLETE */}
 
         {/* Setup Progress */}
         <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
