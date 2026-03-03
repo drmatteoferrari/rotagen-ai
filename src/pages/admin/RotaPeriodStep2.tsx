@@ -12,6 +12,7 @@ import { format, isWithinInterval, differenceInDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useAdminSetup } from "@/contexts/AdminSetupContext";
 import { useRotaContext } from "@/contexts/RotaContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -55,6 +56,7 @@ export default function RotaPeriodStep2() {
   const navigate = useNavigate();
   const { setPeriodComplete, rotaStartDate, rotaEndDate } = useAdminSetup();
   const { currentRotaConfigId, setCurrentRotaConfigId } = useRotaContext();
+  const { user } = useAuth();
   const [saving, setSaving] = useState(false);
   const [bankHolidays, setBankHolidays] = useState<BankHoliday[]>([]);
   const [newHolidayName, setNewHolidayName] = useState("");
@@ -172,7 +174,7 @@ export default function RotaPeriodStep2() {
               if (!configId) {
                 const { data, error } = await supabase
                   .from("rota_configs")
-                  .insert(configFields)
+                  .insert({ ...configFields, owned_by: user?.username ?? "developer1" } as any)
                   .select("id")
                   .single();
                 if (error) throw error;

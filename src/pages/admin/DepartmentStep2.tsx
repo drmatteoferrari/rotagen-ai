@@ -8,6 +8,7 @@ import { ArrowLeft, AlertTriangle, CheckCircle2, RotateCcw, Info } from "lucide-
 import { useAdminSetup } from "@/contexts/AdminSetupContext";
 import { useDepartmentSetup } from "@/contexts/DepartmentSetupContext";
 import { useRotaContext } from "@/contexts/RotaContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -231,6 +232,7 @@ export default function DepartmentStep2() {
   const { setDepartmentComplete } = useAdminSetup();
   const { shifts, globalOncallPct, setGlobalOncallPct, shiftTargetOverrides, setShiftTargetOverrides } = useDepartmentSetup();
   const { currentRotaConfigId, setCurrentRotaConfigId } = useRotaContext();
+  const { user } = useAuth();
   const [saving, setSaving] = useState(false);
 
   const oncallShifts = useMemo(() => shifts.filter((s) => s.isOncall).map((s) => ({ id: s.id, name: s.name })), [shifts]);
@@ -337,7 +339,7 @@ export default function DepartmentStep2() {
                 if (!configId) {
                   const { data, error } = await supabase
                     .from("rota_configs")
-                    .insert({ global_oncall_pct: globalOncallPct, global_non_oncall_pct: nonOncallPct })
+                    .insert({ global_oncall_pct: globalOncallPct, global_non_oncall_pct: nonOncallPct, owned_by: user?.username ?? "developer1" } as any)
                     .select("id")
                     .single();
                   if (error) throw error;

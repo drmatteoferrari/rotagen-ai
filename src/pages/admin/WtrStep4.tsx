@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, CheckCircle, Lock } from "lucide-react";
 import { useAdminSetup } from "@/contexts/AdminSetupContext";
 import { useRotaContext } from "@/contexts/RotaContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -35,6 +36,7 @@ export default function WtrStep4() {
   const navigate = useNavigate();
   const { setWtrComplete, maxAvgWeekly, maxIn7Days, maxConsecDays, maxConsecLong, maxConsecNights, restPostNights, restPostBlock, restAfter7, weekendFreq } = useAdminSetup();
   const { currentRotaConfigId, setCurrentRotaConfigId } = useRotaContext();
+  const { user } = useAuth();
   const [saving, setSaving] = useState(false);
 
   return (
@@ -91,7 +93,7 @@ export default function WtrStep4() {
               if (!configId) {
                 const { data, error } = await supabase
                   .from("rota_configs")
-                  .insert({})
+                  .insert({ owned_by: user?.username ?? "developer1" } as any)
                   .select("id")
                   .single();
                 if (error) throw error;

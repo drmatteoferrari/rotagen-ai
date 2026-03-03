@@ -1,4 +1,8 @@
 import { createContext, useContext, useState, ReactNode, useCallback } from "react";
+import { useRotaContext } from "@/contexts/RotaContext";
+import { toast } from "sonner";
+
+// SECTION 4 — Login restores config; logout clears session
 
 interface AuthUser {
   username: string;
@@ -10,7 +14,7 @@ interface AuthUser {
 interface AuthContextType {
   user: AuthUser | null;
   isAuthenticated: boolean;
-  login: (usernameOrEmail: string, password: string) => { success: boolean; error?: { field: "username" | "password"; message: string } };
+  login: (usernameOrEmail: string, password: string) => Promise<{ success: boolean; error?: { field: "username" | "password"; message: string } }>;
   logout: () => void;
 }
 
@@ -27,8 +31,9 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const { restoreForUser, clearSession } = useRotaContext();
 
-  const login = useCallback((usernameOrEmail: string, password: string) => {
+  const login = useCallback(async (usernameOrEmail: string, password: string) => {
     const trimmed = usernameOrEmail.trim();
 
     if (!trimmed) {
@@ -48,12 +53,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     setUser(HARDCODED_USER);
+
+    // Restore config from DB before redirect
+    const config = await restoreForUser(HARDCODED_USER.username);
+    if (config) {
+      toast.info("Welcome back — your previous configuration has been restored.");
+    }
+
     return { success: true };
-  }, []);
+  }, [restoreForUser]);
 
   const logout = useCallback(() => {
     setUser(null);
-  }, []);
+    clearSession();
+  }, [clearSession]);
 
   return (
     <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout }}>
@@ -67,3 +80,5 @@ export function useAuth() {
   if (!ctx) throw new Error("useAuth must be used within AuthProvider");
   return ctx;
 }
+
+// SECTION 4 COMPLETE

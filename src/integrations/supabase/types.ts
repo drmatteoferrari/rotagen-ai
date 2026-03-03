@@ -81,6 +81,7 @@ export type Database = {
           global_non_oncall_pct: number | null
           global_oncall_pct: number | null
           id: string
+          owned_by: string
           rota_duration_days: number | null
           rota_duration_weeks: number | null
           rota_end_date: string | null
@@ -98,6 +99,7 @@ export type Database = {
           global_non_oncall_pct?: number | null
           global_oncall_pct?: number | null
           id?: string
+          owned_by?: string
           rota_duration_days?: number | null
           rota_duration_weeks?: number | null
           rota_end_date?: string | null
@@ -115,6 +117,7 @@ export type Database = {
           global_non_oncall_pct?: number | null
           global_oncall_pct?: number | null
           id?: string
+          owned_by?: string
           rota_duration_days?: number | null
           rota_duration_weeks?: number | null
           rota_end_date?: string | null
