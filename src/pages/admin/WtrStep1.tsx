@@ -1,6 +1,6 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "@/components/AdminLayout";
+import { useAdminSetup } from "@/contexts/AdminSetupContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -28,8 +28,7 @@ function WtrWarning({ value, threshold, aboveMsg, belowMsg }: { value: number; t
 
 export default function WtrStep1() {
   const navigate = useNavigate();
-  const [maxAvgWeekly, setMaxAvgWeekly] = useState(48);
-  const [maxIn7Days, setMaxIn7Days] = useState(72);
+  const { maxAvgWeekly, setMaxAvgWeekly, maxIn7Days, setMaxIn7Days } = useAdminSetup();
 
   return (
     <AdminLayout title="WTR Setup" subtitle="Step 1 of 4 — Hours & Limits">
