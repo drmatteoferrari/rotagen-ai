@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect, useCallback } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
 // SECTION 7 — getRotaConfig() retrieval function
 
@@ -200,10 +201,12 @@ export async function getRotaConfig(id: string): Promise<RotaConfig> {
   };
 }
 
-export async function getCurrentRotaConfig(): Promise<RotaConfig | null> {
+// SECTION 3 — getCurrentRotaConfig now filters by username
+export async function getCurrentRotaConfig(username: string): Promise<RotaConfig | null> {
   const { data } = await supabase
     .from("rota_configs")
     .select("id")
+    .eq("owned_by", username)
     .in("status", ["draft", "complete"])
     .order("updated_at", { ascending: false })
     .limit(1)
@@ -211,24 +214,31 @@ export async function getCurrentRotaConfig(): Promise<RotaConfig | null> {
   if (!data) return null;
   return getRotaConfig(data.id);
 }
+// SECTION 3 COMPLETE
 
 export function useRotaConfig() {
   const [config, setConfig] = useState<RotaConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
 
   const refresh = useCallback(async () => {
+    if (!user) {
+      setConfig(null);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
-      const result = await getCurrentRotaConfig();
+      const result = await getCurrentRotaConfig(user.username);
       setConfig(result);
     } catch (e: any) {
       setError(e.message ?? "Failed to load config");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => { refresh(); }, [refresh]);
 

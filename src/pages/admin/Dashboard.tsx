@@ -1,15 +1,25 @@
 import { AdminLayout } from "@/components/AdminLayout";
 import { useAdminSetup } from "@/contexts/AdminSetupContext";
+import { useRotaContext } from "@/contexts/RotaContext";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, Circle, Zap, Calendar, Target, Users, ShieldCheck, Lock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
+// SECTION 7 — Status indicators on Dashboard
+
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { isDepartmentComplete, isWtrComplete, isPeriodComplete, areSurveysDone } = useAdminSetup();
+  const { isDepartmentComplete, isWtrComplete, isPeriodComplete, areSurveysDone, restoredFromDb } = useAdminSetup();
+  const { restoredConfig } = useRotaContext();
 
   const completedCount = [isDepartmentComplete, isWtrComplete, isPeriodComplete, areSurveysDone].filter(Boolean).length;
   const canGeneratePreRota = isDepartmentComplete && isWtrComplete && isPeriodComplete;
+
+  const getStatusLabel = (done: boolean) => {
+    if (done && restoredFromDb) return "✅ Saved";
+    if (done) return "Done";
+    return null;
+  };
 
   const steps = [
     { label: "Set up department", done: isDepartmentComplete, link: "/admin/department/step-1" },
@@ -29,29 +39,37 @@ export default function Dashboard() {
             </span>
           </div>
           <div className="space-y-3">
-            {steps.map((s) => (
-              <div
-                key={s.label}
-                className="flex items-center justify-between rounded-lg border border-border px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors"
-                onClick={() => navigate(s.link)}
-              >
-                <div className="flex items-center gap-3">
-                  {s.done ? (
-                    <CheckCircle className="h-5 w-5 text-emerald-500" />
-                  ) : (
-                    <Circle className="h-5 w-5 text-muted-foreground/40" />
+            {steps.map((s) => {
+              const statusLabel = getStatusLabel(s.done);
+              return (
+                <div
+                  key={s.label}
+                  className="flex items-center justify-between rounded-lg border border-border px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => navigate(s.link)}
+                >
+                  <div className="flex items-center gap-3">
+                    {s.done ? (
+                      <CheckCircle className="h-5 w-5 text-emerald-500" />
+                    ) : (
+                      <Circle className="h-5 w-5 text-muted-foreground/40" />
+                    )}
+                    <span className={s.done ? "font-medium text-card-foreground" : "font-medium text-muted-foreground"}>
+                      {s.label}
+                    </span>
+                  </div>
+                  {statusLabel && (
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded">
+                      {statusLabel}
+                    </span>
                   )}
-                  <span className={s.done ? "font-medium text-card-foreground" : "font-medium text-muted-foreground"}>
-                    {s.label}
-                  </span>
+                  {!s.done && (
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                      ○ Not started
+                    </span>
+                  )}
                 </div>
-                {s.done && (
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded">
-                    Done
-                  </span>
-                )}
-              </div>
-            ))}
+              );
+            })}
 
             {/* Doctor preferences -- static for now */}
             <div className="flex items-center justify-between rounded-lg border border-border px-4 py-3">
@@ -147,3 +165,5 @@ export default function Dashboard() {
     </AdminLayout>
   );
 }
+
+// SECTION 7 COMPLETE

@@ -1,5 +1,9 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
 import { calcDurationHours, timeToMinutes, type ApplicableDays } from "@/lib/shiftUtils";
+import { useRotaContext } from "@/contexts/RotaContext";
+import type { RotaConfig } from "@/lib/rotaConfig";
+
+// SECTION 5 — DepartmentSetupContext with restore from config
 
 /* ─── Badge types ─── */
 export interface ShiftBadges {
@@ -47,45 +51,31 @@ export function detectBadges(
   const dur = calcDurationHours(startTime, endTime);
   const hasSatSun = days.sat || days.sun;
 
-  // NIGHT: ≥3h overlap with 23:00–06:00
-  const nightStart = 23 * 60; // 1380
-  const nightEnd = 6 * 60; // 360
+  const nightStart = 23 * 60;
+  const nightEnd = 6 * 60;
   let nightMinutes = 0;
   if (em > sm) {
-    // same-day shift
     nightMinutes += Math.max(0, Math.min(em, 1440) - Math.max(sm, nightStart));
     nightMinutes += Math.max(0, Math.min(em, nightEnd) - Math.max(sm, 0));
   } else {
-    // crosses midnight: treat as sm → sm+duration
     const endAdjusted = sm + Math.round(dur * 60);
-    // overlap with 23:00–30:00 (i.e. 23:00–06:00 next day)
     const ns = nightStart;
-    const ne = nightEnd + 1440; // 1800
+    const ne = nightEnd + 1440;
     nightMinutes = Math.max(0, Math.min(endAdjusted, ne) - Math.max(sm, ns));
   }
   const night = nightMinutes >= 180;
-
-  // LONG: duration > 10h
   const long = dur > 10;
 
-  // OOH: any minutes 19:00–07:00 or weekend
   let ooh = hasSatSun;
   if (!ooh) {
     if (em > sm) {
       ooh = sm < 7 * 60 || em > 19 * 60;
     } else {
-      ooh = true; // crosses midnight → always has OOH hours
+      ooh = true;
     }
   }
 
-  return {
-    night,
-    long,
-    ooh,
-    weekend: hasSatSun,
-    oncall: isOncall,
-    nonres: isNonRes,
-  };
+  return { night, long, ooh, weekend: hasSatSun, oncall: isOncall, nonres: isNonRes };
 }
 
 /** Merge auto-detected badges with manual overrides */
@@ -111,19 +101,10 @@ function makeShift(
   const dur = calcDurationHours(startTime, endTime);
   const autoBadges = detectBadges(startTime, endTime, days, isOncall, false);
   return {
-    id,
-    name,
-    startTime,
-    endTime,
-    durationHours: dur,
-    applicableDays: days,
-    isOncall,
-    isNonRes: false,
-    staffing: { min: 3, max: null },
-    targetOverridePct: null,
-    badges: autoBadges,
-    badgeOverrides: {},
-    oncallManuallySet: false,
+    id, name, startTime, endTime, durationHours: dur,
+    applicableDays: days, isOncall, isNonRes: false,
+    staffing: { min: 3, max: null }, targetOverridePct: null,
+    badges: autoBadges, badgeOverrides: {}, oncallManuallySet: false,
   };
 }
 
@@ -138,7 +119,6 @@ const defaultShifts: ShiftType[] = [
   makeShift("5", "Night Shift — Weekend", "20:00", "08:30", weekend, false),
 ];
 
-// Auto-set oncall based on badge detection for defaults
 defaultShifts.forEach((s) => {
   const auto = detectBadges(s.startTime, s.endTime, s.applicableDays, false, false);
   const shouldBeOncall = auto.night || auto.long || auto.ooh || auto.weekend;
@@ -150,7 +130,7 @@ defaultShifts.forEach((s) => {
 interface DepartmentSetupContextType {
   shifts: ShiftType[];
   setShifts: React.Dispatch<React.SetStateAction<ShiftType[]>>;
-  addShift: () => string; // returns new shift id
+  addShift: () => string;
   removeShift: (id: string) => void;
   updateShift: (id: string, updates: Partial<ShiftType>) => void;
   expandedShiftId: string | null;
@@ -168,6 +148,50 @@ export function DepartmentSetupProvider({ children }: { children: ReactNode }) {
   const [expandedShiftId, setExpandedShiftId] = useState<string | null>(null);
   const [globalOncallPct, setGlobalOncallPct] = useState(50);
   const [shiftTargetOverrides, setShiftTargetOverrides] = useState<Record<string, number | undefined>>({});
+
+  // SECTION 5 — Restore shifts from config
+  const { restoredConfig } = useRotaContext();
+
+  useEffect(() => {
+    if (!restoredConfig || restoredConfig.shifts.length === 0) return;
+
+    const restored: ShiftType[] = restoredConfig.shifts.map((s) => {
+      const days: ApplicableDays = s.applicableDays;
+      const autoBadges = detectBadges(s.startTime, s.endTime, days, s.isOncall, s.isNonResOncall);
+      const badgeOverrides: Partial<Record<BadgeKey, boolean>> = {};
+      for (const key of Object.keys(s.badgeOverrides) as BadgeKey[]) {
+        if (s.badgeOverrides[key] !== undefined) {
+          badgeOverrides[key] = s.badgeOverrides[key];
+        }
+      }
+      return {
+        id: s.shiftKey,
+        name: s.name,
+        startTime: s.startTime,
+        endTime: s.endTime,
+        durationHours: s.durationHours,
+        applicableDays: days,
+        isOncall: s.isOncall,
+        isNonRes: s.isNonResOncall,
+        staffing: { min: s.minDoctors, max: s.maxDoctors },
+        targetOverridePct: s.targetPercentage,
+        badges: autoBadges,
+        badgeOverrides,
+        oncallManuallySet: s.oncallManuallySet,
+      };
+    });
+
+    setShifts(restored);
+    setGlobalOncallPct(restoredConfig.distribution.globalOncallPct);
+
+    // Restore per-shift target overrides
+    const overrides: Record<string, number | undefined> = {};
+    restoredConfig.distribution.byShift.forEach((bs) => {
+      overrides[bs.shiftKey] = bs.targetPct;
+    });
+    setShiftTargetOverrides(overrides);
+  }, [restoredConfig]);
+  // SECTION 5 COMPLETE
 
   const addShift = useCallback(() => {
     const id = String(Date.now());
@@ -188,7 +212,6 @@ export function DepartmentSetupProvider({ children }: { children: ReactNode }) {
       prev.map((s) => {
         if (s.id !== id) return s;
         const updated = { ...s, ...updates };
-        // Recalc duration if times changed
         if (updates.startTime !== undefined || updates.endTime !== undefined) {
           updated.durationHours = calcDurationHours(updated.startTime, updated.endTime);
         }
@@ -200,17 +223,10 @@ export function DepartmentSetupProvider({ children }: { children: ReactNode }) {
   return (
     <DepartmentSetupContext.Provider
       value={{
-        shifts,
-        setShifts,
-        addShift,
-        removeShift,
-        updateShift,
-        expandedShiftId,
-        setExpandedShiftId,
-        globalOncallPct,
-        setGlobalOncallPct,
-        shiftTargetOverrides,
-        setShiftTargetOverrides,
+        shifts, setShifts, addShift, removeShift, updateShift,
+        expandedShiftId, setExpandedShiftId,
+        globalOncallPct, setGlobalOncallPct,
+        shiftTargetOverrides, setShiftTargetOverrides,
       }}
     >
       {children}

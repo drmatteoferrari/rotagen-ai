@@ -32,8 +32,8 @@ export default function Login() {
     if (loading) return;
 
     setLoading(true);
-    setTimeout(() => {
-      const result = login(username, password);
+    setTimeout(async () => {
+      const result = await login(username, password);
       if (result.success) {
         navigate("/", { replace: true });
       } else if (result.error) {
@@ -49,8 +49,8 @@ export default function Login() {
     setErrors({});
     setTimeout(() => {
       setLoading(true);
-      setTimeout(() => {
-        const result = login("developer1", "developer1");
+      setTimeout(async () => {
+        const result = await login("developer1", "developer1");
         if (result.success) {
           navigate("/", { replace: true });
         }
