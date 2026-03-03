@@ -56,9 +56,9 @@ export default function Roster() {
   const [successId, setSuccessId] = useState<string | null>(null);
   const [popoverId, setPopoverId] = useState<string | null>(null);
 
-  // Rota period info from restored config
+  // Rota period info from restored config — parse as local date to avoid UTC timezone shift
   const rotaStartDate = restoredConfig?.rotaPeriod?.startDate
-    ? parseISO(restoredConfig.rotaPeriod.startDate)
+    ? (() => { const [y, m, d] = restoredConfig.rotaPeriod.startDate!.split("-").map(Number); return new Date(y, m - 1, d); })()
     : null;
 
   const departmentName = restoredConfig?.department?.departmentName ?? "";
@@ -86,7 +86,8 @@ export default function Roster() {
       .eq("id", currentRotaConfigId)
       .single();
     if (data?.survey_deadline) {
-      setSurveyDeadline(parseISO(data.survey_deadline));
+      const [y, m, d] = data.survey_deadline.split("-").map(Number);
+      setSurveyDeadline(new Date(y, m - 1, d));
     }
   }, [currentRotaConfigId]);
 
