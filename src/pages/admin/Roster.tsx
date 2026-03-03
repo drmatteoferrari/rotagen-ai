@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "@/components/AdminLayout";
 import { Button } from "@/components/ui/button";
@@ -8,93 +8,308 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Copy, Trash2, UserPlus, Send, Users, Pencil } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Copy, Trash2, UserPlus, Send, Users, Pencil, CalendarIcon, Loader2, Check, AlertTriangle,
+} from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { format, subDays, parseISO } from "date-fns";
+import { supabase } from "@/integrations/supabase/client";
+import { useRotaContext } from "@/contexts/RotaContext";
 
+// SECTION 6 — Doctor interface from DB
 interface Doctor {
   id: string;
-  firstName: string;
-  lastName: string;
-  email: string;
+  rota_config_id: string;
+  first_name: string;
+  last_name: string;
+  email: string | null;
   grade: string;
-  surveyStatus: "not_sent" | "pending" | "completed";
+  survey_status: string;
+  survey_invite_sent_at: string | null;
+  survey_invite_count: number;
 }
-
-const initialDoctors: Doctor[] = [
-  { id: "1", firstName: "Sarah", lastName: "Chen", email: "s.chen@nhs.net", grade: "ST5", surveyStatus: "completed" },
-  { id: "2", firstName: "James", lastName: "Okafor", email: "j.okafor@nhs.net", grade: "ST3", surveyStatus: "pending" },
-  { id: "3", firstName: "Emily", lastName: "Wright", email: "e.wright@nhs.net", grade: "CT2", surveyStatus: "not_sent" },
-];
+// SECTION 6 COMPLETE
 
 export default function Roster() {
   const navigate = useNavigate();
-  const [doctors, setDoctors] = useState<Doctor[]>(initialDoctors);
+  const { currentRotaConfigId, restoredConfig } = useRotaContext();
+
+  // Local form state
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
 
-  const addDoctor = () => {
-    if (!firstName || !lastName || !email) return;
-    const newDoctor: Doctor = {
-      id: Date.now().toString(),
-      firstName,
-      lastName,
+  // DB-backed doctors
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // SECTION 8 — Deadline picker state
+  const [surveyDeadline, setSurveyDeadline] = useState<Date | undefined>(undefined);
+  const [deadlineOpen, setDeadlineOpen] = useState(false);
+
+  // SECTION 5 — Send state per doctor
+  const [sendingId, setSendingId] = useState<string | null>(null);
+  const [successId, setSuccessId] = useState<string | null>(null);
+  const [popoverId, setPopoverId] = useState<string | null>(null);
+
+  // Rota period info from restored config
+  const rotaStartDate = restoredConfig?.rotaPeriod?.startDate
+    ? parseISO(restoredConfig.rotaPeriod.startDate)
+    : null;
+
+  const departmentName = restoredConfig?.department?.departmentName ?? "";
+  const hospitalName = restoredConfig?.department?.trustName ?? "";
+
+  // ─── Load doctors from DB ───
+  const loadDoctors = useCallback(async () => {
+    if (!currentRotaConfigId) { setLoading(false); return; }
+    const { data, error } = await supabase
+      .from("doctors")
+      .select("*")
+      .eq("rota_config_id", currentRotaConfigId)
+      .order("created_at", { ascending: true });
+    if (error) { console.error(error); toast.error("Failed to load doctors"); }
+    setDoctors((data as Doctor[]) ?? []);
+    setLoading(false);
+  }, [currentRotaConfigId]);
+
+  // ─── Load deadline from DB ───
+  const loadDeadline = useCallback(async () => {
+    if (!currentRotaConfigId) return;
+    const { data } = await supabase
+      .from("rota_configs")
+      .select("survey_deadline")
+      .eq("id", currentRotaConfigId)
+      .single();
+    if (data?.survey_deadline) {
+      setSurveyDeadline(parseISO(data.survey_deadline));
+    }
+  }, [currentRotaConfigId]);
+
+  useEffect(() => { loadDoctors(); loadDeadline(); }, [loadDoctors, loadDeadline]);
+
+  // ─── Add doctor to DB ───
+  const addDoctor = async () => {
+    if (!firstName || !lastName || !email || !currentRotaConfigId) return;
+    const { error } = await supabase.from("doctors").insert({
+      rota_config_id: currentRotaConfigId,
+      first_name: firstName,
+      last_name: lastName,
       email,
       grade: "—",
-      surveyStatus: "not_sent",
-    };
-    setDoctors([...doctors, newDoctor]);
-    setFirstName("");
-    setLastName("");
-    setEmail("");
+      survey_status: "not_sent",
+    });
+    if (error) { toast.error("Failed to add doctor"); console.error(error); return; }
+    setFirstName(""); setLastName(""); setEmail("");
     toast.success(`${firstName} ${lastName} added to the roster`);
+    loadDoctors();
   };
 
-  const removeDoctor = (id: string) => {
+  // ─── Remove doctor from DB ───
+  const removeDoctor = async (id: string) => {
+    const { error } = await supabase.from("doctors").delete().eq("id", id);
+    if (error) { toast.error("Failed to remove doctor"); return; }
     setDoctors(doctors.filter((d) => d.id !== id));
     toast("Doctor removed from roster");
   };
 
-  const markPending = (id: string) => {
-    setDoctors(doctors.map((d) => d.id === id ? { ...d, surveyStatus: "pending" as const } : d));
+  // SECTION 8 — Save deadline to DB on change
+  const handleDeadlineSelect = async (date: Date | undefined) => {
+    setSurveyDeadline(date);
+    setDeadlineOpen(false);
+    if (!currentRotaConfigId || !date) return;
+    const { error } = await supabase
+      .from("rota_configs")
+      .update({ survey_deadline: format(date, "yyyy-MM-dd") })
+      .eq("id", currentRotaConfigId);
+    if (error) { toast.error("Failed to save deadline"); console.error(error); }
   };
+  // SECTION 8 COMPLETE
+
+  // SECTION 2 — Survey link construction
+  const buildSurveyLink = (doctorId: string) => {
+    const base = (import.meta.env.VITE_APP_URL as string | undefined) ?? window.location.origin;
+    return `${base}/survey/doctor?id=${doctorId}`;
+  };
+  // SECTION 2 COMPLETE
+
+  // SECTION 4 — Formatted deadline for email
+  const formattedDeadline = surveyDeadline
+    ? format(surveyDeadline, "EEEE, d MMMM yyyy")
+    : null;
+  // SECTION 4 COMPLETE
+
+  // SECTION 5 — Send invite handler
+  const sendInvite = async (doctor: Doctor) => {
+    setPopoverId(null);
+
+    // SECTION 9 — Validate department/hospital
+    if (!departmentName || !hospitalName) {
+      toast.error("Please set your department and hospital name on the Dashboard before sending invites.");
+      return;
+    }
+
+    if (!formattedDeadline) { toast.error("Set a survey deadline first."); return; }
+
+    setSendingId(doctor.id);
+
+    const surveyLink = buildSurveyLink(doctor.id);
+
+    const body = {
+      to: doctor.email,
+      doctorName: `${doctor.first_name} ${doctor.last_name}`,
+      doctorId: doctor.id,
+      rotaPeriod: {
+        startDate: restoredConfig?.rotaPeriod?.startDate
+          ? format(parseISO(restoredConfig.rotaPeriod.startDate), "dd MMM yyyy")
+          : "TBC",
+        endDate: restoredConfig?.rotaPeriod?.endDate
+          ? format(parseISO(restoredConfig.rotaPeriod.endDate), "dd MMM yyyy")
+          : "TBC",
+        durationWeeks: restoredConfig?.rotaPeriod?.durationWeeks ?? 0,
+      },
+      departmentName,
+      hospitalName,
+      surveyDeadline: formattedDeadline,
+      surveyLink,
+    };
+
+    try {
+      const { data, error } = await supabase.functions.invoke("send-survey-invite", { body });
+
+      if (error) throw error;
+      if (data && !data.success) throw new Error(data.error ?? "Send failed");
+
+      // SECTION 6 — Update tracking columns
+      await supabase
+        .from("doctors")
+        .update({
+          survey_invite_sent_at: new Date().toISOString(),
+          survey_invite_count: (doctor.survey_invite_count ?? 0) + 1,
+          survey_status: "pending",
+        })
+        .eq("id", doctor.id);
+
+      setSendingId(null);
+      setSuccessId(doctor.id);
+      toast.success(`✓ Survey invite sent to ${doctor.first_name} ${doctor.last_name}`);
+      setTimeout(() => setSuccessId(null), 3000);
+      loadDoctors();
+    } catch (err: any) {
+      console.error("Send invite error:", err);
+      setSendingId(null);
+      const msg = err?.message?.includes("FunctionsFetchError") || err?.message?.includes("fetch")
+        ? "Could not reach email service — check your connection and try again"
+        : `Failed to send invite to ${doctor.first_name} ${doctor.last_name} — please try again`;
+      toast.error(msg);
+    }
+  };
+  // SECTION 5 COMPLETE
+  // SECTION 9 COMPLETE
 
   const copyMagicLink = (doctor: Doctor) => {
-    const link = `${window.location.origin}/doctor/survey/1?token=${doctor.id}`;
+    const link = buildSurveyLink(doctor.id);
     navigator.clipboard.writeText(link);
-    markPending(doctor.id);
-    toast.success("Magic link copied — status set to Pending");
+    toast.success("Survey link copied to clipboard");
   };
 
-  const sendInvite = (doctor: Doctor) => {
-    markPending(doctor.id);
-    toast.success(`Survey invite sent to ${doctor.firstName} ${doctor.lastName}`);
-  };
+  const completed = doctors.filter((d) => d.survey_status === "completed").length;
+  const pending = doctors.filter((d) => d.survey_status === "pending").length;
 
-  const sendAllSurveys = () => {
-    const unsent = doctors.filter((d) => d.surveyStatus === "not_sent");
-    if (unsent.length === 0) return;
-    setDoctors(doctors.map((d) => d.surveyStatus === "not_sent" ? { ...d, surveyStatus: "pending" as const } : d));
-    toast.success(`Survey invites sent to ${unsent.length} doctor${unsent.length !== 1 ? "s" : ""}`);
-  };
-
-  const completed = doctors.filter((d) => d.surveyStatus === "completed").length;
-  const pending = doctors.filter((d) => d.surveyStatus === "pending").length;
-
-  const statusBadge = (status: Doctor["surveyStatus"]) => {
+  const statusBadge = (status: string) => {
     switch (status) {
       case "completed":
         return <Badge className="bg-emerald-500/15 text-emerald-600 border-emerald-500/20 hover:bg-emerald-500/20">✅ Completed</Badge>;
       case "pending":
         return <Badge className="bg-amber-500/15 text-amber-600 border-amber-500/20 hover:bg-amber-500/20">🟡 Pending</Badge>;
-      case "not_sent":
+      default:
         return <Badge className="bg-muted text-muted-foreground border-border hover:bg-muted">⚪ Not Sent</Badge>;
     }
   };
 
+  // SECTION 7 — Determine send icon state
+  const getSendIconState = (doctor: Doctor): {
+    disabled: boolean;
+    tooltip: string;
+    color: string;
+    badge: string | null;
+  } => {
+    if (!surveyDeadline) {
+      return { disabled: true, tooltip: "Set a survey deadline above before sending invites", color: "text-muted-foreground", badge: null };
+    }
+    if (!doctor.email) {
+      return { disabled: true, tooltip: "No email address on file — add email to enable", color: "text-muted-foreground", badge: null };
+    }
+    if (doctor.survey_invite_sent_at) {
+      const sentDate = format(parseISO(doctor.survey_invite_sent_at), "d MMM yyyy, HH:mm");
+      return {
+        disabled: false,
+        tooltip: `Invite sent ${sentDate}. Click to resend.`,
+        color: "text-emerald-600",
+        badge: doctor.survey_invite_count > 1 ? `×${doctor.survey_invite_count}` : null,
+      };
+    }
+    return { disabled: false, tooltip: "Send survey invite", color: "", badge: null };
+  };
+  // SECTION 7 COMPLETE
+
   return (
     <AdminLayout title="Roster & Invites" subtitle="Build the team and send survey invitations">
       <div className="mx-auto max-w-5xl space-y-6">
+
+        {/* SECTION 8 — Deadline picker */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+              <div className="flex items-center gap-2">
+                <CalendarIcon className="h-5 w-5 text-primary" />
+                <span className="font-semibold text-card-foreground">Survey submission deadline</span>
+              </div>
+              <Popover open={deadlineOpen} onOpenChange={setDeadlineOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-[280px] justify-start text-left font-normal",
+                      !surveyDeadline && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {formattedDeadline ?? "Select deadline date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={surveyDeadline}
+                    onSelect={handleDeadlineSelect}
+                    disabled={(date) => {
+                      if (date < new Date(new Date().setHours(0, 0, 0, 0))) return true;
+                      if (rotaStartDate && date >= rotaStartDate) return true;
+                      return false;
+                    }}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Doctors will be asked to submit their preferences by this date. This date appears in all survey invite emails.
+            </p>
+            {!rotaStartDate && (
+              <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                <AlertTriangle className="h-3 w-3" />
+                Rota start date not set — set it in Rota Period settings to restrict this date automatically.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Summary */}
         <div className="grid gap-4 sm:grid-cols-3">
           <Card>
@@ -168,74 +383,141 @@ export default function Roster() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {doctors.map((doctor) => (
-                    <TableRow key={doctor.id}>
-                      <TableCell className="font-medium">{doctor.firstName} {doctor.lastName}</TableCell>
-                      <TableCell className="text-muted-foreground">{doctor.email}</TableCell>
-                      <TableCell>{doctor.grade}</TableCell>
-                      <TableCell>{statusBadge(doctor.surveyStatus)}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => sendInvite(doctor)}
-                            title="Send survey invite"
-                            disabled={doctor.surveyStatus !== "not_sent"}
-                          >
-                            <Send className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => copyMagicLink(doctor)}
-                            title="Copy magic link"
-                          >
-                            <Copy className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => navigate(`/admin/survey-override/${doctor.id}/1`)}
-                            title="Admin override — edit survey"
-                            disabled={doctor.surveyStatus !== "completed"}
-                            className={doctor.surveyStatus === "completed" ? "text-amber-600 hover:text-amber-700" : ""}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removeDoctor(doctor.id)}
-                            className="text-muted-foreground hover:text-destructive"
-                            title="Remove doctor"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {doctors.length === 0 && (
+                  {doctors.map((doctor) => {
+                    const sendState = getSendIconState(doctor);
+                    const isSending = sendingId === doctor.id;
+                    const isSuccess = successId === doctor.id;
+
+                    return (
+                      <TableRow key={doctor.id}>
+                        <TableCell className="font-medium">{doctor.first_name} {doctor.last_name}</TableCell>
+                        <TableCell className="text-muted-foreground">{doctor.email ?? "—"}</TableCell>
+                        <TableCell>{doctor.grade}</TableCell>
+                        <TableCell>{statusBadge(doctor.survey_status)}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            {/* SECTION 5 — Send icon with popover */}
+                            {isSending ? (
+                              <Button variant="ghost" size="icon" disabled>
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              </Button>
+                            ) : isSuccess ? (
+                              <Button variant="ghost" size="icon" disabled>
+                                <Check className="h-4 w-4 text-emerald-600" />
+                              </Button>
+                            ) : sendState.disabled ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span>
+                                    <Button variant="ghost" size="icon" disabled className="text-muted-foreground">
+                                      <Send className="h-4 w-4" />
+                                    </Button>
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>{sendState.tooltip}</TooltipContent>
+                              </Tooltip>
+                            ) : (
+                              <Popover
+                                open={popoverId === doctor.id}
+                                onOpenChange={(open) => setPopoverId(open ? doctor.id : null)}
+                              >
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <PopoverTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className={cn("relative", sendState.color)}
+                                      >
+                                        <Send className="h-4 w-4" />
+                                        {sendState.badge && (
+                                          <span className="absolute -top-1 -right-1 text-[9px] font-bold bg-emerald-100 text-emerald-700 rounded-full px-1">
+                                            {sendState.badge}
+                                          </span>
+                                        )}
+                                      </Button>
+                                    </PopoverTrigger>
+                                  </TooltipTrigger>
+                                  <TooltipContent>{sendState.tooltip}</TooltipContent>
+                                </Tooltip>
+                                <PopoverContent className="w-72" align="end">
+                                  <div className="space-y-3">
+                                    <p className="text-sm font-medium">
+                                      Send survey invite to {doctor.first_name} {doctor.last_name} at {doctor.email}?
+                                    </p>
+                                    {formattedDeadline && (
+                                      <p className="text-xs text-muted-foreground">
+                                        Survey deadline: {formattedDeadline}
+                                      </p>
+                                    )}
+                                    <div className="flex gap-2 justify-end">
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setPopoverId(null)}
+                                      >
+                                        Cancel
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        onClick={() => sendInvite(doctor)}
+                                      >
+                                        Send
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            )}
+
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => copyMagicLink(doctor)}
+                              title="Copy survey link"
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => navigate(`/admin/survey-override/${doctor.id}/1`)}
+                              title="Admin override — edit survey"
+                              disabled={doctor.survey_status !== "completed"}
+                              className={doctor.survey_status === "completed" ? "text-amber-600 hover:text-amber-700" : ""}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeDoctor(doctor.id)}
+                              className="text-muted-foreground hover:text-destructive"
+                              title="Remove doctor"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {!loading && doctors.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                         No doctors added yet. Use the form above to add team members.
                       </TableCell>
                     </TableRow>
                   )}
+                  {loading && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                        <Loader2 className="h-5 w-5 animate-spin mx-auto" />
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
-            </div>
-
-            {/* Send surveys */}
-            <div className="flex justify-end">
-              <Button
-                size="lg"
-                onClick={sendAllSurveys}
-                disabled={doctors.filter((d) => d.surveyStatus === "not_sent").length === 0}
-              >
-                <Send className="mr-2 h-4 w-4" /> Send All Invites
-              </Button>
             </div>
           </CardContent>
         </Card>

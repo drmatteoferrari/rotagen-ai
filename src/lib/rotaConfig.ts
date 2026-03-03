@@ -35,6 +35,7 @@ export interface RotaConfigShift {
 export interface RotaConfig {
   id: string;
   status: string;
+  surveyDeadline: string | null;
   department: {
     departmentName: string;
     trustName: string;
@@ -172,6 +173,7 @@ export async function getRotaConfig(id: string): Promise<RotaConfig> {
   return {
     id: c.id,
     status: c.status ?? "draft",
+    surveyDeadline: c.survey_deadline ?? null,
     department: {
       departmentName: c.department_name ?? "",
       trustName: c.trust_name ?? "",

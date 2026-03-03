@@ -52,6 +52,56 @@ export type Database = {
           },
         ]
       }
+      doctors: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          first_name: string
+          grade: string | null
+          id: string
+          last_name: string
+          rota_config_id: string
+          survey_invite_count: number | null
+          survey_invite_sent_at: string | null
+          survey_status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          first_name: string
+          grade?: string | null
+          id?: string
+          last_name: string
+          rota_config_id: string
+          survey_invite_count?: number | null
+          survey_invite_sent_at?: string | null
+          survey_status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          first_name?: string
+          grade?: string | null
+          id?: string
+          last_name?: string
+          rota_config_id?: string
+          survey_invite_count?: number | null
+          survey_invite_sent_at?: string | null
+          survey_status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doctors_rota_config_id_fkey"
+            columns: ["rota_config_id"]
+            isOneToOne: false
+            referencedRelation: "rota_configs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string | null
@@ -89,6 +139,7 @@ export type Database = {
           rota_start_date: string | null
           rota_start_time: string | null
           status: string | null
+          survey_deadline: string | null
           trust_name: string | null
           updated_at: string | null
         }
@@ -107,6 +158,7 @@ export type Database = {
           rota_start_date?: string | null
           rota_start_time?: string | null
           status?: string | null
+          survey_deadline?: string | null
           trust_name?: string | null
           updated_at?: string | null
         }
@@ -125,6 +177,7 @@ export type Database = {
           rota_start_date?: string | null
           rota_start_time?: string | null
           status?: string | null
+          survey_deadline?: string | null
           trust_name?: string | null
           updated_at?: string | null
         }
