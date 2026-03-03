@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useAdminSetup } from "@/contexts/AdminSetupContext";
 import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "@/components/AdminLayout";
 import { Button } from "@/components/ui/button";
@@ -27,9 +27,7 @@ function ConsecWarning({ value, threshold, label }: { value: number; threshold: 
 
 export default function WtrStep2() {
   const navigate = useNavigate();
-  const [maxConsecDays, setMaxConsecDays] = useState(7);
-  const [maxConsecLong, setMaxConsecLong] = useState(7);
-  const [maxConsecNights, setMaxConsecNights] = useState(4);
+  const { maxConsecDays, setMaxConsecDays, maxConsecLong, setMaxConsecLong, maxConsecNights, setMaxConsecNights } = useAdminSetup();
 
   const limits = [
     { label: "Max Consecutive Days", sub: "Standard shifts", value: maxConsecDays, set: setMaxConsecDays, threshold: 7, type: "standard" },

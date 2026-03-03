@@ -33,7 +33,7 @@ const onCallCards = [
 
 export default function WtrStep4() {
   const navigate = useNavigate();
-  const { setWtrComplete } = useAdminSetup();
+  const { setWtrComplete, maxAvgWeekly, maxIn7Days, maxConsecDays, maxConsecLong, maxConsecNights, restPostNights, restPostBlock, restAfter7, weekendFreq } = useAdminSetup();
   const { currentRotaConfigId, setCurrentRotaConfigId } = useRotaContext();
   const [saving, setSaving] = useState(false);
 
@@ -107,15 +107,15 @@ export default function WtrStep4() {
               // Upsert wtr_settings (all defaults from the locked on-call rules)
               const wtrFields = {
                 rota_config_id: configId,
-                max_hours_per_week: 48,
-                max_hours_per_168h: 72,
-                max_consec_standard: 7,
-                max_consec_long: 7,
-                max_consec_nights: 4,
-                rest_after_nights_h: 46,
-                rest_after_long_h: 48,
-                rest_after_standard_h: 48,
-                weekend_frequency: 3,
+                max_hours_per_week: maxAvgWeekly,
+                max_hours_per_168h: maxIn7Days,
+                max_consec_standard: maxConsecDays,
+                max_consec_long: maxConsecLong,
+                max_consec_nights: maxConsecNights,
+                rest_after_nights_h: restPostNights,
+                rest_after_long_h: restPostBlock,
+                rest_after_standard_h: restAfter7,
+                weekend_frequency: weekendFreq,
                 oncall_no_consec_except_wknd: true,
                 oncall_max_per_7_days: 3,
                 oncall_local_agreement_max_consec: 7,

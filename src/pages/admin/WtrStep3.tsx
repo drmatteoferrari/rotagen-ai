@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useAdminSetup } from "@/contexts/AdminSetupContext";
 import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "@/components/AdminLayout";
 import { Button } from "@/components/ui/button";
@@ -28,10 +28,7 @@ function RestWarning({ value, min, fieldName }: { value: number; min: number; fi
 
 export default function WtrStep3() {
   const navigate = useNavigate();
-  const [restPostNights, setRestPostNights] = useState(46);
-  const [restPostBlock, setRestPostBlock] = useState(48);
-  const [restAfter7, setRestAfter7] = useState(48);
-  const [weekendFreq, setWeekendFreq] = useState(3);
+  const { restPostNights, setRestPostNights, restPostBlock, setRestPostBlock, restAfter7, setRestAfter7, weekendFreq, setWeekendFreq } = useAdminSetup();
 
   const restFields = [
     { label: "Rest After Consecutive Nights", value: restPostNights, set: setRestPostNights, min: 46, fieldName: "Rest after consecutive nights" },
