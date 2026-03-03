@@ -1,16 +1,55 @@
+import { useState, useEffect } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { useAdminSetup } from "@/contexts/AdminSetupContext";
 import { useRotaContext } from "@/contexts/RotaContext";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Circle, Zap, Calendar, Target, Users, ShieldCheck, Lock } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { CheckCircle, Circle, Zap, Calendar, Target, Users, ShieldCheck, Lock, Building2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 // SECTION 7 — Status indicators on Dashboard
+// SECTION 9 — Department & Hospital fields on Dashboard
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const { isDepartmentComplete, isWtrComplete, isPeriodComplete, areSurveysDone, restoredFromDb } = useAdminSetup();
-  const { restoredConfig } = useRotaContext();
+  const { restoredConfig, currentRotaConfigId } = useRotaContext();
+
+  // SECTION 9 — Department/Hospital state
+  const [deptName, setDeptName] = useState("");
+  const [trustName, setTrustName] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState(false);
+
+  useEffect(() => {
+    if (restoredConfig) {
+      setDeptName(restoredConfig.department?.departmentName ?? "");
+      setTrustName(restoredConfig.department?.trustName ?? "");
+    }
+  }, [restoredConfig]);
+
+  const saveDeptInfo = async () => {
+    if (!currentRotaConfigId) return;
+    setSaving(true);
+    setSaved(false);
+    setSaveError(false);
+    const { error } = await supabase
+      .from("rota_configs")
+      .update({ department_name: deptName, trust_name: trustName, updated_at: new Date().toISOString() })
+      .eq("id", currentRotaConfigId);
+    setSaving(false);
+    if (error) {
+      setSaveError(true);
+      console.error(error);
+      return;
+    }
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
+  // SECTION 9 COMPLETE
 
   const completedCount = [isDepartmentComplete, isWtrComplete, isPeriodComplete, areSurveysDone].filter(Boolean).length;
   const canGeneratePreRota = isDepartmentComplete && isWtrComplete && isPeriodComplete;
@@ -30,6 +69,34 @@ export default function Dashboard() {
   return (
     <AdminLayout title="Generation Command Center" subtitle="Track setup progress and generate the rota">
       <div className="mx-auto max-w-3xl space-y-6">
+        {/* SECTION 9 — Department & Hospital */}
+        <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+          <div className="flex items-center gap-2 mb-3">
+            <Building2 className="h-4 w-4 text-primary" />
+            <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Department & Hospital</h2>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Department name</label>
+              <Input placeholder="e.g. Anaesthetics" value={deptName} onChange={(e) => setDeptName(e.target.value)} />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">Hospital / Trust name</label>
+              <Input placeholder="e.g. Manchester University NHS Foundation Trust" value={trustName} onChange={(e) => setTrustName(e.target.value)} />
+            </div>
+          </div>
+          <div className="flex items-center justify-between mt-3">
+            <p className="text-xs text-muted-foreground">These appear in all survey invite emails sent to doctors.</p>
+            <div className="flex items-center gap-2">
+              {saved && <span className="text-xs font-semibold text-emerald-600">✓ Saved</span>}
+              {saveError && <span className="text-xs font-semibold text-destructive">Save failed — try again</span>}
+              <Button size="sm" onClick={saveDeptInfo} disabled={saving}>
+                {saving ? "Saving…" : "Save"}
+              </Button>
+            </div>
+          </div>
+        </div>
+
         {/* Setup Progress */}
         <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
