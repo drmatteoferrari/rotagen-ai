@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AdminSetupProvider } from "./contexts/AdminSetupContext";
 import { DepartmentSetupProvider } from "./contexts/DepartmentSetupContext";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { RotaProvider } from "./contexts/RotaContext";
 import { ReactNode } from "react";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -43,6 +44,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+        <RotaProvider>
         <AdminSetupProvider>
         <DepartmentSetupProvider>
         <Routes>
@@ -69,6 +71,7 @@ const App = () => (
         </Routes>
         </DepartmentSetupProvider>
         </AdminSetupProvider>
+        </RotaProvider>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

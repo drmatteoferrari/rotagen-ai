@@ -8,9 +8,12 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon, Plus, Trash2, ArrowLeft, Info } from "lucide-react";
-import { format, isWithinInterval } from "date-fns";
+import { format, isWithinInterval, differenceInDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useAdminSetup } from "@/contexts/AdminSetupContext";
+import { useRotaContext } from "@/contexts/RotaContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface BankHoliday {
   id: string;
@@ -51,6 +54,8 @@ const UK_BANK_HOLIDAYS: { date: [number, number, number]; name: string }[] = [
 export default function RotaPeriodStep2() {
   const navigate = useNavigate();
   const { setPeriodComplete, rotaStartDate, rotaEndDate } = useAdminSetup();
+  const { currentRotaConfigId, setCurrentRotaConfigId } = useRotaContext();
+  const [saving, setSaving] = useState(false);
   const [bankHolidays, setBankHolidays] = useState<BankHoliday[]>([]);
   const [newHolidayName, setNewHolidayName] = useState("");
   const [newHolidayDate, setNewHolidayDate] = useState<Date>();
@@ -145,8 +150,69 @@ export default function RotaPeriodStep2() {
           <Button variant="outline" size="lg" onClick={() => navigate("/admin/rota-period/step-1")}>
             <ArrowLeft className="mr-2 h-4 w-4" />Back
           </Button>
-          <Button size="lg" onClick={() => { setPeriodComplete(true); navigate("/admin/dashboard"); }} className="bg-amber-500 hover:bg-amber-600">
-            Save Rota Period
+          <Button size="lg" disabled={saving} onClick={async () => {
+            // SECTION 5 — Save on /admin/rota-period/step-2
+            setSaving(true);
+            try {
+              const startDateStr = rotaStartDate ? format(rotaStartDate, "yyyy-MM-dd") : null;
+              const endDateStr = rotaEndDate ? format(rotaEndDate, "yyyy-MM-dd") : null;
+              const durationDays = rotaStartDate && rotaEndDate ? differenceInDays(rotaEndDate, rotaStartDate) : null;
+              const durationWeeks = durationDays != null ? Number((durationDays / 7).toFixed(1)) : null;
+
+              let configId = currentRotaConfigId;
+              const configFields = {
+                rota_start_date: startDateStr,
+                rota_end_date: endDateStr,
+                rota_duration_days: durationDays,
+                rota_duration_weeks: durationWeeks,
+                rota_start_time: "08:00",
+                rota_end_time: "08:00",
+              };
+
+              if (!configId) {
+                const { data, error } = await supabase
+                  .from("rota_configs")
+                  .insert(configFields)
+                  .select("id")
+                  .single();
+                if (error) throw error;
+                configId = data.id;
+                setCurrentRotaConfigId(configId);
+              } else {
+                const { error } = await supabase
+                  .from("rota_configs")
+                  .update({ ...configFields, updated_at: new Date().toISOString() })
+                  .eq("id", configId);
+                if (error) throw error;
+              }
+
+              // Delete existing bank_holidays
+              await supabase.from("bank_holidays").delete().eq("rota_config_id", configId);
+
+              // Insert bank_holidays
+              if (bankHolidays.length > 0) {
+                const rows = bankHolidays.map((h) => ({
+                  rota_config_id: configId!,
+                  date: format(h.date, "yyyy-MM-dd"),
+                  name: h.name,
+                  is_auto_added: h.id.startsWith("bh-"),
+                }));
+                const { error: insertError } = await supabase.from("bank_holidays").insert(rows);
+                if (insertError) throw insertError;
+              }
+
+              toast.success("✓ Rota period saved");
+              setPeriodComplete(true);
+              navigate("/admin/dashboard");
+              // SECTION 5 COMPLETE
+            } catch (err: any) {
+              console.error("Rota period save failed:", err);
+              toast.error("Save failed — please try again");
+            } finally {
+              setSaving(false);
+            }
+          }} className="bg-amber-500 hover:bg-amber-600">
+            {saving ? "Saving…" : "Save Rota Period"}
           </Button>
         </div>
       </div>

@@ -14,6 +14,44 @@ export type Database = {
   }
   public: {
     Tables: {
+      bank_holidays: {
+        Row: {
+          created_at: string | null
+          date: string
+          id: string
+          is_auto_added: boolean | null
+          name: string
+          rota_config_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          date: string
+          id?: string
+          is_auto_added?: boolean | null
+          name: string
+          rota_config_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          id?: string
+          is_auto_added?: boolean | null
+          name?: string
+          rota_config_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_holidays_rota_config_id_fkey"
+            columns: ["rota_config_id"]
+            isOneToOne: false
+            referencedRelation: "rota_configs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string | null
@@ -35,6 +73,182 @@ export type Database = {
         }
         Relationships: []
       }
+      rota_configs: {
+        Row: {
+          contact_email: string | null
+          created_at: string | null
+          department_name: string | null
+          global_non_oncall_pct: number | null
+          global_oncall_pct: number | null
+          id: string
+          rota_duration_days: number | null
+          rota_duration_weeks: number | null
+          rota_end_date: string | null
+          rota_end_time: string | null
+          rota_start_date: string | null
+          rota_start_time: string | null
+          status: string | null
+          trust_name: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          contact_email?: string | null
+          created_at?: string | null
+          department_name?: string | null
+          global_non_oncall_pct?: number | null
+          global_oncall_pct?: number | null
+          id?: string
+          rota_duration_days?: number | null
+          rota_duration_weeks?: number | null
+          rota_end_date?: string | null
+          rota_end_time?: string | null
+          rota_start_date?: string | null
+          rota_start_time?: string | null
+          status?: string | null
+          trust_name?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          contact_email?: string | null
+          created_at?: string | null
+          department_name?: string | null
+          global_non_oncall_pct?: number | null
+          global_oncall_pct?: number | null
+          id?: string
+          rota_duration_days?: number | null
+          rota_duration_weeks?: number | null
+          rota_end_date?: string | null
+          rota_end_time?: string | null
+          rota_start_date?: string | null
+          rota_start_time?: string | null
+          status?: string | null
+          trust_name?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      shift_types: {
+        Row: {
+          applicable_fri: boolean | null
+          applicable_mon: boolean | null
+          applicable_sat: boolean | null
+          applicable_sun: boolean | null
+          applicable_thu: boolean | null
+          applicable_tue: boolean | null
+          applicable_wed: boolean | null
+          badge_long: boolean | null
+          badge_long_manual_override: boolean | null
+          badge_night: boolean | null
+          badge_night_manual_override: boolean | null
+          badge_nonres: boolean | null
+          badge_nonres_manual_override: boolean | null
+          badge_oncall: boolean | null
+          badge_oncall_manual_override: boolean | null
+          badge_ooh: boolean | null
+          badge_ooh_manual_override: boolean | null
+          badge_weekend: boolean | null
+          badge_weekend_manual_override: boolean | null
+          created_at: string | null
+          duration_hours: number
+          end_time: string
+          id: string
+          is_non_res_oncall: boolean | null
+          is_oncall: boolean | null
+          max_doctors: number | null
+          min_doctors: number | null
+          name: string
+          oncall_manually_set: boolean | null
+          rota_config_id: string
+          shift_key: string
+          sort_order: number | null
+          start_time: string
+          target_percentage: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          applicable_fri?: boolean | null
+          applicable_mon?: boolean | null
+          applicable_sat?: boolean | null
+          applicable_sun?: boolean | null
+          applicable_thu?: boolean | null
+          applicable_tue?: boolean | null
+          applicable_wed?: boolean | null
+          badge_long?: boolean | null
+          badge_long_manual_override?: boolean | null
+          badge_night?: boolean | null
+          badge_night_manual_override?: boolean | null
+          badge_nonres?: boolean | null
+          badge_nonres_manual_override?: boolean | null
+          badge_oncall?: boolean | null
+          badge_oncall_manual_override?: boolean | null
+          badge_ooh?: boolean | null
+          badge_ooh_manual_override?: boolean | null
+          badge_weekend?: boolean | null
+          badge_weekend_manual_override?: boolean | null
+          created_at?: string | null
+          duration_hours: number
+          end_time: string
+          id?: string
+          is_non_res_oncall?: boolean | null
+          is_oncall?: boolean | null
+          max_doctors?: number | null
+          min_doctors?: number | null
+          name: string
+          oncall_manually_set?: boolean | null
+          rota_config_id: string
+          shift_key: string
+          sort_order?: number | null
+          start_time: string
+          target_percentage?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          applicable_fri?: boolean | null
+          applicable_mon?: boolean | null
+          applicable_sat?: boolean | null
+          applicable_sun?: boolean | null
+          applicable_thu?: boolean | null
+          applicable_tue?: boolean | null
+          applicable_wed?: boolean | null
+          badge_long?: boolean | null
+          badge_long_manual_override?: boolean | null
+          badge_night?: boolean | null
+          badge_night_manual_override?: boolean | null
+          badge_nonres?: boolean | null
+          badge_nonres_manual_override?: boolean | null
+          badge_oncall?: boolean | null
+          badge_oncall_manual_override?: boolean | null
+          badge_ooh?: boolean | null
+          badge_ooh_manual_override?: boolean | null
+          badge_weekend?: boolean | null
+          badge_weekend_manual_override?: boolean | null
+          created_at?: string | null
+          duration_hours?: number
+          end_time?: string
+          id?: string
+          is_non_res_oncall?: boolean | null
+          is_oncall?: boolean | null
+          max_doctors?: number | null
+          min_doctors?: number | null
+          name?: string
+          oncall_manually_set?: boolean | null
+          rota_config_id?: string
+          shift_key?: string
+          sort_order?: number | null
+          start_time?: string
+          target_percentage?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_types_rota_config_id_fkey"
+            columns: ["rota_config_id"]
+            isOneToOne: false
+            referencedRelation: "rota_configs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
@@ -52,6 +266,107 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      wtr_settings: {
+        Row: {
+          created_at: string | null
+          id: string
+          max_consec_long: number | null
+          max_consec_nights: number | null
+          max_consec_standard: number | null
+          max_hours_per_168h: number | null
+          max_hours_per_week: number | null
+          oncall_break_fine_threshold_pct: number | null
+          oncall_break_reference_weeks: number | null
+          oncall_clinical_exception_allowed: boolean | null
+          oncall_continuous_rest_end: string | null
+          oncall_continuous_rest_hours: number | null
+          oncall_continuous_rest_start: string | null
+          oncall_day_after_last_consec_max_h: number | null
+          oncall_day_after_max_hours: number | null
+          oncall_if_rest_not_met_max_hours: number | null
+          oncall_local_agreement_max_consec: number | null
+          oncall_max_per_7_days: number | null
+          oncall_no_consec_except_wknd: boolean | null
+          oncall_no_simultaneous_shift: boolean | null
+          oncall_rest_per_24h: number | null
+          oncall_saturday_sunday_paired: boolean | null
+          rest_after_long_h: number | null
+          rest_after_nights_h: number | null
+          rest_after_standard_h: number | null
+          rota_config_id: string
+          updated_at: string | null
+          weekend_frequency: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          max_consec_long?: number | null
+          max_consec_nights?: number | null
+          max_consec_standard?: number | null
+          max_hours_per_168h?: number | null
+          max_hours_per_week?: number | null
+          oncall_break_fine_threshold_pct?: number | null
+          oncall_break_reference_weeks?: number | null
+          oncall_clinical_exception_allowed?: boolean | null
+          oncall_continuous_rest_end?: string | null
+          oncall_continuous_rest_hours?: number | null
+          oncall_continuous_rest_start?: string | null
+          oncall_day_after_last_consec_max_h?: number | null
+          oncall_day_after_max_hours?: number | null
+          oncall_if_rest_not_met_max_hours?: number | null
+          oncall_local_agreement_max_consec?: number | null
+          oncall_max_per_7_days?: number | null
+          oncall_no_consec_except_wknd?: boolean | null
+          oncall_no_simultaneous_shift?: boolean | null
+          oncall_rest_per_24h?: number | null
+          oncall_saturday_sunday_paired?: boolean | null
+          rest_after_long_h?: number | null
+          rest_after_nights_h?: number | null
+          rest_after_standard_h?: number | null
+          rota_config_id: string
+          updated_at?: string | null
+          weekend_frequency?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          max_consec_long?: number | null
+          max_consec_nights?: number | null
+          max_consec_standard?: number | null
+          max_hours_per_168h?: number | null
+          max_hours_per_week?: number | null
+          oncall_break_fine_threshold_pct?: number | null
+          oncall_break_reference_weeks?: number | null
+          oncall_clinical_exception_allowed?: boolean | null
+          oncall_continuous_rest_end?: string | null
+          oncall_continuous_rest_hours?: number | null
+          oncall_continuous_rest_start?: string | null
+          oncall_day_after_last_consec_max_h?: number | null
+          oncall_day_after_max_hours?: number | null
+          oncall_if_rest_not_met_max_hours?: number | null
+          oncall_local_agreement_max_consec?: number | null
+          oncall_max_per_7_days?: number | null
+          oncall_no_consec_except_wknd?: boolean | null
+          oncall_no_simultaneous_shift?: boolean | null
+          oncall_rest_per_24h?: number | null
+          oncall_saturday_sunday_paired?: boolean | null
+          rest_after_long_h?: number | null
+          rest_after_nights_h?: number | null
+          rest_after_standard_h?: number | null
+          rota_config_id?: string
+          updated_at?: string | null
+          weekend_frequency?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wtr_settings_rota_config_id_fkey"
+            columns: ["rota_config_id"]
+            isOneToOne: true
+            referencedRelation: "rota_configs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
