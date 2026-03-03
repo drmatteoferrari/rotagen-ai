@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { format, subDays, parseISO } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useRotaContext } from "@/contexts/RotaContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 // SECTION 6 — Doctor interface from DB
 interface Doctor {
@@ -37,6 +38,7 @@ interface Doctor {
 export default function Roster() {
   const navigate = useNavigate();
   const { currentRotaConfigId, restoredConfig } = useRotaContext();
+  const { accountSettings } = useAuth();
 
   // Local form state
   const [firstName, setFirstName] = useState("");
@@ -61,8 +63,10 @@ export default function Roster() {
     ? (() => { const [y, m, d] = restoredConfig.rotaPeriod.startDate!.split("-").map(Number); return new Date(y, m - 1, d); })()
     : null;
 
-  const departmentName = restoredConfig?.department?.departmentName ?? "";
-  const hospitalName = restoredConfig?.department?.trustName ?? "";
+  // SECTION 5 — Read from accountSettings context
+  const departmentName = accountSettings.departmentName ?? "";
+  const hospitalName = accountSettings.trustName ?? "";
+  // SECTION 5 COMPLETE
 
   // ─── Load doctors from DB ───
   const loadDoctors = useCallback(async () => {
