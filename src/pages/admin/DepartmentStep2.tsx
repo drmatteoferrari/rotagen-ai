@@ -60,16 +60,28 @@ function DragBar({
           <span className="bg-emerald-100 text-emerald-700 text-xs font-bold px-2.5 py-1 rounded-full">
             {value.toFixed(1)}%
           </span>
-          {onReset && (
-            <button onClick={onReset} className="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-primary transition-colors" title="Reset to auto">
-              <RotateCcw className="h-3.5 w-3.5" />
-            </button>
-          )}
+          {onReset && (() => {
+            const isOverridden = autoValue !== undefined && Math.abs(value - autoValue) > 0.5;
+            return (
+              <button
+                onClick={onReset}
+                className={`h-7 w-7 rounded-full flex items-center justify-center transition-colors ${
+                  isOverridden
+                    ? "bg-destructive/10 text-destructive hover:bg-destructive/20"
+                    : "bg-muted text-muted-foreground/40"
+                }`}
+                title={isOverridden ? `Reset to auto (${autoValue!.toFixed(1)}%)` : "Percentage is at auto value"}
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+              </button>
+            );
+          })()}
         </div>
       </div>
       <div
         ref={barRef}
-        className="relative h-5 w-full bg-muted rounded-full overflow-hidden cursor-pointer select-none"
+        className="relative h-11 w-full bg-muted rounded-full overflow-hidden cursor-pointer select-none"
+        style={{ touchAction: 'none' }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
@@ -131,7 +143,8 @@ function GlobalSplitBar({
       </div>
       <div
         ref={barRef}
-        className="relative h-8 w-full rounded-full overflow-hidden cursor-pointer select-none bg-muted"
+        className="relative h-11 w-full rounded-full overflow-hidden cursor-pointer select-none bg-muted"
+        style={{ touchAction: 'none' }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
@@ -192,16 +205,32 @@ function ShiftDistribution({
         <h4 className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground flex items-center gap-2 px-1">
           <span className="w-1.5 h-1.5 rounded-full bg-primary" /> {title}
         </h4>
-        <button
-          onClick={() => setOverrides((prev) => {
-            const next = { ...prev };
-            shifts.forEach((s) => delete next[s.id]);
-            return next;
-          })}
-          className="text-[10px] font-semibold text-primary hover:underline"
-        >
-          Reset all to auto
-        </button>
+        {(() => {
+          const hasOverrides = shifts.some((s) => {
+            if (overrides[s.id] === undefined) return false;
+            const overriddenOnlyTotal = shifts.filter((sh) => overrides[sh.id] !== undefined).reduce((sum, sh) => sum + (overrides[sh.id] ?? 0), 0);
+            const nonOverriddenCount = shifts.filter((sh) => overrides[sh.id] === undefined).length;
+            const remaining = Math.max(0, 100 - overriddenOnlyTotal);
+            const auto = nonOverriddenCount > 0 ? remaining / nonOverriddenCount : 0;
+            return Math.abs((overrides[s.id] ?? auto) - auto) > 0.5;
+          });
+          return (
+            <button
+              onClick={() => setOverrides((prev) => {
+                const next = { ...prev };
+                shifts.forEach((s) => delete next[s.id]);
+                return next;
+              })}
+              className={`text-[10px] font-semibold px-2 py-1 rounded transition-colors ${
+                hasOverrides
+                  ? "bg-destructive text-destructive-foreground animate-pulse-once"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Reset all to auto
+            </button>
+          );
+        })()}
       </div>
 
       <div className="space-y-3">
