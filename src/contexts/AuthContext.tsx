@@ -93,11 +93,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const settings = await loadAccountSettings(HARDCODED_USER.username);
     setAccountSettings(settings);
 
-    // Restore config from DB before redirect
-    const config = await restoreForUser(HARDCODED_USER.username);
-    if (config) {
-      toast.info("Welcome back — your previous configuration has been restored.");
-    }
+    // Restore config from DB before redirect (silently)
+    await restoreForUser(HARDCODED_USER.username);
+    // SECTION 1 COMPLETE
 
     return { success: true };
   }, [restoreForUser]);

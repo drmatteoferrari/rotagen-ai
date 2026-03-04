@@ -96,3 +96,13 @@
     font-family: 'Inter', system-ui, sans-serif;
   }
 }
+
+@keyframes pulse-once {
+  0% { box-shadow: 0 0 0 0 hsl(var(--destructive) / 0.5); }
+  70% { box-shadow: 0 0 0 6px hsl(var(--destructive) / 0); }
+  100% { box-shadow: 0 0 0 0 hsl(var(--destructive) / 0); }
+}
+
+.animate-pulse-once {
+  animation: pulse-once 0.6s ease-out;
+}
