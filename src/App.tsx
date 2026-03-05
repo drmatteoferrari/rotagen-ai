@@ -59,6 +59,7 @@ const App = () => (
           <Route path="/admin/survey-override/:doctorId/:step" element={<ProtectedRoute><SurveyOverride /></ProtectedRoute>} />
           {/* Doctor survey — token-based, no auth required */}
           <Route path="/doctor/survey" element={<Survey />} />
+          <Route path="/audit" element={<Audit />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
         </DepartmentSetupProvider>
