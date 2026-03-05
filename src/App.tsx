@@ -23,6 +23,7 @@ import WtrStep3 from "./pages/admin/WtrStep3";
 import WtrStep4 from "./pages/admin/WtrStep4";
 import Survey from "./pages/doctor/Survey";
 import SurveyOverride from "./pages/admin/SurveyOverride";
+import Audit from "./pages/Audit";
 
 const queryClient = new QueryClient();
 
@@ -58,6 +59,7 @@ const App = () => (
           <Route path="/admin/survey-override/:doctorId/:step" element={<ProtectedRoute><SurveyOverride /></ProtectedRoute>} />
           {/* Doctor survey — token-based, no auth required */}
           <Route path="/doctor/survey" element={<Survey />} />
+          <Route path="/audit" element={<Audit />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
         </DepartmentSetupProvider>
