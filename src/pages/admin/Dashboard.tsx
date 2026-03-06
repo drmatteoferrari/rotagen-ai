@@ -343,6 +343,54 @@ export default function Dashboard() {
         </div>
         {/* SECTION 3 COMPLETE */}
 
+        {/* ✅ Section 8 — Targets Preview Panel */}
+        {targetsResult ? (
+          <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+            <div className="flex items-center gap-2 mb-3">
+              <BarChart3 className="h-4 w-4 text-primary" />
+              <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Shift Hour Targets (Full-Time Baseline)</h2>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border text-left text-xs text-muted-foreground">
+                    <th className="pb-2 font-medium">Shift name</th>
+                    <th className="pb-2 font-medium">On-call?</th>
+                    <th className="pb-2 font-medium text-right">Max target hours</th>
+                    <th className="pb-2 font-medium text-right">Est. shifts</th>
+                    <th className="pb-2 font-medium text-right">Avg duration</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {targetsResult.targets.map((t) => (
+                    <tr key={t.shiftId} className="border-b border-border/50">
+                      <td className="py-2 font-medium text-card-foreground">{t.shiftName}</td>
+                      <td className="py-2 text-muted-foreground">{fullConfig?.shifts.find((s) => s.id === t.shiftId)?.isOncall ? "Yes" : "No"}</td>
+                      <td className="py-2 text-right font-mono">{t.maxTargetHours}h</td>
+                      <td className="py-2 text-right font-mono">~{t.estimatedShiftCount}</td>
+                      <td className="py-2 text-right font-mono">{fullConfig?.shifts.find((s) => s.id === t.shiftId)?.durationHours ?? 0}h</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-xs font-semibold text-card-foreground mt-3">
+              Total: {targetsResult.totalMaxTargetHours}h over {targetsResult.targets[0]?.rotaWeeks ?? 0} weeks
+            </p>
+            <p className="text-[10px] text-muted-foreground mt-1">
+              LTFT doctors receive pro-rata targets. WTE scaling applied per doctor at generation time.
+            </p>
+            <p className="text-[10px] text-muted-foreground">
+              Hard per-week cap: {targetsResult.hardWeeklyCap}h — checked during generation, not included in targets.
+            </p>
+          </div>
+        ) : isDepartmentComplete && isWtrComplete && isPeriodComplete ? null : (
+          <div className="rounded-xl border border-border bg-muted/30 p-5 text-center">
+            <p className="text-sm text-muted-foreground">Complete department setup and WTR configuration to see shift targets.</p>
+          </div>
+        )}
+        {/* ✅ Section 8 complete */}
+
         {/* Phase 1: Pre-Rota Data */}
         <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
           <div className="flex items-center gap-2 mb-1">
