@@ -8,7 +8,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Trash2, Pencil, Clock, Save, X, ChevronDown, Info, AlertTriangle } from "lucide-react";
 import {
-import {
   useDepartmentSetup,
   detectBadges,
   mergedBadges,
