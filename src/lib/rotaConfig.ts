@@ -30,6 +30,11 @@ export interface RotaConfigShift {
   maxDoctors: number | null;
   targetPercentage: number | null;
   sortOrder: number;
+  // ✅ Section 2 — competency & grade requirements
+  reqIac: number;
+  reqIaoc: number;
+  reqIcu: number;
+  reqMinGrade: string | null;
 }
 
 export interface RotaConfig {
@@ -132,7 +137,12 @@ export async function getRotaConfig(id: string): Promise<RotaConfig> {
     maxDoctors: s.max_doctors,
     targetPercentage: s.target_percentage != null ? Number(s.target_percentage) : null,
     sortOrder: s.sort_order,
+    reqIac: s.req_iac ?? 0,
+    reqIaoc: s.req_iaoc ?? 0,
+    reqIcu: s.req_icu ?? 0,
+    reqMinGrade: s.req_min_grade ?? null,
   }));
+  // ✅ Section 2 complete (rotaConfig mapping)
 
   const bankHolidays = (holidaysRes.data ?? []).map((h: any) => ({
     date: h.date,

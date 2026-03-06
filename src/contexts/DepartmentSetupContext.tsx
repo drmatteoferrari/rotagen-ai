@@ -36,6 +36,11 @@ export interface ShiftType {
   badges: ShiftBadges;
   badgeOverrides: Partial<Record<BadgeKey, boolean>>;
   oncallManuallySet: boolean;
+  // ✅ Section 2 — competency & grade requirements
+  reqIac: number;
+  reqIaoc: number;
+  reqIcu: number;
+  reqMinGrade: string | null;
 }
 
 /* ─── Badge auto-detection (pure) ─── */
@@ -105,6 +110,7 @@ function makeShift(
     applicableDays: days, isOncall, isNonRes: false,
     staffing: { min: 3, max: null }, targetOverridePct: null,
     badges: autoBadges, badgeOverrides: {}, oncallManuallySet: false,
+    reqIac: 0, reqIaoc: 0, reqIcu: 0, reqMinGrade: null,
   };
 }
 
@@ -178,6 +184,10 @@ export function DepartmentSetupProvider({ children }: { children: ReactNode }) {
         badges: autoBadges,
         badgeOverrides,
         oncallManuallySet: s.oncallManuallySet,
+        reqIac: (s as any).reqIac ?? 0,
+        reqIaoc: (s as any).reqIaoc ?? 0,
+        reqIcu: (s as any).reqIcu ?? 0,
+        reqMinGrade: (s as any).reqMinGrade ?? null,
       };
     });
 
