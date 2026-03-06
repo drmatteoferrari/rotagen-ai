@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Trash2, Pencil, Clock, Save, X, ChevronDown, Info } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, Trash2, Pencil, Clock, Save, X, ChevronDown, Info, AlertTriangle } from "lucide-react";
+import {
 import {
   useDepartmentSetup,
   detectBadges,
@@ -127,7 +129,7 @@ function ExpandedCard({
   onRemove: () => void;
   canRemove: boolean;
 }) {
-  const [draft, setDraft] = useState<ShiftType>({ ...originalShift, applicableDays: { ...originalShift.applicableDays }, badges: { ...originalShift.badges }, badgeOverrides: { ...originalShift.badgeOverrides }, staffing: { ...originalShift.staffing } });
+  const [draft, setDraft] = useState<ShiftType>({ ...originalShift, applicableDays: { ...originalShift.applicableDays }, badges: { ...originalShift.badges }, badgeOverrides: { ...originalShift.badgeOverrides }, staffing: { ...originalShift.staffing }, reqIac: originalShift.reqIac, reqIaoc: originalShift.reqIaoc, reqIcu: originalShift.reqIcu, reqMinGrade: originalShift.reqMinGrade });
   const [showMax, setShowMax] = useState(draft.staffing.max !== null);
 
   // Recalculate auto badges and auto-oncall whenever relevant fields change
@@ -334,6 +336,73 @@ function ExpandedCard({
         <BadgeRow shift={draft} editable onToggle={toggleBadge} />
         <p className="text-[10px] text-muted-foreground">⚡ = auto-detected, ✏️ = manually set. Click to toggle.</p>
       </div>
+
+      {/* ✅ Section 3 — Staffing Requirements */}
+      <div className="space-y-4 border-t border-border pt-4">
+        <Label className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">Staffing Requirements</Label>
+
+        {/* Competency minimums */}
+        <div className="space-y-2">
+          <Label className="text-xs font-medium">Minimum competency cover required on this shift</Label>
+          <p className="text-[10px] text-muted-foreground">The algorithm will ensure at least this many doctors with each competency are assigned. Set to 0 if no requirement.</p>
+          <div className="grid grid-cols-3 gap-3">
+            {([
+              { key: "reqIac" as const, label: "IAC" },
+              { key: "reqIaoc" as const, label: "IAOC" },
+              { key: "reqIcu" as const, label: "ICU" },
+            ]).map(({ key, label }) => {
+              const maxVal = draft.staffing.max ?? 10;
+              const val = draft[key];
+              return (
+                <div key={key} className="space-y-1">
+                  <Label className="text-xs">{label}</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={maxVal}
+                    step={1}
+                    value={val}
+                    onChange={(e) => {
+                      const v = Math.max(0, Math.min(maxVal, Math.floor(Number(e.target.value) || 0)));
+                      update({ [key]: v } as any);
+                    }}
+                  />
+                  {val > draft.staffing.min && (
+                    <p className="text-[10px] text-amber-600 flex items-center gap-1">
+                      <AlertTriangle className="h-3 w-3" /> This exceeds the minimum staffing level for this shift — check this is correct
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Grade floor */}
+        <div className="space-y-2">
+          <Label className="text-xs font-medium">Minimum grade required (at least one doctor on this shift)</Label>
+          <p className="text-[10px] text-muted-foreground">At least one doctor assigned to this shift must hold this grade or above. Leave blank if no requirement.</p>
+          <Select
+            value={draft.reqMinGrade ?? "__none__"}
+            onValueChange={(v) => update({ reqMinGrade: v === "__none__" ? null : v })}
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="No requirement" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">— No requirement —</SelectItem>
+              <SelectItem value="CT1">CT1+</SelectItem>
+              <SelectItem value="CT2">CT2+</SelectItem>
+              <SelectItem value="CT3">CT3+</SelectItem>
+              <SelectItem value="ST4">ST4+</SelectItem>
+              <SelectItem value="ST5">ST5+</SelectItem>
+              <SelectItem value="ST7">ST7+</SelectItem>
+              <SelectItem value="Consultant">Consultant</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      {/* ✅ Section 3 complete */}
 
       {/* Actions */}
       <div className="flex gap-3 pt-2">

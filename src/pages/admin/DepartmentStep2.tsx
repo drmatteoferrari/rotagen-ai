@@ -441,6 +441,11 @@ export default function DepartmentStep2() {
                     max_doctors: s.staffing.max,
                     target_percentage: getTargetPct(s.id, groupIds, overrides),
                     sort_order: idx,
+                    // ✅ Section 3 — competency & grade fields
+                    req_iac: s.reqIac,
+                    req_iaoc: s.reqIaoc,
+                    req_icu: s.reqIcu,
+                    req_min_grade: s.reqMinGrade,
                   };
                 });
 
