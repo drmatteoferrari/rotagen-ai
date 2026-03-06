@@ -439,6 +439,10 @@ export type Database = {
           min_doctors: number | null
           name: string
           oncall_manually_set: boolean | null
+          req_iac: number
+          req_iaoc: number
+          req_icu: number
+          req_min_grade: string | null
           rota_config_id: string
           shift_key: string
           sort_order: number | null
@@ -476,6 +480,10 @@ export type Database = {
           min_doctors?: number | null
           name: string
           oncall_manually_set?: boolean | null
+          req_iac?: number
+          req_iaoc?: number
+          req_icu?: number
+          req_min_grade?: string | null
           rota_config_id: string
           shift_key: string
           sort_order?: number | null
@@ -513,6 +521,10 @@ export type Database = {
           min_doctors?: number | null
           name?: string
           oncall_manually_set?: boolean | null
+          req_iac?: number
+          req_iaoc?: number
+          req_icu?: number
+          req_min_grade?: string | null
           rota_config_id?: string
           shift_key?: string
           sort_order?: number | null

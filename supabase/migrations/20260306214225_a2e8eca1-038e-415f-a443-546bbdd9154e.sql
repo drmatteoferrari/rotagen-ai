@@ -1,0 +1,5 @@
+ALTER TABLE shift_types
+  ADD COLUMN IF NOT EXISTS req_iac     integer NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS req_iaoc    integer NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS req_icu     integer NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS req_min_grade text DEFAULT NULL;
