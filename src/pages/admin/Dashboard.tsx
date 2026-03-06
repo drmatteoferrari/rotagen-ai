@@ -76,6 +76,31 @@ export default function Dashboard() {
   }, [currentRotaConfigId]);
   // SECTION 3 COMPLETE (fetch)
 
+  // ✅ Section 8 — Shift targets preview
+  const { config: fullConfig } = useRotaConfig();
+
+  const targetsResult = useMemo<ComputeShiftTargetsResult | null>(() => {
+    if (!fullConfig?.wtr || !fullConfig.shifts.length) return null;
+    const hasTargets = fullConfig.shifts.some((s) => s.targetPercentage != null && s.targetPercentage > 0);
+    if (!hasTargets) return null;
+    return computeShiftTargets({
+      maxHoursPerWeek: fullConfig.wtr.maxHoursPerWeek,
+      maxHoursPer168h: fullConfig.wtr.maxHoursPer168h,
+      rotaWeeks: fullConfig.rotaPeriod.durationWeeks ?? 0,
+      globalOncallPct: fullConfig.distribution.globalOncallPct,
+      globalNonOncallPct: fullConfig.distribution.globalNonOncallPct,
+      shiftTypes: fullConfig.shifts.map((s) => ({
+        id: s.id,
+        name: s.name,
+        shiftKey: s.shiftKey,
+        isOncall: s.isOncall,
+        targetPercentage: s.targetPercentage ?? 0,
+        durationHours: s.durationHours,
+      })),
+      wtePercent: 100,
+    });
+  }, [fullConfig]);
+
   // Save handler
   const handleSaveAccountSettings = async () => {
     setDepartmentError("");
