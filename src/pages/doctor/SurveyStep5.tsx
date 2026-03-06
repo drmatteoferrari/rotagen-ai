@@ -1,92 +1,118 @@
-import { DoctorLayout } from "@/components/DoctorLayout";
-import { ArrowLeft, ArrowRight, Info, ShieldAlert } from "lucide-react";
-import { useSurveyMode } from "@/contexts/SurveyModeContext";
+import { useState } from "react";
 import { useSurveyContext } from "@/contexts/SurveyContext";
+import { StepNav } from "@/components/survey/StepNav";
+import { SurveySection } from "@/components/survey/SurveySection";
+import { FieldError } from "@/components/survey/FieldError";
+import { InfoBox } from "@/components/survey/InfoBox";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function SurveyStep5() {
-  const surveyCtx = useSurveyContext();
-  const surveyMode = useSurveyMode();
-  const isAdminMode = surveyMode.isAdminMode;
+  const ctx = useSurveyContext();
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const handleBack = () => surveyCtx?.prevStep();
-  const handleNext = () => surveyCtx?.nextStep();
+  if (!ctx) return null;
+  const { formData, setField, rotaInfo } = ctx;
 
-  const isWrapped = !!surveyCtx;
+  const validate = (): boolean => {
+    const e: Record<string, string> = {};
+    if (formData.parentalLeaveExpected) {
+      if (!formData.parentalLeaveStart) e.parentalLeaveStart = "Start date is required";
+      else if (rotaInfo?.startDate && formData.parentalLeaveStart < rotaInfo.startDate) e.parentalLeaveStart = "Must be within the rota period";
+      else if (rotaInfo?.endDate && formData.parentalLeaveStart > rotaInfo.endDate) e.parentalLeaveStart = "Must be within the rota period";
+      if (!formData.parentalLeaveEnd) e.parentalLeaveEnd = "End date is required";
+      else if (formData.parentalLeaveStart && formData.parentalLeaveEnd < formData.parentalLeaveStart) e.parentalLeaveEnd = "End must be on or after start";
+      if (!formData.parentalLeaveNotes.trim()) e.parentalLeaveNotes = "Please provide details";
+    }
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
 
-  const content = (
-    <div className="flex flex-col min-h-full">
-      {isAdminMode && (
-        <div className="bg-amber-500/15 border-b border-amber-500/30 px-4 py-2.5 flex items-center gap-2">
-          <ShieldAlert className="h-4 w-4 text-amber-600 shrink-0" />
-          <span className="text-sm font-semibold text-amber-700">Admin Override Mode</span>
-        </div>
-      )}
+  const handleNext = () => { if (validate()) ctx.nextStep(); };
 
-      <header className="sticky top-0 z-10 bg-[#f6f8f8]/95 backdrop-blur-sm border-b border-slate-200">
-        <div className="flex items-center p-4 justify-between h-16">
-          <button onClick={handleBack} className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-slate-200 transition-colors text-slate-900">
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <h2 className="text-lg font-bold tracking-tight flex-1 text-center pr-10">Medical Details</h2>
-        </div>
-      </header>
-
-      <div className="px-5 pt-6 pb-2">
-        <div className="flex justify-between items-center mb-3">
-          <p className="text-sm font-semibold text-teal-500 uppercase tracking-wider">Step 5 of 6</p>
-          <span className="text-xs font-medium text-slate-500">83% Completed</span>
-        </div>
-        <div className="h-2 rounded-full bg-slate-200 overflow-hidden">
-          <div className="h-full rounded-full bg-teal-500" style={{ width: "83%" }} />
-        </div>
-      </div>
-
-      <main className="flex-1 flex flex-col gap-6 p-5 pb-32">
+  return (
+    <>
+      <div className="p-4 pb-32 space-y-6">
         <div>
-          <h1 className="text-xl font-bold tracking-tight mb-4 text-slate-900">Do you have any medical or OH restrictions?</h1>
-          <div className="bg-white rounded-xl p-1.5 shadow-sm border border-slate-200 flex overflow-hidden">
-            <label className="flex-1 cursor-pointer">
-              <input type="radio" name="medical_restrictions" defaultChecked className="peer sr-only" />
-              <div className="h-12 flex items-center justify-center rounded-lg text-slate-600 font-medium transition-all peer-checked:bg-teal-500 peer-checked:text-white">No</div>
-            </label>
-            <label className="flex-1 cursor-pointer">
-              <input type="radio" name="medical_restrictions" className="peer sr-only" />
-              <div className="h-12 flex items-center justify-center rounded-lg text-slate-600 font-medium transition-all peer-checked:bg-teal-500 peer-checked:text-white">Yes</div>
-            </label>
+          <h1 className="text-2xl font-extrabold text-slate-900 mb-1">Additional Information & Restrictions</h1>
+          <p className="text-slate-500 text-sm">All fields on this page are optional unless otherwise indicated.</p>
+        </div>
+
+        {/* Health & Restrictions */}
+        <SurveySection number={1} title="Health & Restrictions">
+          <div className="space-y-3">
+            <label className="text-sm font-semibold text-slate-700 block">Health, personal, or occupational circumstances affecting shift allocation</label>
+            <InfoBox type="info">This information is confidential and seen only by the rota coordinator.</InfoBox>
+            <Textarea
+              value={formData.otherRestrictions}
+              onChange={(e) => setField("otherRestrictions", e.target.value)}
+              placeholder="e.g. Cannot work nights due to OH recommendation. Adjusted duties — no weekend on-call. No restrictions."
+              className="bg-slate-50 min-h-[80px]"
+            />
           </div>
-        </div>
+        </SurveySection>
 
-        <div className="pt-4 border-t border-slate-100">
-          <h1 className="text-xl font-bold tracking-tight mb-4 text-slate-900">Are you currently pregnant?</h1>
-          <div className="bg-white rounded-xl p-1.5 shadow-sm border border-slate-200 flex overflow-hidden">
-            <label className="flex-1 cursor-pointer">
-              <input type="radio" name="pregnancy" defaultChecked className="peer sr-only" />
-              <div className="h-12 flex items-center justify-center rounded-lg text-slate-600 font-medium transition-all peer-checked:bg-teal-500 peer-checked:text-white">No</div>
-            </label>
-            <label className="flex-1 cursor-pointer">
-              <input type="radio" name="pregnancy" className="peer sr-only" />
-              <div className="h-12 flex items-center justify-center rounded-lg text-slate-600 font-medium transition-all peer-checked:bg-teal-500 peer-checked:text-white">Yes</div>
-            </label>
+        {/* Parental Leave */}
+        <SurveySection number={2} title="Parental Leave">
+          <div className="space-y-3">
+            <p className="text-sm text-slate-700">Are you expecting to start parental leave during this rota period?</p>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setField("parentalLeaveExpected", false)} className={`flex-1 py-2 rounded-lg text-sm font-bold border ${!formData.parentalLeaveExpected ? "bg-[#0f766e] text-white border-[#0f766e]" : "bg-white text-slate-600 border-slate-200"}`}>No</button>
+              <button type="button" onClick={() => setField("parentalLeaveExpected", true)} className={`flex-1 py-2 rounded-lg text-sm font-bold border ${formData.parentalLeaveExpected ? "bg-[#0f766e] text-white border-[#0f766e]" : "bg-white text-slate-600 border-slate-200"}`}>Yes</button>
+            </div>
+            {formData.parentalLeaveExpected && (
+              <div className="space-y-3 border-l-2 border-slate-200 pl-4 mt-2">
+                <div>
+                  <label className="text-sm font-medium text-slate-700 block mb-1">Expected start date *</label>
+                  <Input
+                    type="date"
+                    value={formData.parentalLeaveStart}
+                    min={rotaInfo?.startDate || undefined}
+                    max={rotaInfo?.endDate || undefined}
+                    onChange={(e) => setField("parentalLeaveStart", e.target.value)}
+                    className="bg-slate-50"
+                  />
+                  <FieldError message={errors.parentalLeaveStart} />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-700 block mb-1">Expected end date *</label>
+                  <Input
+                    type="date"
+                    value={formData.parentalLeaveEnd}
+                    min={formData.parentalLeaveStart || undefined}
+                    onChange={(e) => setField("parentalLeaveEnd", e.target.value)}
+                    className="bg-slate-50"
+                  />
+                  <FieldError message={errors.parentalLeaveEnd} />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-slate-700 block mb-1">Reason / notes *</label>
+                  <Textarea
+                    value={formData.parentalLeaveNotes}
+                    onChange={(e) => setField("parentalLeaveNotes", e.target.value)}
+                    placeholder="e.g. Maternity leave starting week 6. Paternity leave — 2 weeks from expected due date."
+                    className="bg-slate-50 min-h-[60px]"
+                  />
+                  <FieldError message={errors.parentalLeaveNotes} />
+                </div>
+              </div>
+            )}
           </div>
-        </div>
+        </SurveySection>
 
-        <div className="mt-4 p-4 bg-teal-500/10 rounded-xl border border-teal-500/20 flex gap-3 items-start">
-          <Info className="h-5 w-5 text-teal-500 shrink-0 mt-0.5" />
-          <p className="text-sm text-slate-700 leading-relaxed">Your medical information is kept strictly confidential and only used to ensure your safety in the workplace.</p>
-        </div>
-      </main>
-
-      <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-4 pb-8 z-20">
-        <div className="flex gap-4">
-          <button onClick={handleBack} className="flex-1 py-3.5 rounded-xl border border-slate-200 text-slate-700 font-bold hover:bg-slate-50 transition-colors">Back</button>
-          <button onClick={handleNext} className="flex-1 py-3.5 rounded-xl bg-teal-500 text-white font-bold shadow-lg shadow-teal-500/30 hover:bg-teal-600 transition-colors flex items-center justify-center gap-2">
-            Next Step <ArrowRight className="h-4 w-4" />
-          </button>
-        </div>
+        {/* Other Scheduling Restrictions */}
+        <SurveySection number={3} title="Other Scheduling Restrictions">
+          <div>
+            <label className="text-sm font-semibold text-slate-700 block mb-1">Any other scheduling constraints not covered above</label>
+            <Textarea
+              value={formData.otherSchedulingRestrictions}
+              onChange={(e) => setField("otherSchedulingRestrictions", e.target.value)}
+              className="bg-slate-50 min-h-[80px]"
+            />
+          </div>
+        </SurveySection>
       </div>
-    </div>
+      <StepNav onBack={() => ctx.prevStep()} onNext={handleNext} />
+    </>
   );
-
-  if (isWrapped) return content;
-  return <DoctorLayout>{content}</DoctorLayout>;
 }

@@ -83,6 +83,7 @@ export type Database = {
         Row: {
           additional_notes: string | null
           additional_restrictions: string | null
+          al_entitlement: number | null
           annual_leave: Json | null
           comp_icu: boolean | null
           comp_icu_here: boolean | null
@@ -95,6 +96,8 @@ export type Database = {
           created_at: string | null
           dates_to_avoid: string[] | null
           doctor_id: string
+          dual_specialty: boolean | null
+          dual_specialty_types: string[] | null
           exempt_from_nights: boolean | null
           exempt_from_oncall: boolean | null
           exempt_from_weekends: boolean | null
@@ -108,12 +111,21 @@ export type Database = {
           nhs_email: string | null
           noc_dates: Json | null
           other_requests: string | null
+          other_restrictions: string | null
           other_unavailability: Json | null
           pain_session_notes: string | null
+          parental_leave_end: string | null
+          parental_leave_expected: boolean | null
+          parental_leave_notes: string | null
+          parental_leave_start: string | null
+          personal_email: string | null
+          phone_number: string | null
           preferred_days_off: string[] | null
           preferred_shift_types: string[] | null
           rota_config_id: string
+          signoff_needs: string | null
           signoff_requirements: string | null
+          special_sessions: string[] | null
           specialties_requested: Json | null
           specialty: string | null
           specific_days_off: string[] | null
@@ -129,6 +141,7 @@ export type Database = {
         Insert: {
           additional_notes?: string | null
           additional_restrictions?: string | null
+          al_entitlement?: number | null
           annual_leave?: Json | null
           comp_icu?: boolean | null
           comp_icu_here?: boolean | null
@@ -141,6 +154,8 @@ export type Database = {
           created_at?: string | null
           dates_to_avoid?: string[] | null
           doctor_id: string
+          dual_specialty?: boolean | null
+          dual_specialty_types?: string[] | null
           exempt_from_nights?: boolean | null
           exempt_from_oncall?: boolean | null
           exempt_from_weekends?: boolean | null
@@ -154,12 +169,21 @@ export type Database = {
           nhs_email?: string | null
           noc_dates?: Json | null
           other_requests?: string | null
+          other_restrictions?: string | null
           other_unavailability?: Json | null
           pain_session_notes?: string | null
+          parental_leave_end?: string | null
+          parental_leave_expected?: boolean | null
+          parental_leave_notes?: string | null
+          parental_leave_start?: string | null
+          personal_email?: string | null
+          phone_number?: string | null
           preferred_days_off?: string[] | null
           preferred_shift_types?: string[] | null
           rota_config_id: string
+          signoff_needs?: string | null
           signoff_requirements?: string | null
+          special_sessions?: string[] | null
           specialties_requested?: Json | null
           specialty?: string | null
           specific_days_off?: string[] | null
@@ -175,6 +199,7 @@ export type Database = {
         Update: {
           additional_notes?: string | null
           additional_restrictions?: string | null
+          al_entitlement?: number | null
           annual_leave?: Json | null
           comp_icu?: boolean | null
           comp_icu_here?: boolean | null
@@ -187,6 +212,8 @@ export type Database = {
           created_at?: string | null
           dates_to_avoid?: string[] | null
           doctor_id?: string
+          dual_specialty?: boolean | null
+          dual_specialty_types?: string[] | null
           exempt_from_nights?: boolean | null
           exempt_from_oncall?: boolean | null
           exempt_from_weekends?: boolean | null
@@ -200,12 +227,21 @@ export type Database = {
           nhs_email?: string | null
           noc_dates?: Json | null
           other_requests?: string | null
+          other_restrictions?: string | null
           other_unavailability?: Json | null
           pain_session_notes?: string | null
+          parental_leave_end?: string | null
+          parental_leave_expected?: boolean | null
+          parental_leave_notes?: string | null
+          parental_leave_start?: string | null
+          personal_email?: string | null
+          phone_number?: string | null
           preferred_days_off?: string[] | null
           preferred_shift_types?: string[] | null
           rota_config_id?: string
+          signoff_needs?: string | null
           signoff_requirements?: string | null
+          special_sessions?: string[] | null
           specialties_requested?: Json | null
           specialty?: string | null
           specific_days_off?: string[] | null
