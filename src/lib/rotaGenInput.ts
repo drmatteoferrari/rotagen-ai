@@ -294,6 +294,7 @@ function mapResponseToPreference(resp: DoctorSurveyResponse): DoctorPreference {
 
 export async function buildFinalRotaInput(configId: string): Promise<FinalRotaInput> {
   const preRotaInput = await buildPreRotaInput(configId);
+  const cfg = await getRotaConfig(configId);
   const totalWeeks = preRotaInput.period.totalWeeks || 1;
 
   // Fetch submitted survey responses
@@ -313,12 +314,68 @@ export async function buildFinalRotaInput(configId: string): Promise<FinalRotaIn
 
   const doctorCount = doctors.length || 1;
 
+  // ✅ Section 6 — Compute baseline shift targets (full-time, for reference)
+  const shiftTargetShifts = cfg.shifts.map((s) => ({
+    id: s.id,
+    name: s.name,
+    shiftKey: s.shiftKey,
+    isOncall: s.isOncall,
+    targetPercentage: s.targetPercentage ?? 0,
+    durationHours: s.durationHours,
+  }));
+
+  const baselineTargets = cfg.wtr ? computeShiftTargets({
+    maxHoursPerWeek: cfg.wtr.maxHoursPerWeek,
+    maxHoursPer168h: cfg.wtr.maxHoursPer168h,
+    rotaWeeks: totalWeeks,
+    globalOncallPct: cfg.distribution.globalOncallPct,
+    globalNonOncallPct: cfg.distribution.globalNonOncallPct,
+    shiftTypes: shiftTargetShifts,
+    wtePercent: 100,
+  }) : null;
+
+  // Per-doctor targets
+  const doctorTargets = doctors.map((doc) => {
+    const resp = submittedResponses.find((r) => r.doctor_id === doc.doctorId);
+    const compJson = (resp as any)?.competencies_json ?? {};
+
+    const targets = cfg.wtr ? computeShiftTargets({
+      maxHoursPerWeek: cfg.wtr.maxHoursPerWeek,
+      maxHoursPer168h: cfg.wtr.maxHoursPer168h,
+      rotaWeeks: totalWeeks,
+      globalOncallPct: cfg.distribution.globalOncallPct,
+      globalNonOncallPct: cfg.distribution.globalNonOncallPct,
+      shiftTypes: shiftTargetShifts,
+      wtePercent: doc.wtePct,
+    }) : null;
+
+    const weekendCap = cfg.wtr ? computeWeekendCap({
+      rotaWeeks: totalWeeks,
+      weekendFrequency: cfg.wtr.weekendFrequency,
+      wtePercent: doc.wtePct,
+    }) : null;
+
+    return {
+      doctorId: doc.doctorId,
+      shiftTargets: targets?.targets ?? [],
+      totalMaxHours: targets?.totalMaxTargetHours ?? 0,
+      weekendCap: weekendCap?.maxWeekends ?? 0,
+      hardWeeklyCap: targets?.hardWeeklyCap ?? 72,
+      // ✅ Section 6 — competency status on doctors
+      hasIac: compJson?.iac?.achieved === true,
+      hasIaoc: compJson?.iaoc?.achieved === true,
+      hasIcu: compJson?.icu?.achieved === true,
+      grade: doc.grade ?? null,
+    };
+  });
+
   return {
     preRotaInput,
     doctors: doctors.map((doc) => {
       const proportion = doc.wtePct / 100;
       const annualLeaveDates = doc.annualLeave.flatMap((l) => expandDateRange(l.startDate, l.endDate));
       const studyLeaveDates = doc.studyLeave.flatMap((l) => expandDateRange(l.startDate, l.endDate));
+      const dt = doctorTargets.find((d) => d.doctorId === doc.doctorId);
 
       return {
         doctorId: doc.doctorId,
@@ -353,6 +410,14 @@ export async function buildFinalRotaInput(configId: string): Promise<FinalRotaIn
           targetOncallCount: Math.round((totalOncallSlots / doctorCount) * proportion),
           proportionFactor: proportion,
         },
+        // ✅ Section 6 — per-doctor computed targets
+        shiftTargets: dt?.shiftTargets ?? [],
+        totalMaxHours: dt?.totalMaxHours ?? 0,
+        weekendCap: dt?.weekendCap ?? 0,
+        hardWeeklyCap: dt?.hardWeeklyCap ?? 72,
+        hasIac: dt?.hasIac ?? false,
+        hasIaoc: dt?.hasIaoc ?? false,
+        hasIcu: dt?.hasIcu ?? false,
       };
     }),
     constraints: {
@@ -375,6 +440,9 @@ export async function buildFinalRotaInput(configId: string): Promise<FinalRotaIn
         "ONCALL_MAX_PER_7_DAYS",
         "ONCALL_DAY_AFTER_MAX_HOURS",
         "NO_SIMULTANEOUS_ONCALL_AND_SHIFT",
+        "COMPETENCY_COMPOSITION_MET",
+        "GRADE_FLOOR_MET",
+        "WEEKEND_CAP_RESPECTED",
       ],
       soft: [
         "SOFT_NOC_DATES_RESPECTED",
