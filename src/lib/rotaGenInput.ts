@@ -1,5 +1,7 @@
 import { getRotaConfig, type RotaConfig } from "./rotaConfig";
 import { supabase } from "@/integrations/supabase/client";
+import { computeShiftTargets, computeWeekendCap } from "./shiftTargets";
+// ✅ Section 6 complete (imports)
 
 // SECTION 8 — Pre-rota generation input builder
 
@@ -92,6 +94,11 @@ export async function buildPreRotaInput(configId: string): Promise<PreRotaInput>
       minDoctors: s.minDoctors,
       maxDoctors: s.maxDoctors,
       targetPct: s.targetPercentage ?? 0,
+      // ✅ Section 6 — competency requirements on shift types
+      reqIac: s.reqIac,
+      reqIaoc: s.reqIaoc,
+      reqIcu: s.reqIcu,
+      reqMinGrade: s.reqMinGrade,
     })),
     wtrConstraints: {
       maxAvgHoursPerWeek: cfg.wtr?.maxHoursPerWeek ?? 48,
