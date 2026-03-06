@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useSurveyContext, type SpecialtyEntry } from "@/contexts/SurveyContext";
+import { useSurveyContext, type SpecialtyEntry, type SurveyFormData } from "@/contexts/SurveyContext";
 import { StepNav } from "@/components/survey/StepNav";
 import { SurveySection } from "@/components/survey/SurveySection";
 import { FieldError } from "@/components/survey/FieldError";
