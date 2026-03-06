@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { useAdminSetup } from "@/contexts/AdminSetupContext";
 import { useRotaContext } from "@/contexts/RotaContext";
@@ -9,10 +9,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   CheckCircle, Circle, Zap, Calendar, Target, Users, ShieldCheck, Lock,
-  Building2, Loader2, Pencil, ClipboardList, CalendarDays, X,
+  Building2, Loader2, Pencil, ClipboardList, CalendarDays, X, BarChart3,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useRotaConfig } from "@/lib/rotaConfig";
+import { computeShiftTargets, type ComputeShiftTargetsResult } from "@/lib/shiftTargets";
 
 export default function Dashboard() {
   const navigate = useNavigate();
