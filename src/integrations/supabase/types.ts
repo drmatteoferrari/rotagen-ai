@@ -327,6 +327,50 @@ export type Database = {
           },
         ]
       }
+      pre_rota_results: {
+        Row: {
+          calendar_data: Json
+          created_at: string | null
+          generated_at: string
+          generated_by: string
+          id: string
+          rota_config_id: string
+          status: string
+          targets_data: Json
+          validation_issues: Json
+        }
+        Insert: {
+          calendar_data?: Json
+          created_at?: string | null
+          generated_at?: string
+          generated_by: string
+          id?: string
+          rota_config_id: string
+          status: string
+          targets_data?: Json
+          validation_issues?: Json
+        }
+        Update: {
+          calendar_data?: Json
+          created_at?: string | null
+          generated_at?: string
+          generated_by?: string
+          id?: string
+          rota_config_id?: string
+          status?: string
+          targets_data?: Json
+          validation_issues?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pre_rota_results_rota_config_id_fkey"
+            columns: ["rota_config_id"]
+            isOneToOne: true
+            referencedRelation: "rota_configs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string | null
