@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { useAdminSetup } from "@/contexts/AdminSetupContext";
 import { useRotaContext } from "@/contexts/RotaContext";
@@ -10,11 +10,31 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import {
   CheckCircle, Circle, Zap, Calendar, Target, Users, ShieldCheck, Lock,
   Building2, Loader2, Pencil, ClipboardList, CalendarDays, X, BarChart3,
+  ChevronLeft, ChevronRight, RefreshCw, Play, Download, AlertTriangle, XCircle, Info,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useRotaConfig } from "@/lib/rotaConfig";
 import { computeShiftTargets, type ComputeShiftTargetsResult } from "@/lib/shiftTargets";
+import { generatePreRota } from "@/lib/preRotaGenerator";
+import { generatePreRotaExcel } from "@/lib/preRotaExcel";
+import type { PreRotaResult, CellCode } from "@/lib/preRotaTypes";
+// ✅ Section 1 complete
+
+const CELL_BG: Record<string, string> = {
+  AL: 'bg-green-500', SL: 'bg-blue-500', NOC: 'bg-purple-500',
+  ROT: 'bg-orange-500', PL: 'bg-pink-500', BH: 'bg-red-500',
+  LTFT: 'bg-gray-200', AVAILABLE: 'bg-white',
+};
+const CELL_TEXT: Record<string, string> = {
+  AL: 'text-white', SL: 'text-white', NOC: 'text-white',
+  ROT: 'text-white', PL: 'text-white', BH: 'text-white',
+  LTFT: 'text-gray-600', AVAILABLE: 'text-transparent',
+};
+const LEGEND_LABELS: Record<string, string> = {
+  AL: 'Annual Leave', SL: 'Study Leave', NOC: 'Not On-Call',
+  ROT: 'Rotation', PL: 'Parental Leave', BH: 'Bank Holiday', LTFT: 'LTFT day off',
+};
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -33,14 +53,23 @@ export default function Dashboard() {
   const [departmentError, setDepartmentError] = useState("");
   const [trustError, setTrustError] = useState("");
 
-  // SECTION 2 — Editing state for compact view
+  // Editing state for compact view
   const [editing, setEditing] = useState(false);
   const [editDept, setEditDept] = useState("");
   const [editTrust, setEditTrust] = useState("");
 
-  // SECTION 3 — Live survey counts
+  // Live survey counts
   const [surveySubmitted, setSurveySubmitted] = useState(0);
   const [surveyTotal, setSurveyTotal] = useState(0);
+
+  // ✅ Section 2 — Pre-rota state
+  const [preRotaResult, setPreRotaResult] = useState<PreRotaResult | null>(null);
+  const [preRotaLoading, setPreRotaLoading] = useState(false);
+  const [preRotaError, setPreRotaError] = useState<string | null>(null);
+  const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
+  const [isStale, setIsStale] = useState(false);
+  const [issuesPanelOpen, setIssuesPanelOpen] = useState(false);
+  // ✅ Section 2 complete
 
   // Load settings on mount
   useEffect(() => {
@@ -60,7 +89,7 @@ export default function Dashboard() {
     load();
   }, [user?.username]);
 
-  // SECTION 3 — Fetch live survey counts
+  // Fetch live survey counts
   useEffect(() => {
     const fetchCounts = async () => {
       if (!currentRotaConfigId) { setSurveySubmitted(0); setSurveyTotal(0); return; }
@@ -74,9 +103,69 @@ export default function Dashboard() {
     };
     fetchCounts();
   }, [currentRotaConfigId]);
-  // SECTION 3 COMPLETE (fetch)
 
-  // ✅ Section 8 — Shift targets preview
+  // ✅ Section 3 — Load existing pre-rota on mount
+  useEffect(() => {
+    const loadPreRota = async () => {
+      if (!currentRotaConfigId) return;
+      try {
+        const { data: existingPreRota } = await supabase
+          .from('pre_rota_results' as any)
+          .select('*')
+          .eq('rota_config_id', currentRotaConfigId)
+          .single();
+
+        if (existingPreRota) {
+          const pr = existingPreRota as any;
+          const result: PreRotaResult = {
+            id: pr.id,
+            rotaConfigId: pr.rota_config_id,
+            generatedAt: pr.generated_at,
+            generatedBy: pr.generated_by,
+            status: pr.status,
+            validationIssues: pr.validation_issues ?? [],
+            calendarData: pr.calendar_data ?? {},
+            targetsData: pr.targets_data ?? {},
+            isStale: false,
+          };
+
+          const generatedAt = new Date(pr.generated_at);
+
+          const { data: latestDoctors } = await supabase
+            .from('doctors')
+            .select('updated_at')
+            .eq('rota_config_id', currentRotaConfigId)
+            .order('updated_at', { ascending: false })
+            .limit(1);
+
+          const { data: latestSurveys } = await supabase
+            .from('doctor_survey_responses')
+            .select('updated_at')
+            .eq('rota_config_id', currentRotaConfigId)
+            .order('updated_at', { ascending: false })
+            .limit(1);
+
+          const latestDoctorUpdate = latestDoctors?.[0]?.updated_at ? new Date(latestDoctors[0].updated_at) : null;
+          const latestSurveyUpdate = latestSurveys?.[0]?.updated_at ? new Date(latestSurveys[0].updated_at) : null;
+
+          const stale =
+            (latestDoctorUpdate && latestDoctorUpdate > generatedAt) ||
+            (latestSurveyUpdate && latestSurveyUpdate > generatedAt);
+
+          result.isStale = !!stale;
+          setPreRotaResult(result);
+          setIsStale(!!stale);
+          setIssuesPanelOpen(result.validationIssues.length > 0 && result.status !== 'complete');
+        }
+      } catch (err) {
+        console.error('Failed to load existing pre-rota:', err);
+      }
+    };
+    loadPreRota();
+  }, [currentRotaConfigId]);
+  // ✅ Section 3 complete
+
+  // Shift targets preview
   const { config: fullConfig } = useRotaConfig();
 
   const targetsResult = useMemo<ComputeShiftTargetsResult | null>(() => {
@@ -90,16 +179,68 @@ export default function Dashboard() {
       globalOncallPct: fullConfig.distribution.globalOncallPct,
       globalNonOncallPct: fullConfig.distribution.globalNonOncallPct,
       shiftTypes: fullConfig.shifts.map((s) => ({
-        id: s.id,
-        name: s.name,
-        shiftKey: s.shiftKey,
-        isOncall: s.isOncall,
-        targetPercentage: s.targetPercentage ?? 0,
-        durationHours: s.durationHours,
+        id: s.id, name: s.name, shiftKey: s.shiftKey, isOncall: s.isOncall,
+        targetPercentage: s.targetPercentage ?? 0, durationHours: s.durationHours,
       })),
       wtePercent: 100,
     });
   }, [fullConfig]);
+
+  // ✅ Section 4 — Handler functions
+  const handleGeneratePreRota = async () => {
+    if (!currentRotaConfigId) return;
+    setPreRotaLoading(true);
+    setPreRotaError(null);
+
+    const { success, result, error } = await generatePreRota(
+      currentRotaConfigId,
+      user?.username ?? 'developer1'
+    );
+
+    setPreRotaLoading(false);
+
+    if (!success || !result) {
+      setPreRotaError(error ?? 'Generation failed. Check the console for details.');
+      return;
+    }
+
+    setPreRotaResult(result);
+    setCurrentWeekIndex(0);
+    setIsStale(false);
+    setIssuesPanelOpen(result.validationIssues.length > 0);
+  };
+
+  const handleDownloadCalendar = () => {
+    if (!preRotaResult?.calendarData || preRotaResult.status === 'blocked') return;
+    const blob = generatePreRotaExcel(preRotaResult.calendarData, preRotaResult.targetsData);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `RotaGen_PreRota_${preRotaResult.calendarData.rotaStartDate}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadTargets = handleDownloadCalendar;
+
+  const handlePrevWeek = useCallback(() => setCurrentWeekIndex(i => Math.max(0, i - 1)), []);
+  const handleNextWeek = useCallback(() => {
+    const totalWeeks = preRotaResult?.calendarData?.weeks?.length ?? 0;
+    setCurrentWeekIndex(i => Math.min(totalWeeks - 1, i + 1));
+  }, [preRotaResult]);
+  // ✅ Section 4 complete
+
+  // ✅ Section 7 — Keyboard navigation
+  useEffect(() => {
+    if (!preRotaResult || preRotaResult.status === 'blocked') return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') handlePrevWeek();
+      if (e.key === 'ArrowRight') handleNextWeek();
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [preRotaResult, handlePrevWeek, handleNextWeek]);
+  // ✅ Section 7 complete
 
   // Save handler
   const handleSaveAccountSettings = async () => {
@@ -158,7 +299,7 @@ export default function Dashboard() {
     <AdminLayout title="Generation Command Center" subtitle="Track setup progress and generate the rota">
       <div className="mx-auto max-w-3xl space-y-6">
 
-        {/* SECTION 2 — Department & Hospital: two-state */}
+        {/* Department & Hospital */}
         {loadingSettings ? (
           <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
             <div className="grid gap-3 sm:grid-cols-2">
@@ -167,7 +308,6 @@ export default function Dashboard() {
             </div>
           </div>
         ) : hasSavedSettings && !editing ? (
-          /* STATE B — Compact line */
           <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/40 px-4 py-2.5">
             <Building2 className="h-4 w-4 text-primary shrink-0" />
             <span className="text-sm font-medium text-foreground truncate">
@@ -181,7 +321,6 @@ export default function Dashboard() {
             </button>
           </div>
         ) : hasSavedSettings && editing ? (
-          /* STATE B — Editing inline */
           <div className="rounded-lg border border-border bg-muted/40 px-4 py-3 space-y-3">
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
@@ -205,7 +344,6 @@ export default function Dashboard() {
             {saveStatus === "error" && <p className="text-xs text-destructive">Save failed — please try again.</p>}
           </div>
         ) : (
-          /* STATE A — Full form (not yet saved) */
           <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
             <div className="flex items-center gap-2 mb-3">
               <Building2 className="h-4 w-4 text-primary" />
@@ -234,9 +372,8 @@ export default function Dashboard() {
             {saveStatus === "error" && <p className="text-xs text-destructive mt-2">Save failed — please try again.</p>}
           </div>
         )}
-        {/* SECTION 2 COMPLETE */}
 
-        {/* SECTION 3 — Setup Progress */}
+        {/* Setup Progress */}
         <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Setup Progress</h2>
@@ -297,7 +434,7 @@ export default function Dashboard() {
               );
             })}
 
-            {/* Doctor Preferences row (item 4) */}
+            {/* Doctor Preferences row */}
             <div
               className="flex items-center justify-between rounded-lg border border-border px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors"
               onClick={() => navigate("/admin/roster")}
@@ -341,9 +478,8 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
-        {/* SECTION 3 COMPLETE */}
 
-        {/* ✅ Section 8 — Targets Preview Panel */}
+        {/* Targets Preview Panel */}
         {targetsResult ? (
           <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
             <div className="flex items-center gap-2 mb-3">
@@ -389,9 +525,8 @@ export default function Dashboard() {
             <p className="text-sm text-muted-foreground">Complete department setup and WTR configuration to see shift targets.</p>
           </div>
         )}
-        {/* ✅ Section 8 complete */}
 
-        {/* Phase 1: Pre-Rota Data */}
+        {/* ✅ Section 5 — Phase 1: Pre-Rota Data */}
         <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
           <div className="flex items-center gap-2 mb-1">
             <Zap className="h-4 w-4 text-primary" />
@@ -400,9 +535,20 @@ export default function Dashboard() {
           <p className="text-xs text-muted-foreground mb-4">
             Generate the master calendar and shift targets from your configuration.
           </p>
-          <Button size="lg" className="w-full" disabled={!canGeneratePreRota} onClick={() => {}}>
+          <Button
+            size="lg"
+            className="w-full"
+            disabled={!canGeneratePreRota || preRotaLoading}
+            onClick={handleGeneratePreRota}
+          >
             {!canGeneratePreRota && <Lock className="mr-2 h-4 w-4" />}
-            Generate Pre-Rota Data
+            {preRotaLoading ? (
+              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating…</>
+            ) : preRotaResult ? (
+              <><RefreshCw className="mr-2 h-4 w-4" /> Re-generate Pre-Rota</>
+            ) : (
+              <><Play className="mr-2 h-4 w-4" /> Generate Pre-Rota Data</>
+            )}
           </Button>
           {!canGeneratePreRota && (
             <p className="text-xs text-muted-foreground mt-2 text-center">
@@ -410,18 +556,345 @@ export default function Dashboard() {
             </p>
           )}
           <div className="grid grid-cols-2 gap-3 mt-4">
-            <div className="rounded-lg border border-border p-3 text-center">
-              <Calendar className="h-5 w-5 mx-auto text-muted-foreground/50 mb-1" />
-              <p className="text-xs font-medium text-muted-foreground">Master Calendar</p>
-              <p className="text-[10px] text-muted-foreground/60">Not generated</p>
-            </div>
-            <div className="rounded-lg border border-border p-3 text-center">
-              <Target className="h-5 w-5 mx-auto text-muted-foreground/50 mb-1" />
-              <p className="text-xs font-medium text-muted-foreground">Targets</p>
-              <p className="text-[10px] text-muted-foreground/60">Not generated</p>
-            </div>
+            <button
+              onClick={handleDownloadCalendar}
+              disabled={!preRotaResult || preRotaResult.status === 'blocked'}
+              className="rounded-lg border border-border p-3 text-center hover:bg-muted/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Download className="h-5 w-5 mx-auto text-muted-foreground mb-1" />
+              <p className="text-xs font-medium text-muted-foreground">Download Calendar</p>
+              <p className="text-[10px] text-muted-foreground/60">
+                {preRotaResult && preRotaResult.status !== 'blocked' ? 'Excel (.xlsx)' : 'Not generated'}
+              </p>
+            </button>
+            <button
+              onClick={handleDownloadTargets}
+              disabled={!preRotaResult || preRotaResult.status === 'blocked'}
+              className="rounded-lg border border-border p-3 text-center hover:bg-muted/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Download className="h-5 w-5 mx-auto text-muted-foreground mb-1" />
+              <p className="text-xs font-medium text-muted-foreground">Download Targets</p>
+              <p className="text-[10px] text-muted-foreground/60">
+                {preRotaResult && preRotaResult.status !== 'blocked' ? 'Excel (.xlsx)' : 'Not generated'}
+              </p>
+            </button>
           </div>
+          {/* ✅ Section 5 complete */}
+
+          {/* ✅ Section 6 — Results section */}
+
+          {/* 6.1 — Error banner */}
+          {preRotaError && (
+            <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 flex items-start gap-3">
+              <XCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+              <p className="text-sm text-destructive">{preRotaError}</p>
+            </div>
+          )}
+
+          {/* 6.2 — Stale warning banner */}
+          {isStale && preRotaResult && (
+            <div className="mt-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+              <p className="text-sm text-amber-800">
+                Data has changed since this pre-rota was generated on{' '}
+                {new Date(preRotaResult.generatedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}.
+                Re-generate to reflect the latest survey submissions.
+              </p>
+            </div>
+          )}
+
+          {/* 6.3 — Status badge + timestamp */}
+          {preRotaResult && (
+            <div className="mt-4 flex items-center gap-3">
+              {preRotaResult.status === 'complete' && (
+                <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-full">
+                  <CheckCircle className="h-3.5 w-3.5" /> Pre-rota complete
+                </span>
+              )}
+              {preRotaResult.status === 'complete_with_warnings' && (
+                <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-amber-100 px-2.5 py-1 rounded-full">
+                  <AlertTriangle className="h-3.5 w-3.5" /> Complete with warnings
+                </span>
+              )}
+              {preRotaResult.status === 'blocked' && (
+                <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-700 bg-red-100 px-2.5 py-1 rounded-full">
+                  <XCircle className="h-3.5 w-3.5" /> Blocked — critical issues found
+                </span>
+              )}
+              <span className="text-[10px] text-muted-foreground">
+                Generated {new Date(preRotaResult.generatedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} at {new Date(preRotaResult.generatedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            </div>
+          )}
+
+          {/* 6.4 — Validation issues panel */}
+          {preRotaResult && (
+            <div className="mt-4 rounded-lg border border-border overflow-hidden">
+              <button
+                onClick={() => setIssuesPanelOpen(o => !o)}
+                className="w-full flex items-center justify-between px-4 py-3 bg-muted/50 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+              >
+                <span>Data Validation ({preRotaResult.validationIssues.length} issue{preRotaResult.validationIssues.length !== 1 ? 's' : ''})</span>
+                <span className="text-muted-foreground">{issuesPanelOpen ? '▲' : '▼'}</span>
+              </button>
+
+              {issuesPanelOpen && (
+                <div className="px-4 py-3 space-y-4">
+                  {preRotaResult.status === 'blocked' && (
+                    <div className="rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2">
+                      <p className="text-xs font-semibold text-destructive">Generation blocked. Resolve all critical issues before proceeding.</p>
+                    </div>
+                  )}
+
+                  {preRotaResult.validationIssues.filter(i => i.severity === 'critical').length > 0 && (
+                    <div>
+                      <p className="text-xs font-bold text-foreground mb-2">🔴 Critical</p>
+                      <div className="space-y-1.5">
+                        {preRotaResult.validationIssues.filter(i => i.severity === 'critical').map((issue, idx) => (
+                          <div key={idx} className="flex items-start gap-2 text-xs">
+                            <XCircle className="h-3.5 w-3.5 text-destructive shrink-0 mt-0.5" />
+                            <span className="text-foreground">
+                              {issue.doctorName && <strong>{issue.doctorName}: </strong>}
+                              {issue.message.replace(issue.doctorName ? `${issue.doctorName}: ` : '', '')}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {preRotaResult.validationIssues.filter(i => i.severity === 'warning').length > 0 && (
+                    <div>
+                      <p className="text-xs font-bold text-foreground mb-2">🟠 Warnings</p>
+                      <div className="space-y-1.5">
+                        {preRotaResult.validationIssues.filter(i => i.severity === 'warning').map((issue, idx) => (
+                          <div key={idx} className="flex items-start gap-2 text-xs">
+                            <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />
+                            <span className="text-foreground">
+                              {issue.doctorName && <strong>{issue.doctorName}: </strong>}
+                              {issue.message.replace(issue.doctorName ? `${issue.doctorName}: ` : '', '')}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {preRotaResult.validationIssues.filter(i => i.severity === 'info').length > 0 && (
+                    <div>
+                      <p className="text-xs font-bold text-foreground mb-2">🟡 Info</p>
+                      <div className="space-y-1.5">
+                        {preRotaResult.validationIssues.filter(i => i.severity === 'info').map((issue, idx) => (
+                          <div key={idx} className="flex items-start gap-2 text-xs">
+                            <Info className="h-3.5 w-3.5 text-blue-500 shrink-0 mt-0.5" />
+                            <span className="text-foreground">
+                              {issue.doctorName && <strong>{issue.doctorName}: </strong>}
+                              {issue.message.replace(issue.doctorName ? `${issue.doctorName}: ` : '', '')}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {preRotaResult.validationIssues.length === 0 && (
+                    <p className="text-xs text-muted-foreground">No issues found.</p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
+
+        {/* 6.5 — Weekly calendar view */}
+        {preRotaResult && preRotaResult.status !== 'blocked' && preRotaResult.calendarData?.weeks?.length > 0 && (() => {
+          const { weeks, doctors } = preRotaResult.calendarData;
+          const week = weeks[currentWeekIndex];
+          if (!week) return null;
+          const totalDoctors = doctors.length;
+
+          return (
+            <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3">Availability Calendar</h3>
+
+              {/* Week navigator */}
+              <div className="flex items-center justify-between mb-4">
+                <button onClick={handlePrevWeek} disabled={currentWeekIndex === 0} className="p-1.5 rounded-md hover:bg-muted disabled:opacity-30 transition-colors">
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <span className="text-xs font-medium text-foreground">
+                  Week {week.weekNumber} of {weeks.length} —{' '}
+                  {new Date(week.dates[0] + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short' })} to{' '}
+                  {new Date(week.dates[week.dates.length - 1] + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short' })}
+                </span>
+                <button onClick={handleNextWeek} disabled={currentWeekIndex >= weeks.length - 1} className="p-1.5 rounded-md hover:bg-muted disabled:opacity-30 transition-colors">
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Calendar table */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs border-collapse">
+                  <thead>
+                    <tr>
+                      <th className="text-left py-1.5 px-2 font-medium text-muted-foreground border-b border-border">Doctor</th>
+                      {week.dates.map(date => {
+                        const d = new Date(date + 'T00:00:00');
+                        const isWknd = d.getDay() === 0 || d.getDay() === 6;
+                        return (
+                          <th key={date} className={`text-center py-1.5 px-1 font-medium border-b border-border ${isWknd ? 'bg-gray-100' : ''}`}>
+                            <p className="text-[10px] text-muted-foreground">{d.toLocaleDateString('en-GB', { weekday: 'short' })}</p>
+                            <p className="text-[10px] text-muted-foreground">{d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</p>
+                          </th>
+                        );
+                      })}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {doctors.map(doctor => (
+                      <tr key={doctor.doctorId} className="border-b border-border/50">
+                        <td className="py-1.5 px-2 whitespace-nowrap">
+                          <p className="font-medium text-foreground text-[11px]">{doctor.doctorName}</p>
+                          <p className="text-[9px] text-muted-foreground">{doctor.grade} · {doctor.wte}%</p>
+                        </td>
+                        {week.dates.map(date => {
+                          const cell = doctor.availability[date];
+                          const primary = cell?.primary ?? 'AVAILABLE';
+                          const isWknd = new Date(date + 'T00:00:00').getDay() === 0 || new Date(date + 'T00:00:00').getDay() === 6;
+                          return (
+                            <td key={date} className={`text-center py-1.5 px-0.5 ${isWknd && primary === 'AVAILABLE' ? 'bg-gray-50' : ''}`}>
+                              <span className={`inline-block rounded px-1 py-0.5 text-[9px] font-semibold ${CELL_BG[primary] ?? ''} ${CELL_TEXT[primary] ?? ''}`}>
+                                {cell?.label || ''}
+                              </span>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+
+                    {/* Available count row */}
+                    <tr className="bg-blue-50 font-semibold">
+                      <td className="py-1.5 px-2 text-[11px] text-foreground">Available</td>
+                      {week.dates.map(date => {
+                        const available = doctors.filter(d => !d.availability[date] || d.availability[date].primary === 'AVAILABLE').length;
+                        return (
+                          <td key={date} className="text-center py-1.5 text-[10px] text-foreground">
+                            {available}/{totalDoctors}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Legend */}
+              <div className="flex flex-wrap gap-3 mt-4">
+                {(['AL', 'SL', 'NOC', 'ROT', 'PL', 'BH', 'LTFT'] as const).map(code => (
+                  <span key={code} className="inline-flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                    <span className={`inline-block w-3 h-3 rounded ${CELL_BG[code]}`} />
+                    {LEGEND_LABELS[code]}
+                  </span>
+                ))}
+                <span className="inline-flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                  <span className="inline-block w-3 h-3 rounded border border-border bg-white" />
+                  Available
+                </span>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* 6.6 — Targets table */}
+        {preRotaResult && preRotaResult.status !== 'blocked' && preRotaResult.targetsData?.doctors?.length > 0 && (() => {
+          const { doctors: tDoctors, shiftTypes: tShiftTypes, teamTotal, teamAverage, wtrMaxHoursPerWeek, hardWeeklyCap: hwc } = preRotaResult.targetsData;
+
+          return (
+            <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3">Shift Hour Targets</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs border-collapse">
+                  <thead>
+                    <tr className="border-b border-border text-left">
+                      <th className="py-2 px-2 font-medium text-muted-foreground">Doctor</th>
+                      <th className="py-2 px-2 font-medium text-muted-foreground">Grade</th>
+                      <th className="py-2 px-2 font-medium text-muted-foreground">WTE</th>
+                      <th className="py-2 px-2 font-medium text-muted-foreground text-center">
+                        <p>Hrs/wk</p><p className="font-normal text-[9px]">contracted</p>
+                      </th>
+                      <th className="py-2 px-2 font-medium text-muted-foreground text-center">
+                        <p>Hard cap</p><p className="font-normal text-[9px]">per 168h</p>
+                      </th>
+                      {tShiftTypes.map(st => (
+                        <th key={st.id} className="py-2 px-2 font-medium text-muted-foreground text-center">
+                          <p>{st.name}</p><p className="font-normal text-[9px]">{st.isOncall ? 'on-call' : 'non-oncall'}</p>
+                        </th>
+                      ))}
+                      <th className="py-2 px-2 font-medium text-muted-foreground text-center">
+                        <p>Weekends</p><p className="font-normal text-[9px]">max</p>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tDoctors.map((doctor, idx) => {
+                      const isLTFT = doctor.wte < 100;
+                      return (
+                        <tr key={doctor.doctorId} className={`border-b border-border/50 ${isLTFT ? 'bg-amber-50' : idx % 2 === 1 ? 'bg-muted/20' : ''}`}>
+                          <td className="py-2 px-2 font-medium text-foreground whitespace-nowrap">{doctor.doctorName}</td>
+                          <td className="py-2 px-2 text-muted-foreground">{doctor.grade}</td>
+                          <td className="py-2 px-2 text-muted-foreground">
+                            {doctor.wte}%
+                          </td>
+                          <td className="py-2 px-2 text-center font-mono">{doctor.contractedHoursPerWeek}h</td>
+                          <td className="py-2 px-2 text-center font-mono">{doctor.hardWeeklyCap}h</td>
+                          {tShiftTypes.map(st => {
+                            const target = doctor.shiftTargets.find(t => t.shiftTypeId === st.id);
+                            return (
+                              <td key={st.id} className="py-2 px-2 text-center">
+                                <p className="font-mono">{target?.maxTargetHours ?? 0}h</p>
+                                <p className="text-[9px] text-muted-foreground">~{target?.estimatedShiftCount ?? 0} shifts</p>
+                              </td>
+                            );
+                          })}
+                          <td className="py-2 px-2 text-center font-mono">{doctor.weekendCap}</td>
+                        </tr>
+                      );
+                    })}
+
+                    {/* Team Total row */}
+                    <tr className="border-b-2 border-border bg-blue-50 font-semibold">
+                      <td className="py-2 px-2 text-foreground">Team Total</td>
+                      <td className="py-2 px-2">—</td>
+                      <td className="py-2 px-2">—</td>
+                      <td className="py-2 px-2"></td>
+                      <td className="py-2 px-2"></td>
+                      {tShiftTypes.map(st => {
+                        const t = teamTotal.shiftTargets.find(x => x.shiftTypeId === st.id);
+                        return <td key={st.id} className="py-2 px-2 text-center font-mono">{t?.value ?? 0}h</td>;
+                      })}
+                      <td className="py-2 px-2 text-center font-mono">{teamTotal.weekendCap}</td>
+                    </tr>
+
+                    {/* Team Average row */}
+                    <tr className="bg-blue-50 font-semibold">
+                      <td className="py-2 px-2 text-foreground">Team Average</td>
+                      <td className="py-2 px-2">—</td>
+                      <td className="py-2 px-2">—</td>
+                      <td className="py-2 px-2"></td>
+                      <td className="py-2 px-2"></td>
+                      {tShiftTypes.map(st => {
+                        const t = teamAverage.shiftTargets.find(x => x.shiftTypeId === st.id);
+                        return <td key={st.id} className="py-2 px-2 text-center font-mono">{t?.value ?? 0}h</td>;
+                      })}
+                      <td className="py-2 px-2 text-center font-mono">{teamAverage.weekendCap}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          );
+        })()}
+        {/* ✅ Section 6 complete */}
 
         {/* Phase 2: Final Allocation */}
         <div className="rounded-xl border border-border bg-card p-5 shadow-sm opacity-60">
