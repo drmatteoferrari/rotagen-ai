@@ -1,5 +1,7 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { format, parseISO } from "date-fns";
+import { toast } from "sonner";
 import { useSurveyContext, type SurveyFormData } from "@/contexts/SurveyContext";
 import { StepNav } from "@/components/survey/StepNav";
 import { SurveySection } from "@/components/survey/SurveySection";
@@ -22,11 +24,12 @@ function fmtDateRange(start: string, end: string): string {
 
 export default function SurveyStep7() {
   const ctx = useSurveyContext();
+  const navigate = useNavigate();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saveMessage, setSaveMessage] = useState("");
 
   if (!ctx) return null;
-  const { formData, setField, submitSurvey, submitting, submitError, saveDraft, setStep } = ctx;
+  const { formData, setField, submitSurvey, submitting, submitError, saveDraft, setStep, isAdminMode } = ctx;
 
   const validate = (): boolean => {
     const e: Record<string, string> = {};
@@ -42,7 +45,11 @@ export default function SurveyStep7() {
 
   const handleSubmit = async () => {
     if (!validate()) return;
-    await submitSurvey();
+    const success = await submitSurvey();
+    if (success && isAdminMode) {
+      toast.success("Survey updated successfully");
+      navigate("/admin/roster");
+    }
   };
 
   const handleSaveAndReturn = async () => {

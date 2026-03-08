@@ -180,6 +180,7 @@ interface SurveyContextType {
   setSubmittedAt: (v: string | null) => void;
   setLoadState: (s: LoadState) => void;
   saveStatus: SaveStatus;
+  isAdminMode: boolean;
 }
 
 const SurveyContext = createContext<SurveyContextType | null>(null);
@@ -279,7 +280,7 @@ function dbRowToFormData(draft: any, base: SurveyFormData): SurveyFormData {
 
 // === Provider ===
 
-export function SurveyProvider({ token, children }: { token: string | null; children: ReactNode }) {
+export function SurveyProvider({ token, adminMode = false, children }: { token: string | null; adminMode?: boolean; children: ReactNode }) {
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [errorMessage, setErrorMessage] = useState("");
   const [doctor, setDoctor] = useState<SurveyDoctorInfo | null>(null);
@@ -367,7 +368,7 @@ export function SurveyProvider({ token, children }: { token: string | null; chil
       if (doctorRow.survey_status === "submitted") {
         setSubmittedAt(doctorRow.survey_submitted_at ?? new Date().toISOString());
 
-        // Load submitted data for confirmation display
+        // Load submitted data
         const { data: draft } = await supabase
           .from("doctor_survey_responses")
           .select("*")
@@ -383,6 +384,12 @@ export function SurveyProvider({ token, children }: { token: string | null; chil
             grade: doc.grade,
           };
           setFormData(dbRowToFormData(draft, initial));
+        }
+
+        // Admin mode: allow editing submitted surveys
+        if (adminMode) {
+          setLoadState("ready");
+          return;
         }
 
         setLoadState("submitted");
@@ -576,7 +583,7 @@ export function SurveyProvider({ token, children }: { token: string | null; chil
         loadState, errorMessage, doctor, rotaInfo, formData, currentStep,
         setField, setFields, setStep, nextStep, prevStep, goToStep,
         submitSurvey, saveDraft, submitting, submitError, draftSavedAt, submittedAt,
-        setSubmittedAt, setLoadState, saveStatus,
+        setSubmittedAt, setLoadState, saveStatus, isAdminMode: adminMode,
       }}
     >
       {children}
