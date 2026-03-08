@@ -449,6 +449,7 @@ export default function PreRotaCalendarPage() {
     if (!currentDate) return null;
     const d = new Date(currentDate + 'T00:00:00');
     const isBH = bankHolidays.has(currentDate);
+    const isWknd = d.getDay() === 0 || d.getDay() === 6;
 
     const totalAvailable = doctors.filter(doc => {
       const p = doc.availability[currentDate]?.primary ?? 'AVAILABLE';
@@ -461,91 +462,125 @@ export default function PreRotaCalendarPage() {
 
     return (
       <AdminLayout title="Availability Calendar">
-        <div className="space-y-4">
-          <div className="space-y-2">
+        <div className="space-y-3">
+          {/* Top bar */}
+          <div className="flex items-center justify-between">
             <button onClick={() => navigate('/admin/dashboard')} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
-              <ArrowLeft className="h-3.5 w-3.5" /> Back to Dashboard
+              <ArrowLeft className="h-3.5 w-3.5" /> Dashboard
             </button>
-            <p className="text-xs text-muted-foreground">{deptName}{deptName && hospitalName ? ' · ' : ''}{hospitalName}</p>
-            <Button variant="outline" size="sm" onClick={handleDownload} className="w-full">
-              <Download className="h-4 w-4 mr-2" /> Download .xlsx
+            <Button variant="outline" size="sm" onClick={handleDownload}>
+              <Download className="h-3.5 w-3.5 mr-1.5" /> .xlsx
             </Button>
           </div>
 
           {/* Day navigator */}
-          <div className="flex items-center justify-between">
-            <button onClick={() => setCurrentDayIndex(i => Math.max(0, i - 1))} disabled={currentDayIndex === 0} className="p-2 rounded-md hover:bg-muted disabled:opacity-30 min-h-[44px]">
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            background: getColumnHeaderBg(isBH, isWknd),
+            border: '1px solid #e2e8f0', borderRadius: 8, padding: '6px 4px',
+          }}>
+            <button onClick={() => setCurrentDayIndex(i => Math.max(0, i - 1))} disabled={currentDayIndex === 0} className="p-2 rounded-md hover:bg-muted disabled:opacity-30 min-h-[40px]">
               <ChevronLeft className="h-4 w-4" />
             </button>
             <div className="text-center">
-              <p className="text-sm font-medium text-foreground">
-                {d.toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'short', year: 'numeric' })}
+              <p className="text-sm font-semibold" style={{ color: getColumnHeaderTextColor(isBH, isWknd) }}>
+                {d.toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}
               </p>
-              {isBH && <span style={{ display: 'inline-block', background: '#b91c1c', color: '#fff', fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4, marginTop: 3 }}>BH</span>}
+              <p className="text-[10px] text-muted-foreground">Day {currentDayIndex + 1} of {allDates.length}</p>
+              {isBH && <span style={{ display: 'inline-block', background: '#b91c1c', color: '#fff', fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4, marginTop: 2 }}>Bank Holiday</span>}
             </div>
-            <button onClick={() => setCurrentDayIndex(i => Math.min(allDates.length - 1, i + 1))} disabled={currentDayIndex >= allDates.length - 1} className="p-2 rounded-md hover:bg-muted disabled:opacity-30 min-h-[44px]">
+            <button onClick={() => setCurrentDayIndex(i => Math.min(allDates.length - 1, i + 1))} disabled={currentDayIndex >= allDates.length - 1} className="p-2 rounded-md hover:bg-muted disabled:opacity-30 min-h-[40px]">
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>
 
-          {/* Doctor cards */}
-          <div className="space-y-2">
-            {doctors.map(doctor => {
+          {/* Availability summary — desktop-style colored badges */}
+          <div style={{
+            display: 'grid', gridTemplateColumns: `repeat(${Math.min(shiftTypes.length + 1, 3)}, 1fr)`,
+            gap: 6, padding: '8px 10px', background: '#f8fafc',
+            border: '1px solid #e2e8f0', borderRadius: 8,
+          }}>
+            {/* All shifts */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+              <span style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                width: 30, height: 30, borderRadius: 6,
+                background: availabilityColour(totalAvailable, maxMinDoctors), color: '#fff',
+                fontSize: 14, fontWeight: 700,
+              }}>{totalAvailable}</span>
+              <span style={{ fontSize: 10, color: '#64748b', fontWeight: 500, textAlign: 'center', lineHeight: 1.2 }}>All shifts</span>
+              {nocOnlyCount > 0 && (
+                <span style={{ fontSize: 9, color: '#ec4899', fontWeight: 600 }}>+{nocOnlyCount} NOC</span>
+              )}
+            </div>
+            {shiftTypes.map(shift => {
+              const count = eligibility[shift.id]?.[currentDate] ?? 0;
+              return (
+                <div key={shift.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                  <span style={{
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    width: 30, height: 30, borderRadius: 6,
+                    background: availabilityColour(count, shift.min_doctors), color: '#fff',
+                    fontSize: 14, fontWeight: 700,
+                  }}>{count}</span>
+                  <span style={{ fontSize: 10, color: '#64748b', fontWeight: 500, textAlign: 'center', lineHeight: 1.2 }}>{shift.name}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Doctor list — compact dense rows */}
+          <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden' }}>
+            {doctors.map((doctor, idx) => {
               const cell = doctor.availability[currentDate];
               const primary = cell?.primary ?? 'AVAILABLE';
               const isLtftDay = getLtftDaysOff(doctor).includes(getDayNameFromISO(currentDate));
+              const cellBg = getCellBackground(doctor, currentDate, isBH, isWknd);
+              const isUnavailable = ['AL', 'SL', 'ROT', 'PL'].includes(primary);
 
               return (
-                <div key={doctor.doctorId} className="rounded-lg border border-border bg-card p-3 min-h-[44px]">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-foreground">{doctor.doctorName}</p>
-                      <p className="text-[11px] text-muted-foreground">{doctor.grade} · {doctor.wte}%</p>
-                    </div>
-                    <div className="flex flex-col items-end gap-1">
-                      {['AL', 'SL', 'ROT', 'PL'].includes(primary) && (
-                        <LeaveBadge type={primary as keyof typeof BADGE_STYLES} />
-                      )}
-                      {primary === 'NOC' && (
-                        <span style={{ background: '#ec4899', color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 5 }}>NOC</span>
-                      )}
-                      {isLtftDay && (
-                        <span style={{ background: 'rgba(253,230,138,0.7)', color: '#92400e', border: '1px solid #fde68a', fontSize: 9, fontWeight: 600, padding: '1px 5px', borderRadius: 4 }}>LTFT</span>
-                      )}
-                      {!['AL', 'SL', 'ROT', 'PL', 'NOC'].includes(primary) && !isLtftDay && (
-                        <span className="text-[11px] text-muted-foreground">Available</span>
-                      )}
-                    </div>
+                <div key={doctor.doctorId} style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '5px 10px',
+                  background: cellBg,
+                  borderBottom: idx < doctors.length - 1 ? '1px solid #f1f5f9' : 'none',
+                  opacity: isUnavailable ? 0.6 : 1,
+                  minHeight: 32,
+                }}>
+                  <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
+                      {doctor.doctorName}
+                    </span>
+                    <span style={{ fontSize: 10, color: '#94a3b8' }}>{doctor.grade} · {doctor.wte}%</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0, marginLeft: 6 }}>
+                    {primary === 'AL' && <span style={{ background: '#16a34a', color: '#fff', fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4 }}>AL</span>}
+                    {primary === 'SL' && <span style={{ background: '#2563eb', color: '#fff', fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4 }}>SL</span>}
+                    {primary === 'ROT' && <span style={{ background: '#c2410c', color: '#fff', fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4 }}>ROT</span>}
+                    {primary === 'PL' && <span style={{ background: '#7c3aed', color: '#fff', fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4 }}>PL</span>}
+                    {primary === 'NOC' && <span style={{ background: '#ec4899', color: '#fff', fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4 }}>NOC</span>}
+                    {isLtftDay && <span style={{ background: 'rgba(253,230,138,0.7)', color: '#92400e', border: '1px solid #fde68a', fontSize: 8, fontWeight: 600, padding: '1px 4px', borderRadius: 3 }}>LTFT</span>}
                   </div>
                 </div>
               );
             })}
           </div>
 
-          {/* Availability chips */}
-          <div className="flex flex-wrap gap-2">
-            <span style={{
-              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 6,
-              background: availabilityColour(totalAvailable, maxMinDoctors), color: '#fff',
-            }}>
-              All shifts: {totalAvailable}{nocOnlyCount > 0 ? ` (+${nocOnlyCount} NOC)` : ''}
-            </span>
-            {shiftTypes.map(shift => {
-              const count = eligibility[shift.id]?.[currentDate] ?? 0;
-              return (
-                <span key={shift.id} style={{
-                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 6,
-                  background: availabilityColour(count, shift.min_doctors), color: '#fff',
-                }}>
-                  {shift.name}: {count}
-                </span>
-              );
-            })}
+          {/* Compact legend */}
+          <div style={{
+            display: 'flex', flexWrap: 'wrap', gap: '4px 10px',
+            fontSize: 10, color: '#374151', padding: '6px 10px',
+            background: '#fff', border: '1px solid #e2e8f0', borderRadius: 6,
+          }}>
+            <span><span style={{ background: '#16a34a', color: '#fff', fontSize: 8, fontWeight: 700, padding: '1px 4px', borderRadius: 3 }}>AL</span> Annual</span>
+            <span><span style={{ background: '#2563eb', color: '#fff', fontSize: 8, fontWeight: 700, padding: '1px 4px', borderRadius: 3 }}>SL</span> Study</span>
+            <span><span style={{ background: '#c2410c', color: '#fff', fontSize: 8, fontWeight: 700, padding: '1px 4px', borderRadius: 3 }}>ROT</span> Rotation</span>
+            <span><span style={{ background: '#7c3aed', color: '#fff', fontSize: 8, fontWeight: 700, padding: '1px 4px', borderRadius: 3 }}>PL</span> Parental</span>
+            <span><span style={{ background: '#ec4899', color: '#fff', fontSize: 8, fontWeight: 700, padding: '1px 4px', borderRadius: 3 }}>NOC</span> Not On-Call</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}><span style={{ width: 8, height: 8, borderRadius: 2, background: '#fef9c3', border: '1px solid #fde68a', display: 'inline-block' }} /> LTFT</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}><span style={{ width: 8, height: 8, borderRadius: 2, background: '#fee2e2', border: '1px solid #fecaca', display: 'inline-block' }} /> BH</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}><span style={{ width: 8, height: 8, borderRadius: 2, background: '#f3f4f6', border: '1px solid #e5e7eb', display: 'inline-block' }} /> Weekend</span>
           </div>
-
-          <CalendarLegend />
         </div>
       </AdminLayout>
     );
