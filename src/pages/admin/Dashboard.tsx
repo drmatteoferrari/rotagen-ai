@@ -2,12 +2,11 @@ import { useState, useEffect } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { useAdminSetup } from "@/contexts/AdminSetupContext";
 import { useRotaContext } from "@/contexts/RotaContext";
-import { useAuth, loadAccountSettings } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   CheckCircle, Zap, Target, Users, ShieldCheck, Lock,
-  Building2, Loader2, Pencil, ClipboardList, CalendarDays,
+  Building2, Loader2, ClipboardList, CalendarDays,
   RefreshCw, Play, AlertTriangle, XCircle, Info,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -21,14 +20,8 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { isDepartmentComplete, isWtrComplete, isPeriodComplete, areSurveysDone, restoredFromDb } = useAdminSetup();
   const { restoredConfig, currentRotaConfigId } = useRotaContext();
-  const { user, accountSettings, setAccountSettings } = useAuth();
+  const { user } = useAuth();
 
-  // Loading state
-  const [loadingSettings, setLoadingSettings] = useState(true);
-
-  // Department/Hospital state (read-only display)
-  const [departmentName, setDepartmentName] = useState("");
-  const [trustName, setTrustName] = useState("");
 
   // Live survey counts
   const [surveySubmitted, setSurveySubmitted] = useState(0);
@@ -41,23 +34,7 @@ export default function Dashboard() {
   const [isStale, setIsStale] = useState(false);
   const [issuesPanelOpen, setIssuesPanelOpen] = useState(false);
 
-  // Load settings on mount
-  useEffect(() => {
-    const load = async () => {
-      if (!user?.username) { setLoadingSettings(false); return; }
-      setLoadingSettings(true);
-      try {
-        const settings = await loadAccountSettings(user.username);
-        setDepartmentName(settings.departmentName || "");
-        setTrustName(settings.trustName || "");
-      } catch (error) {
-        console.error("Failed to load account settings:", error);
-      } finally {
-        setLoadingSettings(false);
-      }
-    };
-    load();
-  }, [user?.username]);
+  // Live survey counts
 
   // Fetch live survey counts
   useEffect(() => {
@@ -157,7 +134,6 @@ export default function Dashboard() {
     setIssuesPanelOpen(result.validationIssues.length > 0);
   };
 
-  const hasSavedSettings = !loadingSettings && !!departmentName.trim() && !!trustName.trim();
   const canGeneratePreRota = isDepartmentComplete && isWtrComplete && isPeriodComplete;
 
   // ✅ Section 1e complete — setup items with numbered circles
@@ -183,26 +159,6 @@ export default function Dashboard() {
     <AdminLayout title="Dashboard" subtitle="Track setup progress and generate the rota">
       <div className="mx-auto max-w-3xl space-y-6">
 
-        {/* Department & Hospital — read-only display */}
-        {loadingSettings ? (
-          <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-            <Skeleton className="h-10 w-full" />
-          </div>
-        ) : hasSavedSettings ? (
-          <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/40 px-4 py-2.5">
-            <Building2 className="h-5 w-5 text-primary shrink-0" />
-            <span className="text-sm font-medium text-foreground truncate">
-              {departmentName} <span className="text-muted-foreground mx-1">·</span> {trustName}
-            </span>
-            <button
-              onClick={() => navigate("/admin/department/step-1")}
-              className="ml-auto shrink-0 h-7 w-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-            >
-              <Pencil className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        ) : null}
-        {/* ✅ Section 4d complete — editable inputs removed, read-only display kept */}
 
         {/* 1. Setup */}
         <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
