@@ -155,6 +155,8 @@ const DEFAULT_FORM_DATA: SurveyFormData = {
 };
 
 type LoadState = "loading" | "error" | "submitted" | "ready";
+// ✅ Section 4 complete — SaveStatus type
+type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
 interface SurveyContextType {
   loadState: LoadState;
@@ -177,6 +179,7 @@ interface SurveyContextType {
   submittedAt: string | null;
   setSubmittedAt: (v: string | null) => void;
   setLoadState: (s: LoadState) => void;
+  saveStatus: SaveStatus;
 }
 
 const SurveyContext = createContext<SurveyContextType | null>(null);
