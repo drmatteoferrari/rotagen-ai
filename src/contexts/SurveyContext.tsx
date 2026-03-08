@@ -368,7 +368,7 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
       if (doctorRow.survey_status === "submitted") {
         setSubmittedAt(doctorRow.survey_submitted_at ?? new Date().toISOString());
 
-        // Load submitted data for confirmation display
+        // Load submitted data
         const { data: draft } = await supabase
           .from("doctor_survey_responses")
           .select("*")
@@ -384,6 +384,12 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
             grade: doc.grade,
           };
           setFormData(dbRowToFormData(draft, initial));
+        }
+
+        // Admin mode: allow editing submitted surveys
+        if (adminMode) {
+          setLoadState("ready");
+          return;
         }
 
         setLoadState("submitted");
