@@ -290,6 +290,7 @@ export function SurveyProvider({ token, children }: { token: string | null; chil
   const [submitError, setSubmitError] = useState("");
   const [draftSavedAt, setDraftSavedAt] = useState<Date | null>(null);
   const [submittedAt, setSubmittedAt] = useState<string | null>(null);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const formDataRef = useRef(formData);
   const doctorRef = useRef(doctor);
