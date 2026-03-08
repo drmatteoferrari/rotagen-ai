@@ -97,6 +97,10 @@ function CollapsedCard({
           <p className="text-xs text-muted-foreground flex items-center gap-1.5">
             <Clock className="h-3.5 w-3.5 shrink-0" />
             {shift.startTime} – {shift.endTime} ({shift.durationHours}h)
+            <span className="text-muted-foreground/60">·</span>
+            <span className="font-semibold tracking-wide">
+              {DAY_KEYS.filter(k => shift.applicableDays[k]).map((k, i) => DAY_LABELS[DAY_KEYS.indexOf(k)]).join("")}
+            </span>
           </p>
           {/* Show icon-only badges on mobile, full badges on sm+ */}
           <div className="sm:hidden">
