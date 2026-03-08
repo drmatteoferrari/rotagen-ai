@@ -47,21 +47,28 @@ export function AdminLayout({ children, title, subtitle }: AdminLayoutProps) {
       <div className="flex min-h-screen w-full flex-col bg-background">
         {/* Header */}
         <header className="flex h-14 items-center justify-between border-b border-border bg-card px-4">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary">
               <Stethoscope className="h-3.5 w-3.5 text-primary-foreground" />
             </div>
-            <div>
-              <h1 className="text-sm font-semibold text-card-foreground leading-tight">{title}</h1>
-              {subtitle && <p className="text-[11px] text-muted-foreground">{subtitle}</p>}
+            <div className="min-w-0">
+              <h1 className="text-sm font-semibold text-card-foreground leading-tight truncate">{title}</h1>
+              {subtitle && <p className="text-[11px] text-muted-foreground truncate">{subtitle}</p>}
             </div>
           </div>
           {user && (
-            <button onClick={handleLogout} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
-              <span>{user.username}</span>
-              <span className="text-border">|</span>
-              <span className="flex items-center gap-1">Sign out <LogOut className="h-3 w-3" /></span>
-            </button>
+            <div className="flex items-center gap-2 shrink-0 ml-2">
+              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold uppercase">
+                {user.username?.charAt(0) || "?"}
+              </div>
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-1 rounded-md border border-border bg-muted/50 px-2 py-1 text-[11px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              >
+                <LogOut className="h-3 w-3" />
+                <span className="sr-only sm:not-sr-only">Sign out</span>
+              </button>
+            </div>
           )}
         </header>
 
