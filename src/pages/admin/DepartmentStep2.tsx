@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Pencil, Clock, Save, X, ChevronDown, Info, AlertTriangle, ArrowLeft } from "lucide-react";
+import { Plus, Trash2, Pencil, Clock, Save, X, ChevronDown, Info, AlertTriangle, ArrowLeft, ArrowRight, CalendarDays } from "lucide-react";
 import {
   useDepartmentSetup,
   detectBadges,
@@ -83,12 +84,12 @@ function CollapsedCard({
   return (
     <div
       onClick={onExpand}
-      className="rounded-2xl border border-border bg-card p-5 shadow-sm transition-all hover:shadow-md cursor-pointer"
+      className="rounded-lg border border-border bg-card p-4 space-y-3 transition-all hover:shadow-md cursor-pointer"
     >
       <div className="flex justify-between items-start">
         <div className="flex flex-col gap-2">
-          <h3 className="text-lg font-bold text-card-foreground">{shift.name}</h3>
-          <p className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+          <h3 className="text-sm font-medium text-card-foreground">{shift.name}</h3>
+          <p className="text-xs text-muted-foreground flex items-center gap-1.5">
             <Clock className="h-3.5 w-3.5" />
             {shift.startTime} – {shift.endTime} ({shift.durationHours}h)
           </p>
@@ -105,7 +106,7 @@ function CollapsedCard({
           )}
           <button
             onClick={(e) => { e.stopPropagation(); onExpand(); }}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-muted-foreground hover:text-primary transition-colors"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-muted-foreground hover:text-purple-600 transition-colors"
           >
             <Pencil className="h-4 w-4" />
           </button>
@@ -131,7 +132,6 @@ function ExpandedCard({
   const [draft, setDraft] = useState<ShiftType>({ ...originalShift, applicableDays: { ...originalShift.applicableDays }, badges: { ...originalShift.badges }, badgeOverrides: { ...originalShift.badgeOverrides }, staffing: { ...originalShift.staffing }, reqIac: originalShift.reqIac, reqIaoc: originalShift.reqIaoc, reqIcu: originalShift.reqIcu, reqMinGrade: originalShift.reqMinGrade });
   const [showMax, setShowMax] = useState(draft.staffing.max !== null);
 
-  // Recalculate auto badges and auto-oncall whenever relevant fields change
   const recalc = useCallback((d: ShiftType): ShiftType => {
     const dur = calcDurationHours(d.startTime, d.endTime);
     const auto = detectBadges(d.startTime, d.endTime, d.applicableDays, d.isOncall, d.isNonRes);
@@ -154,7 +154,6 @@ function ExpandedCard({
 
   const toggleDay = (key: keyof ApplicableDays) => {
     const newDays = { ...draft.applicableDays, [key]: !draft.applicableDays[key] };
-    // Ensure at least one day is selected
     if (!Object.values(newDays).some(Boolean)) return;
     update({ applicableDays: newDays });
   };
@@ -164,15 +163,12 @@ function ExpandedCard({
     let newOverrides = { ...draft.badgeOverrides };
     
     if (isCurrentlyOverridden) {
-      // Remove override → revert to auto
       delete newOverrides[key];
     } else {
-      // Set override → flip current effective value
       const auto = detectBadges(draft.startTime, draft.endTime, draft.applicableDays, draft.isOncall, draft.isNonRes);
       newOverrides[key] = !auto[key];
     }
 
-    // If toggling oncall/nonres badges, also update the corresponding field
     let extraUpdates: Partial<ShiftType> = {};
     if (key === "oncall") {
       const effectiveVal = newOverrides.oncall !== undefined ? newOverrides.oncall : detectBadges(draft.startTime, draft.endTime, draft.applicableDays, draft.isOncall, draft.isNonRes).oncall;
@@ -187,10 +183,10 @@ function ExpandedCard({
   };
 
   return (
-    <div className="rounded-2xl border-2 border-primary/30 bg-card p-6 shadow-lg space-y-5">
+    <div className="rounded-lg border-2 border-purple-200 bg-card p-6 shadow-lg space-y-5">
       {/* Header with remove */}
       <div className="flex justify-between items-center">
-        <ChevronDown className="h-5 w-5 text-primary" />
+        <ChevronDown className="h-5 w-5 text-purple-600" />
         {canRemove && (
           <button onClick={onRemove} className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-muted-foreground hover:text-destructive transition-colors">
             <Trash2 className="h-4 w-4" />
@@ -213,15 +209,15 @@ function ExpandedCard({
       <div className="grid grid-cols-3 gap-4">
         <div className="space-y-1">
           <Label className="font-semibold text-xs">Start Time</Label>
-          <Input type="time" value={draft.startTime} onChange={(e) => update({ startTime: e.target.value })} />
+          <Input type="time" value={draft.startTime} onChange={(e) => update({ startTime: e.target.value })} className="bg-muted border-border" />
         </div>
         <div className="space-y-1">
           <Label className="font-semibold text-xs">End Time</Label>
-          <Input type="time" value={draft.endTime} onChange={(e) => update({ endTime: e.target.value })} />
+          <Input type="time" value={draft.endTime} onChange={(e) => update({ endTime: e.target.value })} className="bg-muted border-border" />
         </div>
         <div className="space-y-1">
           <Label className="font-semibold text-xs">Duration</Label>
-          <div className="flex items-center gap-2 h-10 px-3 rounded-md border border-input bg-muted text-muted-foreground text-sm font-medium">
+          <div className="flex items-center gap-2 h-10 px-3 rounded-md border border-border bg-muted text-muted-foreground text-sm font-medium">
             <Clock className="h-3.5 w-3.5" /> {draft.durationHours}h
           </div>
         </div>
@@ -238,7 +234,7 @@ function ExpandedCard({
               onClick={() => toggleDay(key)}
               className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${
                 draft.applicableDays[key]
-                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                  ? "bg-purple-600 text-white shadow-lg shadow-purple-600/20"
                   : "bg-muted text-muted-foreground hover:bg-muted/80"
               }`}
             >
@@ -260,7 +256,7 @@ function ExpandedCard({
                 onClick={() => update({ isOncall: val, oncallManuallySet: true })}
                 className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
                   draft.isOncall === val
-                    ? "bg-primary text-primary-foreground"
+                    ? "bg-purple-600 text-white"
                     : "bg-muted text-muted-foreground"
                 }`}
               >
@@ -279,7 +275,7 @@ function ExpandedCard({
                 onClick={() => update({ isNonRes: val })}
                 className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
                   draft.isNonRes === val
-                    ? "bg-primary text-primary-foreground"
+                    ? "bg-purple-600 text-white"
                     : "bg-muted text-muted-foreground"
                 }`}
               >
@@ -302,6 +298,7 @@ function ExpandedCard({
               max={50}
               value={draft.staffing.min}
               onChange={(e) => update({ staffing: { ...draft.staffing, min: Math.max(0, Math.min(50, Number(e.target.value) || 0)) } })}
+              className="bg-muted border-border"
             />
           </div>
           <div className="space-y-1">
@@ -323,6 +320,7 @@ function ExpandedCard({
                 max={50}
                 value={draft.staffing.max ?? ""}
                 onChange={(e) => update({ staffing: { ...draft.staffing, max: Math.max(0, Math.min(50, Number(e.target.value) || 0)) } })}
+                className="bg-muted border-border"
               />
             )}
           </div>
@@ -336,11 +334,10 @@ function ExpandedCard({
         <p className="text-[10px] text-muted-foreground">⚡ = auto-detected, ✏️ = manually set. Click to toggle.</p>
       </div>
 
-      {/* ✅ Section 3 — Staffing Requirements */}
+      {/* Staffing Requirements */}
       <div className="space-y-4 border-t border-border pt-4">
         <Label className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">Staffing Requirements</Label>
 
-        {/* Competency minimums */}
         <div className="space-y-2">
           <Label className="text-xs font-medium">Minimum competency cover required on this shift</Label>
           <p className="text-[10px] text-muted-foreground">The algorithm will ensure at least this many doctors with each competency are assigned. Set to 0 if no requirement.</p>
@@ -365,6 +362,7 @@ function ExpandedCard({
                       const v = Math.max(0, Math.min(maxVal, Math.floor(Number(e.target.value) || 0)));
                       update({ [key]: v } as any);
                     }}
+                    className="bg-muted border-border"
                   />
                   {val > draft.staffing.min && (
                     <p className="text-[10px] text-amber-600 flex items-center gap-1">
@@ -377,7 +375,6 @@ function ExpandedCard({
           </div>
         </div>
 
-        {/* Grade floor */}
         <div className="space-y-2">
           <Label className="text-xs font-medium">Minimum grade required (at least one doctor on this shift)</Label>
           <p className="text-[10px] text-muted-foreground">At least one doctor assigned to this shift must hold this grade or above. Leave blank if no requirement.</p>
@@ -401,11 +398,10 @@ function ExpandedCard({
           </Select>
         </div>
       </div>
-      {/* ✅ Section 3 complete */}
 
       {/* Actions */}
       <div className="flex gap-3 pt-2">
-        <Button onClick={() => onSave(draft)} className="bg-primary text-primary-foreground hover:bg-primary/90">
+        <Button onClick={() => onSave(draft)} className="bg-purple-600 hover:bg-purple-700 text-white">
           <Save className="mr-2 h-4 w-4" /> Save
         </Button>
         <Button variant="outline" onClick={onCancel}>
@@ -426,69 +422,86 @@ export default function DepartmentStep2() {
   };
 
   return (
-    <AdminLayout title="Department Setup" subtitle="Step 2 of 3 — Shift Types">
+    <AdminLayout title="Department Setup" subtitle="Step 2 of 3 — Shift types">
       <div className="mx-auto max-w-3xl space-y-6">
-        <div className="mb-2">
-          <h2 className="text-2xl font-extrabold tracking-tight text-foreground">Shift Overview</h2>
-          <p className="text-muted-foreground mt-1">Review and edit your shift types. These will be used to build your clinical schedule.</p>
+        {/* Info banner */}
+        <div className="flex items-center gap-2 rounded-lg border border-purple-200 bg-purple-50 px-4 py-2.5 text-sm font-medium text-purple-700">
+          <Info className="h-4 w-4 shrink-0 text-purple-600" />
+          Define the shift types your department uses. Name, times, and on-call status are all required.
         </div>
 
-        {/* Badge legend */}
-        <div className="flex items-start gap-3 rounded-xl bg-muted/50 border border-border p-4 text-xs text-muted-foreground">
-          <Info className="h-4 w-4 shrink-0 mt-0.5" />
-          <p>
-            <span className="font-semibold">🏷️ Badge meanings:</span> NIGHT = ≥3h between 23:00–06:00 | LONG = duration &gt;10h | OOH = any hours 19:00–07:00 or weekend | WEEKEND = shift falls on Sat/Sun | ON-CALL = resident doctor on-site | NON-RES OC = on-call from home
-          </p>
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CalendarDays className="h-5 w-5 text-purple-600" />
+              Shift Types
+            </CardTitle>
+            <CardDescription>Define shift names, times, and on-call status. Night shifts are auto-detected.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Badge legend */}
+            <div className="flex items-start gap-3 rounded-lg bg-muted/50 border border-border p-4 text-xs text-muted-foreground">
+              <Info className="h-4 w-4 shrink-0 mt-0.5" />
+              <p>
+                <span className="font-semibold">🏷️ Badge meanings:</span> NIGHT = ≥3h between 23:00–06:00 | LONG = duration &gt;10h | OOH = any hours 19:00–07:00 or weekend | WEEKEND = shift falls on Sat/Sun | ON-CALL = resident doctor on-site | NON-RES OC = on-call from home
+              </p>
+            </div>
 
-        {/* ✅ Section 6 complete — loading indicator */}
-        {isLoadingShifts && (
-          <div className="text-sm text-muted-foreground py-2 italic">
-            Loading your saved shift types…
-          </div>
-        )}
+            {isLoadingShifts && (
+              <div className="text-sm text-muted-foreground py-2 italic">
+                Loading your saved shift types…
+              </div>
+            )}
 
-        {/* Shift cards */}
-        <div className="flex flex-col gap-4">
-          {shifts.map((shift) =>
-            expandedShiftId === shift.id ? (
-              <ExpandedCard
-                key={shift.id}
-                shift={shift}
-                onSave={handleSaveCard}
-                onCancel={() => setExpandedShiftId(null)}
-                onRemove={() => removeShift(shift.id)}
-                canRemove={shifts.length > 1}
-              />
-            ) : (
-              <CollapsedCard
-                key={shift.id}
-                shift={shift}
-                onExpand={() => setExpandedShiftId(shift.id)}
-                onRemove={() => removeShift(shift.id)}
-                canRemove={shifts.length > 1}
-              />
-            ),
-          )}
-        </div>
+            {/* Shift cards */}
+            <div className="flex flex-col gap-4">
+              {shifts.map((shift) =>
+                expandedShiftId === shift.id ? (
+                  <ExpandedCard
+                    key={shift.id}
+                    shift={shift}
+                    onSave={handleSaveCard}
+                    onCancel={() => setExpandedShiftId(null)}
+                    onRemove={() => removeShift(shift.id)}
+                    canRemove={shifts.length > 1}
+                  />
+                ) : (
+                  <CollapsedCard
+                    key={shift.id}
+                    shift={shift}
+                    onExpand={() => setExpandedShiftId(shift.id)}
+                    onRemove={() => removeShift(shift.id)}
+                    canRemove={shifts.length > 1}
+                  />
+                ),
+              )}
+            </div>
 
-        {/* Add + Next */}
-        <div className="space-y-3 pt-4">
-          <Button variant="outline" size="lg" className="w-full sm:w-auto" onClick={() => addShift()} disabled={isLoadingShifts}>
-            <Plus className="mr-2 h-4 w-4" /> {isLoadingShifts ? 'Loading saved shifts…' : 'Add Custom Shift Type'}
-          </Button>
-          <div className="flex justify-between">
-            <Button variant="outline" size="lg" onClick={() => navigate("/admin/department/step-1")}>
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back
-            </Button>
-            <Button
-              size="lg"
-              onClick={() => navigate("/admin/department/step-3")}
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            {/* Add shift button — dashed purple */}
+            <button
+              onClick={() => addShift()}
+              disabled={isLoadingShifts}
+              className="w-full rounded-lg border border-dashed border-purple-300 p-3 flex items-center justify-center gap-2 text-sm font-medium text-purple-600 cursor-pointer hover:bg-purple-50 transition-colors disabled:opacity-50"
             >
-              Next: Distribution
-            </Button>
-          </div>
+              <Plus className="h-4 w-4" />
+              {isLoadingShifts ? 'Loading saved shifts…' : 'Add Shift Type'}
+            </button>
+          </CardContent>
+        </Card>
+
+        {/* Navigation */}
+        <div className="flex justify-between">
+          <Button variant="outline" size="lg" onClick={() => navigate("/admin/department/step-1")}>
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back
+          </Button>
+          <Button
+            size="lg"
+            onClick={() => navigate("/admin/department/step-3")}
+            className="bg-purple-600 hover:bg-purple-700 text-white"
+          >
+            Continue
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
         </div>
       </div>
     </AdminLayout>

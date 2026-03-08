@@ -4,7 +4,8 @@ import { AdminLayout } from "@/components/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, AlertTriangle, CheckCircle2, RotateCcw, Info } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { ArrowLeft, AlertTriangle, CheckCircle2, RotateCcw, Info, Users, Save } from "lucide-react";
 import { useAdminSetup } from "@/contexts/AdminSetupContext";
 import { useDepartmentSetup } from "@/contexts/DepartmentSetupContext";
 import { useRotaContext } from "@/contexts/RotaContext";
@@ -53,11 +54,11 @@ function DragBar({
   };
 
   return (
-    <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+    <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
       <div className="flex justify-between items-center mb-2">
         <span className="font-semibold text-sm text-card-foreground">{label}</span>
         <div className="flex items-center gap-2">
-          <span className="bg-emerald-100 text-emerald-700 text-xs font-bold px-2.5 py-1 rounded-full">
+          <span className="bg-purple-50 text-purple-600 text-xs font-bold px-2.5 py-1 rounded-full border border-purple-200">
             {value.toFixed(1)}%
           </span>
           {onReset && (() => {
@@ -87,11 +88,11 @@ function DragBar({
         onPointerUp={handlePointerUp}
       >
         <div
-          className="absolute top-0 left-0 h-full bg-primary rounded-full transition-[width] duration-75"
+          className="absolute top-0 left-0 h-full bg-purple-600 rounded-full transition-[width] duration-75"
           style={{ width: `${Math.min(value, 100)}%` }}
         />
         <div
-          className="absolute top-0 h-full w-3 bg-primary-foreground border-2 border-primary rounded-full -translate-x-1/2 shadow-md"
+          className="absolute top-0 h-full w-3 bg-white border-2 border-purple-600 rounded-full -translate-x-1/2 shadow-md"
           style={{ left: `${Math.min(value, 100)}%` }}
         />
       </div>
@@ -135,10 +136,10 @@ function GlobalSplitBar({
   };
 
   return (
-    <div className="rounded-2xl border border-border bg-card p-6 shadow-sm space-y-4">
-      <Label className="font-semibold text-muted-foreground">Global On-Call / Non-On-Call Split</Label>
+    <div className="rounded-lg border border-border bg-card p-4 shadow-sm space-y-4">
+      <Label className="font-semibold text-sm text-card-foreground">Global On-Call / Non-On-Call Split</Label>
       <div className="flex justify-between text-sm font-bold">
-        <span className="text-primary">On-call: {oncallPct}%</span>
+        <span className="text-purple-600">On-call: {oncallPct}%</span>
         <span className="text-muted-foreground">Non-on-call: {100 - oncallPct}%</span>
       </div>
       <div
@@ -149,9 +150,9 @@ function GlobalSplitBar({
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
       >
-        <div className="absolute top-0 left-0 h-full bg-primary rounded-l-full transition-[width] duration-75" style={{ width: `${oncallPct}%` }} />
+        <div className="absolute top-0 left-0 h-full bg-purple-600 rounded-l-full transition-[width] duration-75" style={{ width: `${oncallPct}%` }} />
         <div
-          className="absolute top-0 h-full w-4 bg-card border-2 border-primary rounded-full -translate-x-1/2 shadow-lg"
+          className="absolute top-0 h-full w-4 bg-card border-2 border-purple-600 rounded-full -translate-x-1/2 shadow-lg"
           style={{ left: `${oncallPct}%` }}
         />
       </div>
@@ -163,7 +164,7 @@ function GlobalSplitBar({
           max={100}
           value={oncallPct}
           onChange={(e) => onChange(Math.max(0, Math.min(100, Number(e.target.value) || 0)))}
-          className="w-20 h-8 text-sm"
+          className="w-20 h-8 text-sm bg-muted border-border"
         />
       </div>
       <div className="flex items-start gap-2 rounded-lg bg-muted/50 border border-border p-3 text-xs text-muted-foreground">
@@ -188,7 +189,6 @@ function ShiftDistribution({
 }) {
   if (shifts.length === 0) return null;
 
-  // Calculate auto values: equal share for non-overridden shifts from remaining budget
   const overriddenTotal = shifts.reduce((sum, s) => sum + (overrides[s.id] ?? 0), 0);
   const nonOverriddenCount = shifts.filter((s) => overrides[s.id] === undefined).length;
   const overriddenOnlyTotal = shifts.filter((s) => overrides[s.id] !== undefined).reduce((sum, s) => sum + (overrides[s.id] ?? 0), 0);
@@ -202,8 +202,8 @@ function ShiftDistribution({
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h4 className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground flex items-center gap-2 px-1">
-          <span className="w-1.5 h-1.5 rounded-full bg-primary" /> {title}
+        <h4 className="text-sm font-semibold text-card-foreground flex items-center gap-2">
+          <span className="w-1.5 h-1.5 rounded-full bg-purple-600" /> {title}
         </h4>
         {(() => {
           const hasOverrides = shifts.some((s) => {
@@ -247,7 +247,7 @@ function ShiftDistribution({
       </div>
 
       <div className={`flex items-center gap-2 rounded-lg border p-3 text-sm font-semibold ${
-        isValid ? "bg-emerald-50 border-emerald-200 text-emerald-700" : "bg-destructive/10 border-destructive/20 text-destructive"
+        isValid ? "bg-green-50 border-green-200 text-green-700" : "bg-destructive/10 border-destructive/20 text-destructive"
       }`}>
         {isValid ? <CheckCircle2 className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
         Total: {total.toFixed(1)}%
@@ -267,11 +267,9 @@ export default function DepartmentStep3() {
   const oncallShifts = useMemo(() => shifts.filter((s) => s.isOncall).map((s) => ({ id: s.id, name: s.name })), [shifts]);
   const nonOncallShifts = useMemo(() => shifts.filter((s) => !s.isOncall).map((s) => ({ id: s.id, name: s.name })), [shifts]);
 
-  // Separate overrides for oncall vs non-oncall
   const [oncallOverrides, setOncallOverrides] = useState<Record<string, number | undefined>>({});
   const [nonOncallOverrides, setNonOncallOverrides] = useState<Record<string, number | undefined>>({});
 
-  // Validation
   const getGroupTotal = (groupShifts: { id: string }[], overrides: Record<string, number | undefined>) => {
     const overriddenOnlyTotal = groupShifts.filter((s) => overrides[s.id] !== undefined).reduce((sum, s) => sum + (overrides[s.id] ?? 0), 0);
     const nonOverriddenCount = groupShifts.filter((s) => overrides[s.id] === undefined).length;
@@ -298,60 +296,66 @@ export default function DepartmentStep3() {
   const canSave = errors.length === 0;
 
   return (
-    <AdminLayout title="Department Setup" subtitle="Step 3 of 3 — Distribution Targets">
+    <AdminLayout title="Department Setup" subtitle="Step 3 of 3 — Staffing">
       <div className="mx-auto max-w-3xl space-y-6">
-        {/* Progress */}
-        <div className="flex items-center justify-center gap-3">
-          <div className="h-2 w-2 rounded-full bg-muted-foreground/30" />
-          <div className="h-2.5 w-2.5 rounded-full bg-primary shadow-[0_0_10px_hsl(var(--primary)/0.4)]" />
+        {/* Info banner */}
+        <div className="flex items-center gap-2 rounded-lg border border-purple-200 bg-purple-50 px-4 py-2.5 text-sm font-medium text-purple-700">
+          <Info className="h-4 w-4 shrink-0 text-purple-600" />
+          Set minimum staffing levels for each shift and configure on-call hour distribution.
         </div>
 
-        <div>
-          <h2 className="text-2xl font-bold text-foreground">Hour Distribution Targets</h2>
-          <p className="text-muted-foreground text-sm mt-1">Set the on-call split and individual shift targets. Each group must total 100%.</p>
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-purple-600" />
+              Staffing & Distribution
+            </CardTitle>
+            <CardDescription>Minimum staffing per shift and on-call hour distribution across the team.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Global split */}
+            <GlobalSplitBar oncallPct={globalOncallPct} onChange={setGlobalOncallPct} />
 
-        {/* Global split */}
-        <GlobalSplitBar oncallPct={globalOncallPct} onChange={setGlobalOncallPct} />
+            {/* On-call shifts */}
+            {oncallShifts.length > 0 ? (
+              <ShiftDistribution
+                title="On-Call Shifts"
+                shifts={oncallShifts}
+                overrides={oncallOverrides}
+                setOverrides={setOncallOverrides}
+              />
+            ) : (
+              <div className="flex items-center gap-3 rounded-lg bg-amber-50 border border-amber-200 p-4 text-sm text-amber-700">
+                <AlertTriangle className="h-5 w-5 shrink-0" />
+                ⚠️ No resident on-call shifts defined. Mark at least one shift as on-call in step 2.
+              </div>
+            )}
 
-        {/* On-call shifts */}
-        {oncallShifts.length > 0 ? (
-          <ShiftDistribution
-            title="On-Call Shifts"
-            shifts={oncallShifts}
-            overrides={oncallOverrides}
-            setOverrides={setOncallOverrides}
-          />
-        ) : (
-          <div className="flex items-center gap-3 rounded-xl bg-amber-50 border border-amber-200 p-4 text-sm text-amber-700">
-            <AlertTriangle className="h-5 w-5 shrink-0" />
-            ⚠️ No resident on-call shifts defined. Mark at least one shift as on-call in step-1.
-          </div>
-        )}
+            {/* Non-on-call shifts */}
+            {nonOncallShifts.length > 0 && (
+              <ShiftDistribution
+                title="Non-On-Call Shifts"
+                shifts={nonOncallShifts}
+                overrides={nonOncallOverrides}
+                setOverrides={setNonOncallOverrides}
+              />
+            )}
 
-        {/* Non-on-call shifts */}
-        {nonOncallShifts.length > 0 && (
-          <ShiftDistribution
-            title="Non-On-Call Shifts"
-            shifts={nonOncallShifts}
-            overrides={nonOncallOverrides}
-            setOverrides={setNonOncallOverrides}
-          />
-        )}
-
-        {/* Errors */}
-        {errors.length > 0 && (
-          <div className="rounded-xl bg-destructive/10 border border-destructive/20 p-4 space-y-1">
-            {errors.map((err, i) => (
-              <p key={i} className="text-sm text-destructive flex items-center gap-2">
-                <AlertTriangle className="h-3.5 w-3.5 shrink-0" /> {err}
-              </p>
-            ))}
-          </div>
-        )}
+            {/* Errors */}
+            {errors.length > 0 && (
+              <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-4 space-y-1">
+                {errors.map((err, i) => (
+                  <p key={i} className="text-sm text-destructive flex items-center gap-2">
+                    <AlertTriangle className="h-3.5 w-3.5 shrink-0" /> {err}
+                  </p>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Navigation */}
-        <div className="flex justify-between pt-4">
+        <div className="flex justify-between">
           <Button variant="outline" size="lg" onClick={() => navigate("/admin/department/step-2")}>
             <ArrowLeft className="mr-2 h-4 w-4" /> Back
           </Button>
@@ -361,7 +365,6 @@ export default function DepartmentStep3() {
             onClick={async () => {
               setSaving(true);
               try {
-                // SECTION 4 — Save on /admin/department/step-2
                 const nonOncallPct = 100 - globalOncallPct;
                 let configId = currentRotaConfigId;
 
@@ -382,10 +385,8 @@ export default function DepartmentStep3() {
                   if (error) throw error;
                 }
 
-                // Delete existing shift_types
                 await supabase.from("shift_types").delete().eq("rota_config_id", configId);
 
-                // Compute target percentages for each shift
                 const oncallShiftIds = shifts.filter(s => s.isOncall).map(s => s.id);
                 const nonOncallShiftIds = shifts.filter(s => !s.isOncall).map(s => s.id);
 
@@ -397,13 +398,11 @@ export default function DepartmentStep3() {
                   return overrides[shiftId] ?? autoShare;
                 };
 
-                // Insert shift_types
                 const shiftRows = shifts.map((s, idx) => {
                   const isOncall = s.isOncall;
                   const groupIds = isOncall ? oncallShiftIds : nonOncallShiftIds;
                   const overrides = isOncall ? oncallOverrides : nonOncallOverrides;
                   const merged = { ...s.badges };
-                  // Apply overrides to get effective badges
                   for (const key of Object.keys(s.badgeOverrides) as Array<keyof typeof s.badgeOverrides>) {
                     if (s.badgeOverrides[key] !== undefined) merged[key] = s.badgeOverrides[key]!;
                   }
@@ -441,7 +440,6 @@ export default function DepartmentStep3() {
                     max_doctors: s.staffing.max,
                     target_percentage: getTargetPct(s.id, groupIds, overrides),
                     sort_order: idx,
-                    // ✅ Section 3 — competency & grade fields
                     req_iac: s.reqIac,
                     req_iaoc: s.reqIaoc,
                     req_icu: s.reqIcu,
@@ -455,7 +453,6 @@ export default function DepartmentStep3() {
                 toast.success("✓ Shift configuration saved");
                 setDepartmentComplete(true);
                 navigate("/admin/dashboard");
-                // SECTION 4 COMPLETE
               } catch (err: any) {
                 console.error("Department save failed:", err);
                 toast.error("Save failed — please try again");
@@ -463,9 +460,10 @@ export default function DepartmentStep3() {
                 setSaving(false);
               }
             }}
-            className="bg-primary text-primary-foreground hover:bg-primary/90"
+            className="bg-purple-600 hover:bg-purple-700 text-white"
           >
-            {saving ? "Saving…" : "Save Department Configuration"}
+            {saving ? "Saving…" : "Save Department Setup"}
+            {!saving && <Save className="ml-2 h-4 w-4" />}
           </Button>
         </div>
       </div>
