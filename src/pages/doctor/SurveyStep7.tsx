@@ -297,7 +297,7 @@ export default function SurveyStep7() {
                     <span className="text-sm font-medium text-card-foreground">Date</span>
                     <span className="text-[11px] font-semibold text-teal-600 mt-0.5">Required</span>
                   </div>
-                  <Input type="date" value={formData.signatureDate || new Date().toISOString().split("T")[0]} onChange={(e) => setField("signatureDate", e.target.value)} className="w-full bg-muted border-border" />
+                  <Input type="date" value={formData.signatureDate || new Date().toISOString().split("T")[0]} onChange={(e) => setField("signatureDate", e.target.value)} className="w-full bg-muted border-border" readOnly />
                 </div>
                 <FieldError message={errors.sigDate} />
               </div>
