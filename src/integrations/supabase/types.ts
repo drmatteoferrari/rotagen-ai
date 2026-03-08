@@ -394,6 +394,8 @@ export type Database = {
       }
       rota_configs: {
         Row: {
+          bh_custom_rules: string | null
+          bh_same_as_weekend: boolean | null
           contact_email: string | null
           created_at: string | null
           department_name: string | null
@@ -413,6 +415,8 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          bh_custom_rules?: string | null
+          bh_same_as_weekend?: boolean | null
           contact_email?: string | null
           created_at?: string | null
           department_name?: string | null
@@ -432,6 +436,8 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          bh_custom_rules?: string | null
+          bh_same_as_weekend?: boolean | null
           contact_email?: string | null
           created_at?: string | null
           department_name?: string | null

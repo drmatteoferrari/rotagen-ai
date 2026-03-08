@@ -231,7 +231,7 @@ function CalendarLegend() {
       <LegendFusedItem badgeBg="#7c3aed" label="PL" cellBg="#ede9fe" cellBorder="#7c3aed" text="Parental Leave" />
       <LegendBadgeItem bg="#ec4899" label="NOC" text="Not On-Call" />
       <div style={{ width: 1, height: 16, background: '#e2e8f0', margin: '0 2px' }} />
-      <LegendSwatchItem color="#fef9c3" border="#fde68a" text="LTFT day off" />
+      <LegendFusedItem badgeBg="#92400e" label="LTFT" cellBg="#fef9c3" cellBorder="#fde68a" text="LTFT day off" />
       <LegendSwatchItem color="#fee2e2" border="#fecaca" text="Bank Holiday" />
       <LegendSwatchItem color="#f3f4f6" border="#e5e7eb" text="Weekend" />
       <LegendSwatchItem color="#ffffff" border="#e2e8f0" text="Available" />
@@ -568,7 +568,56 @@ export default function PreRotaCalendarPage() {
           </Button>
         </div>
 
-        {/* Week navigator */}
+        {/* Week jump selector */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 12,
+          padding: '10px 16px', background: '#f8fafc',
+          borderRadius: 8, border: '1px solid #e2e8f0',
+          marginBottom: 4, flexWrap: 'wrap',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <label style={{ fontSize: 13, color: '#64748b', fontWeight: 500 }}>Jump to week:</label>
+            <select
+              value={currentWeekIndex}
+              onChange={e => setCurrentWeekIndex(Number(e.target.value))}
+              style={{
+                fontSize: 13, padding: '5px 10px', borderRadius: 6,
+                border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer',
+              }}
+            >
+              {weeks.map((w, idx) => (
+                <option key={idx} value={idx}>
+                  Week {w.weekNumber} — {new Date(w.dates[0] + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })} to {new Date(w.dates[w.dates.length - 1] + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                </option>
+              ))}
+            </select>
+          </div>
+          <span style={{ color: '#cbd5e1', fontSize: 16 }}>|</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <label style={{ fontSize: 13, color: '#64748b', fontWeight: 500 }}>Jump to date:</label>
+            <input
+              type="date"
+              min={allDates[0]}
+              max={allDates[allDates.length - 1]}
+              onChange={e => {
+                const target = e.target.value;
+                if (!target) return;
+                const idx = weeks.findIndex(w => w.dates.includes(target));
+                if (idx !== -1) setCurrentWeekIndex(idx);
+              }}
+              style={{
+                fontSize: 13, padding: '5px 10px', borderRadius: 6,
+                border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer',
+              }}
+            />
+          </div>
+          <span style={{ fontSize: 13, color: '#374151', fontWeight: 600, marginLeft: 'auto' }}>
+            Week {currentWeekIndex + 1} of {weeks.length}
+          </span>
+        </div>
+        {/* ✅ Section 1c complete — week/date jump selector */}
+
+        {/* Week navigator (← → buttons preserved) */}
         <div className="flex items-center justify-between">
           <button onClick={() => setCurrentWeekIndex(i => Math.max(0, i - 1))} disabled={currentWeekIndex === 0} className="p-1.5 rounded-md hover:bg-muted disabled:opacity-30 transition-colors">
             <ChevronLeft className="h-4 w-4" />
@@ -583,9 +632,9 @@ export default function PreRotaCalendarPage() {
           </button>
         </div>
 
-        {/* Calendar table */}
-        <div className="overflow-x-auto rounded-lg border border-border">
-          <table className="w-full text-xs border-collapse">
+        {/* Calendar table — ✅ Section 1f: scrollable container with minWidth */}
+        <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+          <table style={{ minWidth: 800 }} className="w-full text-xs border-collapse">
             <thead>
               <tr>
                 <th style={{ minWidth: 260, maxWidth: 260, position: 'sticky', left: 0, zIndex: 10, background: '#fff', textAlign: 'left', padding: '8px 16px', fontWeight: 500, color: '#6b7280', borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0' }}>
