@@ -756,10 +756,10 @@ export default function PreRotaCalendarPage() {
                     borderRight: '1px solid #e2e8f0', borderBottom: '1px solid #f1f5f9',
                     minHeight: 52, height: 1, verticalAlign: 'middle',
                   }}>
-                    <div style={{ fontWeight: 600, fontSize: 13, color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <div style={{ fontWeight: 600, fontSize: 12, color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {doctor.doctorName}
                     </div>
-                    <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {doctor.grade} · {doctor.wte}%
                     </div>
                     {getLtftDaysOff(doctor).length > 0 && (
