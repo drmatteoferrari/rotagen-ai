@@ -20,7 +20,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { isDepartmentComplete, isWtrComplete, isPeriodComplete, areSurveysDone, restoredFromDb } = useAdminSetup();
   const { restoredConfig, currentRotaConfigId } = useRotaContext();
-  const { user, accountSettings, setAccountSettings } = useAuth();
+  const { user } = useAuth();
 
 
   // Live survey counts
