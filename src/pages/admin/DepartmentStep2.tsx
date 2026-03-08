@@ -46,7 +46,7 @@ function BadgeRow({
   const effective = mergedBadges(auto, shift.badgeOverrides);
 
   return (
-    <div className="flex flex-wrap gap-1.5">
+    <div className="flex flex-nowrap gap-1 overflow-x-auto">
       {BADGE_DEFS.map(({ key, label, emoji, activeClasses }) => {
         const isActive = effective[key];
         const isOverridden = shift.badgeOverrides[key] !== undefined;
@@ -59,8 +59,8 @@ function BadgeRow({
             disabled={!editable}
             onClick={() => editable && onToggle?.(key)}
             title={label}
-            className={`inline-flex items-center gap-1 rounded-full py-1 text-[10px] font-bold uppercase tracking-wider transition-all ${
-              compact ? "px-1.5" : "px-2.5"
+            className={`inline-flex items-center gap-0.5 rounded-full py-1 text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap shrink-0 ${
+              compact ? "px-1.5" : "px-2.5 gap-1"
             } ${
               isActive
                 ? activeClasses
@@ -97,6 +97,10 @@ function CollapsedCard({
           <p className="text-xs text-muted-foreground flex items-center gap-1.5">
             <Clock className="h-3.5 w-3.5 shrink-0" />
             {shift.startTime} – {shift.endTime} ({shift.durationHours}h)
+            <span className="text-muted-foreground/60">·</span>
+            <span className="font-semibold tracking-wide">
+              {DAY_KEYS.filter(k => shift.applicableDays[k]).map((k, i) => DAY_LABELS[DAY_KEYS.indexOf(k)]).join("")}
+            </span>
           </p>
           {/* Show icon-only badges on mobile, full badges on sm+ */}
           <div className="sm:hidden">
