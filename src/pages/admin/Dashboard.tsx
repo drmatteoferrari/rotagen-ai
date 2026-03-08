@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { useAdminSetup } from "@/contexts/AdminSetupContext";
 import { useRotaContext } from "@/contexts/RotaContext";
@@ -10,31 +10,15 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import {
   CheckCircle, Circle, Zap, Calendar, Target, Users, ShieldCheck, Lock,
   Building2, Loader2, Pencil, ClipboardList, CalendarDays, X, BarChart3,
-  ChevronLeft, ChevronRight, RefreshCw, Play, Download, AlertTriangle, XCircle, Info,
+  RefreshCw, Play, AlertTriangle, XCircle, Info,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useRotaConfig } from "@/lib/rotaConfig";
 import { computeShiftTargets, type ComputeShiftTargetsResult } from "@/lib/shiftTargets";
 import { generatePreRota } from "@/lib/preRotaGenerator";
-import { generatePreRotaExcel } from "@/lib/preRotaExcel";
-import type { PreRotaResult, CellCode } from "@/lib/preRotaTypes";
+import type { PreRotaResult } from "@/lib/preRotaTypes";
 // ✅ Section 1 complete
-
-const CELL_BG: Record<string, string> = {
-  AL: 'bg-green-500', SL: 'bg-blue-500', NOC: 'bg-purple-500',
-  ROT: 'bg-orange-500', PL: 'bg-pink-500', BH: 'bg-red-500',
-  LTFT: 'bg-gray-200', AVAILABLE: 'bg-white',
-};
-const CELL_TEXT: Record<string, string> = {
-  AL: 'text-white', SL: 'text-white', NOC: 'text-white',
-  ROT: 'text-white', PL: 'text-white', BH: 'text-white',
-  LTFT: 'text-gray-600', AVAILABLE: 'text-transparent',
-};
-const LEGEND_LABELS: Record<string, string> = {
-  AL: 'Annual Leave', SL: 'Study Leave', NOC: 'Not On-Call',
-  ROT: 'Rotation', PL: 'Parental Leave', BH: 'Bank Holiday', LTFT: 'LTFT day off',
-};
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -62,14 +46,12 @@ export default function Dashboard() {
   const [surveySubmitted, setSurveySubmitted] = useState(0);
   const [surveyTotal, setSurveyTotal] = useState(0);
 
-  // ✅ Section 2 — Pre-rota state
+  // Pre-rota state
   const [preRotaResult, setPreRotaResult] = useState<PreRotaResult | null>(null);
   const [preRotaLoading, setPreRotaLoading] = useState(false);
   const [preRotaError, setPreRotaError] = useState<string | null>(null);
-  const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
   const [isStale, setIsStale] = useState(false);
   const [issuesPanelOpen, setIssuesPanelOpen] = useState(false);
-  // ✅ Section 2 complete
 
   // Load settings on mount
   useEffect(() => {
@@ -104,7 +86,7 @@ export default function Dashboard() {
     fetchCounts();
   }, [currentRotaConfigId]);
 
-  // ✅ Section 3 — Load existing pre-rota on mount
+  // Load existing pre-rota on mount
   useEffect(() => {
     const loadPreRota = async () => {
       if (!currentRotaConfigId) return;
@@ -163,7 +145,6 @@ export default function Dashboard() {
     };
     loadPreRota();
   }, [currentRotaConfigId]);
-  // ✅ Section 3 complete
 
   // Shift targets preview
   const { config: fullConfig } = useRotaConfig();
@@ -186,7 +167,7 @@ export default function Dashboard() {
     });
   }, [fullConfig]);
 
-  // ✅ Section 4 — Handler functions
+  // Handler functions
   const handleGeneratePreRota = async () => {
     if (!currentRotaConfigId) return;
     setPreRotaLoading(true);
@@ -205,42 +186,9 @@ export default function Dashboard() {
     }
 
     setPreRotaResult(result);
-    setCurrentWeekIndex(0);
     setIsStale(false);
     setIssuesPanelOpen(result.validationIssues.length > 0);
   };
-
-  const handleDownloadCalendar = () => {
-    if (!preRotaResult?.calendarData || preRotaResult.status === 'blocked') return;
-    const blob = generatePreRotaExcel(preRotaResult.calendarData, preRotaResult.targetsData);
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `RotaGen_PreRota_${preRotaResult.calendarData.rotaStartDate}.xlsx`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const handleDownloadTargets = handleDownloadCalendar;
-
-  const handlePrevWeek = useCallback(() => setCurrentWeekIndex(i => Math.max(0, i - 1)), []);
-  const handleNextWeek = useCallback(() => {
-    const totalWeeks = preRotaResult?.calendarData?.weeks?.length ?? 0;
-    setCurrentWeekIndex(i => Math.min(totalWeeks - 1, i + 1));
-  }, [preRotaResult]);
-  // ✅ Section 4 complete
-
-  // ✅ Section 7 — Keyboard navigation
-  useEffect(() => {
-    if (!preRotaResult || preRotaResult.status === 'blocked') return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft') handlePrevWeek();
-      if (e.key === 'ArrowRight') handleNextWeek();
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [preRotaResult, handlePrevWeek, handleNextWeek]);
-  // ✅ Section 7 complete
 
   // Save handler
   const handleSaveAccountSettings = async () => {
@@ -526,7 +474,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ✅ Section 5 — Phase 1: Pre-Rota Data */}
+        {/* Phase 1: Pre-Rota Data */}
         <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
           <div className="flex items-center gap-2 mb-1">
             <Zap className="h-4 w-4 text-primary" />
@@ -555,35 +503,33 @@ export default function Dashboard() {
               Complete all setup steps above to unlock generation.
             </p>
           )}
+          {/* ✅ Section 1 — Navigation links replace download buttons */}
           <div className="grid grid-cols-2 gap-3 mt-4">
             <button
-              onClick={handleDownloadCalendar}
+              onClick={() => navigate('/admin/pre-rota-calendar')}
               disabled={!preRotaResult || preRotaResult.status === 'blocked'}
               className="rounded-lg border border-border p-3 text-center hover:bg-muted/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              <Download className="h-5 w-5 mx-auto text-muted-foreground mb-1" />
-              <p className="text-xs font-medium text-muted-foreground">Download Calendar</p>
+              <CalendarDays className="h-5 w-5 mx-auto text-muted-foreground mb-1" />
+              <p className="text-xs font-medium text-muted-foreground">View Calendar →</p>
               <p className="text-[10px] text-muted-foreground/60">
-                {preRotaResult && preRotaResult.status !== 'blocked' ? 'Excel (.xlsx)' : 'Not generated'}
+                {preRotaResult && preRotaResult.status !== 'blocked' ? 'Availability calendar' : 'Not generated'}
               </p>
             </button>
             <button
-              onClick={handleDownloadTargets}
+              onClick={() => navigate('/admin/pre-rota-targets')}
               disabled={!preRotaResult || preRotaResult.status === 'blocked'}
               className="rounded-lg border border-border p-3 text-center hover:bg-muted/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              <Download className="h-5 w-5 mx-auto text-muted-foreground mb-1" />
-              <p className="text-xs font-medium text-muted-foreground">Download Targets</p>
+              <Target className="h-5 w-5 mx-auto text-muted-foreground mb-1" />
+              <p className="text-xs font-medium text-muted-foreground">View Targets →</p>
               <p className="text-[10px] text-muted-foreground/60">
-                {preRotaResult && preRotaResult.status !== 'blocked' ? 'Excel (.xlsx)' : 'Not generated'}
+                {preRotaResult && preRotaResult.status !== 'blocked' ? 'Shift hour targets' : 'Not generated'}
               </p>
             </button>
           </div>
-          {/* ✅ Section 5 complete */}
 
-          {/* ✅ Section 6 — Results section */}
-
-          {/* 6.1 — Error banner */}
+          {/* Error banner */}
           {preRotaError && (
             <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 flex items-start gap-3">
               <XCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
@@ -591,7 +537,7 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* 6.2 — Stale warning banner */}
+          {/* Stale warning banner */}
           {isStale && preRotaResult && (
             <div className="mt-4 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 flex items-start gap-3">
               <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
@@ -603,7 +549,7 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* 6.3 — Status badge + timestamp */}
+          {/* Status badge + timestamp */}
           {preRotaResult && (
             <div className="mt-4 flex items-center gap-3">
               {preRotaResult.status === 'complete' && (
@@ -627,7 +573,7 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* 6.4 — Validation issues panel */}
+          {/* Validation issues panel */}
           {preRotaResult && (
             <div className="mt-4 rounded-lg border border-border overflow-hidden">
               <button
@@ -705,196 +651,6 @@ export default function Dashboard() {
             </div>
           )}
         </div>
-
-        {/* 6.5 — Weekly calendar view */}
-        {preRotaResult && preRotaResult.status !== 'blocked' && preRotaResult.calendarData?.weeks?.length > 0 && (() => {
-          const { weeks, doctors } = preRotaResult.calendarData;
-          const week = weeks[currentWeekIndex];
-          if (!week) return null;
-          const totalDoctors = doctors.length;
-
-          return (
-            <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3">Availability Calendar</h3>
-
-              {/* Week navigator */}
-              <div className="flex items-center justify-between mb-4">
-                <button onClick={handlePrevWeek} disabled={currentWeekIndex === 0} className="p-1.5 rounded-md hover:bg-muted disabled:opacity-30 transition-colors">
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-                <span className="text-xs font-medium text-foreground">
-                  Week {week.weekNumber} of {weeks.length} —{' '}
-                  {new Date(week.dates[0] + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short' })} to{' '}
-                  {new Date(week.dates[week.dates.length - 1] + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short' })}
-                </span>
-                <button onClick={handleNextWeek} disabled={currentWeekIndex >= weeks.length - 1} className="p-1.5 rounded-md hover:bg-muted disabled:opacity-30 transition-colors">
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
-
-              {/* Calendar table */}
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs border-collapse">
-                  <thead>
-                    <tr>
-                      <th className="text-left py-1.5 px-2 font-medium text-muted-foreground border-b border-border">Doctor</th>
-                      {week.dates.map(date => {
-                        const d = new Date(date + 'T00:00:00');
-                        const isWknd = d.getDay() === 0 || d.getDay() === 6;
-                        return (
-                          <th key={date} className={`text-center py-1.5 px-1 font-medium border-b border-border ${isWknd ? 'bg-gray-100' : ''}`}>
-                            <p className="text-[10px] text-muted-foreground">{d.toLocaleDateString('en-GB', { weekday: 'short' })}</p>
-                            <p className="text-[10px] text-muted-foreground">{d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</p>
-                          </th>
-                        );
-                      })}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {doctors.map(doctor => (
-                      <tr key={doctor.doctorId} className="border-b border-border/50">
-                        <td className="py-1.5 px-2 whitespace-nowrap">
-                          <p className="font-medium text-foreground text-[11px]">{doctor.doctorName}</p>
-                          <p className="text-[9px] text-muted-foreground">{doctor.grade} · {doctor.wte}%</p>
-                        </td>
-                        {week.dates.map(date => {
-                          const cell = doctor.availability[date];
-                          const primary = cell?.primary ?? 'AVAILABLE';
-                          const isWknd = new Date(date + 'T00:00:00').getDay() === 0 || new Date(date + 'T00:00:00').getDay() === 6;
-                          return (
-                            <td key={date} className={`text-center py-1.5 px-0.5 ${isWknd && primary === 'AVAILABLE' ? 'bg-gray-50' : ''}`}>
-                              <span className={`inline-block rounded px-1 py-0.5 text-[9px] font-semibold ${CELL_BG[primary] ?? ''} ${CELL_TEXT[primary] ?? ''}`}>
-                                {cell?.label || ''}
-                              </span>
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-
-                    {/* Available count row */}
-                    <tr className="bg-blue-50 font-semibold">
-                      <td className="py-1.5 px-2 text-[11px] text-foreground">Available</td>
-                      {week.dates.map(date => {
-                        const available = doctors.filter(d => !d.availability[date] || d.availability[date].primary === 'AVAILABLE').length;
-                        return (
-                          <td key={date} className="text-center py-1.5 text-[10px] text-foreground">
-                            {available}/{totalDoctors}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Legend */}
-              <div className="flex flex-wrap gap-3 mt-4">
-                {(['AL', 'SL', 'NOC', 'ROT', 'PL', 'BH', 'LTFT'] as const).map(code => (
-                  <span key={code} className="inline-flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                    <span className={`inline-block w-3 h-3 rounded ${CELL_BG[code]}`} />
-                    {LEGEND_LABELS[code]}
-                  </span>
-                ))}
-                <span className="inline-flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                  <span className="inline-block w-3 h-3 rounded border border-border bg-white" />
-                  Available
-                </span>
-              </div>
-            </div>
-          );
-        })()}
-
-        {/* 6.6 — Targets table */}
-        {preRotaResult && preRotaResult.status !== 'blocked' && preRotaResult.targetsData?.doctors?.length > 0 && (() => {
-          const { doctors: tDoctors, shiftTypes: tShiftTypes, teamTotal, teamAverage, wtrMaxHoursPerWeek, hardWeeklyCap: hwc } = preRotaResult.targetsData;
-
-          return (
-            <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-3">Shift Hour Targets</h3>
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs border-collapse">
-                  <thead>
-                    <tr className="border-b border-border text-left">
-                      <th className="py-2 px-2 font-medium text-muted-foreground">Doctor</th>
-                      <th className="py-2 px-2 font-medium text-muted-foreground">Grade</th>
-                      <th className="py-2 px-2 font-medium text-muted-foreground">WTE</th>
-                      <th className="py-2 px-2 font-medium text-muted-foreground text-center">
-                        <p>Hrs/wk</p><p className="font-normal text-[9px]">contracted</p>
-                      </th>
-                      <th className="py-2 px-2 font-medium text-muted-foreground text-center">
-                        <p>Hard cap</p><p className="font-normal text-[9px]">per 168h</p>
-                      </th>
-                      {tShiftTypes.map(st => (
-                        <th key={st.id} className="py-2 px-2 font-medium text-muted-foreground text-center">
-                          <p>{st.name}</p><p className="font-normal text-[9px]">{st.isOncall ? 'on-call' : 'non-oncall'}</p>
-                        </th>
-                      ))}
-                      <th className="py-2 px-2 font-medium text-muted-foreground text-center">
-                        <p>Weekends</p><p className="font-normal text-[9px]">max</p>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {tDoctors.map((doctor, idx) => {
-                      const isLTFT = doctor.wte < 100;
-                      return (
-                        <tr key={doctor.doctorId} className={`border-b border-border/50 ${isLTFT ? 'bg-amber-50' : idx % 2 === 1 ? 'bg-muted/20' : ''}`}>
-                          <td className="py-2 px-2 font-medium text-foreground whitespace-nowrap">{doctor.doctorName}</td>
-                          <td className="py-2 px-2 text-muted-foreground">{doctor.grade}</td>
-                          <td className="py-2 px-2 text-muted-foreground">
-                            {doctor.wte}%
-                          </td>
-                          <td className="py-2 px-2 text-center font-mono">{doctor.contractedHoursPerWeek}h</td>
-                          <td className="py-2 px-2 text-center font-mono">{doctor.hardWeeklyCap}h</td>
-                          {tShiftTypes.map(st => {
-                            const target = doctor.shiftTargets.find(t => t.shiftTypeId === st.id);
-                            return (
-                              <td key={st.id} className="py-2 px-2 text-center">
-                                <p className="font-mono">{target?.maxTargetHours ?? 0}h</p>
-                                <p className="text-[9px] text-muted-foreground">~{target?.estimatedShiftCount ?? 0} shifts</p>
-                              </td>
-                            );
-                          })}
-                          <td className="py-2 px-2 text-center font-mono">{doctor.weekendCap}</td>
-                        </tr>
-                      );
-                    })}
-
-                    {/* Team Total row */}
-                    <tr className="border-b-2 border-border bg-blue-50 font-semibold">
-                      <td className="py-2 px-2 text-foreground">Team Total</td>
-                      <td className="py-2 px-2">—</td>
-                      <td className="py-2 px-2">—</td>
-                      <td className="py-2 px-2"></td>
-                      <td className="py-2 px-2"></td>
-                      {tShiftTypes.map(st => {
-                        const t = teamTotal.shiftTargets.find(x => x.shiftTypeId === st.id);
-                        return <td key={st.id} className="py-2 px-2 text-center font-mono">{t?.value ?? 0}h</td>;
-                      })}
-                      <td className="py-2 px-2 text-center font-mono">{teamTotal.weekendCap}</td>
-                    </tr>
-
-                    {/* Team Average row */}
-                    <tr className="bg-blue-50 font-semibold">
-                      <td className="py-2 px-2 text-foreground">Team Average</td>
-                      <td className="py-2 px-2">—</td>
-                      <td className="py-2 px-2">—</td>
-                      <td className="py-2 px-2"></td>
-                      <td className="py-2 px-2"></td>
-                      {tShiftTypes.map(st => {
-                        const t = teamAverage.shiftTargets.find(x => x.shiftTypeId === st.id);
-                        return <td key={st.id} className="py-2 px-2 text-center font-mono">{t?.value ?? 0}h</td>;
-                      })}
-                      <td className="py-2 px-2 text-center font-mono">{teamAverage.weekendCap}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          );
-        })()}
-        {/* ✅ Section 6 complete */}
 
         {/* Phase 2: Final Allocation */}
         <div className="rounded-xl border border-border bg-card p-5 shadow-sm opacity-60">

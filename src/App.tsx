@@ -24,8 +24,11 @@ import WtrStep4 from "./pages/admin/WtrStep4";
 import Survey from "./pages/doctor/Survey";
 import SurveyOverride from "./pages/admin/SurveyOverride";
 import Audit from "./pages/Audit";
+import PreRotaCalendarPage from "./pages/admin/PreRotaCalendarPage";
+import PreRotaTargetsPage from "./pages/admin/PreRotaTargetsPage";
 
 const queryClient = new QueryClient();
+// ✅ Section 2 complete
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth();
