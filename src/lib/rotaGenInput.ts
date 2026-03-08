@@ -261,8 +261,16 @@ function expandDateRange(start: string, end: string): string[] {
 function mapResponseToPreference(resp: DoctorSurveyResponse): DoctorPreference {
   const annualLeave = Array.isArray(resp.annual_leave) ? resp.annual_leave : [];
   const studyLeave = Array.isArray(resp.study_leave) ? resp.study_leave : [];
+  // ✅ Section 1 complete — NOC dates expanded from {startDate, endDate} ranges
   const nocDates = Array.isArray(resp.noc_dates)
-    ? resp.noc_dates.map((n: any) => typeof n === "string" ? n : n?.date ?? "")
+    ? resp.noc_dates.flatMap((n: any) => {
+        if (typeof n === "string") return [n];
+        const start = n?.startDate ?? n?.start_date ?? n?.date ?? '';
+        const end   = n?.endDate   ?? n?.end_date   ?? n?.date ?? '';
+        if (!start) return [];
+        if (!end || end === start) return [start];
+        return expandDateRange(start, end);
+      })
     : [];
   const ltftNightFlex = Array.isArray(resp.ltft_night_flexibility) ? resp.ltft_night_flexibility : [];
 
