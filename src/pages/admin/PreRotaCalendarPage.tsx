@@ -606,10 +606,15 @@ export default function PreRotaCalendarPage() {
                     <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {doctor.grade} · {doctor.wte}%
                     </div>
-                    {doctor.ltftDaysOff.length > 0 && (
+                {getLtftDaysOff(doctor).length > 0 && (
                       <div style={{ marginTop: 2 }}>
                         <span style={{
                           fontSize: 10, fontWeight: 600, color: '#b45309',
+                          background: '#fef3c7', borderRadius: 3, padding: '1px 5px',
+                        }}>
+                          LTFT: {getLtftDaysOff(doctor).map(d => d.slice(0, 3).charAt(0).toUpperCase() + d.slice(1, 3)).join(', ')}
+                        </span>
+                      </div>
                           background: '#fef3c7', borderRadius: 3, padding: '1px 5px',
                         }}>
                           LTFT: {doctor.ltftDaysOff.map(d => d.slice(0, 3).charAt(0).toUpperCase() + d.slice(1, 3)).join(', ')}
