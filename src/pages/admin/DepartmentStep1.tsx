@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Building2, ArrowRight, Loader2, Info, CheckCircle2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRotaContext } from "@/contexts/RotaContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
