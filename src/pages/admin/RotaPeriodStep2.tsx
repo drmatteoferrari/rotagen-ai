@@ -210,6 +210,9 @@ export default function RotaPeriodStep2() {
                 rota_duration_weeks: durationWeeks,
                 rota_start_time: "08:00",
                 rota_end_time: "08:00",
+                // ✅ Section 5c — persist BH rules
+                bh_same_as_weekend: bhSameAsWeekend,
+                bh_custom_rules: bhSameAsWeekend === false ? bhCustomRules : null,
               };
 
               if (!configId) {
