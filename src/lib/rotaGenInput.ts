@@ -290,9 +290,9 @@ function mapResponseToPreference(resp: DoctorSurveyResponse): DoctorPreference {
 
   // ✅ Section 3 complete — expand parental leave into individual blocked dates
   const parentalLeaveDates: string[] = (() => {
-    if (!(resp as any).parental_leave_expected) return [];
-    const start = (resp as any).parental_leave_start;
-    const end   = (resp as any).parental_leave_end;
+    if (!resp.parental_leave_expected) return [];
+    const start = resp.parental_leave_start;
+    const end   = resp.parental_leave_end;
     if (!start) return [];
     if (!end || end === start) return [start];
     return expandDateRange(start, end);
