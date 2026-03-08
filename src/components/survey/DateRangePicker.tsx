@@ -98,7 +98,10 @@ export function DateRangePicker({
     } catch {}
   }
 
-  const displayText = startDate && endDate
+  const isSingleDay = startDate && endDate && startDate === endDate;
+  const displayText = isSingleDay
+    ? format(parseISO(startDate), "d MMM yyyy")
+    : startDate && endDate
     ? `${format(parseISO(startDate), "d MMM")} → ${format(parseISO(endDate), "d MMM yyyy")}`
     : startDate
     ? `${format(parseISO(startDate), "d MMM yyyy")} → …`
