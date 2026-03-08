@@ -832,7 +832,7 @@ export default function PreRotaCalendarPage() {
               {/* ✅ Section 2 complete — Total available row with NOC sub-count */}
               <tr style={{ background: '#f8fafc' }}>
                 <td style={{
-                  padding: '10px 16px', fontWeight: 700, fontSize: 13, color: '#1e293b',
+                  padding: '10px 12px', fontWeight: 700, fontSize: 13, color: '#1e293b',
                   borderBottom: '2px solid #e2e8f0', borderRight: '1px solid #e2e8f0',
                   position: 'sticky', left: 0, background: '#f8fafc', zIndex: 1,
                   minHeight: 44, height: 1,
