@@ -168,6 +168,7 @@ export default function Dashboard() {
           <div className="space-y-1">
             {steps.map((s) => {
               const status = getStepStatus(s.done);
+              const IconComp = s.icon;
               return (
                 <div
                   key={s.label}
@@ -183,7 +184,17 @@ export default function Dashboard() {
                   }}>
                     {s.num}
                   </div>
-                  <span className="flex-1 text-sm font-medium text-foreground">{s.label}</span>
+                  <IconComp className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <div className="flex-1">
+                    <span className="text-sm font-medium text-foreground">{s.label}</span>
+                    {s.num === 3 && restoredConfig?.rotaPeriod?.startDate && restoredConfig?.rotaPeriod?.endDate && (
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        {new Date(restoredConfig.rotaPeriod.startDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        {' → '}
+                        {new Date(restoredConfig.rotaPeriod.endDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </p>
+                    )}
+                  </div>
                   <span style={{ fontSize: 13, fontWeight: 600, color: status.color }}>{status.text}</span>
                 </div>
               );
@@ -204,6 +215,7 @@ export default function Dashboard() {
                   }}>
                     4
                   </div>
+                  <Users className="h-4 w-4 text-muted-foreground shrink-0" />
                   <span className="flex-1 text-sm font-medium text-foreground">Doctor Preferences</span>
                   <span style={{ fontSize: 13, fontWeight: 600, color: surveyStatus.color }}>{surveyStatus.text}</span>
                 </div>
@@ -211,7 +223,6 @@ export default function Dashboard() {
             })()}
           </div>
         </div>
-        {/* ✅ Section 1e complete */}
 
         {/* 2. Pre-allocation Rota */}
         <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
