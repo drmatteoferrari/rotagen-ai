@@ -750,9 +750,9 @@ export default function PreRotaCalendarPage() {
                 <tr key={doctor.doctorId} style={{ borderBottom: '1px solid #f1f5f9' }}>
                   {/* Doctor name cell — 2.1 */}
                   <td style={{
-                    minWidth: 260, maxWidth: 260,
+                    minWidth: 200, maxWidth: 200,
                     position: 'sticky', left: 0, zIndex: 10, background: '#fff',
-                    padding: '6px 16px',
+                    padding: '6px 12px',
                     borderRight: '1px solid #e2e8f0', borderBottom: '1px solid #f1f5f9',
                     minHeight: 52, height: 1, verticalAlign: 'middle',
                   }}>
