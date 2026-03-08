@@ -52,6 +52,8 @@ const UK_BANK_HOLIDAYS: { date: [number, number, number]; name: string }[] = [
   { date: [2027, 11, 28], name: "Boxing Day (substitute)" },
 ];
 
+import { getRotaConfig } from "@/lib/rotaConfig";
+
 export default function RotaPeriodStep2() {
   const navigate = useNavigate();
   const { setPeriodComplete, rotaStartDate, rotaEndDate } = useAdminSetup();
