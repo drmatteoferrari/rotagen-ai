@@ -501,14 +501,14 @@ export default function DepartmentStep2() {
         </Card>
 
         {/* Navigation */}
-        <div className="flex justify-between">
-          <Button variant="outline" size="lg" onClick={() => navigate("/admin/department/step-1")}>
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-between gap-3 mt-6">
+          <Button variant="outline" size="lg" onClick={() => navigate("/admin/department/step-1")} className="w-full sm:w-auto">
             <ArrowLeft className="mr-2 h-4 w-4" /> Back
           </Button>
           <Button
             size="lg"
             onClick={() => navigate("/admin/department/step-3")}
-            className="bg-purple-600 hover:bg-purple-700 text-white"
+            className="bg-purple-600 hover:bg-purple-700 text-white w-full sm:w-auto"
           >
             Continue
             <ArrowRight className="ml-2 h-4 w-4" />
