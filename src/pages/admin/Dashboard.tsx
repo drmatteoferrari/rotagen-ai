@@ -22,23 +22,8 @@ export default function Dashboard() {
   const { restoredConfig, currentRotaConfigId } = useRotaContext();
   const { user, accountSettings, setAccountSettings } = useAuth();
 
-  const [loadingSettings, setLoadingSettings] = useState(true);
 
   // Live survey counts
-  const [surveySubmitted, setSurveySubmitted] = useState(0);
-  const [surveyTotal, setSurveyTotal] = useState(0);
-
-  // Pre-rota state
-  const [preRotaResult, setPreRotaResult] = useState<PreRotaResult | null>(null);
-  const [preRotaLoading, setPreRotaLoading] = useState(false);
-  const [preRotaError, setPreRotaError] = useState<string | null>(null);
-  const [isStale, setIsStale] = useState(false);
-  const [issuesPanelOpen, setIssuesPanelOpen] = useState(false);
-
-  // Load settings on mount
-  useEffect(() => {
-    setLoadingSettings(false);
-  }, []);
 
   // Fetch live survey counts
   useEffect(() => {
