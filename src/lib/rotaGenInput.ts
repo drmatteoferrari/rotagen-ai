@@ -185,6 +185,8 @@ export interface FinalRotaInput {
       hard: {
         annualLeaveDates: string[];
         studyLeaveDates: string[];
+        // ✅ Section 3 complete — parental leave in FinalRotaInput type
+        parentalLeaveDates: string[];
         exemptFromNights: boolean;
         exemptFromWeekends: boolean;
         exemptFromOncall: boolean;
