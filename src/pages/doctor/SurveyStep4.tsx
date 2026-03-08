@@ -1,127 +1,15 @@
 import { useState } from "react";
-import { format, parseISO } from "date-fns";
 import { useSurveyContext, type LeaveEntry, type RotationEntry } from "@/contexts/SurveyContext";
 import { StepNav } from "@/components/survey/StepNav";
 import { SurveySection } from "@/components/survey/SurveySection";
 import { FieldError } from "@/components/survey/FieldError";
 import { InfoBox } from "@/components/survey/InfoBox";
+import { DateRangePicker } from "@/components/survey/DateRangePicker";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Plus, X, CalendarX, Info, CalendarDays } from "lucide-react";
-import { cn } from "@/lib/utils";
-import type { DateRange } from "react-day-picker";
+import { Plus, Trash2, CalendarX, Info } from "lucide-react";
 
 function genId() { return crypto.randomUUID(); }
-
-/* ─── Range date picker: pick start + end from one calendar ─── */
-function DateRangePicker({
-  startDate,
-  endDate,
-  onChange,
-  minDate,
-  maxDate,
-  errors,
-}: {
-  startDate: string;
-  endDate: string;
-  onChange: (start: string, end: string) => void;
-  minDate?: string;
-  maxDate?: string;
-  errors?: { startDate?: string; endDate?: string };
-}) {
-  const [open, setOpen] = useState(false);
-  // Track whether user has clicked once (picking end date) or needs fresh start
-  const [pickingEnd, setPickingEnd] = useState(false);
-  const [tempFrom, setTempFrom] = useState<Date | undefined>(undefined);
-
-  const selected: DateRange | undefined = pickingEnd
-    ? { from: tempFrom, to: undefined }
-    : startDate || endDate
-      ? {
-          from: startDate ? parseISO(startDate) : undefined,
-          to: endDate ? parseISO(endDate) : undefined,
-        }
-      : undefined;
-
-  const handleSelect = (range: DateRange | undefined) => {
-    if (!pickingEnd) {
-      // First click: always reset to new start date
-      const clickedDate = range?.from || range?.to;
-      if (clickedDate) {
-        setTempFrom(clickedDate);
-        setPickingEnd(true);
-        onChange(format(clickedDate, "yyyy-MM-dd"), "");
-      }
-      return;
-    }
-    // Second click: set end date
-    const to = range?.to || range?.from;
-    if (tempFrom && to) {
-      const [start, end] = tempFrom <= to ? [tempFrom, to] : [to, tempFrom];
-      onChange(format(start, "yyyy-MM-dd"), format(end, "yyyy-MM-dd"));
-      setPickingEnd(false);
-      setTempFrom(undefined);
-      setTimeout(() => setOpen(false), 150);
-    }
-  };
-
-  const handleOpenChange = (isOpen: boolean) => {
-    setOpen(isOpen);
-    if (isOpen) {
-      // Always start fresh selection when opening
-      setPickingEnd(false);
-      setTempFrom(undefined);
-    }
-  };
-
-  const displayText = startDate && endDate
-    ? `${format(parseISO(startDate), "d MMM")} → ${format(parseISO(endDate), "d MMM yyyy")}`
-    : startDate
-    ? `${format(parseISO(startDate), "d MMM yyyy")} → …`
-    : "Select dates";
-
-  return (
-    <div className="space-y-1">
-      <Popover open={open} onOpenChange={handleOpenChange}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            className={cn(
-              "w-full justify-start text-left font-normal h-10 text-sm",
-              !startDate && "text-muted-foreground"
-            )}
-          >
-            <CalendarDays className="mr-2 h-4 w-4 shrink-0" />
-            <span className="truncate">{displayText}</span>
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start" side="bottom">
-          <Calendar
-            mode="range"
-            selected={selected}
-            onSelect={handleSelect}
-            numberOfMonths={1}
-            disabled={(date) => {
-              if (minDate && date < parseISO(minDate)) return true;
-              if (maxDate && date > parseISO(maxDate)) return true;
-              return false;
-            }}
-            initialFocus
-            className={cn("p-3 pointer-events-auto")}
-          />
-          {pickingEnd && (
-            <p className="text-[10px] text-center text-muted-foreground pb-2">Now select end date</p>
-          )}
-        </PopoverContent>
-      </Popover>
-      {errors?.startDate && <p className="text-xs text-destructive">{errors.startDate}</p>}
-      {errors?.endDate && <p className="text-xs text-destructive">{errors.endDate}</p>}
-    </div>
-  );
-}
 
 interface DateRowProps {
   entry: LeaveEntry;
@@ -137,16 +25,24 @@ interface DateRowProps {
 
 function DateRow({ entry, onChange, onRemove, rotaStart, rotaEnd, reasonLabel = "Reason", reasonRequired = false, reasonPlaceholder = "", errors = {} }: DateRowProps) {
   return (
-    <div className="rounded-lg border border-border p-3 space-y-2 relative">
-      <button onClick={onRemove} className="absolute top-2 right-2 text-muted-foreground hover:text-destructive"><X className="h-4 w-4" /></button>
-      <DateRangePicker
-        startDate={entry.startDate}
-        endDate={entry.endDate}
-        onChange={(s, e) => onChange({ ...entry, startDate: s, endDate: e })}
-        minDate={rotaStart}
-        maxDate={rotaEnd}
-        errors={{ startDate: errors.startDate, endDate: errors.endDate }}
-      />
+    <div className="rounded-lg border border-border p-3 space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <DateRangePicker
+          startDate={entry.startDate}
+          endDate={entry.endDate}
+          onChange={(s, e) => onChange({ ...entry, startDate: s, endDate: e })}
+          minDate={rotaStart}
+          maxDate={rotaEnd}
+          errors={{ startDate: errors.startDate, endDate: errors.endDate }}
+        />
+        <button
+          onClick={onRemove}
+          className="shrink-0 flex items-center justify-center h-10 w-10 rounded-lg border border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive hover:text-white transition-colors"
+          title="Remove"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </div>
       <div>
         <label className="text-xs font-medium text-muted-foreground">{reasonLabel}{reasonRequired ? " *" : ""}</label>
         <Input value={entry.reason} onChange={(e) => onChange({ ...entry, reason: e.target.value })} placeholder={reasonPlaceholder} className="bg-muted border-border text-sm" />
@@ -158,16 +54,24 @@ function DateRow({ entry, onChange, onRemove, rotaStart, rotaEnd, reasonLabel = 
 
 function RotationRow({ entry, onChange, onRemove, rotaStart, rotaEnd, errors = {} }: { entry: RotationEntry; onChange: (e: RotationEntry) => void; onRemove: () => void; rotaStart?: string; rotaEnd?: string; errors?: Record<string, string> }) {
   return (
-    <div className="rounded-lg border border-border p-3 space-y-2 relative">
-      <button onClick={onRemove} className="absolute top-2 right-2 text-muted-foreground hover:text-destructive"><X className="h-4 w-4" /></button>
-      <DateRangePicker
-        startDate={entry.startDate}
-        endDate={entry.endDate}
-        onChange={(s, e) => onChange({ ...entry, startDate: s, endDate: e })}
-        minDate={rotaStart}
-        maxDate={rotaEnd}
-        errors={{ startDate: errors.startDate, endDate: errors.endDate }}
-      />
+    <div className="rounded-lg border border-border p-3 space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <DateRangePicker
+          startDate={entry.startDate}
+          endDate={entry.endDate}
+          onChange={(s, e) => onChange({ ...entry, startDate: s, endDate: e })}
+          minDate={rotaStart}
+          maxDate={rotaEnd}
+          errors={{ startDate: errors.startDate, endDate: errors.endDate }}
+        />
+        <button
+          onClick={onRemove}
+          className="shrink-0 flex items-center justify-center h-10 w-10 rounded-lg border border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive hover:text-white transition-colors"
+          title="Remove"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </div>
       <div>
         <label className="text-xs font-medium text-muted-foreground">Location / department *</label>
         <Input value={entry.location} onChange={(e) => onChange({ ...entry, location: e.target.value })} placeholder="e.g. Royal Liverpool Hospital — ICU" className="bg-muted border-border text-sm" />
