@@ -4,6 +4,7 @@ import { runPreRotaValidation } from './preRotaValidation'
 import { buildCalendarData } from './preRotaCalendar'
 import { buildTargetsData } from './preRotaTargets'
 import { supabase } from '@/integrations/supabase/client'
+import type { Json } from '@/integrations/supabase/types'
 import type { PreRotaResult, PreRotaStatus } from './preRotaTypes'
 
 export async function generatePreRota(
