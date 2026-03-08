@@ -4,6 +4,7 @@
 
 | Date | Sections Updated | Summary of Changes |
 |------|-----------------|-------------------|
+| 2026-03-08 | Sections 1–3, 10–11 | Audit v3: re-verified v1+v2 fixes; WTR UI checked; new audit of rota_configs persistence, bank_holidays storage, account_settings independence, survey token flow, downstream consumers, accent colour consistency, TypeScript safety, navigation |
 | 2026-03-05 | All | Initial audit generated |
 
 ---
