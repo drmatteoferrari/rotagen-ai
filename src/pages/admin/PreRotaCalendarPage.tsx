@@ -485,10 +485,9 @@ export default function PreRotaCalendarPage() {
             <button onClick={() => setCurrentDayIndex(i => Math.max(0, i - 1))} disabled={currentDayIndex === 0} className="p-2 rounded-md hover:bg-muted disabled:opacity-30 min-h-[36px]">
               <ChevronLeft className="h-4 w-4" />
             </button>
-            <button
-              onClick={() => dateInputRef.current?.showPicker?.()}
-              className="text-center relative cursor-pointer hover:opacity-80 transition-opacity"
-              style={{ background: 'none', border: 'none', padding: '2px 8px' }}
+            <div
+              className="text-center relative cursor-pointer"
+              style={{ padding: '2px 8px', flex: 1 }}
             >
               <p className="text-sm font-semibold" style={{ color: getColumnHeaderTextColor(isBH, isWknd) }}>
                 {d.toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}
@@ -507,10 +506,13 @@ export default function PreRotaCalendarPage() {
                   const idx = allDates.indexOf(target);
                   if (idx !== -1) setCurrentDayIndex(idx);
                 }}
-                style={{ position: 'absolute', opacity: 0, width: 0, height: 0, pointerEvents: 'none' }}
-                tabIndex={-1}
+                style={{
+                  position: 'absolute', inset: 0,
+                  opacity: 0, width: '100%', height: '100%',
+                  cursor: 'pointer',
+                }}
               />
-            </button>
+            </div>
             <button onClick={() => setCurrentDayIndex(i => Math.min(allDates.length - 1, i + 1))} disabled={currentDayIndex >= allDates.length - 1} className="p-2 rounded-md hover:bg-muted disabled:opacity-30 min-h-[36px]">
               <ChevronRight className="h-4 w-4" />
             </button>
