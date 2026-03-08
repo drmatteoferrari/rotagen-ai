@@ -426,7 +426,7 @@ export default function DepartmentStep1() {
   };
 
   return (
-    <AdminLayout title="Department Setup" subtitle="Step 1 of 2 — Shift Overview">
+    <AdminLayout title="Department Setup" subtitle="Step 2 of 3 — Shift Types">
       <div className="mx-auto max-w-3xl space-y-6">
         <div className="mb-2">
           <h2 className="text-2xl font-extrabold tracking-tight text-foreground">Shift Overview</h2>
