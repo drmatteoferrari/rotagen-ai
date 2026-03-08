@@ -31,7 +31,7 @@ export default function WtrStep2() {
 
   const limits = [
     { label: "Max Consecutive Days", sub: "Standard shifts", hint: "WTR maximum: 7 days", value: maxConsecDays, set: setMaxConsecDays, max: 7, type: "days" },
-    { label: "Max Consecutive Long Shifts", sub: "Consecutive long shifts", hint: "WTR maximum: 7 shifts", value: maxConsecLong, set: setMaxConsecLong, max: 7, type: "long shifts" },
+    { label: "Max Consecutive Long Shifts", sub: "Consecutive long shifts", hint: "WTR maximum: 4 shifts", value: maxConsecLong, set: setMaxConsecLong, max: 4, type: "long shifts" },
     { label: "Max Consecutive Nights", sub: "Consecutive nights", hint: "WTR maximum: 4 nights", value: maxConsecNights, set: setMaxConsecNights, max: 4, type: "nights" },
   ];
 
