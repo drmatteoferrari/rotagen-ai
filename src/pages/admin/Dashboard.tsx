@@ -38,21 +38,8 @@ export default function Dashboard() {
 
   // Load settings on mount
   useEffect(() => {
-    const load = async () => {
-      if (!user?.username) { setLoadingSettings(false); return; }
-      setLoadingSettings(true);
-      try {
-        const settings = await loadAccountSettings(user.username);
-        setDepartmentName(settings.departmentName || "");
-        setTrustName(settings.trustName || "");
-      } catch (error) {
-        console.error("Failed to load account settings:", error);
-      } finally {
-        setLoadingSettings(false);
-      }
-    };
-    load();
-  }, [user?.username]);
+    setLoadingSettings(false);
+  }, []);
 
   // Fetch live survey counts
   useEffect(() => {
