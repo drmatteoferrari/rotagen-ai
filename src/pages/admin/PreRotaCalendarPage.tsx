@@ -475,15 +475,27 @@ export default function PreRotaCalendarPage() {
             </Button>
           </div>
 
-          {/* Date picker + day navigator */}
+          {/* Day navigator — tap date to open picker */}
           <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             background: getColumnHeaderBg(isBH, isWknd),
-            border: '1px solid #e2e8f0', borderRadius: 8, padding: '6px 4px',
+            border: '1px solid #e2e8f0', borderRadius: 8, padding: '4px 4px',
           }}>
-            {/* Quick date jump */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 4, padding: '0 8px' }}>
-              <label style={{ fontSize: 11, color: '#64748b', fontWeight: 500, whiteSpace: 'nowrap' }}>Go to:</label>
+            <button onClick={() => setCurrentDayIndex(i => Math.max(0, i - 1))} disabled={currentDayIndex === 0} className="p-2 rounded-md hover:bg-muted disabled:opacity-30 min-h-[36px]">
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => dateInputRef.current?.showPicker?.()}
+              className="text-center relative cursor-pointer hover:opacity-80 transition-opacity"
+              style={{ background: 'none', border: 'none', padding: '2px 8px' }}
+            >
+              <p className="text-sm font-semibold" style={{ color: getColumnHeaderTextColor(isBH, isWknd) }}>
+                {d.toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}
+              </p>
+              <p className="text-[10px] text-muted-foreground">Day {currentDayIndex + 1} of {allDates.length} · tap to jump</p>
+              {isBH && <span style={{ display: 'inline-block', background: '#b91c1c', color: '#fff', fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4, marginTop: 2 }}>Bank Holiday</span>}
               <input
+                ref={dateInputRef}
                 type="date"
                 min={allDates[0]}
                 max={allDates[allDates.length - 1]}
@@ -494,29 +506,13 @@ export default function PreRotaCalendarPage() {
                   const idx = allDates.indexOf(target);
                   if (idx !== -1) setCurrentDayIndex(idx);
                 }}
-                style={{
-                  fontSize: 12, padding: '3px 6px', borderRadius: 5,
-                  border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer',
-                  flex: 1, maxWidth: 160,
-                }}
+                style={{ position: 'absolute', opacity: 0, width: 0, height: 0, pointerEvents: 'none' }}
+                tabIndex={-1}
               />
-            </div>
-            {/* Day nav arrows */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <button onClick={() => setCurrentDayIndex(i => Math.max(0, i - 1))} disabled={currentDayIndex === 0} className="p-2 rounded-md hover:bg-muted disabled:opacity-30 min-h-[36px]">
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <div className="text-center">
-                <p className="text-sm font-semibold" style={{ color: getColumnHeaderTextColor(isBH, isWknd) }}>
-                  {d.toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}
-                </p>
-                <p className="text-[10px] text-muted-foreground">Day {currentDayIndex + 1} of {allDates.length}</p>
-                {isBH && <span style={{ display: 'inline-block', background: '#b91c1c', color: '#fff', fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4, marginTop: 2 }}>Bank Holiday</span>}
-              </div>
-              <button onClick={() => setCurrentDayIndex(i => Math.min(allDates.length - 1, i + 1))} disabled={currentDayIndex >= allDates.length - 1} className="p-2 rounded-md hover:bg-muted disabled:opacity-30 min-h-[36px]">
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
+            </button>
+            <button onClick={() => setCurrentDayIndex(i => Math.min(allDates.length - 1, i + 1))} disabled={currentDayIndex >= allDates.length - 1} className="p-2 rounded-md hover:bg-muted disabled:opacity-30 min-h-[36px]">
+              <ChevronRight className="h-4 w-4" />
+            </button>
           </div>
 
           {/* Doctor list first */}
