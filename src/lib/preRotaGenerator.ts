@@ -167,7 +167,7 @@ export async function generatePreRota(
 
     // 12. Save to DB (UPSERT)
     const { data: saved } = await supabase
-      .from('pre_rota_results' as any)
+      .from('pre_rota_results')
       .upsert({
         rota_config_id: rotaConfigId,
         generated_at: new Date().toISOString(),

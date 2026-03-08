@@ -59,10 +59,10 @@ export default function PreRotaTargetsPage() {
 
       try {
         const { data: preRota } = await supabase
-          .from('pre_rota_results' as any)
+          .from('pre_rota_results')
           .select('*')
           .eq('rota_config_id', rotaConfigId)
-          .single();
+          .maybeSingle();
 
         if (!preRota) { setErrorMsg('No pre-rota generated yet. Go back to the dashboard and generate the pre-rota first.'); setLoading(false); return; }
         const pr = preRota as any;
