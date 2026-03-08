@@ -583,59 +583,27 @@ No storage buckets configured.
 
 ### TypeScript Types & Interfaces
 
-#### `RotaConfig` — `src/lib/rotaConfig.ts`
-Full deserialized rota configuration including department info, rota period, shifts, distribution targets, and WTR settings. Used throughout the admin setup flow.
+[Unchanged since last audit — verified clean]
 
-#### `RotaConfigShift` — `src/lib/rotaConfig.ts`
-Single shift definition with timing, badges, staffing, and badge overrides. Used within `RotaConfig.shifts`.
+#### Additional types added since v2:
 
-#### `ShiftType` — `src/contexts/DepartmentSetupContext.tsx`
-In-memory shift type used during department setup editing. Includes `applicableDays`, `badges`, `badgeOverrides`, `staffing`, `oncallManuallySet`.
+#### `PreRotaResult` — `src/lib/preRotaTypes.ts`
+Full pre-rota generation result including status, validation issues, calendar data, targets data, and staleness flag.
 
-#### `ShiftBadges` — `src/contexts/DepartmentSetupContext.tsx`
-Badge flags: `night`, `long`, `ooh`, `weekend`, `oncall`, `nonres`.
+#### `PreRotaStatus` — `src/lib/preRotaTypes.ts`
+`'blocked' | 'complete_with_warnings' | 'complete'`
 
-#### `BadgeKey` — `src/contexts/DepartmentSetupContext.tsx`
-`keyof ShiftBadges` — union of badge names.
+#### `ValidationIssue` — `src/lib/preRotaTypes.ts`
+`{ severity, code, doctorId, doctorName, message, field? }`
 
-#### `ShiftStaffing` — `src/contexts/DepartmentSetupContext.tsx`
-`{ min: number; max: number | null }`
+#### `CalendarData`, `CalendarDoctor`, `CalendarCell`, `CellCode`, `CalendarWeek` — `src/lib/preRotaTypes.ts`
+Calendar rendering types for the pre-rota availability calendar.
 
-#### `ApplicableDays` — `src/lib/shiftUtils.ts`
-`{ mon: boolean; tue: boolean; ... sun: boolean }`
+#### `TargetsData`, `DoctorTargets`, `DoctorShiftTarget`, `TeamSummaryRow` — `src/lib/preRotaTypes.ts`
+Shift hour target types for the pre-rota targets table.
 
-#### `DaysPreset` — `src/lib/shiftUtils.ts`
-`'weekday' | 'weekend' | 'ext_weekend' | 'any' | 'custom'`
-
-#### `SurveyFormData` — `src/contexts/SurveyContext.tsx`
-Comprehensive 35+ field interface covering all 6 survey steps. Maps directly to `doctor_survey_responses` columns.
-
-#### `SurveyDoctorInfo` — `src/contexts/SurveyContext.tsx`
-`{ id, firstName, lastName, email, grade, rotaConfigId }`
-
-#### `SurveyRotaInfo` — `src/contexts/SurveyContext.tsx`
-`{ startDate, endDate, durationWeeks, departmentName, trustName, surveyDeadline }`
-
-#### `AuthUser` — `src/contexts/AuthContext.tsx`
-`{ username, email, role, displayName }`
-
-#### `AccountSettings` — `src/contexts/AuthContext.tsx`
-`{ departmentName: string | null; trustName: string | null }`
-
-#### `PreRotaInput` — `src/lib/rotaGenInput.ts`
-Structured input for pre-rota data generation. Contains period, shift slots with targets, WTR constraints, and distribution targets.
-
-#### `FinalRotaInput` — `src/lib/rotaGenInput.ts`
-Extends `PreRotaInput` with per-doctor constraints (leave, exemptions, fairness targets) and hard/soft constraint lists.
-
-#### `DoctorPreference` — `src/lib/rotaGenInput.ts`
-Per-doctor preference data derived from survey responses.
-
-#### `DoctorSurveyResponse` — `src/lib/rotaGenInput.ts`
-Maps to `doctor_survey_responses` table row.
-
-#### `Doctor` — `src/pages/admin/Roster.tsx`
-Local interface matching `doctors` table row.
+#### `EligibilityDoctor`, `ShiftRequirements` — `src/lib/shiftEligibility.ts`
+Types for shift eligibility checking (competency and grade validation).
 
 ---
 
