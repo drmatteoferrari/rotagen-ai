@@ -418,7 +418,7 @@ function ExpandedCard({
 
 export default function DepartmentStep1() {
   const navigate = useNavigate();
-  const { shifts, updateShift, addShift, removeShift, expandedShiftId, setExpandedShiftId, setShifts } = useDepartmentSetup();
+  const { shifts, updateShift, addShift, removeShift, expandedShiftId, setExpandedShiftId, setShifts, isLoadingShifts } = useDepartmentSetup();
 
   const handleSaveCard = (updated: ShiftType) => {
     setShifts((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
