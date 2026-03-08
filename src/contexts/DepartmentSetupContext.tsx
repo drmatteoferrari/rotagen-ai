@@ -146,6 +146,8 @@ interface DepartmentSetupContextType {
   setGlobalOncallPct: (v: number) => void;
   shiftTargetOverrides: Record<string, number | undefined>;
   setShiftTargetOverrides: React.Dispatch<React.SetStateAction<Record<string, number | undefined>>>;
+  // ✅ Section 6 complete — expose isLoadingShifts
+  isLoadingShifts: boolean;
 }
 
 const DepartmentSetupContext = createContext<DepartmentSetupContextType | undefined>(undefined);
