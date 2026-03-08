@@ -1,13 +1,121 @@
 import { useState } from "react";
+import { format, parseISO } from "date-fns";
 import { useSurveyContext } from "@/contexts/SurveyContext";
 import { StepNav } from "@/components/survey/StepNav";
 import { SurveySection } from "@/components/survey/SurveySection";
 import { FieldError } from "@/components/survey/FieldError";
 import { InfoBox } from "@/components/survey/InfoBox";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { ShieldAlert, Info } from "lucide-react";
+import { ShieldAlert, Info, CalendarDays } from "lucide-react";
+import { cn } from "@/lib/utils";
+import type { DateRange } from "react-day-picker";
+
+/* ─── Parental leave date range picker (same pattern as Step 4) ─── */
+function ParentalDateRangePicker({
+  startDate,
+  endDate,
+  onChange,
+  minDate,
+  maxDate,
+  errors,
+}: {
+  startDate: string;
+  endDate: string;
+  onChange: (start: string, end: string) => void;
+  minDate?: string;
+  maxDate?: string;
+  errors?: { start?: string; end?: string };
+}) {
+  const [open, setOpen] = useState(false);
+  const [pickingEnd, setPickingEnd] = useState(false);
+  const [tempFrom, setTempFrom] = useState<Date | undefined>(undefined);
+
+  const selected: DateRange | undefined = pickingEnd
+    ? { from: tempFrom, to: undefined }
+    : startDate || endDate
+      ? {
+          from: startDate ? parseISO(startDate) : undefined,
+          to: endDate ? parseISO(endDate) : undefined,
+        }
+      : undefined;
+
+  const handleSelect = (range: DateRange | undefined) => {
+    if (!pickingEnd) {
+      const clickedDate = range?.from || range?.to;
+      if (clickedDate) {
+        setTempFrom(clickedDate);
+        setPickingEnd(true);
+        onChange(format(clickedDate, "yyyy-MM-dd"), "");
+      }
+      return;
+    }
+    const to = range?.to || range?.from;
+    if (tempFrom && to) {
+      const [start, end] = tempFrom <= to ? [tempFrom, to] : [to, tempFrom];
+      onChange(format(start, "yyyy-MM-dd"), format(end, "yyyy-MM-dd"));
+      setPickingEnd(false);
+      setTempFrom(undefined);
+      setTimeout(() => setOpen(false), 150);
+    }
+  };
+
+  const handleOpenChange = (isOpen: boolean) => {
+    setOpen(isOpen);
+    if (isOpen) {
+      setPickingEnd(false);
+      setTempFrom(undefined);
+    }
+  };
+
+  const displayText = startDate && endDate
+    ? `${format(parseISO(startDate), "d MMM")} → ${format(parseISO(endDate), "d MMM yyyy")}`
+    : startDate
+    ? `${format(parseISO(startDate), "d MMM yyyy")} → …`
+    : "Select dates";
+
+  return (
+    <div className="space-y-1">
+      <Popover open={open} onOpenChange={handleOpenChange}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            className={cn(
+              "w-full justify-start text-left font-normal h-10 text-sm",
+              !startDate && "text-muted-foreground"
+            )}
+          >
+            <CalendarDays className="mr-2 h-4 w-4 shrink-0" />
+            <span className="truncate">{displayText}</span>
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start" side="bottom">
+          <Calendar
+            mode="range"
+            selected={selected}
+            onSelect={handleSelect}
+            numberOfMonths={1}
+            disabled={(date) => {
+              if (minDate && date < parseISO(minDate)) return true;
+              if (maxDate && date > parseISO(maxDate)) return true;
+              return false;
+            }}
+            initialFocus
+            className={cn("p-3 pointer-events-auto")}
+          />
+          {pickingEnd && (
+            <p className="text-[10px] text-center text-muted-foreground pb-2">Now select end date</p>
+          )}
+        </PopoverContent>
+      </Popover>
+      {errors?.start && <p className="text-xs text-destructive">{errors.start}</p>}
+      {errors?.end && <p className="text-xs text-destructive">{errors.end}</p>}
+    </div>
+  );
+}
 
 export default function SurveyStep5() {
   const ctx = useSurveyContext();
@@ -34,7 +142,7 @@ export default function SurveyStep5() {
 
   return (
     <>
-      <div className="p-3 sm:p-4 pb-4 space-y-4">
+      <div className="flex-1 overflow-y-auto overscroll-contain p-3 sm:p-4 pb-4 space-y-4">
         {/* Info banner */}
         <div className="flex items-start gap-2 rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-xs sm:text-sm font-medium text-teal-700">
           <Info className="h-4 w-4 shrink-0 mt-0.5 text-teal-600" />
@@ -75,27 +183,21 @@ export default function SurveyStep5() {
                 {formData.parentalLeaveExpected && (
                   <div className="space-y-3 border-l-2 border-border pl-3 mt-2">
                     <div>
-                      <label className="text-xs font-medium text-card-foreground block mb-1">Expected start *</label>
-                      <Input
-                        type="date"
-                        value={formData.parentalLeaveStart}
-                        min={rotaInfo?.startDate || undefined}
-                        max={rotaInfo?.endDate || undefined}
-                        onChange={(e) => setField("parentalLeaveStart", e.target.value)}
-                        className="bg-muted border-border w-full"
+                      <label className="text-xs font-medium text-card-foreground block mb-1">Leave period *</label>
+                      <ParentalDateRangePicker
+                        startDate={formData.parentalLeaveStart}
+                        endDate={formData.parentalLeaveEnd}
+                        onChange={(s, e) => {
+                          setField("parentalLeaveStart", s);
+                          setField("parentalLeaveEnd", e);
+                        }}
+                        minDate={rotaInfo?.startDate || undefined}
+                        maxDate={rotaInfo?.endDate || undefined}
+                        errors={{
+                          start: errors.parentalLeaveStart,
+                          end: errors.parentalLeaveEnd,
+                        }}
                       />
-                      <FieldError message={errors.parentalLeaveStart} />
-                    </div>
-                    <div>
-                      <label className="text-xs font-medium text-card-foreground block mb-1">Expected end *</label>
-                      <Input
-                        type="date"
-                        value={formData.parentalLeaveEnd}
-                        min={formData.parentalLeaveStart || undefined}
-                        onChange={(e) => setField("parentalLeaveEnd", e.target.value)}
-                        className="bg-muted border-border w-full"
-                      />
-                      <FieldError message={errors.parentalLeaveEnd} />
                     </div>
                     <div>
                       <label className="text-xs font-medium text-card-foreground block mb-1">Notes *</label>
