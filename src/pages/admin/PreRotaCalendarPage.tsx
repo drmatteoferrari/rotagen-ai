@@ -444,6 +444,8 @@ export default function PreRotaCalendarPage() {
   const { weeks, doctors } = calendarData;
 
   // ── MOBILE: single-day view ──
+  const [showBreakdown, setShowBreakdown] = useState(false);
+
   if (isMobile) {
     const currentDate = allDates[currentDayIndex] ?? allDates[0];
     if (!currentDate) return null;
@@ -462,7 +464,7 @@ export default function PreRotaCalendarPage() {
 
     return (
       <AdminLayout title="Availability Calendar">
-        <div className="space-y-3">
+        <div className="space-y-2">
           {/* Top bar */}
           <div className="flex items-center justify-between">
             <button onClick={() => navigate('/admin/dashboard')} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
@@ -473,63 +475,51 @@ export default function PreRotaCalendarPage() {
             </Button>
           </div>
 
-          {/* Day navigator */}
+          {/* Date picker + day navigator */}
           <div style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             background: getColumnHeaderBg(isBH, isWknd),
             border: '1px solid #e2e8f0', borderRadius: 8, padding: '6px 4px',
           }}>
-            <button onClick={() => setCurrentDayIndex(i => Math.max(0, i - 1))} disabled={currentDayIndex === 0} className="p-2 rounded-md hover:bg-muted disabled:opacity-30 min-h-[40px]">
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <div className="text-center">
-              <p className="text-sm font-semibold" style={{ color: getColumnHeaderTextColor(isBH, isWknd) }}>
-                {d.toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}
-              </p>
-              <p className="text-[10px] text-muted-foreground">Day {currentDayIndex + 1} of {allDates.length}</p>
-              {isBH && <span style={{ display: 'inline-block', background: '#b91c1c', color: '#fff', fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4, marginTop: 2 }}>Bank Holiday</span>}
+            {/* Quick date jump */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: 4, padding: '0 8px' }}>
+              <label style={{ fontSize: 11, color: '#64748b', fontWeight: 500, whiteSpace: 'nowrap' }}>Go to:</label>
+              <input
+                type="date"
+                min={allDates[0]}
+                max={allDates[allDates.length - 1]}
+                value={currentDate}
+                onChange={e => {
+                  const target = e.target.value;
+                  if (!target) return;
+                  const idx = allDates.indexOf(target);
+                  if (idx !== -1) setCurrentDayIndex(idx);
+                }}
+                style={{
+                  fontSize: 12, padding: '3px 6px', borderRadius: 5,
+                  border: '1px solid #cbd5e1', background: '#fff', cursor: 'pointer',
+                  flex: 1, maxWidth: 160,
+                }}
+              />
             </div>
-            <button onClick={() => setCurrentDayIndex(i => Math.min(allDates.length - 1, i + 1))} disabled={currentDayIndex >= allDates.length - 1} className="p-2 rounded-md hover:bg-muted disabled:opacity-30 min-h-[40px]">
-              <ChevronRight className="h-4 w-4" />
-            </button>
+            {/* Day nav arrows */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <button onClick={() => setCurrentDayIndex(i => Math.max(0, i - 1))} disabled={currentDayIndex === 0} className="p-2 rounded-md hover:bg-muted disabled:opacity-30 min-h-[36px]">
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <div className="text-center">
+                <p className="text-sm font-semibold" style={{ color: getColumnHeaderTextColor(isBH, isWknd) }}>
+                  {d.toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })}
+                </p>
+                <p className="text-[10px] text-muted-foreground">Day {currentDayIndex + 1} of {allDates.length}</p>
+                {isBH && <span style={{ display: 'inline-block', background: '#b91c1c', color: '#fff', fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4, marginTop: 2 }}>Bank Holiday</span>}
+              </div>
+              <button onClick={() => setCurrentDayIndex(i => Math.min(allDates.length - 1, i + 1))} disabled={currentDayIndex >= allDates.length - 1} className="p-2 rounded-md hover:bg-muted disabled:opacity-30 min-h-[36px]">
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
           </div>
 
-          {/* Availability summary — desktop-style colored badges */}
-          <div style={{
-            display: 'grid', gridTemplateColumns: `repeat(${Math.min(shiftTypes.length + 1, 3)}, 1fr)`,
-            gap: 6, padding: '8px 10px', background: '#f8fafc',
-            border: '1px solid #e2e8f0', borderRadius: 8,
-          }}>
-            {/* All shifts */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-              <span style={{
-                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                width: 30, height: 30, borderRadius: 6,
-                background: availabilityColour(totalAvailable, maxMinDoctors), color: '#fff',
-                fontSize: 14, fontWeight: 700,
-              }}>{totalAvailable}</span>
-              <span style={{ fontSize: 10, color: '#64748b', fontWeight: 500, textAlign: 'center', lineHeight: 1.2 }}>All shifts</span>
-              {nocOnlyCount > 0 && (
-                <span style={{ fontSize: 9, color: '#ec4899', fontWeight: 600 }}>+{nocOnlyCount} NOC</span>
-              )}
-            </div>
-            {shiftTypes.map(shift => {
-              const count = eligibility[shift.id]?.[currentDate] ?? 0;
-              return (
-                <div key={shift.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                  <span style={{
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                    width: 30, height: 30, borderRadius: 6,
-                    background: availabilityColour(count, shift.min_doctors), color: '#fff',
-                    fontSize: 14, fontWeight: 700,
-                  }}>{count}</span>
-                  <span style={{ fontSize: 10, color: '#64748b', fontWeight: 500, textAlign: 'center', lineHeight: 1.2 }}>{shift.name}</span>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Doctor list — compact dense rows */}
+          {/* Doctor list first */}
           <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden' }}>
             {doctors.map((doctor, idx) => {
               const cell = doctor.availability[currentDate];
@@ -541,11 +531,11 @@ export default function PreRotaCalendarPage() {
               return (
                 <div key={doctor.doctorId} style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: '5px 10px',
+                  padding: '4px 8px',
                   background: cellBg,
                   borderBottom: idx < doctors.length - 1 ? '1px solid #f1f5f9' : 'none',
                   opacity: isUnavailable ? 0.6 : 1,
-                  minHeight: 32,
+                  minHeight: 30,
                 }}>
                   <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
                     <span style={{ fontSize: 12, fontWeight: 600, color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
@@ -553,7 +543,7 @@ export default function PreRotaCalendarPage() {
                     </span>
                     <span style={{ fontSize: 10, color: '#94a3b8' }}>{doctor.grade} · {doctor.wte}%</span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0, marginLeft: 6 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0, marginLeft: 4 }}>
                     {primary === 'AL' && <span style={{ background: '#16a34a', color: '#fff', fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4 }}>AL</span>}
                     {primary === 'SL' && <span style={{ background: '#2563eb', color: '#fff', fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4 }}>SL</span>}
                     {primary === 'ROT' && <span style={{ background: '#c2410c', color: '#fff', fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4 }}>ROT</span>}
@@ -564,6 +554,60 @@ export default function PreRotaCalendarPage() {
                 </div>
               );
             })}
+          </div>
+
+          {/* Availability summary — total only, tap to expand */}
+          <div style={{
+            border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden',
+            background: '#f8fafc',
+          }}>
+            <button
+              onClick={() => setShowBreakdown(v => !v)}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                width: '100%', padding: '8px 12px', background: 'transparent',
+                border: 'none', cursor: 'pointer',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  width: 28, height: 28, borderRadius: 6,
+                  background: availabilityColour(totalAvailable, maxMinDoctors), color: '#fff',
+                  fontSize: 13, fontWeight: 700,
+                }}>{totalAvailable}</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: '#1e293b' }}>Available (all shifts)</span>
+                {nocOnlyCount > 0 && (
+                  <span style={{ fontSize: 10, color: '#ec4899', fontWeight: 600 }}>+{nocOnlyCount} NOC</span>
+                )}
+              </div>
+              <ChevronDown className="h-4 w-4 text-muted-foreground" style={{
+                transform: showBreakdown ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 0.2s',
+              }} />
+            </button>
+            {showBreakdown && (
+              <div style={{
+                display: 'grid', gridTemplateColumns: `repeat(${Math.min(shiftTypes.length, 3)}, 1fr)`,
+                gap: 6, padding: '4px 12px 10px',
+                borderTop: '1px solid #e2e8f0',
+              }}>
+                {shiftTypes.map(shift => {
+                  const count = eligibility[shift.id]?.[currentDate] ?? 0;
+                  return (
+                    <div key={shift.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '2px 0' }}>
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        width: 24, height: 24, borderRadius: 5,
+                        background: availabilityColour(count, shift.min_doctors), color: '#fff',
+                        fontSize: 12, fontWeight: 700,
+                      }}>{count}</span>
+                      <span style={{ fontSize: 11, color: '#64748b', fontWeight: 500, lineHeight: 1.2 }}>{shift.name}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Compact legend */}
