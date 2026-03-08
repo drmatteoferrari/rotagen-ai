@@ -281,14 +281,23 @@ export default function Roster() {
     return { disabled: false, tooltip: "Send survey invite", color: "", badge: null };
   };
 
-  const renderSendButton = (doctor: Doctor, sendState: ReturnType<typeof getSendIconState>, isSending: boolean, isSuccess: boolean) => {
+  const renderSendButton = (
+    doctor: Doctor,
+    sendState: ReturnType<typeof getSendIconState>,
+    isSending: boolean,
+    isSuccess: boolean,
+    view: "desktop" | "mobile"
+  ) => {
     if (isSending) return <Button variant="ghost" size="icon" disabled><Loader2 className="h-4 w-4 animate-spin" /></Button>;
     if (isSuccess) return <Button variant="ghost" size="icon" disabled><Check className="h-4 w-4 text-emerald-600" /></Button>;
     if (sendState.disabled) return (
       <Tooltip><TooltipTrigger asChild><span><Button variant="ghost" size="icon" disabled className="text-muted-foreground"><Send className="h-4 w-4" /></Button></span></TooltipTrigger><TooltipContent>{sendState.tooltip}</TooltipContent></Tooltip>
     );
+
+    const popoverKey = `${doctor.id}:${view}`;
+
     return (
-      <Popover open={popoverId === doctor.id} onOpenChange={(open) => setPopoverId(open ? doctor.id : null)}>
+      <Popover open={popoverId === popoverKey} onOpenChange={(open) => setPopoverId(open ? popoverKey : null)}>
         <PopoverTrigger asChild>
           <Button variant="ghost" size="icon" className={cn("relative", sendState.color)} title={sendState.tooltip}>
             <Send className="h-4 w-4" />
