@@ -91,7 +91,7 @@ export default function DepartmentStep1New() {
             ) : (
               <>
                 {/* Department Name */}
-                <div className="rounded-lg border border-border p-4 flex items-center justify-between gap-4">
+                <div className="rounded-lg border border-border p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div className="flex flex-col">
                     <span className="text-sm font-medium text-card-foreground">Department Name</span>
                     <span className="text-xs text-muted-foreground">Used on rota outputs and survey emails</span>
@@ -102,13 +102,13 @@ export default function DepartmentStep1New() {
                     value={deptName}
                     onChange={(e) => { setDeptName(e.target.value.slice(0, 100)); setDeptError(""); }}
                     maxLength={100}
-                    className="w-[180px]"
+                    className="w-full sm:w-[220px]"
                   />
                 </div>
                 {deptError && <p className="text-xs text-destructive">{deptError}</p>}
 
                 {/* Hospital / Trust Name */}
-                <div className="rounded-lg border border-border p-4 flex items-center justify-between gap-4">
+                <div className="rounded-lg border border-border p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div className="flex flex-col">
                     <span className="text-sm font-medium text-card-foreground">Hospital or Trust</span>
                     <span className="text-xs text-muted-foreground">Full name of the hospital or NHS trust</span>
@@ -119,7 +119,7 @@ export default function DepartmentStep1New() {
                     value={trustName}
                     onChange={(e) => { setTrustName(e.target.value.slice(0, 100)); setTrustError(""); }}
                     maxLength={100}
-                    className="w-[180px]"
+                    className="w-full sm:w-[220px]"
                   />
                 </div>
                 {trustError && <p className="text-xs text-destructive">{trustError}</p>}
@@ -137,7 +137,7 @@ export default function DepartmentStep1New() {
         </Card>
 
         <div className="flex justify-end">
-          <Button size="lg" onClick={handleSaveAndContinue} disabled={saving || loading} className="bg-purple-600 hover:bg-purple-700 text-white">
+          <Button size="lg" onClick={handleSaveAndContinue} disabled={saving || loading} className="bg-purple-600 hover:bg-purple-700 text-white w-full sm:w-auto">
             {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {saving ? "Saving…" : "Save & Continue"}
             {!saving && <ArrowRight className="ml-2 h-4 w-4" />}

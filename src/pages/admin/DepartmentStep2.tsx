@@ -35,10 +35,12 @@ function BadgeRow({
   shift,
   editable,
   onToggle,
+  compact = false,
 }: {
   shift: ShiftType;
   editable: boolean;
   onToggle?: (key: BadgeKey) => void;
+  compact?: boolean;
 }) {
   const auto = detectBadges(shift.startTime, shift.endTime, shift.applicableDays, shift.isOncall, shift.isNonRes);
   const effective = mergedBadges(auto, shift.badgeOverrides);
@@ -56,13 +58,16 @@ function BadgeRow({
             type="button"
             disabled={!editable}
             onClick={() => editable && onToggle?.(key)}
-            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-all ${
+            title={label}
+            className={`inline-flex items-center gap-1 rounded-full py-1 text-[10px] font-bold uppercase tracking-wider transition-all ${
+              compact ? "px-1.5" : "px-2.5"
+            } ${
               isActive
                 ? activeClasses
                 : "bg-muted text-muted-foreground/40 line-through"
             } ${editable ? "cursor-pointer hover:opacity-80" : "cursor-default"}`}
           >
-            {emoji} {label}{suffix}
+            {emoji}{!compact && <>{" "}{label}{suffix}</>}
           </button>
         );
       })}
@@ -87,15 +92,21 @@ function CollapsedCard({
       className="rounded-lg border border-border bg-card p-4 space-y-3 transition-all hover:shadow-md cursor-pointer"
     >
       <div className="flex justify-between items-start">
-        <div className="flex flex-col gap-2">
-          <h3 className="text-sm font-medium text-card-foreground">{shift.name}</h3>
+        <div className="flex flex-col gap-2 min-w-0 flex-1">
+          <h3 className="text-sm font-medium text-card-foreground truncate">{shift.name}</h3>
           <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-            <Clock className="h-3.5 w-3.5" />
+            <Clock className="h-3.5 w-3.5 shrink-0" />
             {shift.startTime} – {shift.endTime} ({shift.durationHours}h)
           </p>
-          <BadgeRow shift={shift} editable={false} />
+          {/* Show icon-only badges on mobile, full badges on sm+ */}
+          <div className="sm:hidden">
+            <BadgeRow shift={shift} editable={false} compact />
+          </div>
+          <div className="hidden sm:block">
+            <BadgeRow shift={shift} editable={false} />
+          </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 shrink-0 ml-2">
           {canRemove && (
             <button
               onClick={(e) => { e.stopPropagation(); onRemove(); }}
@@ -206,7 +217,7 @@ function ExpandedCard({
       </div>
 
       {/* Times + Duration */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="space-y-1">
           <Label className="font-semibold text-xs">Start Time</Label>
           <Input type="time" value={draft.startTime} onChange={(e) => update({ startTime: e.target.value })} className="bg-muted border-border" />
@@ -226,7 +237,7 @@ function ExpandedCard({
       {/* Days */}
       <div className="space-y-2">
         <Label className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">Applicable Days</Label>
-        <div className="flex gap-2">
+        <div className="flex gap-1.5 sm:gap-2 flex-wrap">
           {DAY_KEYS.map((key, i) => (
             <button
               key={key}
@@ -245,7 +256,7 @@ function ExpandedCard({
       </div>
 
       {/* On-call radios */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">Resident On-Call?</Label>
           <div className="flex gap-3">
@@ -289,7 +300,7 @@ function ExpandedCard({
       {/* Staffing */}
       <div className="space-y-3">
         <Label className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">Staffing</Label>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1">
             <Label className="text-xs">Min Doctors</Label>
             <Input
@@ -341,7 +352,7 @@ function ExpandedCard({
         <div className="space-y-2">
           <Label className="text-xs font-medium">Minimum competency cover required on this shift</Label>
           <p className="text-[10px] text-muted-foreground">The algorithm will ensure at least this many doctors with each competency are assigned. Set to 0 if no requirement.</p>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 sm:grid-cols-3 gap-3">
             {([
               { key: "reqIac" as const, label: "IAC" },
               { key: "reqIaoc" as const, label: "IAOC" },
@@ -490,14 +501,14 @@ export default function DepartmentStep2() {
         </Card>
 
         {/* Navigation */}
-        <div className="flex justify-between">
-          <Button variant="outline" size="lg" onClick={() => navigate("/admin/department/step-1")}>
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-between gap-3 mt-6">
+          <Button variant="outline" size="lg" onClick={() => navigate("/admin/department/step-1")} className="w-full sm:w-auto">
             <ArrowLeft className="mr-2 h-4 w-4" /> Back
           </Button>
           <Button
             size="lg"
             onClick={() => navigate("/admin/department/step-3")}
-            className="bg-purple-600 hover:bg-purple-700 text-white"
+            className="bg-purple-600 hover:bg-purple-700 text-white w-full sm:w-auto"
           >
             Continue
             <ArrowRight className="ml-2 h-4 w-4" />
