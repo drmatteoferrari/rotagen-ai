@@ -37,9 +37,9 @@ export function SurveyShell({ children }: SurveyShellProps) {
   const step = ctx?.currentStep || 1;
 
   return (
-    <div className="flex flex-col min-h-full">
-      {/* Header — white bg matching WTR pattern */}
-      <div className="sticky top-0 z-10 bg-white border-b border-border px-4 py-3">
+    <div className="flex flex-col h-full min-h-0">
+      {/* Header — fixed at top, shrink-0 */}
+      <div className="shrink-0 bg-white border-b border-border px-4 py-3 z-10">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-teal-600">
@@ -54,7 +54,6 @@ export function SurveyShell({ children }: SurveyShellProps) {
             {step} / 6
           </div>
         </div>
-        {/* Progress bar */}
         <div className="mt-2 h-1.5 bg-muted rounded-full overflow-hidden">
           <div
             className="h-full bg-teal-600 rounded-full transition-all duration-500 ease-out"
@@ -65,34 +64,34 @@ export function SurveyShell({ children }: SurveyShellProps) {
 
       {/* Rota period banner */}
       {ctx?.rotaInfo && (
-        <div className="bg-card border-b border-border px-4 py-2 text-xs text-muted-foreground flex flex-wrap gap-x-4 gap-y-1">
+        <div className="shrink-0 bg-card border-b border-border px-4 py-2 text-xs text-muted-foreground flex flex-wrap gap-x-4 gap-y-1">
           <span>📅 Rota period: {fmtDate(ctx.rotaInfo.startDate)} – {fmtDate(ctx.rotaInfo.endDate)}{ctx.rotaInfo.durationWeeks ? ` (${ctx.rotaInfo.durationWeeks} weeks)` : ""}</span>
           {ctx.rotaInfo.surveyDeadline && <span>Survey deadline: {fmtDate(ctx.rotaInfo.surveyDeadline)}</span>}
         </div>
       )}
 
-      {/* Auto-save status indicator */}
+      {/* Auto-save status */}
       {ctx?.saveStatus === 'saving' && (
-        <div className="flex items-center justify-center gap-1.5 text-xs py-1 text-muted-foreground">
+        <div className="shrink-0 flex items-center justify-center gap-1.5 text-xs py-1 text-muted-foreground">
           <span className="inline-block w-2 h-2 rounded-full bg-muted-foreground/50" />
           Saving…
         </div>
       )}
       {ctx?.saveStatus === 'saved' && (
-        <div className="flex items-center justify-center gap-1.5 text-xs py-1 text-teal-600 font-medium">
+        <div className="shrink-0 flex items-center justify-center gap-1.5 text-xs py-1 text-teal-600 font-medium">
           <span className="inline-block w-2 h-2 rounded-full bg-teal-500" />
           Saved
         </div>
       )}
       {ctx?.saveStatus === 'error' && (
-        <div className="flex items-center justify-center gap-1.5 text-xs py-1 text-destructive font-semibold">
+        <div className="shrink-0 flex items-center justify-center gap-1.5 text-xs py-1 text-destructive font-semibold">
           <span className="inline-block w-2 h-2 rounded-full bg-destructive" />
-          Save failed — check your connection. Your data may not be saved.
+          Save failed — check your connection.
         </div>
       )}
 
-      {/* Content */}
-      <div className="flex-1">
+      {/* Content + StepNav wrapper */}
+      <div className="flex-1 flex flex-col min-h-0">
         {children}
       </div>
     </div>

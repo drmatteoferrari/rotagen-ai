@@ -259,7 +259,7 @@ export default function SurveyStep4() {
 
   return (
     <>
-      <div className="p-3 sm:p-4 pb-4 space-y-4">
+      <div className="flex-1 overflow-y-auto overscroll-contain p-3 sm:p-4 pb-4 space-y-4">
         {/* Info banner */}
         <div className="flex items-start gap-2 rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-xs sm:text-sm font-medium text-teal-700">
           <Info className="h-4 w-4 shrink-0 mt-0.5 text-teal-600" />

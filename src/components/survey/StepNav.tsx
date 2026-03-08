@@ -12,7 +12,7 @@ interface StepNavProps {
 
 export function StepNav({ onBack, onNext, backLabel = "Back", nextLabel = "Continue", nextDisabled = false, isSubmit = false }: StepNavProps) {
   return (
-    <div className="sticky bottom-0 bg-card/95 backdrop-blur-md border-t border-border p-4 pb-6 z-20">
+    <div className="shrink-0 bg-card/95 backdrop-blur-md border-t border-border p-3 pb-4 z-20">
       <div className="flex items-center justify-between gap-3 sm:flex-row flex-col-reverse">
         {onBack && (
           <Button variant="outline" size="lg" onClick={onBack} className="w-full sm:w-auto">
