@@ -468,11 +468,20 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
         );
       if (error) throw error;
 
+      // Sync doctor name, email, grade back to doctors table
+      const nameParts = fd.fullName.trim().split(/\s+/);
+      const syncFirst = nameParts[0] || "";
+      const syncLast = nameParts.slice(1).join(" ") || "";
       await supabase
         .from("doctors")
-        .update({ survey_status: "in_progress" })
-        .eq("id", doc.id)
-        .in("survey_status", ["not_started", "not_sent"]);
+        .update({
+          survey_status: "in_progress",
+          first_name: syncFirst,
+          last_name: syncLast,
+          email: fd.nhsEmail || undefined,
+          grade: fd.grade || undefined,
+        })
+        .eq("id", doc.id);
 
       setDraftSavedAt(new Date());
       setSaveStatus('saved');
