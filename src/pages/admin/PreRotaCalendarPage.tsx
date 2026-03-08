@@ -133,10 +133,10 @@ function LeaveBadge({ type }: { type: keyof typeof BADGE_STYLES }) {
 
 // ── Cell background logic ─────────────────────────────────────
 
-function getCellBackground(doctor: CalendarDoctor, date: string, isBH: boolean, isWeekend: boolean): string {
+function getCellBackground(doctor: any, date: string, isBH: boolean, isWeekend: boolean): string {
   const cell = doctor.availability[date];
   const primary = cell?.primary ?? 'AVAILABLE';
-  const isLtftDay = doctor.ltftDaysOff.includes(getDayName(date));
+  const isLtftDay = getLtftDaysOff(doctor).includes(getDayNameFromISO(date));
 
   if (primary === 'ROT') return '#ffedd5';
   if (primary === 'PL')  return '#ede9fe';
