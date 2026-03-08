@@ -183,26 +183,6 @@ export default function Dashboard() {
     <AdminLayout title="Dashboard" subtitle="Track setup progress and generate the rota">
       <div className="mx-auto max-w-3xl space-y-6">
 
-        {/* Department & Hospital — read-only display */}
-        {loadingSettings ? (
-          <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-            <Skeleton className="h-10 w-full" />
-          </div>
-        ) : hasSavedSettings ? (
-          <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/40 px-4 py-2.5">
-            <Building2 className="h-5 w-5 text-primary shrink-0" />
-            <span className="text-sm font-medium text-foreground truncate">
-              {departmentName} <span className="text-muted-foreground mx-1">·</span> {trustName}
-            </span>
-            <button
-              onClick={() => navigate("/admin/department/step-1")}
-              className="ml-auto shrink-0 h-7 w-7 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-            >
-              <Pencil className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        ) : null}
-        {/* ✅ Section 4d complete — editable inputs removed, read-only display kept */}
 
         {/* 1. Setup */}
         <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
