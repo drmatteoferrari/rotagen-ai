@@ -243,6 +243,8 @@ function CalendarLegend() {
 export default function PreRotaCalendarPage() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  // ✅ Section 5 complete — use RotaContext as single source of truth
+  const { currentRotaConfigId: rotaConfigId } = useRotaContext();
 
   const [loading, setLoading] = useState(true);
   const [calendarData, setCalendarData] = useState<CalendarData | null>(null);
@@ -252,16 +254,19 @@ export default function PreRotaCalendarPage() {
   const [surveysMap, setSurveysMap] = useState<Record<string, SurveyMap>>({});
   const [eligibility, setEligibility] = useState<Record<string, Record<string, number>>>({});
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
   const [currentDayIndex, setCurrentDayIndex] = useState(0);
   const [deptName, setDeptName] = useState('');
   const [hospitalName, setHospitalName] = useState('');
 
-  // Load data
+  // ✅ Section 6 complete — data load wrapped in try/catch
   useEffect(() => {
     const load = async () => {
-      const rotaConfigId = sessionStorage.getItem(SESSION_KEY);
+      setLoadError(null);
       if (!rotaConfigId) { setErrorMsg('No rota config found. Go back to the dashboard.'); setLoading(false); return; }
+
+      try {
 
       const { data: preRota } = await supabase
         .from('pre_rota_results' as any)
