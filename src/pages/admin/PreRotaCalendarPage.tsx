@@ -14,14 +14,35 @@ import {
 const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 const SESSION_KEY = 'rotaConfigId';
 
-function addDays(isoDate: string, n: number): string {
-  const d = new Date(isoDate + 'T00:00:00');
-  d.setDate(d.getDate() + n);
-  return d.toISOString().split('T')[0];
+// ✅ Section 2.1 complete — UTC-safe day name derivation
+const FULL_DAY_NAMES: Record<string, string> = {
+  sun: 'sunday', mon: 'monday', tue: 'tuesday', wed: 'wednesday',
+  thu: 'thursday', fri: 'friday', sat: 'saturday',
+  sunday: 'sunday', monday: 'monday', tuesday: 'tuesday', wednesday: 'wednesday',
+  thursday: 'thursday', friday: 'friday', saturday: 'saturday',
+};
+
+function normaliseDayName(raw: string): string {
+  return FULL_DAY_NAMES[raw.toLowerCase()] ?? raw.toLowerCase();
+}
+// ✅ Section 2.2 complete — case + abbreviation normalisation
+
+function getDayNameFromISO(isoDate: string): string {
+  const [year, month, day] = isoDate.split('-').map(Number);
+  const d = new Date(Date.UTC(year, month - 1, day));
+  return DAY_NAMES[d.getUTCDay()];
 }
 
-function getDayName(date: string): string {
-  return DAY_NAMES[new Date(date + 'T00:00:00').getDay()];
+function getLtftDaysOff(doctor: any): string[] {
+  const raw = doctor.ltftDaysOff ?? doctor.ltft_days_off ?? [];
+  return (Array.isArray(raw) ? raw : []).map(normaliseDayName);
+}
+// ✅ Section 4 complete — snake_case vs camelCase safe accessor
+
+function addDays(isoDate: string, n: number): string {
+  const [y, m, d] = isoDate.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d + n));
+  return dt.toISOString().split('T')[0];
 }
 
 function availabilityColour(count: number, min: number): string {
@@ -57,8 +78,8 @@ function isDoctorEligible(
 
   const isNightShift = shift.badge_night === true;
   const survey = surveys[doctor.doctorId];
-  const dayNameOfDate = DAY_NAMES[new Date(date + 'T00:00:00').getDay()];
-  const isLtftDayOff = doctor.ltftDaysOff.includes(dayNameOfDate);
+  const dayNameOfDate = getDayNameFromISO(date);
+  const isLtftDayOff = getLtftDaysOff(doctor).includes(dayNameOfDate);
 
   if (!isNightShift) {
     return !isLtftDayOff;
@@ -66,20 +87,20 @@ function isDoctorEligible(
 
   if (isLtftDayOff) {
     if (!survey) return false;
-    const flex = survey.ltftNightFlexibility.find(f => f.day === dayNameOfDate);
+    const flex = survey.ltftNightFlexibility.find(f => normaliseDayName(f.day) === dayNameOfDate);
     return flex?.canStart === true;
   }
 
   const nextDate = addDays(date, 1);
-  const dayNameOfNextDate = DAY_NAMES[new Date(nextDate + 'T00:00:00').getDay()];
-  const isNextDayLtftOff = doctor.ltftDaysOff.includes(dayNameOfNextDate);
+  const dayNameOfNextDate = getDayNameFromISO(nextDate);
+  const isNextDayLtftOff = getLtftDaysOff(doctor).includes(dayNameOfNextDate);
 
   if (isNextDayLtftOff) {
     if (!survey) return false;
     const nextCell = doctor.availability[nextDate];
     const nextPrimary = nextCell?.primary ?? 'AVAILABLE';
     if (['AL', 'SL', 'ROT', 'PL'].includes(nextPrimary)) return false;
-    const flex = survey.ltftNightFlexibility.find(f => f.day === dayNameOfNextDate);
+    const flex = survey.ltftNightFlexibility.find(f => normaliseDayName(f.day) === dayNameOfNextDate);
     return flex?.canEnd === true;
   }
 
@@ -112,10 +133,10 @@ function LeaveBadge({ type }: { type: keyof typeof BADGE_STYLES }) {
 
 // ── Cell background logic ─────────────────────────────────────
 
-function getCellBackground(doctor: CalendarDoctor, date: string, isBH: boolean, isWeekend: boolean): string {
+function getCellBackground(doctor: any, date: string, isBH: boolean, isWeekend: boolean): string {
   const cell = doctor.availability[date];
   const primary = cell?.primary ?? 'AVAILABLE';
-  const isLtftDay = doctor.ltftDaysOff.includes(getDayName(date));
+  const isLtftDay = getLtftDaysOff(doctor).includes(getDayNameFromISO(date));
 
   if (primary === 'ROT') return '#ffedd5';
   if (primary === 'PL')  return '#ede9fe';
@@ -254,7 +275,8 @@ export default function PreRotaCalendarPage() {
 
       const cd = pr.calendar_data as CalendarData;
       const td = pr.targets_data as TargetsData;
-      setCalendarData(cd);
+      // Merge ltftDaysOff from survey responses into calendar doctors (Section 3.3)
+      // Done after surveys are loaded — see below
       setTargetsData(td);
 
       // Fetch shift types
@@ -284,11 +306,14 @@ export default function PreRotaCalendarPage() {
       const sMap: Record<string, SurveyMap> = {};
       for (const s of surveyRows ?? []) {
         sMap[(s as any).doctor_id] = {
-          ltftDaysOff: (s as any).ltft_days_off ?? [],
-          ltftNightFlexibility: (s as any).ltft_night_flexibility ?? [],
+          ltftDaysOff: ((s as any).ltft_days_off ?? []).map(normaliseDayName),
+          ltftNightFlexibility: ((s as any).ltft_night_flexibility ?? []).map((f: any) => ({
+            ...f, day: normaliseDayName(f.day ?? ''),
+          })),
         };
       }
       setSurveysMap(sMap);
+      // ✅ Section 3.2 complete — survey map with normalised day names
 
       // Account settings
       const { data: config } = await supabase
@@ -308,16 +333,26 @@ export default function PreRotaCalendarPage() {
         }
       }
 
+      // ✅ Section 3.3 complete — merge ltftDaysOff from surveys into calendar doctors
+      const mergedDoctors = (cd.doctors ?? []).map((doc: any) => ({
+        ...doc,
+        ltftDaysOff: (
+          (doc.ltftDaysOff ?? doc.ltft_days_off ?? sMap[doc.doctorId]?.ltftDaysOff ?? [])
+        ).map(normaliseDayName),
+      }));
+      const mergedCd = { ...cd, doctors: mergedDoctors };
+      setCalendarData(mergedCd);
+
       // Compute eligibility
-      if (cd?.doctors && cd?.weeks) {
+      if (mergedCd?.doctors && mergedCd?.weeks) {
         const allDates: string[] = [];
-        for (const w of cd.weeks) allDates.push(...w.dates);
+        for (const w of mergedCd.weeks) allDates.push(...w.dates);
         const elig: Record<string, Record<string, number>> = {};
         for (const shift of shifts) {
           elig[shift.id] = {};
           for (const date of allDates) {
             let count = 0;
-            for (const doctor of cd.doctors) {
+            for (const doctor of mergedCd.doctors) {
               if (isDoctorEligible(doctor, date, shift, sMap)) count++;
             }
             elig[shift.id][date] = count;
@@ -444,7 +479,7 @@ export default function PreRotaCalendarPage() {
             {doctors.map(doctor => {
               const cell = doctor.availability[currentDate];
               const primary = cell?.primary ?? 'AVAILABLE';
-              const isLtftDay = doctor.ltftDaysOff.includes(getDayName(currentDate));
+              const isLtftDay = getLtftDaysOff(doctor).includes(getDayNameFromISO(currentDate));
 
               return (
                 <div key={doctor.doctorId} className="rounded-lg border border-border bg-card p-3 min-h-[44px]">
@@ -585,13 +620,13 @@ export default function PreRotaCalendarPage() {
                     <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {doctor.grade} · {doctor.wte}%
                     </div>
-                    {doctor.ltftDaysOff.length > 0 && (
+                    {getLtftDaysOff(doctor).length > 0 && (
                       <div style={{ marginTop: 2 }}>
                         <span style={{
                           fontSize: 10, fontWeight: 600, color: '#b45309',
                           background: '#fef3c7', borderRadius: 3, padding: '1px 5px',
                         }}>
-                          LTFT: {doctor.ltftDaysOff.map(d => d.slice(0, 3).charAt(0).toUpperCase() + d.slice(1, 3)).join(', ')}
+                          LTFT: {getLtftDaysOff(doctor).map(d => d.slice(0, 3).charAt(0).toUpperCase() + d.slice(1, 3)).join(', ')}
                         </span>
                       </div>
                     )}
@@ -603,7 +638,7 @@ export default function PreRotaCalendarPage() {
                     const primary = cell?.primary ?? 'AVAILABLE';
                     const isWknd = new Date(date + 'T00:00:00').getDay() === 0 || new Date(date + 'T00:00:00').getDay() === 6;
                     const isBH = bankHolidays.has(date);
-                    const isLtftDay = doctor.ltftDaysOff.includes(getDayName(date));
+                    const isLtftDay = getLtftDaysOff(doctor).includes(getDayNameFromISO(date));
                     const isNoc = primary === 'NOC';
 
                     const badgeEvents = (['AL', 'SL', 'ROT', 'PL'] as const).filter(e => primary === e);
