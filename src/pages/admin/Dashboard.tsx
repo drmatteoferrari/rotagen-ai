@@ -8,8 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  CheckCircle, Circle, Zap, Calendar, Target, Users, ShieldCheck, Lock,
-  Building2, Loader2, Pencil, ClipboardList, CalendarDays, X, BarChart3,
+  CheckCircle, Circle, Zap, Target, Users, ShieldCheck, Lock,
+  Building2, Loader2, Pencil, ClipboardList, CalendarDays,
   RefreshCw, Play, AlertTriangle, XCircle, Info,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
