@@ -8,7 +8,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useRotaContext } from "@/contexts/RotaContext";
 import { Button } from "@/components/ui/button";
 import {
-  ChevronLeft, ChevronRight, Download, ArrowLeft, Loader2, AlertTriangle,
+  ChevronLeft, ChevronRight, Download, ArrowLeft, Loader2, AlertTriangle, ChevronDown,
 } from "lucide-react";
 // ✅ Section 5 complete (imports — useRotaContext replaces sessionStorage)
 
