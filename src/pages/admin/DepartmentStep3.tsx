@@ -352,7 +352,7 @@ export default function DepartmentStep3() {
 
         {/* Navigation */}
         <div className="flex justify-between pt-4">
-          <Button variant="outline" size="lg" onClick={() => navigate("/admin/department/step-1")}>
+          <Button variant="outline" size="lg" onClick={() => navigate("/admin/department/step-2")}>
             <ArrowLeft className="mr-2 h-4 w-4" /> Back
           </Button>
           <Button

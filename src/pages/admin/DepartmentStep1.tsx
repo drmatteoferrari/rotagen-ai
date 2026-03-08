@@ -473,17 +473,22 @@ export default function DepartmentStep1() {
         </div>
 
         {/* Add + Next */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:justify-between pt-4">
-          <Button variant="outline" size="lg" onClick={() => addShift()} disabled={isLoadingShifts}>
+        <div className="space-y-3 pt-4">
+          <Button variant="outline" size="lg" className="w-full sm:w-auto" onClick={() => addShift()} disabled={isLoadingShifts}>
             <Plus className="mr-2 h-4 w-4" /> {isLoadingShifts ? 'Loading saved shifts…' : 'Add Custom Shift Type'}
           </Button>
-          <Button
-            size="lg"
-            onClick={() => navigate("/admin/department/step-2")}
-            className="bg-primary text-primary-foreground hover:bg-primary/90"
-          >
-            Next: Distribution
-          </Button>
+          <div className="flex justify-between">
+            <Button variant="outline" size="lg" onClick={() => navigate("/admin/department/step-1")}>
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back
+            </Button>
+            <Button
+              size="lg"
+              onClick={() => navigate("/admin/department/step-3")}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              Next: Distribution
+            </Button>
+          </div>
         </div>
       </div>
     </AdminLayout>
