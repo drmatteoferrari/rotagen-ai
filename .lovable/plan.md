@@ -1,42 +1,41 @@
 
 
-# UI/UX Improvements Plan
+## Plan: Admin Edit via Doctor Survey UI
 
-## Section 1 — Remove "Welcome back" toast
-Remove lines 98-100 in `src/contexts/AuthContext.tsx` (the `if (config)` block with `toast.info`). Config restoration continues silently.
+### Problem
+The roster edit button opens a basic slide-over panel (`SurveyResponsePanel`) with raw JSON fields. The admin should instead be able to open the actual doctor survey interface (`/doctor/survey`) pre-filled with the doctor's responses, and edit directly — even after submission or past the deadline.
 
-## Section 2 — Collapsible Department & Hospital on Dashboard
-Replace the current full card (lines 121-187 in Dashboard.tsx) with two-state logic:
+### Approach
 
-- **STATE A** (not saved): `accountSettings.departmentName` and `accountSettings.trustName` are both null/empty after loading. Show full form as-is with helper text.
-- **STATE B** (saved): Show a compact single-line bar: `Building2` icon, department · trust, `Pencil` edit icon. Add `editing` state — clicking pencil expands inline inputs with Save/Cancel. Save calls existing `handleSaveAccountSettings`, then collapses. Cancel resets local state and collapses.
+**1. Route the edit button to the survey with admin query params**
 
-Determine state from loaded values (after `loadingSettings` resolves). The compact line is the first element in the content area.
+In `Roster.tsx`, change the edit button (`Pencil`) to navigate to `/doctor/survey?token=<survey_token>&admin=true` instead of opening the `SurveyResponsePanel`. This reuses the exact same survey UI the doctor sees. Remove the `SurveyResponsePanel` import and state since it's no longer needed.
 
-## Section 3 — Setup Progress redesign
-- Add step numbers as circular badges (1-4)
-- Rename: "Department", "Contract Rules (WTR)", "Rota Period", "Doctor Preferences"
-- Add icons: `Building2`, `ClipboardList`, `CalendarDays`, `Users`
-- Add `Pencil` edit icon at right of each row (always clickable)
-- Doctor Preferences row: clickable, navigates to `/admin/roster`
-- Fetch live survey counts from `doctors` table where `rota_config_id = currentRotaConfigId`. Show `X / Y responses received`. Remove hardcoded 10/16 and "Active" label.
+**2. Update `SurveyContext` to support admin mode**
 
-## Section 4 — Pointer events on DepartmentStep2 drag bars
-The drag bars already use pointer events (`onPointerDown`, `onPointerMove`, `onPointerUp`) — lines 32-53 and 104-123. The fix needed is:
-- Add `style={{ touchAction: 'none' }}` to the draggable bar `div` elements (lines 70-76 and 132-138)
-- Ensure min height of 44px for touch targets (currently `h-5` = 20px on DragBar, `h-8` = 32px on GlobalSplitBar — increase both to `h-11` = 44px)
+- Accept an `adminMode` prop on `SurveyProvider`
+- When `adminMode=true` and `survey_status === "submitted"`, skip redirecting to the confirmation screen — instead load the data and set `loadState = "ready"` so the form is editable
+- Expose `isAdminMode` in the context value
 
-## Section 5 — Reset button visual states
-- **"Reset all to auto" button**: Compare each shift's current value to `autoShare`. If any differ by >0.5pp, show red style; otherwise muted/ghost.
-- **Per-shift reset icon**: Compare individual value to `autoShare`. If differs >0.5pp, show red with tooltip "Reset to auto (X%)"; otherwise grey/muted with tooltip "Percentage is at auto value".
-- Add a one-time pulse animation class for the red "Reset all" button.
+**3. Update `Survey.tsx` to detect admin mode**
 
-## Files Changed
+- Read `admin` query param from URL
+- Pass `adminMode={admin === "true"}` to `SurveyProvider`
+- In `SurveyInner`, show an admin banner (amber background with "Admin Edit Mode" + "Back to Roster" link) when `isAdminMode` is true
+- Skip rendering `SurveyConfirmation` when in admin mode (already handled by context change)
 
-| File | Changes |
-|---|---|
-| `src/contexts/AuthContext.tsx` | Remove toast.info on login |
-| `src/pages/admin/Dashboard.tsx` | Two-state dept/hospital, redesigned setup progress with numbered badges/icons/edit icons, live survey count fetch |
-| `src/pages/admin/DepartmentStep2.tsx` | Add `touchAction: 'none'`, increase drag target height to 44px, reset button visual states based on auto-value comparison |
-| `src/index.css` | Add pulse-once keyframe animation for red reset button |
+**4. Update `SurveyStep7` submit behavior for admin**
+
+- When in admin mode, after successful submission, navigate back to `/admin/roster` instead of showing the confirmation screen
+- Show a toast confirming the save
+
+### Files to modify
+- `src/contexts/SurveyContext.tsx` — add `adminMode` prop, bypass submitted state
+- `src/pages/doctor/Survey.tsx` — read `admin` param, render admin banner
+- `src/pages/admin/Roster.tsx` — change edit button to navigate instead of opening panel
+- `src/pages/doctor/SurveyStep7.tsx` — admin-mode redirect after submit
+
+### Files potentially removable
+- `src/components/SurveyResponsePanel.tsx` — no longer needed (can keep for now)
+- `src/pages/admin/SurveyOverride.tsx` — redundant with new approach (can keep for now)
 
