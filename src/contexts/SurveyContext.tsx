@@ -280,7 +280,7 @@ function dbRowToFormData(draft: any, base: SurveyFormData): SurveyFormData {
 
 // === Provider ===
 
-export function SurveyProvider({ token, children }: { token: string | null; children: ReactNode }) {
+export function SurveyProvider({ token, adminMode = false, children }: { token: string | null; adminMode?: boolean; children: ReactNode }) {
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [errorMessage, setErrorMessage] = useState("");
   const [doctor, setDoctor] = useState<SurveyDoctorInfo | null>(null);
