@@ -6,12 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Building2, ArrowRight, Loader2, Info, CheckCircle2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRotaContext } from "@/contexts/RotaContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export default function DepartmentStep1New() {
   const navigate = useNavigate();
   const { user, setAccountSettings } = useAuth();
+  const { currentRotaConfigId } = useRotaContext();
   const [deptName, setDeptName] = useState("");
   const [trustName, setTrustName] = useState("");
   const [saving, setSaving] = useState(false);
@@ -53,6 +55,19 @@ export default function DepartmentStep1New() {
           { onConflict: "owned_by" }
         );
       if (error) throw error;
+
+      // SECTION 4 COMPLETE — Sync to rota_configs
+      if (currentRotaConfigId) {
+        try {
+          await supabase
+            .from("rota_configs")
+            .update({ department_name: deptName.trim(), trust_name: trustName.trim() })
+            .eq("id", currentRotaConfigId);
+        } catch (syncErr) {
+          console.error("Failed to sync department/trust to rota_configs (non-blocking):", syncErr);
+        }
+      }
+
       setAccountSettings({ departmentName: deptName.trim(), trustName: trustName.trim() });
       toast.success("✓ Department details saved");
       navigate("/admin/department/step-2");
