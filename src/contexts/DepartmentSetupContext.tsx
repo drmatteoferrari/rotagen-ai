@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
 import { calcDurationHours, timeToMinutes, type ApplicableDays } from "@/lib/shiftUtils";
 import { useRotaContext } from "@/contexts/RotaContext";
+import { supabase } from "@/integrations/supabase/client";
 import type { RotaConfig } from "@/lib/rotaConfig";
 
 // SECTION 5 — DepartmentSetupContext with restore from config
