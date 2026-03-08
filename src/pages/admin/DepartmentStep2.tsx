@@ -237,7 +237,7 @@ function ExpandedCard({
       {/* Days */}
       <div className="space-y-2">
         <Label className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">Applicable Days</Label>
-        <div className="flex gap-2">
+        <div className="flex gap-1.5 sm:gap-2 flex-wrap">
           {DAY_KEYS.map((key, i) => (
             <button
               key={key}
