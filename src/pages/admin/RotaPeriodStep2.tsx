@@ -161,6 +161,10 @@ export default function RotaPeriodStep2() {
         if (insertError) throw insertError;
       }
 
+      // Refresh RotaContext so Roster and other pages see updated dates
+      const refreshedConfig = await getRotaConfig(configId!);
+      setRestoredConfig(refreshedConfig);
+
       toast.success("✓ Rota period saved");
       setPeriodComplete(true);
       navigate("/admin/dashboard");
