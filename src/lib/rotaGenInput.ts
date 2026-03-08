@@ -426,6 +426,8 @@ export async function buildFinalRotaInput(configId: string): Promise<FinalRotaIn
           hard: {
             annualLeaveDates,
             studyLeaveDates,
+            // ✅ Section 3 complete — parental leave dates in hard constraints
+            parentalLeaveDates: doc.parentalLeaveDates ?? [],
             exemptFromNights: doc.exemptFromNights,
             exemptFromWeekends: doc.exemptFromWeekends,
             exemptFromOncall: doc.exemptFromOncall,
