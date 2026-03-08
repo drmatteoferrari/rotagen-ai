@@ -18,7 +18,7 @@ import type { PreRotaResult } from "@/lib/preRotaTypes";
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { isDepartmentComplete, isWtrComplete, isPeriodComplete, areSurveysDone, restoredFromDb } = useAdminSetup();
+  const { isDepartmentComplete, isWtrComplete, isPeriodComplete, areSurveysDone, restoredFromDb, rotaStartDate, rotaEndDate } = useAdminSetup();
   const { restoredConfig, currentRotaConfigId } = useRotaContext();
   const { user } = useAuth();
 
