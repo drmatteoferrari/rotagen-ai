@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
   CheckCircle, Zap, Target, Users, ShieldCheck, Lock,
-  Building2, Loader2, Pencil, ClipboardList, CalendarDays,
+  Building2, Loader2, ClipboardList, CalendarDays,
   RefreshCw, Play, AlertTriangle, XCircle, Info,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
