@@ -23,12 +23,7 @@ export default function Dashboard() {
   const { restoredConfig, currentRotaConfigId } = useRotaContext();
   const { user, accountSettings, setAccountSettings } = useAuth();
 
-  // Loading state
   const [loadingSettings, setLoadingSettings] = useState(true);
-
-  // Department/Hospital state (read-only display)
-  const [departmentName, setDepartmentName] = useState("");
-  const [trustName, setTrustName] = useState("");
 
   // Live survey counts
   const [surveySubmitted, setSurveySubmitted] = useState(0);
