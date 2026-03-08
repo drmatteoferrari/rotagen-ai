@@ -277,6 +277,16 @@ function mapResponseToPreference(resp: DoctorSurveyResponse): DoctorPreference {
     : [];
   const ltftNightFlex = Array.isArray(resp.ltft_night_flexibility) ? resp.ltft_night_flexibility : [];
 
+  // ✅ Section 3 complete — expand parental leave into individual blocked dates
+  const parentalLeaveDates: string[] = (() => {
+    if (!(resp as any).parental_leave_expected) return [];
+    const start = (resp as any).parental_leave_start;
+    const end   = (resp as any).parental_leave_end;
+    if (!start) return [];
+    if (!end || end === start) return [start];
+    return expandDateRange(start, end);
+  })();
+
   return {
     doctorId: resp.doctor_id,
     name: resp.full_name ?? "",
@@ -300,6 +310,8 @@ function mapResponseToPreference(resp: DoctorSurveyResponse): DoctorPreference {
       reason: l.reason ?? "",
     })),
     nocDates,
+    parentalLeaveDates,
+    parentalLeaveNotes: (resp as any).parental_leave_notes ?? undefined,
     exemptFromNights: resp.exempt_from_nights ?? false,
     exemptFromWeekends: resp.exempt_from_weekends ?? false,
     exemptFromOncall: resp.exempt_from_oncall ?? false,
