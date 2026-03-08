@@ -35,10 +35,12 @@ function BadgeRow({
   shift,
   editable,
   onToggle,
+  compact = false,
 }: {
   shift: ShiftType;
   editable: boolean;
   onToggle?: (key: BadgeKey) => void;
+  compact?: boolean;
 }) {
   const auto = detectBadges(shift.startTime, shift.endTime, shift.applicableDays, shift.isOncall, shift.isNonRes);
   const effective = mergedBadges(auto, shift.badgeOverrides);
@@ -56,13 +58,16 @@ function BadgeRow({
             type="button"
             disabled={!editable}
             onClick={() => editable && onToggle?.(key)}
-            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition-all ${
+            title={label}
+            className={`inline-flex items-center gap-1 rounded-full py-1 text-[10px] font-bold uppercase tracking-wider transition-all ${
+              compact ? "px-1.5" : "px-2.5"
+            } ${
               isActive
                 ? activeClasses
                 : "bg-muted text-muted-foreground/40 line-through"
             } ${editable ? "cursor-pointer hover:opacity-80" : "cursor-default"}`}
           >
-            {emoji} {label}{suffix}
+            {emoji}{!compact && <>{" "}{label}{suffix}</>}
           </button>
         );
       })}
