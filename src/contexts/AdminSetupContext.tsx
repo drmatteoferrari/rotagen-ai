@@ -2,8 +2,6 @@ import { createContext, useContext, useState, useEffect, type ReactNode } from "
 import { useRotaContext } from "@/contexts/RotaContext";
 import type { RotaConfig } from "@/lib/rotaConfig";
 
-// SECTION 5 — AdminSetupContext with restoreFromConfig
-
 interface AdminSetupContextType {
   isDepartmentComplete: boolean;
   isWtrComplete: boolean;
@@ -38,6 +36,17 @@ interface AdminSetupContextType {
   setRestPostBlock: (v: number) => void;
   setRestAfter7: (v: number) => void;
   setWeekendFreq: (v: number) => void;
+  // WTR Step 4 — Advanced on-call fields
+  oncallContinuousRestStart: string;
+  oncallContinuousRestEnd: string;
+  oncallIfRestNotMetMaxHours: number;
+  oncallBreakReferenceWeeks: number;
+  oncallBreakFineThresholdPct: number;
+  setOncallContinuousRestStart: (v: string) => void;
+  setOncallContinuousRestEnd: (v: string) => void;
+  setOncallIfRestNotMetMaxHours: (v: number) => void;
+  setOncallBreakReferenceWeeks: (v: number) => void;
+  setOncallBreakFineThresholdPct: (v: number) => void;
   // Source tracking
   restoredFromDb: boolean;
 }
@@ -64,15 +73,19 @@ export function AdminSetupProvider({ children }: { children: ReactNode }) {
   const [restPostBlock, setRestPostBlock] = useState(48);
   const [restAfter7, setRestAfter7] = useState(48);
   const [weekendFreq, setWeekendFreq] = useState(3);
+  // WTR Step 4 — Advanced on-call fields
+  const [oncallContinuousRestStart, setOncallContinuousRestStart] = useState("22:00");
+  const [oncallContinuousRestEnd, setOncallContinuousRestEnd] = useState("07:00");
+  const [oncallIfRestNotMetMaxHours, setOncallIfRestNotMetMaxHours] = useState(5);
+  const [oncallBreakReferenceWeeks, setOncallBreakReferenceWeeks] = useState(4);
+  const [oncallBreakFineThresholdPct, setOncallBreakFineThresholdPct] = useState(25);
 
-  // SECTION 5 — Restore from config when restoredConfig changes
   const { restoredConfig } = useRotaContext();
 
   useEffect(() => {
     if (!restoredConfig) return;
     const config = restoredConfig;
 
-    // Rota period
     if (config.rotaPeriod.startDate) {
       setRotaStartDate(new Date(config.rotaPeriod.startDate));
       setPeriodComplete(true);
@@ -81,12 +94,10 @@ export function AdminSetupProvider({ children }: { children: ReactNode }) {
       setRotaEndDate(new Date(config.rotaPeriod.endDate));
     }
 
-    // Department
     if (config.shifts.length > 0) {
       setDepartmentComplete(true);
     }
 
-    // WTR
     if (config.wtr) {
       const w = config.wtr;
       setMaxAvgWeekly(w.maxHoursPerWeek);
@@ -98,12 +109,17 @@ export function AdminSetupProvider({ children }: { children: ReactNode }) {
       setRestPostBlock(w.restAfterLongH);
       setRestAfter7(w.restAfterStandardH);
       setWeekendFreq(w.weekendFrequency);
+      // Advanced on-call fields
+      setOncallContinuousRestStart(w.oncall.continuousRestStart ?? "22:00");
+      setOncallContinuousRestEnd(w.oncall.continuousRestEnd ?? "07:00");
+      setOncallIfRestNotMetMaxHours(w.oncall.ifRestNotMetMaxHours ?? 5);
+      setOncallBreakReferenceWeeks(w.oncall.breakReferenceWeeks ?? 4);
+      setOncallBreakFineThresholdPct(w.oncall.breakFineThresholdPct ?? 25);
       setWtrComplete(true);
     }
 
     setRestoredFromDb(true);
   }, [restoredConfig]);
-  // SECTION 5 COMPLETE
 
   return (
     <AdminSetupContext.Provider
@@ -114,6 +130,8 @@ export function AdminSetupProvider({ children }: { children: ReactNode }) {
         maxAvgWeekly, maxIn7Days, setMaxAvgWeekly, setMaxIn7Days,
         maxConsecDays, maxConsecLong, maxConsecNights, setMaxConsecDays, setMaxConsecLong, setMaxConsecNights,
         restPostNights, restPostBlock, restAfter7, weekendFreq, setRestPostNights, setRestPostBlock, setRestAfter7, setWeekendFreq,
+        oncallContinuousRestStart, oncallContinuousRestEnd, oncallIfRestNotMetMaxHours, oncallBreakReferenceWeeks, oncallBreakFineThresholdPct,
+        setOncallContinuousRestStart, setOncallContinuousRestEnd, setOncallIfRestNotMetMaxHours, setOncallBreakReferenceWeeks, setOncallBreakFineThresholdPct,
         restoredFromDb,
       }}
     >
