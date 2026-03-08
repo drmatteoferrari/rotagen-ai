@@ -1,6 +1,5 @@
 import { ReactNode } from "react";
-
-// ✅ Section 3 complete — SurveySection
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface SurveySectionProps {
   number: number;
@@ -10,7 +9,7 @@ interface SurveySectionProps {
 }
 
 const badgeStyles = {
-  high: "bg-[#0f766e]/10 text-[#0f766e]",
+  high: "bg-teal-50 text-teal-700 border border-teal-200",
   medium: "bg-blue-100 text-blue-700",
   hard: "bg-red-100 text-red-700",
 };
@@ -23,19 +22,19 @@ const badgeLabels = {
 
 export function SurveySection({ number, title, badge, children }: SurveySectionProps) {
   return (
-    <div className="rounded-xl border border-slate-200 overflow-hidden">
-      <div className="bg-gradient-to-r from-slate-800 to-slate-700 px-4 py-3 flex items-center gap-3">
-        <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-white text-xs font-bold">
+    <div className="rounded-lg border border-border overflow-hidden">
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-card">
+        <div className="w-7 h-7 rounded-full bg-teal-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
           {number}
         </div>
-        <h3 className="text-white font-bold text-sm flex-1">{title}</h3>
+        <h3 className="text-sm font-semibold text-card-foreground flex-1">{title}</h3>
         {badge && (
           <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${badgeStyles[badge]}`}>
             {badgeLabels[badge]}
           </span>
         )}
       </div>
-      <div className="bg-white p-4">
+      <div className="bg-card p-4">
         {children}
       </div>
     </div>
