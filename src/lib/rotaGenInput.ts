@@ -542,11 +542,11 @@ export async function validateFinalRotaInput(configId: string): Promise<Validati
       warnings.push(`${name}: WTE is 100% with no LTFT days off — confirm this is correct`);
     }
 
-    // All competencies false
-    const compIp = (r as any).comp_ip_anaesthesia ?? false;
-    const compObs = (r as any).comp_obstetric ?? false;
-    const compIcu = (r as any).comp_icu ?? false;
-    if (!compIp && !compObs && !compIcu) {
+    // All competencies false — check both JSONB and legacy boolean columns
+    const compJson = r.competencies_json as Record<string, any> | null;
+    const hasJsonComp = compJson?.iac?.achieved || compJson?.iaoc?.achieved || compJson?.icu?.achieved;
+    const hasLegacyComp = r.comp_ip_anaesthesia || r.comp_obstetric || r.comp_icu;
+    if (!hasJsonComp && !hasLegacyComp) {
       warnings.push(`${name}: No competencies recorded (IP Anaesthesia, Obstetric, ICU all false)`);
     }
 
