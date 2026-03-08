@@ -168,15 +168,15 @@ export async function generatePreRota(
     // 12. Save to DB (UPSERT)
     const { data: saved } = await supabase
       .from('pre_rota_results')
-      .upsert({
+      .upsert([{
         rota_config_id: rotaConfigId,
         generated_at: new Date().toISOString(),
         generated_by: generatedBy,
         status,
-        validation_issues: validationIssues,
-        calendar_data: calendarData,
-        targets_data: targetsData,
-      }, { onConflict: 'rota_config_id' })
+        validation_issues: validationIssues as unknown as Json,
+        calendar_data: calendarData as unknown as Json,
+        targets_data: targetsData as unknown as Json,
+      }], { onConflict: 'rota_config_id' })
       .select().single()
 
     return {
