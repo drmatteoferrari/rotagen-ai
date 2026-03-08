@@ -62,6 +62,9 @@ export default function RotaPeriodStep2() {
   const [newHolidayName, setNewHolidayName] = useState("");
   const [newHolidayDate, setNewHolidayDate] = useState<Date>();
   const [initialized, setInitialized] = useState(false);
+  // ✅ Section 5b — BH rules state
+  const [bhSameAsWeekend, setBhSameAsWeekend] = useState<boolean | null>(null);
+  const [bhCustomRules, setBhCustomRules] = useState<string>("");
 
   useEffect(() => {
     if (initialized || !rotaStartDate || !rotaEndDate) return;

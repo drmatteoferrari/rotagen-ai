@@ -632,9 +632,9 @@ export default function PreRotaCalendarPage() {
           </button>
         </div>
 
-        {/* Calendar table */}
-        <div className="overflow-x-auto rounded-lg border border-border">
-          <table className="w-full text-xs border-collapse">
+        {/* Calendar table — ✅ Section 1f: scrollable container with minWidth */}
+        <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+          <table style={{ minWidth: 800 }} className="w-full text-xs border-collapse">
             <thead>
               <tr>
                 <th style={{ minWidth: 260, maxWidth: 260, position: 'sticky', left: 0, zIndex: 10, background: '#fff', textAlign: 'left', padding: '8px 16px', fontWeight: 500, color: '#6b7280', borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0' }}>
