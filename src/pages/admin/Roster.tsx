@@ -288,14 +288,14 @@ export default function Roster() {
       <Tooltip><TooltipTrigger asChild><span><Button variant="ghost" size="icon" disabled className="text-muted-foreground"><Send className="h-4 w-4" /></Button></span></TooltipTrigger><TooltipContent>{sendState.tooltip}</TooltipContent></Tooltip>
     );
     return (
-      <Popover modal open={popoverId === doctor.id} onOpenChange={(open) => setPopoverId(open ? doctor.id : null)}>
+      <Popover open={popoverId === doctor.id} onOpenChange={(open) => setPopoverId(open ? doctor.id : null)}>
         <PopoverTrigger asChild>
           <Button variant="ghost" size="icon" className={cn("relative", sendState.color)} title={sendState.tooltip}>
             <Send className="h-4 w-4" />
             {sendState.badge && <span className="absolute -top-1 -right-1 text-[9px] font-bold bg-emerald-100 text-emerald-700 rounded-full px-1">{sendState.badge}</span>}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-72" align="end">
+        <PopoverContent className="w-72 pointer-events-auto" align="end" side="bottom" sideOffset={4} onOpenAutoFocus={(e) => e.preventDefault()}>
           <div className="space-y-3">
             <p className="text-sm font-medium">Send invite to {doctor.first_name} {doctor.last_name}?</p>
             {formattedDeadline && <p className="text-xs text-muted-foreground">Deadline: {formattedDeadline}</p>}
