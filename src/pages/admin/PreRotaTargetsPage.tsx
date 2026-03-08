@@ -1,12 +1,14 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { generatePreRotaExcel } from "@/lib/preRotaExcel";
+import { computeShiftTargets, type ComputeShiftTargetsResult } from "@/lib/shiftTargets";
+import { useRotaConfig } from "@/lib/rotaConfig";
 import type { CalendarData, TargetsData, DoctorTargets } from "@/lib/preRotaTypes";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Download, Loader2, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Download, Loader2, AlertTriangle, BarChart3 } from "lucide-react";
 // ✅ Section 1 complete (imports)
 
 const SESSION_KEY = 'rotaConfigId';
@@ -26,6 +28,27 @@ export default function PreRotaTargetsPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [deptName, setDeptName] = useState('');
   const [hospitalName, setHospitalName] = useState('');
+
+  // Full-time baseline targets
+  const { config: fullConfig } = useRotaConfig();
+
+  const targetsResult = useMemo<ComputeShiftTargetsResult | null>(() => {
+    if (!fullConfig?.wtr || !fullConfig.shifts.length) return null;
+    const hasTargets = fullConfig.shifts.some((s) => s.targetPercentage != null && s.targetPercentage > 0);
+    if (!hasTargets) return null;
+    return computeShiftTargets({
+      maxHoursPerWeek: fullConfig.wtr.maxHoursPerWeek,
+      maxHoursPer168h: fullConfig.wtr.maxHoursPer168h,
+      rotaWeeks: fullConfig.rotaPeriod.durationWeeks ?? 0,
+      globalOncallPct: fullConfig.distribution.globalOncallPct,
+      globalNonOncallPct: fullConfig.distribution.globalNonOncallPct,
+      shiftTypes: fullConfig.shifts.map((s) => ({
+        id: s.id, name: s.name, shiftKey: s.shiftKey, isOncall: s.isOncall,
+        targetPercentage: s.targetPercentage ?? 0, durationHours: s.durationHours,
+      })),
+      wtePercent: 100,
+    });
+  }, [fullConfig]);
 
   useEffect(() => {
     const load = async () => {
@@ -113,7 +136,7 @@ export default function PreRotaTargetsPage() {
           </Button>
         </div>
 
-        {/* Targets table */}
+        {/* Per-doctor targets table */}
         <div className="overflow-x-auto rounded-lg border border-border">
           <table className="w-full text-xs border-collapse">
             <thead>
@@ -171,6 +194,52 @@ export default function PreRotaTargetsPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Divider */}
+        {targetsResult && <hr className="border-border my-6" />}
+
+        {/* Shift Hour Targets (Full-Time Baseline) — moved from dashboard */}
+        {targetsResult && (
+          <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+            <div className="flex items-center gap-2 mb-3">
+              <BarChart3 className="h-4 w-4 text-primary" />
+              <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Shift Hour Targets (Full-Time Baseline)</h2>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border text-left text-xs text-muted-foreground">
+                    <th className="pb-2 font-medium">Shift name</th>
+                    <th className="pb-2 font-medium">On-call?</th>
+                    <th className="pb-2 font-medium text-right">Max target hours</th>
+                    <th className="pb-2 font-medium text-right">Est. shifts</th>
+                    <th className="pb-2 font-medium text-right">Avg duration</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {targetsResult.targets.map((t) => (
+                    <tr key={t.shiftId} className="border-b border-border/50">
+                      <td className="py-2 font-medium text-card-foreground">{t.shiftName}</td>
+                      <td className="py-2 text-muted-foreground">{fullConfig?.shifts.find((s) => s.id === t.shiftId)?.isOncall ? "Yes" : "No"}</td>
+                      <td className="py-2 text-right font-mono">{t.maxTargetHours}h</td>
+                      <td className="py-2 text-right font-mono">~{t.estimatedShiftCount}</td>
+                      <td className="py-2 text-right font-mono">{fullConfig?.shifts.find((s) => s.id === t.shiftId)?.durationHours ?? 0}h</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-xs font-semibold text-card-foreground mt-3">
+              Total: {targetsResult.totalMaxTargetHours}h over {targetsResult.targets[0]?.rotaWeeks ?? 0} weeks
+            </p>
+            <p className="text-[10px] text-muted-foreground mt-1">
+              LTFT doctors receive pro-rata targets. WTE scaling applied per doctor at generation time.
+            </p>
+            <p className="text-[10px] text-muted-foreground">
+              Hard per-week cap: {targetsResult.hardWeeklyCap}h — checked during generation, not included in targets.
+            </p>
+          </div>
+        )}
       </div>
     </AdminLayout>
   );

@@ -10,9 +10,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 // ✅ Section 4 complete
 
 const GRADE_OPTIONS = [
-  "CT1 (or ACCS equivalent)",
-  "CT2 (or ACCS equivalent)",
-  "CT3 (or ACCS equivalent)",
+  "CT1 (or ACCS)",
+  "CT2 (or ACCS)",
+  "CT3 (or ACCS)",
   "ST4", "ST5", "ST6", "ST7", "ST8", "ST9",
   "Staff Grade / Associate Specialist (SAS)",
   "Post-CCT Fellow",
