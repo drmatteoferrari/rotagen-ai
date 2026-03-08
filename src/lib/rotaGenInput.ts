@@ -470,6 +470,7 @@ export async function buildFinalRotaInput(configId: string): Promise<FinalRotaIn
         "WTR_MAX_CONSEC_STANDARD",
         "ANNUAL_LEAVE_DATES_BLOCKED",
         "STUDY_LEAVE_DATES_BLOCKED",
+        "PARENTAL_LEAVE_DATES_BLOCKED",
         "LTFT_DAYS_BLOCKED",
         "NIGHT_EXEMPTIONS_RESPECTED",
         "WEEKEND_EXEMPTIONS_RESPECTED",

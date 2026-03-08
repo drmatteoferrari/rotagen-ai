@@ -74,11 +74,10 @@ export default function PreRotaTargetsPage() {
         // Account settings
         const { data: config } = await supabase.from('rota_configs').select('owned_by, rota_start_date, rota_end_date').eq('id', rotaConfigId).single();
         if (config) {
-          const { data: acct } = await supabase.from('account_settings').select('department_name, trust_name').eq('owned_by', (config as any).owned_by).single();
-          if (acct) {
-            setDeptName((acct as any).department_name ?? '');
-            setHospitalName((acct as any).trust_name ?? '');
-          }
+          // ✅ Section 1 complete — .maybeSingle() prevents crash when no account_settings exist
+          const { data: acct } = await supabase.from('account_settings').select('department_name, trust_name').eq('owned_by', (config as any).owned_by).maybeSingle();
+          setDeptName((acct as any)?.department_name ?? 'Department');
+          setHospitalName((acct as any)?.trust_name ?? 'Trust');
         }
       } catch (err) {
         console.error('Failed to load targets data:', err);

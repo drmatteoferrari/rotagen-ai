@@ -280,6 +280,7 @@ export function DepartmentSetupProvider({ children }: { children: ReactNode }) {
         expandedShiftId, setExpandedShiftId,
         globalOncallPct, setGlobalOncallPct,
         shiftTargetOverrides, setShiftTargetOverrides,
+        isLoadingShifts,
       }}
     >
       {children}

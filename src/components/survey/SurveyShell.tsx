@@ -59,10 +59,23 @@ export function SurveyShell({ children }: SurveyShellProps) {
         </div>
       )}
 
-      {/* Auto-save indicator */}
-      {saveVisible && ctx?.draftSavedAt && (
-        <div className="bg-emerald-50 text-emerald-700 text-xs text-center py-1 font-medium transition-opacity">
-          ✓ Draft saved {format(ctx.draftSavedAt, "HH:mm")}
+      {/* ✅ Section 4 complete — Auto-save status indicator */}
+      {ctx?.saveStatus === 'saving' && (
+        <div className="flex items-center justify-center gap-1.5 text-xs py-1 text-muted-foreground">
+          <span className="inline-block w-2 h-2 rounded-full bg-muted-foreground/50" />
+          Saving…
+        </div>
+      )}
+      {ctx?.saveStatus === 'saved' && (
+        <div className="flex items-center justify-center gap-1.5 text-xs py-1 text-emerald-600">
+          <span className="inline-block w-2 h-2 rounded-full bg-emerald-500" />
+          Saved
+        </div>
+      )}
+      {ctx?.saveStatus === 'error' && (
+        <div className="flex items-center justify-center gap-1.5 text-xs py-1 text-destructive font-semibold">
+          <span className="inline-block w-2 h-2 rounded-full bg-destructive" />
+          Save failed — check your connection. Your data may not be saved.
         </div>
       )}
 

@@ -576,7 +576,7 @@ export function SurveyProvider({ token, children }: { token: string | null; chil
         loadState, errorMessage, doctor, rotaInfo, formData, currentStep,
         setField, setFields, setStep, nextStep, prevStep, goToStep,
         submitSurvey, saveDraft, submitting, submitError, draftSavedAt, submittedAt,
-        setSubmittedAt, setLoadState,
+        setSubmittedAt, setLoadState, saveStatus,
       }}
     >
       {children}

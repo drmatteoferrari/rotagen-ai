@@ -529,7 +529,7 @@ export default function PreRotaCalendarPage() {
               fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 6,
               background: availabilityColour(totalAvailable, maxMinDoctors), color: '#fff',
             }}>
-              Total: {totalAvailable} available
+              All shifts: {totalAvailable}{nocOnlyCount > 0 ? ` (+${nocOnlyCount} NOC)` : ''}
             </span>
             {shiftTypes.map(shift => {
               const count = eligibility[shift.id]?.[currentDate] ?? 0;
