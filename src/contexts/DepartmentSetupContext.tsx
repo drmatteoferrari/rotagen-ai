@@ -157,7 +157,68 @@ export function DepartmentSetupProvider({ children }: { children: ReactNode }) {
   const [shiftTargetOverrides, setShiftTargetOverrides] = useState<Record<string, number | undefined>>({});
 
   // SECTION 5 — Restore shifts from config
-  const { restoredConfig } = useRotaContext();
+  const { restoredConfig, currentRotaConfigId } = useRotaContext();
+  const [isLoadingShifts, setIsLoadingShifts] = useState(false);
+
+  // ✅ Section 4 complete — Re-hydrate shift types from DB when context is empty
+  useEffect(() => {
+    if (!currentRotaConfigId) return;
+    if (shifts !== defaultShifts && shifts.length > 0) return; // already hydrated
+
+    const loadFromDb = async () => {
+      setIsLoadingShifts(true);
+      try {
+        const { data, error } = await supabase
+          .from('shift_types')
+          .select('*')
+          .eq('rota_config_id', currentRotaConfigId)
+          .order('sort_order', { ascending: true });
+
+        if (!error && data && data.length > 0) {
+          const restored: ShiftType[] = data.map((row: any) => {
+            const days: ApplicableDays = {
+              mon: row.applicable_mon ?? false, tue: row.applicable_tue ?? false,
+              wed: row.applicable_wed ?? false, thu: row.applicable_thu ?? false,
+              fri: row.applicable_fri ?? false, sat: row.applicable_sat ?? false,
+              sun: row.applicable_sun ?? false,
+            };
+            const isOncall = row.is_oncall ?? false;
+            const isNonRes = row.is_non_res_oncall ?? false;
+            const autoBadges = detectBadges(row.start_time, row.end_time, days, isOncall, isNonRes);
+            const badgeOverrides: Partial<Record<BadgeKey, boolean>> = {};
+            if (row.badge_night_manual_override != null) badgeOverrides.night = row.badge_night;
+            if (row.badge_long_manual_override != null) badgeOverrides.long = row.badge_long;
+            if (row.badge_ooh_manual_override != null) badgeOverrides.ooh = row.badge_ooh;
+            if (row.badge_weekend_manual_override != null) badgeOverrides.weekend = row.badge_weekend;
+            if (row.badge_oncall_manual_override != null) badgeOverrides.oncall = row.badge_oncall;
+            if (row.badge_nonres_manual_override != null) badgeOverrides.nonres = row.badge_nonres;
+            return {
+              id: row.shift_key ?? row.id,
+              name: row.name,
+              startTime: row.start_time,
+              endTime: row.end_time,
+              durationHours: row.duration_hours,
+              applicableDays: days,
+              isOncall, isNonRes,
+              staffing: { min: row.min_doctors ?? 1, max: row.max_doctors ?? null },
+              targetOverridePct: row.target_percentage ?? null,
+              badges: mergedBadges(autoBadges, badgeOverrides),
+              badgeOverrides,
+              oncallManuallySet: row.oncall_manually_set ?? false,
+              reqIac: row.req_iac ?? 0, reqIaoc: row.req_iaoc ?? 0,
+              reqIcu: row.req_icu ?? 0, reqMinGrade: row.req_min_grade ?? null,
+            };
+          });
+          setShifts(restored);
+        }
+      } catch (err) {
+        console.error('Failed to load shift types from DB:', err);
+      } finally {
+        setIsLoadingShifts(false);
+      }
+    };
+    loadFromDb();
+  }, [currentRotaConfigId]);
 
   useEffect(() => {
     if (!restoredConfig || restoredConfig.shifts.length === 0) return;

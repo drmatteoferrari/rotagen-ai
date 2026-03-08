@@ -366,10 +366,15 @@ export default function PreRotaCalendarPage() {
         setEligibility(elig);
       }
 
-      setLoading(false);
+      } catch (err) {
+        console.error('Failed to load calendar data:', err);
+        setLoadError('Failed to load data. Please go back and try again.');
+      } finally {
+        setLoading(false);
+      }
     };
     load();
-  }, []);
+  }, [rotaConfigId]);
 
   // Keyboard navigation
   useEffect(() => {

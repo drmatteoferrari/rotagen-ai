@@ -309,10 +309,17 @@ export async function buildFinalRotaInput(configId: string): Promise<FinalRotaIn
   const cfg = await getRotaConfig(configId);
   const totalWeeks = preRotaInput.period.totalWeeks || 1;
 
+  // ✅ Section 2 complete — read maxConsecNights from WTR settings instead of hardcoding
+  const maxConsecNights = cfg.wtr?.maxConsecNights ?? 4;
+
   // Fetch submitted survey responses
   const responses = await getSurveyResponsesForConfig(configId);
   const submittedResponses = responses.filter((r) => r.status === "submitted");
-  const doctors = submittedResponses.map(mapResponseToPreference);
+  const doctors = submittedResponses.map((r) => {
+    const pref = mapResponseToPreference(r);
+    pref.maxConsecNights = maxConsecNights;
+    return pref;
+  });
 
   const totalNightSlots = preRotaInput.shiftSlots
     .filter((s) => s.badges.includes("night"))
