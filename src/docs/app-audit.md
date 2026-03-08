@@ -452,7 +452,7 @@ All located in `src/components/ui/`:
 ### `RotaContext` — `src/contexts/RotaContext.tsx`
 
 **Data held:**
-- `currentRotaConfigId: string | null` — Active rota config ID (persisted to sessionStorage)
+- `currentRotaConfigId: string | null` — Active rota config ID (persisted to localStorage, verified against DB on load)
 - `restoredConfig: RotaConfig | null` — Full deserialized config from DB
 
 **Provider:** `RotaProvider` (wraps entire app in `App.tsx`)
