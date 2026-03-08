@@ -231,7 +231,7 @@ function CalendarLegend() {
       <LegendFusedItem badgeBg="#7c3aed" label="PL" cellBg="#ede9fe" cellBorder="#7c3aed" text="Parental Leave" />
       <LegendBadgeItem bg="#ec4899" label="NOC" text="Not On-Call" />
       <div style={{ width: 1, height: 16, background: '#e2e8f0', margin: '0 2px' }} />
-      <LegendSwatchItem color="#fef9c3" border="#fde68a" text="LTFT day off" />
+      <LegendFusedItem badgeBg="#92400e" label="LTFT" cellBg="#fef9c3" cellBorder="#fde68a" text="LTFT day off" />
       <LegendSwatchItem color="#fee2e2" border="#fecaca" text="Bank Holiday" />
       <LegendSwatchItem color="#f3f4f6" border="#e5e7eb" text="Weekend" />
       <LegendSwatchItem color="#ffffff" border="#e2e8f0" text="Available" />
