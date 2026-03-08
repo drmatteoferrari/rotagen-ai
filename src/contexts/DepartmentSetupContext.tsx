@@ -230,40 +230,11 @@ export function DepartmentSetupProvider({ children }: { children: ReactNode }) {
     loadFromDb();
   }, [currentRotaConfigId]);
 
+  // ✅ Section 5 complete — restoredConfig effect no longer sets shifts (DB load is single source of truth)
   useEffect(() => {
     if (!restoredConfig || restoredConfig.shifts.length === 0) return;
 
-    const restored: ShiftType[] = restoredConfig.shifts.map((s) => {
-      const days: ApplicableDays = s.applicableDays;
-      const autoBadges = detectBadges(s.startTime, s.endTime, days, s.isOncall, s.isNonResOncall);
-      const badgeOverrides: Partial<Record<BadgeKey, boolean>> = {};
-      for (const key of Object.keys(s.badgeOverrides) as BadgeKey[]) {
-        if (s.badgeOverrides[key] !== undefined) {
-          badgeOverrides[key] = s.badgeOverrides[key];
-        }
-      }
-      return {
-        id: s.shiftKey,
-        name: s.name,
-        startTime: s.startTime,
-        endTime: s.endTime,
-        durationHours: s.durationHours,
-        applicableDays: days,
-        isOncall: s.isOncall,
-        isNonRes: s.isNonResOncall,
-        staffing: { min: s.minDoctors, max: s.maxDoctors },
-        targetOverridePct: s.targetPercentage,
-        badges: autoBadges,
-        badgeOverrides,
-        oncallManuallySet: s.oncallManuallySet,
-        reqIac: (s as any).reqIac ?? 0,
-        reqIaoc: (s as any).reqIaoc ?? 0,
-        reqIcu: (s as any).reqIcu ?? 0,
-        reqMinGrade: (s as any).reqMinGrade ?? null,
-      };
-    });
-
-    setShifts(restored);
+    // Only restore non-shift-type values from restoredConfig
     setGlobalOncallPct(restoredConfig.distribution.globalOncallPct);
 
     // Restore per-shift target overrides
