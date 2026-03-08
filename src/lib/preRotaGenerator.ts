@@ -4,6 +4,7 @@ import { runPreRotaValidation } from './preRotaValidation'
 import { buildCalendarData } from './preRotaCalendar'
 import { buildTargetsData } from './preRotaTargets'
 import { supabase } from '@/integrations/supabase/client'
+import type { Json } from '@/integrations/supabase/types'
 import type { PreRotaResult, PreRotaStatus } from './preRotaTypes'
 
 export async function generatePreRota(
@@ -41,9 +42,10 @@ export async function generatePreRota(
       .from('doctor_survey_responses').select('*').eq('rota_config_id', rotaConfigId)
 
     // 7. Fetch account settings
+    // FIX: .maybeSingle() prevents crash when no account_settings row exists
     const { data: accountSettings } = await supabase
       .from('account_settings').select('department_name, trust_name')
-      .eq('owned_by', config.owned_by).single()
+      .eq('owned_by', config.owned_by).maybeSingle()
 
     // 8. Map doctors + surveys
     const doctorsWithSurveys = doctors.map(doctor => {
@@ -109,15 +111,15 @@ export async function generatePreRota(
 
     // 10. If blocked: save issues only, return early
     if (hasCritical) {
-      const { data: saved } = await supabase.from('pre_rota_results' as any).upsert({
+      const { data: saved } = await supabase.from('pre_rota_results').upsert([{
         rota_config_id: rotaConfigId,
         generated_at: new Date().toISOString(),
         generated_by: generatedBy,
         status: 'blocked',
-        validation_issues: validationIssues,
-        calendar_data: {},
-        targets_data: {},
-      }, { onConflict: 'rota_config_id' }).select().single()
+        validation_issues: validationIssues as unknown as Json,
+        calendar_data: {} as Json,
+        targets_data: {} as Json,
+      }], { onConflict: 'rota_config_id' }).select().single()
 
       return {
         success: true,
@@ -166,16 +168,16 @@ export async function generatePreRota(
 
     // 12. Save to DB (UPSERT)
     const { data: saved } = await supabase
-      .from('pre_rota_results' as any)
-      .upsert({
+      .from('pre_rota_results')
+      .upsert([{
         rota_config_id: rotaConfigId,
         generated_at: new Date().toISOString(),
         generated_by: generatedBy,
         status,
-        validation_issues: validationIssues,
-        calendar_data: calendarData,
-        targets_data: targetsData,
-      }, { onConflict: 'rota_config_id' })
+        validation_issues: validationIssues as unknown as Json,
+        calendar_data: calendarData as unknown as Json,
+        targets_data: targetsData as unknown as Json,
+      }], { onConflict: 'rota_config_id' })
       .select().single()
 
     return {

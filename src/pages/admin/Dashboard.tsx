@@ -60,10 +60,10 @@ export default function Dashboard() {
       if (!currentRotaConfigId) return;
       try {
         const { data: existingPreRota } = await supabase
-          .from('pre_rota_results' as any)
+          .from('pre_rota_results')
           .select('*')
           .eq('rota_config_id', currentRotaConfigId)
-          .single();
+          .maybeSingle();
 
         if (existingPreRota) {
           const pr = existingPreRota as any;

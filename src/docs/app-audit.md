@@ -4,6 +4,7 @@
 
 | Date | Sections Updated | Summary of Changes |
 |------|-----------------|-------------------|
+| 2026-03-08 | Sections 1, 10, 12 | Audit v4: fixed .single()→.maybeSingle() in preRotaGenerator; added missing fields to DoctorSurveyResponse interface; removed all `as any` casts on pre_rota_results queries; fixed competency validation to use competencies_json; updated remaining issues list |
 | 2026-03-08 | Sections 1–3, 10–11 | Audit v3: re-verified v1+v2 fixes; WTR UI checked; new audit of rota_configs persistence, bank_holidays storage, account_settings independence, survey token flow, downstream consumers, accent colour consistency, TypeScript safety, navigation |
 | 2026-03-05 | All | Initial audit generated |
 
@@ -16,7 +17,7 @@
 | Column | Type | Nullable | Default | Constraints |
 |--------|------|----------|---------|-------------|
 | id | uuid | No | `gen_random_uuid()` | PRIMARY KEY |
-| owned_by | text | No | — | |
+| owned_by | text | No | — | UNIQUE (added v4) |
 | department_name | text | Yes | — | |
 | trust_name | text | Yes | — | |
 | created_at | timestamptz | Yes | `now()` | |
@@ -24,7 +25,7 @@
 
 **Foreign Keys:** None
 
-**Unique Constraints:** None explicit (upsert uses `owned_by` as conflict target in code)
+**Unique Constraints:** `owned_by` (added Section 8 fix)
 
 **RLS Policies:**
 
@@ -451,7 +452,7 @@ All located in `src/components/ui/`:
 ### `RotaContext` — `src/contexts/RotaContext.tsx`
 
 **Data held:**
-- `currentRotaConfigId: string | null` — Active rota config ID (persisted to sessionStorage)
+- `currentRotaConfigId: string | null` — Active rota config ID (persisted to localStorage, verified against DB on load)
 - `restoredConfig: RotaConfig | null` — Full deserialized config from DB
 
 **Provider:** `RotaProvider` (wraps entire app in `App.tsx`)
@@ -633,7 +634,7 @@ The `ProtectedRoute` component in `App.tsx` checks `useAuth().isAuthenticated`. 
 
 The doctor survey route (`/doctor/survey`) is **not** protected — it uses token-based access via the `?token=` query parameter.
 
-There is no role differentiation in the route guard — all authenticated users are treated as coordinators. The `role` field on `AuthUser` is set to `"coordinator"` but is not checked anywhere.
+The `ProtectedRoute` component supports a `requiredRole` prop. All `/admin/*` routes require `requiredRole="coordinator"`. The doctor survey route uses token-based access.
 
 ---
 
@@ -665,11 +666,11 @@ There is no role differentiation in the route guard — all authenticated users 
 
 ### Remaining Issues
 
-1. **`preRotaGenerator.ts` line 46** — Uses `.single()` on `account_settings` query. Will throw if no row exists. Should use `.maybeSingle()`.
+1. ~~**`preRotaGenerator.ts` line 46**~~ — **RESOLVED (v4):** Changed `.single()` to `.maybeSingle()`.
 
-2. **`DoctorSurveyResponse` interface** — Missing fields: `parental_leave_expected`, `parental_leave_start`, `parental_leave_end`, `parental_leave_notes`, `competencies_json`. Forces `as any` casts in algorithm input builders (HIGH PRIORITY).
+2. ~~**`DoctorSurveyResponse` interface**~~ — **RESOLVED (v4):** Added `parental_leave_*`, `competencies_json`, and `comp_*` fields. Removed all `as any` casts.
 
-3. **`pre_rota_results` Supabase type casting** — Code uses `supabase.from('pre_rota_results' as any)` in 4 locations despite the table being in the generated types. These casts can be removed.
+3. ~~**`pre_rota_results` Supabase type casting**~~ — **RESOLVED (v4):** Removed all `as any` casts; queries now use typed `.from('pre_rota_results')` and `.maybeSingle()`.
 
 4. **No enforced max on WTR steppers** — Steppers warn but don't prevent exceeding WTR limits (e.g., `maxConsecLong` can be set above 4). May be intentional.
 
@@ -679,4 +680,4 @@ There is no role differentiation in the route guard — all authenticated users 
 
 7. **No test coverage** — Only placeholder test exists.
 
-8. **`rota_configs.department_name` and `rota_configs.trust_name`** — Columns exist but app uses `account_settings` table. These columns are vestigial.
+8. ~~**`rota_configs.department_name` and `rota_configs.trust_name`**~~ — **RESOLVED (Section 4):** Now synced from `account_settings` on save.

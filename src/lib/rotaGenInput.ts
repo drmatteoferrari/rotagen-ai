@@ -235,6 +235,15 @@ export interface DoctorSurveyResponse {
   additional_notes: string | null;
   status: string;
   submitted_at: string | null;
+  // Previously missing fields — eliminates `as any` casts
+  parental_leave_expected: boolean | null;
+  parental_leave_start: string | null;
+  parental_leave_end: string | null;
+  parental_leave_notes: string | null;
+  competencies_json: Record<string, any> | null;
+  comp_ip_anaesthesia: boolean | null;
+  comp_obstetric: boolean | null;
+  comp_icu: boolean | null;
 }
 
 export async function getSurveyResponsesForConfig(configId: string): Promise<DoctorSurveyResponse[]> {
@@ -281,9 +290,9 @@ function mapResponseToPreference(resp: DoctorSurveyResponse): DoctorPreference {
 
   // ✅ Section 3 complete — expand parental leave into individual blocked dates
   const parentalLeaveDates: string[] = (() => {
-    if (!(resp as any).parental_leave_expected) return [];
-    const start = (resp as any).parental_leave_start;
-    const end   = (resp as any).parental_leave_end;
+    if (!resp.parental_leave_expected) return [];
+    const start = resp.parental_leave_start;
+    const end   = resp.parental_leave_end;
     if (!start) return [];
     if (!end || end === start) return [start];
     return expandDateRange(start, end);
@@ -313,7 +322,7 @@ function mapResponseToPreference(resp: DoctorSurveyResponse): DoctorPreference {
     })),
     nocDates,
     parentalLeaveDates,
-    parentalLeaveNotes: (resp as any).parental_leave_notes ?? undefined,
+    parentalLeaveNotes: resp.parental_leave_notes ?? undefined,
     exemptFromNights: resp.exempt_from_nights ?? false,
     exemptFromWeekends: resp.exempt_from_weekends ?? false,
     exemptFromOncall: resp.exempt_from_oncall ?? false,
@@ -373,7 +382,7 @@ export async function buildFinalRotaInput(configId: string): Promise<FinalRotaIn
   // Per-doctor targets
   const doctorTargets = doctors.map((doc) => {
     const resp = submittedResponses.find((r) => r.doctor_id === doc.doctorId);
-    const compJson = (resp as any)?.competencies_json ?? {};
+    const compJson = resp.competencies_json ?? {};
 
     const targets = cfg.wtr ? computeShiftTargets({
       maxHoursPerWeek: cfg.wtr.maxHoursPerWeek,
@@ -533,11 +542,11 @@ export async function validateFinalRotaInput(configId: string): Promise<Validati
       warnings.push(`${name}: WTE is 100% with no LTFT days off — confirm this is correct`);
     }
 
-    // All competencies false
-    const compIp = (r as any).comp_ip_anaesthesia ?? false;
-    const compObs = (r as any).comp_obstetric ?? false;
-    const compIcu = (r as any).comp_icu ?? false;
-    if (!compIp && !compObs && !compIcu) {
+    // All competencies false — check both JSONB and legacy boolean columns
+    const compJson = r.competencies_json as Record<string, any> | null;
+    const hasJsonComp = compJson?.iac?.achieved || compJson?.iaoc?.achieved || compJson?.icu?.achieved;
+    const hasLegacyComp = r.comp_ip_anaesthesia || r.comp_obstetric || r.comp_icu;
+    if (!hasJsonComp && !hasLegacyComp) {
       warnings.push(`${name}: No competencies recorded (IP Anaesthesia, Obstetric, ICU all false)`);
     }
 
