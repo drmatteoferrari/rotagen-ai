@@ -139,7 +139,6 @@ export default function Dashboard() {
     setIssuesPanelOpen(result.validationIssues.length > 0);
   };
 
-  const hasSavedSettings = !loadingSettings && !!departmentName.trim() && !!trustName.trim();
   const canGeneratePreRota = isDepartmentComplete && isWtrComplete && isPeriodComplete;
 
   // ✅ Section 1e complete — setup items with numbered circles
