@@ -461,7 +461,6 @@ export default function DepartmentStep3() {
                 setSaving(false);
               }
             }}
-            className="bg-purple-600 hover:bg-purple-700 text-white"
           >
             {saving ? "Saving…" : "Save Department Setup"}
             {!saving && <Save className="ml-2 h-4 w-4" />}
