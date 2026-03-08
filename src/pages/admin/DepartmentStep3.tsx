@@ -256,7 +256,7 @@ function ShiftDistribution({
   );
 }
 
-export default function DepartmentStep2() {
+export default function DepartmentStep3() {
   const navigate = useNavigate();
   const { setDepartmentComplete } = useAdminSetup();
   const { shifts, globalOncallPct, setGlobalOncallPct, shiftTargetOverrides, setShiftTargetOverrides } = useDepartmentSetup();
