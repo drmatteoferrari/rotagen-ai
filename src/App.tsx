@@ -17,6 +17,7 @@ import RotaPeriodStep1 from "./pages/admin/RotaPeriodStep1";
 import RotaPeriodStep2 from "./pages/admin/RotaPeriodStep2";
 import DepartmentStep1 from "./pages/admin/DepartmentStep1";
 import DepartmentStep2 from "./pages/admin/DepartmentStep2";
+import DepartmentStep3 from "./pages/admin/DepartmentStep3";
 import WtrStep1 from "./pages/admin/WtrStep1";
 import WtrStep2 from "./pages/admin/WtrStep2";
 import WtrStep3 from "./pages/admin/WtrStep3";
