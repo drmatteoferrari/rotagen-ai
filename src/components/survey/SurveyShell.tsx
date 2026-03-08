@@ -54,7 +54,7 @@ export function SurveyShell({ children }: SurveyShellProps) {
             </div>
           </div>
           <div className="text-xs font-medium bg-teal-50 text-teal-700 border border-teal-200 rounded-full px-3 py-1">
-            {step} / 6
+            {step} / {TOTAL_STEPS}
           </div>
         </div>
         <div className="mt-2 h-1.5 bg-muted rounded-full overflow-hidden">
