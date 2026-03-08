@@ -333,16 +333,26 @@ export default function PreRotaCalendarPage() {
         }
       }
 
+      // ✅ Section 3.3 complete — merge ltftDaysOff from surveys into calendar doctors
+      const mergedDoctors = (cd.doctors ?? []).map((doc: any) => ({
+        ...doc,
+        ltftDaysOff: (
+          (doc.ltftDaysOff ?? doc.ltft_days_off ?? sMap[doc.doctorId]?.ltftDaysOff ?? [])
+        ).map(normaliseDayName),
+      }));
+      const mergedCd = { ...cd, doctors: mergedDoctors };
+      setCalendarData(mergedCd);
+
       // Compute eligibility
-      if (cd?.doctors && cd?.weeks) {
+      if (mergedCd?.doctors && mergedCd?.weeks) {
         const allDates: string[] = [];
-        for (const w of cd.weeks) allDates.push(...w.dates);
+        for (const w of mergedCd.weeks) allDates.push(...w.dates);
         const elig: Record<string, Record<string, number>> = {};
         for (const shift of shifts) {
           elig[shift.id] = {};
           for (const date of allDates) {
             let count = 0;
-            for (const doctor of cd.doctors) {
+            for (const doctor of mergedCd.doctors) {
               if (isDoctorEligible(doctor, date, shift, sMap)) count++;
             }
             elig[shift.id][date] = count;
