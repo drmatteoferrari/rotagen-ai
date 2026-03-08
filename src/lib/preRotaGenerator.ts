@@ -41,9 +41,10 @@ export async function generatePreRota(
       .from('doctor_survey_responses').select('*').eq('rota_config_id', rotaConfigId)
 
     // 7. Fetch account settings
+    // FIX: .maybeSingle() prevents crash when no account_settings row exists
     const { data: accountSettings } = await supabase
       .from('account_settings').select('department_name, trust_name')
-      .eq('owned_by', config.owned_by).single()
+      .eq('owned_by', config.owned_by).maybeSingle()
 
     // 8. Map doctors + surveys
     const doctorsWithSurveys = doctors.map(doctor => {
