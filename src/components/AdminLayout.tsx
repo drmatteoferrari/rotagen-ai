@@ -155,11 +155,21 @@ export function AdminLayout({ children, title, subtitle }: AdminLayoutProps) {
             {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
           </div>
           {user && (
-            <button onClick={handleLogout} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
-              <span>{user.username}</span>
-              <span className="text-border">|</span>
-              <span className="flex items-center gap-1">Sign out <LogOut className="h-3.5 w-3.5" /></span>
-            </button>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary text-sm font-bold uppercase">
+                  {user.username?.charAt(0) || "?"}
+                </div>
+                <span className="text-sm text-card-foreground font-medium">{user.username}</span>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                Sign out
+              </button>
+            </div>
           )}
         </header>
         <main className="flex-1 overflow-y-auto p-6">{children}</main>
