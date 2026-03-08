@@ -382,7 +382,7 @@ export async function buildFinalRotaInput(configId: string): Promise<FinalRotaIn
   // Per-doctor targets
   const doctorTargets = doctors.map((doc) => {
     const resp = submittedResponses.find((r) => r.doctor_id === doc.doctorId);
-    const compJson = (resp as any)?.competencies_json ?? {};
+    const compJson = resp.competencies_json ?? {};
 
     const targets = cfg.wtr ? computeShiftTargets({
       maxHoursPerWeek: cfg.wtr.maxHoursPerWeek,
