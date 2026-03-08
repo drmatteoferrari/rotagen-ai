@@ -643,43 +643,40 @@ There is no role differentiation in the route guard — all authenticated users 
 
 | Metric | Count |
 |--------|-------|
-| Database tables | 8 (`account_settings`, `bank_holidays`, `doctor_survey_responses`, `doctors`, `profiles`, `rota_configs`, `shift_types`, `user_roles`, `wtr_settings`) |
-| Routes | 15 (including catch-all) |
-| Page components | 19 |
+| Database tables | 9 (`account_settings`, `bank_holidays`, `doctor_survey_responses`, `doctors`, `pre_rota_results`, `profiles`, `rota_configs`, `shift_types`, `user_roles`, `wtr_settings`) |
+| Routes | 18 (including catch-all) |
+| Page components | 22 |
 | Layout components | 3 |
 | Feature components | 2 |
 | UI components (shadcn) | 48 |
 | Custom hooks | 3 (`useIsMobile`, `useRotaConfig`, `use-toast`) |
 | Contexts | 5 |
-| Edge Functions | 1 |
-| Library/utility files | 4 (`rotaConfig.ts`, `rotaGenInput.ts`, `shiftUtils.ts`, `surveyLinks.ts`) |
+| Edge Functions | 2 (`send-survey-invite`, `send-survey-confirmation`) |
+| Library/utility files | 9 (`rotaConfig.ts`, `rotaGenInput.ts`, `shiftUtils.ts`, `surveyLinks.ts`, `preRotaGenerator.ts`, `preRotaCalendar.ts`, `preRotaTargets.ts`, `preRotaValidation.ts`, `shiftEligibility.ts`) |
 
-### Partially Built Features
+### Resolved Since v2
 
-1. **Phase 1 / Phase 2 generation buttons** on Dashboard — UI exists with "Generate Pre-Rota Data" and "Generate Final Rota" buttons, but `onClick` handlers are empty (`() => {}`). No generation logic is implemented.
+1. **Pre-rota generation** — Fully implemented: validation engine, calendar builder, targets builder, DB persistence via `pre_rota_results` table.
+2. **Doctor survey (all 7 steps)** — Fully controlled, auto-saving, teal-accented UI with debounced save and submission flow.
+3. **Department setup** — Purple-accented 3-step wizard with shift type editor, competency/grade requirements, and distribution targets.
+4. **Rota Period setup** — Amber-accented 2-step wizard with bank holiday management and BH rules.
+5. **WTR setup** — Red-accented 4-step wizard with compliance warnings and locked on-call rules.
+6. **Shift type re-hydration** — DB is single source of truth via guarded `useEffect` in `DepartmentSetupContext`.
 
-2. **Survey Steps 2-5 (doctor-facing)** — UI is rendered with hardcoded/static data. Steps 2 (Competencies), 3 (Working Hours), 4 (Leave), and 5 (Medical) display placeholder content with uncontrolled inputs. Form state changes do not consistently flow back to `SurveyContext.formData`.
+### Remaining Issues
 
-3. **SurveyOverride** — Uses a hardcoded `doctorLookup` with only 3 doctors (IDs "1", "2", "3"). Does not query the actual `doctors` table.
+1. **`preRotaGenerator.ts` line 46** — Uses `.single()` on `account_settings` query. Will throw if no row exists. Should use `.maybeSingle()`.
 
-4. **`profiles` table** — Created via the `handle_new_user()` trigger function but never queried by the application. RLS policies reference `auth.uid()` but the app uses mock auth.
+2. **`DoctorSurveyResponse` interface** — Missing fields: `parental_leave_expected`, `parental_leave_start`, `parental_leave_end`, `parental_leave_notes`, `competencies_json`. Forces `as any` casts in algorithm input builders (HIGH PRIORITY).
 
-5. **`user_roles` table** — Schema exists with proper RLS policies referencing `has_role()`, but no application code reads or writes to this table.
+3. **`pre_rota_results` Supabase type casting** — Code uses `supabase.from('pre_rota_results' as any)` in 4 locations despite the table being in the generated types. These casts can be removed.
 
-### Gaps & Issues
+4. **No enforced max on WTR steppers** — Steppers warn but don't prevent exceeding WTR limits (e.g., `maxConsecLong` can be set above 4). May be intentional.
 
-1. **`handle_new_user` trigger** — The function exists but no trigger attachment is visible in the database metadata. May be attached to `auth.users` (reserved schema) or may be orphaned.
+5. **No Supabase Auth integration** — Still uses hardcoded credentials (`developer1` / `developer1`). All RLS policies remain `true`.
 
-2. **No Supabase Auth integration** — The app uses hardcoded credentials (`developer1` / `developer1`) stored in source code. The `AuthContext` does not use Supabase Auth sessions. All database RLS policies are set to `true` (public access) to work around this.
+6. **Email sender** — Still uses `onboarding@resend.dev` (Resend sandbox). Production deployment needs a custom domain.
 
-3. **Survey form data binding** — Steps 2-5 use uncontrolled HTML inputs (`defaultChecked`, native `<input>` elements) rather than binding to `SurveyContext.setField()`. Data entered on these steps may not be saved to the database.
+7. **No test coverage** — Only placeholder test exists.
 
-4. **Missing `VITE_APP_URL` environment variable** — `buildSurveyLink()` falls back to `window.location.origin`, which works in the preview but may not generate correct production URLs.
-
-5. **Email sender** — Uses `onboarding@resend.dev` (Resend sandbox). Production deployment would need a custom sending domain.
-
-6. **No test coverage** — `src/test/example.test.ts` exists but contains only a placeholder test. No component, integration, or E2E tests.
-
-7. **`rota_configs.department_name` and `rota_configs.trust_name`** — These columns exist on `rota_configs` but the app uses the separate `account_settings` table for department/trust names. The `rota_configs` columns default to empty strings and are not updated from the setup flow.
-
-8. **Unused shadcn components** — Many UI components are installed but not imported anywhere: `aspect-ratio`, `avatar`, `breadcrumb`, `carousel`, `chart`, `collapsible`, `command`, `context-menu`, `dialog`, `drawer`, `dropdown-menu`, `form`, `hover-card`, `input-otp`, `menubar`, `navigation-menu`, `pagination`, `progress`, `radio-group`, `resizable`, `scroll-area`, `select`, `sidebar`, `slider`, `tabs`, `toggle`, `toggle-group`.
+8. **`rota_configs.department_name` and `rota_configs.trust_name`** — Columns exist but app uses `account_settings` table. These columns are vestigial.
