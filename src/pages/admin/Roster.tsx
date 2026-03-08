@@ -62,9 +62,6 @@ export default function Roster() {
   const [successId, setSuccessId] = useState<string | null>(null);
   const [popoverId, setPopoverId] = useState<string | null>(null);
 
-  // SECTION 8 — Edit panel state
-  const [editDoctor, setEditDoctor] = useState<Doctor | null>(null);
-  const [editPanelOpen, setEditPanelOpen] = useState(false);
 
   // Copy tooltip state
   const [copiedId, setCopiedId] = useState<string | null>(null);
