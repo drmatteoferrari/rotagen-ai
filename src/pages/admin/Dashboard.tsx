@@ -35,6 +35,8 @@ export default function Dashboard() {
   const [preRotaError, setPreRotaError] = useState<string | null>(null);
   const [isStale, setIsStale] = useState(false);
   const [issuesPanelOpen, setIssuesPanelOpen] = useState(false);
+  const [finalLoading, setFinalLoading] = useState(false);
+  const [issuesPanelOpen, setIssuesPanelOpen] = useState(false);
 
   // Live survey counts
 
