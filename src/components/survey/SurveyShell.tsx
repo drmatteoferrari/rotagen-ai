@@ -39,7 +39,7 @@ export function SurveyShell({ children }: SurveyShellProps) {
   return (
     <div className="flex flex-col min-h-full">
       {/* Header — white bg matching WTR pattern */}
-      <div className="bg-white border-b border-border px-4 py-3">
+      <div className="sticky top-0 z-10 bg-white border-b border-border px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-teal-600">
@@ -92,7 +92,7 @@ export function SurveyShell({ children }: SurveyShellProps) {
       )}
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1">
         {children}
       </div>
     </div>

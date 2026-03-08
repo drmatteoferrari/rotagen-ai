@@ -33,9 +33,13 @@ function DateRangePicker({
   errors?: { startDate?: string; endDate?: string };
 }) {
   const [open, setOpen] = useState(false);
+  // Track whether user has clicked once (picking end date) or needs fresh start
+  const [pickingEnd, setPickingEnd] = useState(false);
+  const [tempFrom, setTempFrom] = useState<Date | undefined>(undefined);
 
-  const selected: DateRange | undefined =
-    startDate || endDate
+  const selected: DateRange | undefined = pickingEnd
+    ? { from: tempFrom, to: undefined }
+    : startDate || endDate
       ? {
           from: startDate ? parseISO(startDate) : undefined,
           to: endDate ? parseISO(endDate) : undefined,
@@ -43,12 +47,33 @@ function DateRangePicker({
       : undefined;
 
   const handleSelect = (range: DateRange | undefined) => {
-    const from = range?.from ? format(range.from, "yyyy-MM-dd") : "";
-    const to = range?.to ? format(range.to, "yyyy-MM-dd") : "";
-    onChange(from, to);
-    // Close popover once both dates are selected
-    if (range?.from && range?.to) {
-      setTimeout(() => setOpen(false), 200);
+    if (!pickingEnd) {
+      // First click: always reset to new start date
+      const clickedDate = range?.from || range?.to;
+      if (clickedDate) {
+        setTempFrom(clickedDate);
+        setPickingEnd(true);
+        onChange(format(clickedDate, "yyyy-MM-dd"), "");
+      }
+      return;
+    }
+    // Second click: set end date
+    const to = range?.to || range?.from;
+    if (tempFrom && to) {
+      const [start, end] = tempFrom <= to ? [tempFrom, to] : [to, tempFrom];
+      onChange(format(start, "yyyy-MM-dd"), format(end, "yyyy-MM-dd"));
+      setPickingEnd(false);
+      setTempFrom(undefined);
+      setTimeout(() => setOpen(false), 150);
+    }
+  };
+
+  const handleOpenChange = (isOpen: boolean) => {
+    setOpen(isOpen);
+    if (isOpen) {
+      // Always start fresh selection when opening
+      setPickingEnd(false);
+      setTempFrom(undefined);
     }
   };
 
@@ -60,7 +85,7 @@ function DateRangePicker({
 
   return (
     <div className="space-y-1">
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={handleOpenChange}>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
@@ -87,6 +112,9 @@ function DateRangePicker({
             initialFocus
             className={cn("p-3 pointer-events-auto")}
           />
+          {pickingEnd && (
+            <p className="text-[10px] text-center text-muted-foreground pb-2">Now select end date</p>
+          )}
         </PopoverContent>
       </Popover>
       {errors?.startDate && <p className="text-xs text-destructive">{errors.startDate}</p>}
@@ -231,7 +259,7 @@ export default function SurveyStep4() {
 
   return (
     <>
-      <div className="p-3 sm:p-4 pb-32 space-y-4">
+      <div className="p-3 sm:p-4 pb-4 space-y-4">
         {/* Info banner */}
         <div className="flex items-start gap-2 rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-xs sm:text-sm font-medium text-teal-700">
           <Info className="h-4 w-4 shrink-0 mt-0.5 text-teal-600" />
