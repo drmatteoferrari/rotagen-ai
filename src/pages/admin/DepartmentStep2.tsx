@@ -217,7 +217,7 @@ function ExpandedCard({
       </div>
 
       {/* Times + Duration */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="space-y-1">
           <Label className="font-semibold text-xs">Start Time</Label>
           <Input type="time" value={draft.startTime} onChange={(e) => update({ startTime: e.target.value })} className="bg-muted border-border" />
