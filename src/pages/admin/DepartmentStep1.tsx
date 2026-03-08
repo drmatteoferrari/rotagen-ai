@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Pencil, Clock, Save, X, ChevronDown, Info, AlertTriangle } from "lucide-react";
+import { Plus, Trash2, Pencil, Clock, Save, X, ChevronDown, Info, AlertTriangle, ArrowLeft } from "lucide-react";
 import {
   useDepartmentSetup,
   detectBadges,
