@@ -552,9 +552,20 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
         );
       if (respErr) throw respErr;
 
+      // Sync doctor name, email, grade on submission
+      const submitNameParts = fd.fullName.trim().split(/\s+/);
+      const submitFirst = submitNameParts[0] || "";
+      const submitLast = submitNameParts.slice(1).join(" ") || "";
       const { error: docErr } = await supabase
         .from("doctors")
-        .update({ survey_status: "submitted", survey_submitted_at: now })
+        .update({
+          survey_status: "submitted",
+          survey_submitted_at: now,
+          first_name: submitFirst,
+          last_name: submitLast,
+          email: fd.nhsEmail || undefined,
+          grade: fd.grade || undefined,
+        })
         .eq("id", doc.id);
       if (docErr) throw docErr;
 
