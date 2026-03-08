@@ -24,11 +24,12 @@ function fmtDateRange(start: string, end: string): string {
 
 export default function SurveyStep7() {
   const ctx = useSurveyContext();
+  const navigate = useNavigate();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saveMessage, setSaveMessage] = useState("");
 
   if (!ctx) return null;
-  const { formData, setField, submitSurvey, submitting, submitError, saveDraft, setStep } = ctx;
+  const { formData, setField, submitSurvey, submitting, submitError, saveDraft, setStep, isAdminMode } = ctx;
 
   const validate = (): boolean => {
     const e: Record<string, string> = {};
