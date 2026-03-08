@@ -416,7 +416,7 @@ function ExpandedCard({
   );
 }
 
-export default function DepartmentStep1() {
+export default function DepartmentStep2() {
   const navigate = useNavigate();
   const { shifts, updateShift, addShift, removeShift, expandedShiftId, setExpandedShiftId, setShifts, isLoadingShifts } = useDepartmentSetup();
 

@@ -55,6 +55,7 @@ const App = () => (
           <Route path="/admin/rota-period/step-2" element={<ProtectedRoute><RotaPeriodStep2 /></ProtectedRoute>} />
           <Route path="/admin/department/step-1" element={<ProtectedRoute><DepartmentStep1 /></ProtectedRoute>} />
           <Route path="/admin/department/step-2" element={<ProtectedRoute><DepartmentStep2 /></ProtectedRoute>} />
+          <Route path="/admin/department/step-3" element={<ProtectedRoute><DepartmentStep3 /></ProtectedRoute>} />
           <Route path="/admin/wtr/step-1" element={<ProtectedRoute><WtrStep1 /></ProtectedRoute>} />
           <Route path="/admin/wtr/step-2" element={<ProtectedRoute><WtrStep2 /></ProtectedRoute>} />
           <Route path="/admin/wtr/step-3" element={<ProtectedRoute><WtrStep3 /></ProtectedRoute>} />
