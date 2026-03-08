@@ -18,7 +18,7 @@ import type { PreRotaResult } from "@/lib/preRotaTypes";
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { isDepartmentComplete, isWtrComplete, isPeriodComplete, areSurveysDone, restoredFromDb } = useAdminSetup();
+  const { isDepartmentComplete, isWtrComplete, isPeriodComplete, areSurveysDone, restoredFromDb, rotaStartDate, rotaEndDate } = useAdminSetup();
   const { restoredConfig, currentRotaConfigId } = useRotaContext();
   const { user } = useAuth();
 
@@ -187,13 +187,18 @@ export default function Dashboard() {
                   <IconComp className="h-4 w-4 text-muted-foreground shrink-0" />
                   <div className="flex-1">
                     <span className="text-sm font-medium text-foreground">{s.label}</span>
-                    {s.num === 3 && restoredConfig?.rotaPeriod?.startDate && restoredConfig?.rotaPeriod?.endDate && (
-                      <p className="text-[11px] text-muted-foreground mt-0.5">
-                        {new Date(restoredConfig.rotaPeriod.startDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-                        {' → '}
-                        {new Date(restoredConfig.rotaPeriod.endDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-                      </p>
-                    )}
+                    {s.num === 3 && (() => {
+                      const sd = rotaStartDate ?? (restoredConfig?.rotaPeriod?.startDate ? new Date(restoredConfig.rotaPeriod.startDate) : null);
+                      const ed = rotaEndDate ?? (restoredConfig?.rotaPeriod?.endDate ? new Date(restoredConfig.rotaPeriod.endDate) : null);
+                      if (!sd || !ed) return null;
+                      return (
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
+                          {sd.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          {' → '}
+                          {ed.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </p>
+                      );
+                    })()}
                   </div>
                   <span style={{ fontSize: 13, fontWeight: 600, color: status.color }}>{status.text}</span>
                 </div>
