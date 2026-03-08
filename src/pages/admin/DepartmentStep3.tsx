@@ -298,7 +298,7 @@ export default function DepartmentStep3() {
   const canSave = errors.length === 0;
 
   return (
-    <AdminLayout title="Department Setup" subtitle="Step 2 of 2 — Distribution Targets">
+    <AdminLayout title="Department Setup" subtitle="Step 3 of 3 — Distribution Targets">
       <div className="mx-auto max-w-3xl space-y-6">
         {/* Progress */}
         <div className="flex items-center justify-center gap-3">
