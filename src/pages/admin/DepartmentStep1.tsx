@@ -441,6 +441,13 @@ export default function DepartmentStep1() {
           </p>
         </div>
 
+        {/* ✅ Section 6 complete — loading indicator */}
+        {isLoadingShifts && (
+          <div className="text-sm text-muted-foreground py-2 italic">
+            Loading your saved shift types…
+          </div>
+        )}
+
         {/* Shift cards */}
         <div className="flex flex-col gap-4">
           {shifts.map((shift) =>
