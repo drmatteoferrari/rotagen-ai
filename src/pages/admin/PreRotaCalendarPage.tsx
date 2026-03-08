@@ -260,6 +260,7 @@ export default function PreRotaCalendarPage() {
   const [deptName, setDeptName] = useState('');
   const [hospitalName, setHospitalName] = useState('');
   const [showBreakdown, setShowBreakdown] = useState(false);
+  const dateInputRef = useRef<HTMLInputElement>(null);
 
   // ✅ Section 6 complete — data load wrapped in try/catch
   useEffect(() => {
