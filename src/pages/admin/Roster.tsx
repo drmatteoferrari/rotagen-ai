@@ -466,7 +466,7 @@ export default function Roster() {
                               </TooltipTrigger>
                               <TooltipContent>Open survey in new tab</TooltipContent>
                             </Tooltip>
-                            <Button variant="ghost" size="icon" onClick={() => { setEditDoctor(doctor); setEditPanelOpen(true); }} className={doctor.survey_status === "submitted" ? "text-amber-600 hover:text-amber-700" : ""}><Pencil className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="icon" onClick={() => doctor.survey_token && navigate(`/doctor/survey?token=${doctor.survey_token}&admin=true`)} disabled={!doctor.survey_token} className={doctor.survey_status === "submitted" ? "text-amber-600 hover:text-amber-700" : ""}><Pencil className="h-4 w-4" /></Button>
                             <Button variant="ghost" size="icon" onClick={() => removeDoctor(doctor.id)} className="text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
                           </div>
                         </TableCell>
