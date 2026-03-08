@@ -11,8 +11,6 @@ import SurveyStep4 from "./SurveyStep4";
 import SurveyStep5 from "./SurveyStep5";
 import SurveyStep6 from "./SurveyStep6";
 
-// ✅ Section 3 complete (Survey wrapper)
-
 const stepComponents: Record<number, React.ComponentType> = {
   1: SurveyStep1,
   2: SurveyStep2,
@@ -32,8 +30,8 @@ function SurveyInner() {
     return (
       <DoctorLayout>
         <div className="flex flex-col items-center justify-center min-h-full gap-4">
-          <Loader2 className="h-8 w-8 animate-spin text-[#0f766e]" />
-          <p className="text-slate-500 text-sm">Loading your survey…</p>
+          <Loader2 className="h-8 w-8 animate-spin text-teal-600" />
+          <p className="text-muted-foreground text-sm">Loading your survey…</p>
         </div>
       </DoctorLayout>
     );
@@ -46,8 +44,8 @@ function SurveyInner() {
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-50">
             <AlertTriangle className="h-8 w-8 text-red-500" />
           </div>
-          <h1 className="text-xl font-bold text-slate-900">Survey Unavailable</h1>
-          <p className="text-slate-600 text-sm max-w-sm leading-relaxed">{errorMessage}</p>
+          <h1 className="text-xl font-bold text-card-foreground">Survey Unavailable</h1>
+          <p className="text-muted-foreground text-sm max-w-sm leading-relaxed">{errorMessage}</p>
         </div>
       </DoctorLayout>
     );

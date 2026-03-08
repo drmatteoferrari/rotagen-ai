@@ -1,6 +1,5 @@
-import { ArrowLeft, ArrowRight } from "lucide-react";
-
-// ✅ Section 3 complete — StepNav
+import { ArrowLeft, ArrowRight, Send } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface StepNavProps {
   onBack?: () => void;
@@ -11,29 +10,24 @@ interface StepNavProps {
   isSubmit?: boolean;
 }
 
-export function StepNav({ onBack, onNext, backLabel = "Back", nextLabel = "Next Step", nextDisabled = false, isSubmit = false }: StepNavProps) {
+export function StepNav({ onBack, onNext, backLabel = "Back", nextLabel = "Continue", nextDisabled = false, isSubmit = false }: StepNavProps) {
   return (
-    <div className="sticky bottom-0 bg-white/95 backdrop-blur-md border-t border-slate-200 p-4 pb-6 z-20">
-      <div className="flex gap-3">
+    <div className="sticky bottom-0 bg-card/95 backdrop-blur-md border-t border-border p-4 pb-6 z-20">
+      <div className="flex items-center justify-between gap-3 sm:flex-row flex-col-reverse">
         {onBack && (
-          <button
-            onClick={onBack}
-            className="flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl border border-slate-200 text-slate-700 font-bold hover:bg-slate-50 transition-colors"
-          >
-            <ArrowLeft className="h-4 w-4" /> {backLabel}
-          </button>
+          <Button variant="outline" size="lg" onClick={onBack} className="w-full sm:w-auto">
+            <ArrowLeft className="h-4 w-4 mr-2" /> {backLabel}
+          </Button>
         )}
-        <button
+        <Button
+          size="lg"
           onClick={onNext}
           disabled={nextDisabled}
-          className={`flex-1 flex items-center justify-center gap-2 py-3.5 rounded-xl font-bold shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-            isSubmit
-              ? "bg-red-600 text-white shadow-red-600/30 hover:bg-red-700"
-              : "bg-[#0f766e] text-white shadow-[#0f766e]/30 hover:bg-[#0d6560]"
-          }`}
+          className="bg-teal-600 hover:bg-teal-700 text-white w-full sm:w-auto"
         >
-          {nextLabel} {!isSubmit && <ArrowRight className="h-4 w-4" />}
-        </button>
+          {nextLabel}
+          {isSubmit ? <Send className="h-4 w-4 ml-2" /> : <ArrowRight className="h-4 w-4 ml-2" />}
+        </Button>
       </div>
     </div>
   );

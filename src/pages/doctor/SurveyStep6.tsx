@@ -7,9 +7,8 @@ import { InfoBox } from "@/components/survey/InfoBox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, Pencil } from "lucide-react";
-
-// ✅ Section 9 complete
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Loader2, Pencil, ClipboardCheck, Info } from "lucide-react";
 
 const SPECIALTIES = [
   "Paediatric", "Obstetric", "Cardiothoracic", "Neuro", "Vascular",
@@ -77,7 +76,6 @@ export default function SurveyStep6() {
     setTimeout(() => setSaveMessage(""), 3000);
   };
 
-  // Review summary helper
   const wteLabel = formData.wtePercent === 100
     ? "Full-time (100%)"
     : `${formData.wtePercent === 0 ? formData.wteOtherValue : formData.wtePercent}% LTFT`;
@@ -85,181 +83,200 @@ export default function SurveyStep6() {
   return (
     <>
       <div className="p-4 pb-32 space-y-6">
-        <div>
-          <h1 className="text-2xl font-extrabold text-slate-900 mb-1">Specialties, Training & Submission</h1>
+        {/* Info banner */}
+        <div className="flex items-center gap-2 rounded-lg border border-teal-200 bg-teal-50 px-4 py-2.5 text-sm font-medium text-teal-700">
+          <Info className="h-4 w-4 shrink-0 text-teal-600" />
+          Review all sections before submitting. You can go back to edit any step.
         </div>
 
-        {/* Specialty Preferences */}
-        <SurveySection number={1} title="Specialty Preferences">
-          <div className="space-y-3">
-            <InfoBox type="info">Soft preferences — listing too many may dilute the weight each carries. Not all specialties may be available at this hospital.</InfoBox>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {SPECIALTIES.map((name) => (
-                <div key={name} className={`border rounded-lg p-3 transition-colors ${isSpecSelected(name) ? "border-[#0f766e] bg-[#0f766e]/5" : "border-slate-200"}`}>
-                  <div className="flex items-center gap-2">
-                    <Checkbox checked={isSpecSelected(name)} onCheckedChange={(v) => toggleSpec(name, !!v)} />
-                    <span className="text-sm text-slate-700">{name}</span>
-                  </div>
-                  {isSpecSelected(name) && (
-                    <Input
-                      placeholder="Notes / sign-offs needed (optional)"
-                      value={getSpecNotes(name)}
-                      onChange={(e) => updateSpecNotes(name, e.target.value)}
-                      className="mt-2 bg-slate-50 text-xs"
-                    />
-                  )}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ClipboardCheck className="h-5 w-5 text-teal-600" />
+              Review & Submit
+            </CardTitle>
+            <CardDescription>Check your answers before submitting.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Specialty Preferences */}
+            <SurveySection number={1} title="Specialty Preferences">
+              <div className="space-y-3">
+                <InfoBox type="info">Soft preferences — listing too many may dilute the weight each carries.</InfoBox>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {SPECIALTIES.map((name) => (
+                    <div key={name} className={`rounded-lg border p-3 transition-colors ${isSpecSelected(name) ? "border-teal-300 bg-teal-50" : "border-border"}`}>
+                      <div className="flex items-center gap-2">
+                        <Checkbox checked={isSpecSelected(name)} onCheckedChange={(v) => toggleSpec(name, !!v)} />
+                        <span className="text-sm text-card-foreground">{name}</span>
+                      </div>
+                      {isSpecSelected(name) && (
+                        <Input
+                          placeholder="Notes / sign-offs needed (optional)"
+                          value={getSpecNotes(name)}
+                          onChange={(e) => updateSpecNotes(name, e.target.value)}
+                          className="mt-2 bg-muted border-border text-xs"
+                        />
+                      )}
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </div>
-        </SurveySection>
-
-        {/* Special Sessions */}
-        <SurveySection number={2} title="Special Interest Sessions">
-          <div className="space-y-2">
-            {SPECIAL_SESSION_OPTIONS.map((s) => (
-              <div key={s}>
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    checked={s === "Other" ? formData.specialSessions.some((ss) => ss !== "Pain medicine" && ss !== "Pre-op clinics") : formData.specialSessions.includes(s)}
-                    onCheckedChange={(v) => {
-                      if (s === "Other") {
-                        if (!v) {
-                          setField("specialSessions", formData.specialSessions.filter((ss) => ss === "Pain medicine" || ss === "Pre-op clinics"));
-                          setOtherSession("");
-                        } else {
-                          setField("specialSessions", [...formData.specialSessions, ""]);
-                        }
-                      } else {
-                        toggleSession(s, !!v);
-                      }
-                    }}
-                  />
-                  <span className="text-sm text-slate-700">{s}</span>
-                </div>
-                {s === "Other" && formData.specialSessions.some((ss) => ss !== "Pain medicine" && ss !== "Pre-op clinics") && (
-                  <Input
-                    placeholder="Please specify"
-                    value={otherSession}
-                    onChange={(e) => {
-                      setOtherSession(e.target.value);
-                      const base = formData.specialSessions.filter((ss) => ss === "Pain medicine" || ss === "Pre-op clinics");
-                      setField("specialSessions", e.target.value ? [...base, e.target.value] : [...base, ""]);
-                    }}
-                    className="bg-slate-50 ml-6 mt-1 text-sm"
-                  />
-                )}
               </div>
-            ))}
-          </div>
-        </SurveySection>
+            </SurveySection>
 
-        {/* Sign-offs */}
-        <SurveySection number={3} title="Sign-offs & Assessments">
-          <div>
-            <label className="text-sm font-semibold text-slate-700 block mb-1">Sign-offs & assessments needed this rotation</label>
-            <Textarea
-              value={formData.signoffNeeds}
-              onChange={(e) => setField("signoffNeeds", e.target.value)}
-              placeholder="e.g. 10 T&O cases, 5 obstetric epidurals, DOPS for nerve blocks"
-              className="bg-slate-50 min-h-[60px]"
-            />
-          </div>
-        </SurveySection>
+            {/* Special Sessions */}
+            <SurveySection number={2} title="Special Interest Sessions">
+              <div className="space-y-2">
+                {SPECIAL_SESSION_OPTIONS.map((s) => (
+                  <div key={s}>
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        checked={s === "Other" ? formData.specialSessions.some((ss) => ss !== "Pain medicine" && ss !== "Pre-op clinics") : formData.specialSessions.includes(s)}
+                        onCheckedChange={(v) => {
+                          if (s === "Other") {
+                            if (!v) {
+                              setField("specialSessions", formData.specialSessions.filter((ss) => ss === "Pain medicine" || ss === "Pre-op clinics"));
+                              setOtherSession("");
+                            } else {
+                              setField("specialSessions", [...formData.specialSessions, ""]);
+                            }
+                          } else {
+                            toggleSession(s, !!v);
+                          }
+                        }}
+                      />
+                      <span className="text-sm text-card-foreground">{s}</span>
+                    </div>
+                    {s === "Other" && formData.specialSessions.some((ss) => ss !== "Pain medicine" && ss !== "Pre-op clinics") && (
+                      <Input
+                        placeholder="Please specify"
+                        value={otherSession}
+                        onChange={(e) => {
+                          setOtherSession(e.target.value);
+                          const base = formData.specialSessions.filter((ss) => ss === "Pain medicine" || ss === "Pre-op clinics");
+                          setField("specialSessions", e.target.value ? [...base, e.target.value] : [...base, ""]);
+                        }}
+                        className="bg-muted border-border ml-6 mt-1 text-sm"
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </SurveySection>
 
-        {/* Additional */}
-        <SurveySection number={4} title="Additional Information">
-          <div>
-            <label className="text-sm font-semibold text-slate-700 block mb-1">Anything else the coordinator should know</label>
-            <Textarea
-              value={formData.additionalNotes}
-              onChange={(e) => setField("additionalNotes", e.target.value)}
-              placeholder="e.g. Returning from maternity leave in week 4 — prefer lighter start. Currently under OH review. ARCP in week 8."
-              className="bg-slate-50 min-h-[60px]"
-            />
-          </div>
-        </SurveySection>
+            {/* Sign-offs */}
+            <SurveySection number={3} title="Sign-offs & Assessments">
+              <div>
+                <label className="text-sm font-semibold text-card-foreground block mb-1">Sign-offs & assessments needed this rotation</label>
+                <Textarea
+                  value={formData.signoffNeeds}
+                  onChange={(e) => setField("signoffNeeds", e.target.value)}
+                  placeholder="e.g. 10 T&O cases, 5 obstetric epidurals, DOPS for nerve blocks"
+                  className="bg-muted border-border min-h-[60px]"
+                />
+              </div>
+            </SurveySection>
 
-        {/* Review Summary */}
-        <SurveySection number={5} title="Review Summary">
-          <div className="divide-y divide-slate-100">
-            <SummaryRow icon="📋" label="Personal Details" value={`${formData.fullName} · ${formData.grade}${formData.dualSpecialty ? ` · Dual: ${formData.dualSpecialtyTypes.join(", ")}` : ""}`} onEdit={() => setStep(1)} />
-            <SummaryRow icon="⚙️" label="Competencies" value={compSummary(formData)} onEdit={() => setStep(2)} />
-            <SummaryRow icon="🗓️" label="Working Pattern" value={`${wteLabel}${formData.ltftDaysOff.length ? ` · ${formData.ltftDaysOff.join(", ")} off` : ""}`} onEdit={() => setStep(3)} />
-            <SummaryRow icon="📅" label="Annual Leave" value={formData.annualLeave.length ? `${formData.annualLeave.length} period(s)` : "None"} onEdit={() => setStep(4)} />
-            <SummaryRow icon="📅" label="Study Leave" value={formData.studyLeave.length ? `${formData.studyLeave.length} period(s)` : "None"} onEdit={() => setStep(4)} />
-            <SummaryRow icon="🔕" label="Prefer not on-call" value={formData.nocDates.length ? `${formData.nocDates.length} date(s)` : "None"} onEdit={() => setStep(4)} />
-            <SummaryRow icon="🔁" label="Rotations" value={formData.rotations.length ? `${formData.rotations.length} rotation(s)` : "None"} onEdit={() => setStep(4)} />
-            <SummaryRow icon="🚫" label="Additional info" value={formData.otherRestrictions || formData.otherSchedulingRestrictions || formData.parentalLeaveExpected ? "Entered" : "None entered"} onEdit={() => setStep(5)} />
-            <SummaryRow icon="🎓" label="Specialties & Training" value={formData.specialtiesRequested.length ? formData.specialtiesRequested.map((s) => s.name).join(", ") : "None selected"} onEdit={() => setStep(6)} />
-          </div>
+            {/* Additional */}
+            <SurveySection number={4} title="Additional Information">
+              <div>
+                <label className="text-sm font-semibold text-card-foreground block mb-1">Anything else the coordinator should know</label>
+                <Textarea
+                  value={formData.additionalNotes}
+                  onChange={(e) => setField("additionalNotes", e.target.value)}
+                  placeholder="e.g. Returning from maternity leave in week 4 — prefer lighter start."
+                  className="bg-muted border-border min-h-[60px]"
+                />
+              </div>
+            </SurveySection>
 
-          {/* Warnings */}
-          {!formData.fullName && <InfoBox type="warn">⚠️ Personal Details — you left this blank. <button className="underline font-medium" onClick={() => setStep(1)}>Edit →</button></InfoBox>}
-          {formData.iacAchieved === null && formData.iaocAchieved === null && formData.icuAchieved === null && formData.transferAchieved === null && (
-            <InfoBox type="warn">⚠️ Competencies section is blank. <button className="underline font-medium" onClick={() => setStep(2)}>Edit →</button></InfoBox>
-          )}
-          {formData.wtePercent !== 100 && formData.ltftDaysOff.length === 0 && (
-            <InfoBox type="warn">⚠️ LTFT selected but no days off entered. <button className="underline font-medium" onClick={() => setStep(3)}>Edit →</button></InfoBox>
-          )}
-        </SurveySection>
+            {/* Review Summary */}
+            <SurveySection number={5} title="Review Summary">
+              <div className="divide-y divide-border">
+                <SummaryRow icon="📋" label="Personal Details" value={`${formData.fullName} · ${formData.grade}${formData.dualSpecialty ? ` · Dual: ${formData.dualSpecialtyTypes.join(", ")}` : ""}`} onEdit={() => setStep(1)} />
+                <SummaryRow icon="⚙️" label="Competencies" value={compSummary(formData)} onEdit={() => setStep(2)} />
+                <SummaryRow icon="🗓️" label="Working Pattern" value={`${wteLabel}${formData.ltftDaysOff.length ? ` · ${formData.ltftDaysOff.join(", ")} off` : ""}`} onEdit={() => setStep(3)} />
+                <SummaryRow icon="📅" label="Annual Leave" value={formData.annualLeave.length ? `${formData.annualLeave.length} period(s)` : "None"} onEdit={() => setStep(4)} />
+                <SummaryRow icon="📅" label="Study Leave" value={formData.studyLeave.length ? `${formData.studyLeave.length} period(s)` : "None"} onEdit={() => setStep(4)} />
+                <SummaryRow icon="🔕" label="Prefer not on-call" value={formData.nocDates.length ? `${formData.nocDates.length} date(s)` : "None"} onEdit={() => setStep(4)} />
+                <SummaryRow icon="🔁" label="Rotations" value={formData.rotations.length ? `${formData.rotations.length} rotation(s)` : "None"} onEdit={() => setStep(4)} />
+                <SummaryRow icon="🚫" label="Additional info" value={formData.otherRestrictions || formData.otherSchedulingRestrictions || formData.parentalLeaveExpected ? "Entered" : "None entered"} onEdit={() => setStep(5)} />
+                <SummaryRow icon="🎓" label="Specialties & Training" value={formData.specialtiesRequested.length ? formData.specialtiesRequested.map((s) => s.name).join(", ") : "None selected"} onEdit={() => setStep(6)} />
+              </div>
 
-        {/* Confirmations */}
-        <SurveySection number={6} title="Confirmation">
-          <div className="space-y-3">
-            <ConfirmCheck
-              checked={formData.confirmedAccurate}
-              onChange={(v) => setField("confirmedAccurate", v)}
-              label="I confirm all information above is accurate to the best of my knowledge"
-              error={errors.confirmed}
-            />
-            <ConfirmCheck
-              checked={formData.confirmAlgorithmUnderstood}
-              onChange={(v) => setField("confirmAlgorithmUnderstood", v)}
-              label="I understand the algorithm will try to respect all my requests, but this cannot always be guaranteed — the final rota balances the preferences of the whole team"
-              error={errors.algorithm}
-            />
-            <ConfirmCheck
-              checked={formData.confirmExemptionsUnderstood}
-              onChange={(v) => setField("confirmExemptionsUnderstood", v)}
-              label="I understand that medical exemptions may require Occupational Health documentation"
-              error={errors.exemptions}
-            />
-            <ConfirmCheck
-              checked={formData.confirmFairnessUnderstood}
-              onChange={(v) => setField("confirmFairnessUnderstood", v)}
-              label="I understand that submitting inaccurate or excessive leave may negatively affect fairness for my colleagues"
-              error={errors.fairness}
-            />
-          </div>
-        </SurveySection>
+              {/* Warnings */}
+              {!formData.fullName && <InfoBox type="warn">⚠️ Personal Details — you left this blank. <button className="underline font-medium" onClick={() => setStep(1)}>Edit →</button></InfoBox>}
+              {formData.iacAchieved === null && formData.iaocAchieved === null && formData.icuAchieved === null && formData.transferAchieved === null && (
+                <InfoBox type="warn">⚠️ Competencies section is blank. <button className="underline font-medium" onClick={() => setStep(2)}>Edit →</button></InfoBox>
+              )}
+              {formData.wtePercent !== 100 && formData.ltftDaysOff.length === 0 && (
+                <InfoBox type="warn">⚠️ LTFT selected but no days off entered. <button className="underline font-medium" onClick={() => setStep(3)}>Edit →</button></InfoBox>
+              )}
+            </SurveySection>
 
-        {/* Signature */}
-        <SurveySection number={7} title="Signature">
-          <div className="space-y-3">
-            <div>
-              <label className="text-sm font-semibold text-slate-700 block mb-1">Your name *</label>
-              <Input value={formData.signatureName} onChange={(e) => setField("signatureName", e.target.value)} className="bg-slate-50" />
-              <FieldError message={errors.sigName} />
-            </div>
-            <div>
-              <label className="text-sm font-semibold text-slate-700 block mb-1">Date submitted *</label>
-              <Input type="date" value={formData.signatureDate || new Date().toISOString().split("T")[0]} onChange={(e) => setField("signatureDate", e.target.value)} className="bg-slate-50" />
-              <FieldError message={errors.sigDate} />
-            </div>
-          </div>
-        </SurveySection>
+            {/* Confirmations */}
+            <SurveySection number={6} title="Confirmation">
+              <div className="space-y-3">
+                <ConfirmCheck
+                  checked={formData.confirmedAccurate}
+                  onChange={(v) => setField("confirmedAccurate", v)}
+                  label="I confirm all information above is accurate to the best of my knowledge"
+                  error={errors.confirmed}
+                />
+                <ConfirmCheck
+                  checked={formData.confirmAlgorithmUnderstood}
+                  onChange={(v) => setField("confirmAlgorithmUnderstood", v)}
+                  label="I understand the algorithm will try to respect all my requests, but this cannot always be guaranteed — the final rota balances the preferences of the whole team"
+                  error={errors.algorithm}
+                />
+                <ConfirmCheck
+                  checked={formData.confirmExemptionsUnderstood}
+                  onChange={(v) => setField("confirmExemptionsUnderstood", v)}
+                  label="I understand that medical exemptions may require Occupational Health documentation"
+                  error={errors.exemptions}
+                />
+                <ConfirmCheck
+                  checked={formData.confirmFairnessUnderstood}
+                  onChange={(v) => setField("confirmFairnessUnderstood", v)}
+                  label="I understand that submitting inaccurate or excessive leave may negatively affect fairness for my colleagues"
+                  error={errors.fairness}
+                />
+              </div>
+            </SurveySection>
 
-        {/* Save and return */}
-        <button
-          onClick={handleSaveAndReturn}
-          className="w-full py-3 rounded-xl border border-slate-300 text-slate-600 font-medium hover:bg-slate-50 transition-colors"
-        >
-          Save and return later
-        </button>
-        {saveMessage && <p className="text-sm text-emerald-600 text-center font-medium">{saveMessage}</p>}
+            {/* Signature */}
+            <SurveySection number={7} title="Signature">
+              <div className="space-y-3">
+                <div className="rounded-lg border border-border p-4 flex items-center justify-between gap-4">
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium text-card-foreground">Your name</span>
+                    <span className="text-[11px] font-semibold text-teal-600 mt-0.5">Required</span>
+                  </div>
+                  <Input value={formData.signatureName} onChange={(e) => setField("signatureName", e.target.value)} className="w-[180px] bg-muted border-border" />
+                </div>
+                <FieldError message={errors.sigName} />
+                <div className="rounded-lg border border-border p-4 flex items-center justify-between gap-4">
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium text-card-foreground">Date submitted</span>
+                    <span className="text-[11px] font-semibold text-teal-600 mt-0.5">Required</span>
+                  </div>
+                  <Input type="date" value={formData.signatureDate || new Date().toISOString().split("T")[0]} onChange={(e) => setField("signatureDate", e.target.value)} className="w-[180px] bg-muted border-border" />
+                </div>
+                <FieldError message={errors.sigDate} />
+              </div>
+            </SurveySection>
 
-        {submitError && <p className="text-sm text-red-600 font-medium text-center">{submitError}</p>}
+            {/* Save and return */}
+            <button
+              onClick={handleSaveAndReturn}
+              className="w-full py-3 rounded-lg border border-border text-muted-foreground font-medium hover:bg-muted transition-colors"
+            >
+              Save and return later
+            </button>
+            {saveMessage && <p className="text-sm text-teal-600 text-center font-medium">{saveMessage}</p>}
+
+            {submitError && <p className="text-sm text-destructive font-medium text-center">{submitError}</p>}
+          </CardContent>
+        </Card>
       </div>
 
       <StepNav
@@ -279,10 +296,10 @@ function SummaryRow({ icon, label, value, onEdit }: { icon: string; label: strin
     <div className="flex items-center justify-between py-2.5 gap-2">
       <div className="flex items-center gap-2 min-w-0 flex-1">
         <span className="text-sm">{icon}</span>
-        <span className="text-xs font-medium text-slate-500 whitespace-nowrap">{label}</span>
-        <span className="text-xs text-slate-700 truncate">{value}</span>
+        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{label}</span>
+        <span className="text-xs text-card-foreground truncate">{value}</span>
       </div>
-      <button onClick={onEdit} className="text-[#0f766e] hover:underline text-xs font-medium flex items-center gap-1 shrink-0">
+      <button onClick={onEdit} className="text-teal-600 hover:underline text-xs font-medium flex items-center gap-1 shrink-0">
         <Pencil className="h-3 w-3" /> Edit
       </button>
     </div>
@@ -294,7 +311,7 @@ function ConfirmCheck({ checked, onChange, label, error }: { checked: boolean; o
     <div>
       <div className="flex items-start gap-2">
         <Checkbox checked={checked} onCheckedChange={(v) => onChange(!!v)} className="mt-0.5" />
-        <span className="text-sm text-slate-700 leading-relaxed">{label}</span>
+        <span className="text-sm text-card-foreground leading-relaxed">{label}</span>
       </div>
       <FieldError message={error} />
     </div>

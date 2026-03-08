@@ -4,8 +4,8 @@ import { StepNav } from "@/components/survey/StepNav";
 import { SurveySection } from "@/components/survey/SurveySection";
 import { FieldError } from "@/components/survey/FieldError";
 import { InfoBox } from "@/components/survey/InfoBox";
-
-// ✅ Section 5 complete
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Stethoscope, Info } from "lucide-react";
 
 interface CompBlock {
   key: "iac" | "iaoc" | "icu" | "transfer";
@@ -25,19 +25,19 @@ const BLOCKS: CompBlock[] = [
 function RadioYesNo({ value, onChange, label }: { value: boolean | null; onChange: (v: boolean) => void; label: string }) {
   return (
     <div className="space-y-1.5">
-      <p className="text-sm font-medium text-slate-700">{label}</p>
+      <p className="text-sm font-medium text-card-foreground">{label}</p>
       <div className="flex gap-2">
         <button
           type="button"
           onClick={() => onChange(true)}
-          className={`flex-1 py-2.5 rounded-lg text-sm font-bold border transition-all ${value === true ? "bg-[#0f766e] text-white border-[#0f766e]" : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"}`}
+          className={`flex-1 py-2.5 rounded-lg text-sm font-bold border transition-all ${value === true ? "bg-teal-600 text-white border-teal-600" : "bg-card text-muted-foreground border-border hover:border-teal-300"}`}
         >
           Yes
         </button>
         <button
           type="button"
           onClick={() => onChange(false)}
-          className={`flex-1 py-2.5 rounded-lg text-sm font-bold border transition-all ${value === false ? "bg-[#0f766e] text-white border-[#0f766e]" : "bg-white text-slate-600 border-slate-200 hover:border-slate-300"}`}
+          className={`flex-1 py-2.5 rounded-lg text-sm font-bold border transition-all ${value === false ? "bg-teal-600 text-white border-teal-600" : "bg-card text-muted-foreground border-border hover:border-teal-300"}`}
         >
           No
         </button>
@@ -69,51 +69,61 @@ export default function SurveyStep2() {
   return (
     <>
       <div className="p-4 pb-32 space-y-6">
-        <div>
-          <h1 className="text-2xl font-extrabold text-slate-900 mb-1">Competencies & Scope of Practice</h1>
+        {/* Info banner */}
+        <div className="flex items-center gap-2 rounded-lg border border-teal-200 bg-teal-50 px-4 py-2.5 text-sm font-medium text-teal-700">
+          <Info className="h-4 w-4 shrink-0 text-teal-600" />
+          Only tick competencies where you have confirmed clinical sign-off.
         </div>
 
-        <InfoBox type="info">These answers determine whether you can be allocated on certain lists.</InfoBox>
-
-        {BLOCKS.map((b) => (
-          <SurveySection key={b.key} number={BLOCKS.indexOf(b) + 1} title={b.title}>
-            <div className="space-y-4">
-              <RadioYesNo
-                label={`Have you achieved ${b.title.split(" — ")[0]}?`}
-                value={formData[b.achievedField]}
-                onChange={(v) => {
-                  setField(b.achievedField, v);
-                  // Clear follow-ups when toggling
-                  if (v) setField(b.workingField, null);
-                  else setField(b.remoteField, null);
-                }}
-              />
-              <FieldError message={errors[b.achievedField]} />
-
-              {formData[b.achievedField] === false && (
-                <>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Stethoscope className="h-5 w-5 text-teal-600" />
+              Clinical Competencies
+            </CardTitle>
+            <CardDescription>Areas you are trained and signed off to work in.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {BLOCKS.map((b) => (
+              <SurveySection key={b.key} number={BLOCKS.indexOf(b) + 1} title={b.title}>
+                <div className="space-y-4">
                   <RadioYesNo
-                    label={`Working towards ${b.title.split(" — ")[0]} this rotation?`}
-                    value={formData[b.workingField]}
-                    onChange={(v) => setField(b.workingField, v)}
+                    label={`Have you achieved ${b.title.split(" — ")[0]}?`}
+                    value={formData[b.achievedField]}
+                    onChange={(v) => {
+                      setField(b.achievedField, v);
+                      if (v) setField(b.workingField, null);
+                      else setField(b.remoteField, null);
+                    }}
                   />
-                  <FieldError message={errors[b.workingField]} />
-                </>
-              )}
+                  <FieldError message={errors[b.achievedField]} />
 
-              {formData[b.achievedField] === true && (
-                <>
-                  <RadioYesNo
-                    label={`Already covered ${b.title.split(" — ")[0]} with remote supervision?`}
-                    value={formData[b.remoteField]}
-                    onChange={(v) => setField(b.remoteField, v)}
-                  />
-                  <FieldError message={errors[b.remoteField]} />
-                </>
-              )}
-            </div>
-          </SurveySection>
-        ))}
+                  {formData[b.achievedField] === false && (
+                    <>
+                      <RadioYesNo
+                        label={`Working towards ${b.title.split(" — ")[0]} this rotation?`}
+                        value={formData[b.workingField]}
+                        onChange={(v) => setField(b.workingField, v)}
+                      />
+                      <FieldError message={errors[b.workingField]} />
+                    </>
+                  )}
+
+                  {formData[b.achievedField] === true && (
+                    <>
+                      <RadioYesNo
+                        label={`Already covered ${b.title.split(" — ")[0]} with remote supervision?`}
+                        value={formData[b.remoteField]}
+                        onChange={(v) => setField(b.remoteField, v)}
+                      />
+                      <FieldError message={errors[b.remoteField]} />
+                    </>
+                  )}
+                </div>
+              </SurveySection>
+            ))}
+          </CardContent>
+        </Card>
       </div>
       <StepNav onBack={() => ctx.prevStep()} onNext={handleNext} />
     </>
