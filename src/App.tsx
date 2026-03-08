@@ -24,8 +24,11 @@ import WtrStep4 from "./pages/admin/WtrStep4";
 import Survey from "./pages/doctor/Survey";
 import SurveyOverride from "./pages/admin/SurveyOverride";
 import Audit from "./pages/Audit";
+import PreRotaCalendarPage from "./pages/admin/PreRotaCalendarPage";
+import PreRotaTargetsPage from "./pages/admin/PreRotaTargetsPage";
 
 const queryClient = new QueryClient();
+// ✅ Section 2 complete
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -56,6 +59,8 @@ const App = () => (
           <Route path="/admin/wtr/step-3" element={<ProtectedRoute><WtrStep3 /></ProtectedRoute>} />
           <Route path="/admin/wtr/step-4" element={<ProtectedRoute><WtrStep4 /></ProtectedRoute>} />
           <Route path="/admin/roster" element={<ProtectedRoute><Roster /></ProtectedRoute>} />
+          <Route path="/admin/pre-rota-calendar" element={<ProtectedRoute><PreRotaCalendarPage /></ProtectedRoute>} />
+          <Route path="/admin/pre-rota-targets" element={<ProtectedRoute><PreRotaTargetsPage /></ProtectedRoute>} />
           <Route path="/admin/survey-override/:doctorId/:step" element={<ProtectedRoute><SurveyOverride /></ProtectedRoute>} />
           {/* Doctor survey — token-based, no auth required */}
           <Route path="/doctor/survey" element={<Survey />} />

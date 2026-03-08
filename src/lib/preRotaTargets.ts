@@ -56,7 +56,7 @@ export function buildTargetsData(inputs: TargetsBuilderInputs): TargetsData {
       doctorName: `Dr ${doctor.firstName} ${doctor.lastName}`,
       grade: doctor.grade,
       wte: doctor.wte,
-      contractedHoursPerWeek: wtrMaxHoursPerWeek,
+      contractedHoursPerWeek: Math.round(wtrMaxHoursPerWeek * (doctor.wte / 100) * 10) / 10, // ✅ Section 6 complete
       hardWeeklyCap: wtrMaxHoursPer168h,
       weekendCap: maxWeekends,
       totalMaxHours: result.totalMaxTargetHours,
