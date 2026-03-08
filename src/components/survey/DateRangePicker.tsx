@@ -42,7 +42,7 @@ export function DateRangePicker({
       setPhase("end");
       onChange(format(day, "yyyy-MM-dd"), "");
     } else {
-      // Phase "end" — finalize range
+      // Phase "end" — finalize range (allows same day for single-day selection)
       if (tempStart) {
         const [s, e] = tempStart <= day ? [tempStart, day] : [day, tempStart];
         onChange(format(s, "yyyy-MM-dd"), format(e, "yyyy-MM-dd"));
@@ -98,7 +98,10 @@ export function DateRangePicker({
     } catch {}
   }
 
-  const displayText = startDate && endDate
+  const isSingleDay = startDate && endDate && startDate === endDate;
+  const displayText = isSingleDay
+    ? format(parseISO(startDate), "d MMM yyyy")
+    : startDate && endDate
     ? `${format(parseISO(startDate), "d MMM")} → ${format(parseISO(endDate), "d MMM yyyy")}`
     : startDate
     ? `${format(parseISO(startDate), "d MMM yyyy")} → …`
