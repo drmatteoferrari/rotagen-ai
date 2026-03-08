@@ -31,6 +31,13 @@ export default function SurveyStep7() {
   if (!ctx) return null;
   const { formData, setField, submitSurvey, submitting, submitError, saveDraft, setStep, isAdminMode } = ctx;
 
+  // Auto-set signature date to today if not already set
+  if (!formData.signatureDate) {
+    const today = new Date().toISOString().split("T")[0];
+    // Use setTimeout to avoid setting state during render
+    setTimeout(() => setField("signatureDate", today), 0);
+  }
+
   const validate = (): boolean => {
     const e: Record<string, string> = {};
     if (!formData.confirmedAccurate) e.confirmed = "You must confirm this is accurate";
