@@ -55,6 +55,19 @@ export default function DepartmentStep1New() {
           { onConflict: "owned_by" }
         );
       if (error) throw error;
+
+      // SECTION 4 COMPLETE — Sync to rota_configs
+      if (currentRotaConfigId) {
+        try {
+          await supabase
+            .from("rota_configs")
+            .update({ department_name: deptName.trim(), trust_name: trustName.trim() })
+            .eq("id", currentRotaConfigId);
+        } catch (syncErr) {
+          console.error("Failed to sync department/trust to rota_configs (non-blocking):", syncErr);
+        }
+      }
+
       setAccountSettings({ departmentName: deptName.trim(), trustName: trustName.trim() });
       toast.success("✓ Department details saved");
       navigate("/admin/department/step-2");

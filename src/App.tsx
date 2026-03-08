@@ -52,20 +52,20 @@ const App = () => (
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-          <Route path="/admin/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-          <Route path="/admin/rota-period/step-1" element={<ProtectedRoute><RotaPeriodStep1 /></ProtectedRoute>} />
-          <Route path="/admin/rota-period/step-2" element={<ProtectedRoute><RotaPeriodStep2 /></ProtectedRoute>} />
-          <Route path="/admin/department/step-1" element={<ProtectedRoute><DepartmentStep1 /></ProtectedRoute>} />
-          <Route path="/admin/department/step-2" element={<ProtectedRoute><DepartmentStep2 /></ProtectedRoute>} />
-          <Route path="/admin/department/step-3" element={<ProtectedRoute><DepartmentStep3 /></ProtectedRoute>} />
-          <Route path="/admin/wtr/step-1" element={<ProtectedRoute><WtrStep1 /></ProtectedRoute>} />
-          <Route path="/admin/wtr/step-2" element={<ProtectedRoute><WtrStep2 /></ProtectedRoute>} />
-          <Route path="/admin/wtr/step-3" element={<ProtectedRoute><WtrStep3 /></ProtectedRoute>} />
-          <Route path="/admin/wtr/step-4" element={<ProtectedRoute><WtrStep4 /></ProtectedRoute>} />
-          <Route path="/admin/roster" element={<ProtectedRoute><Roster /></ProtectedRoute>} />
-          <Route path="/admin/pre-rota-calendar" element={<ProtectedRoute><PreRotaCalendarPage /></ProtectedRoute>} />
-          <Route path="/admin/pre-rota-targets" element={<ProtectedRoute><PreRotaTargetsPage /></ProtectedRoute>} />
-          <Route path="/admin/survey-override/:doctorId/:step" element={<ProtectedRoute><SurveyOverride /></ProtectedRoute>} />
+          <Route path="/admin/dashboard" element={<ProtectedRoute requiredRole="coordinator"><Dashboard /></ProtectedRoute>} />
+          <Route path="/admin/rota-period/step-1" element={<ProtectedRoute requiredRole="coordinator"><RotaPeriodStep1 /></ProtectedRoute>} />
+          <Route path="/admin/rota-period/step-2" element={<ProtectedRoute requiredRole="coordinator"><RotaPeriodStep2 /></ProtectedRoute>} />
+          <Route path="/admin/department/step-1" element={<ProtectedRoute requiredRole="coordinator"><DepartmentStep1 /></ProtectedRoute>} />
+          <Route path="/admin/department/step-2" element={<ProtectedRoute requiredRole="coordinator"><DepartmentStep2 /></ProtectedRoute>} />
+          <Route path="/admin/department/step-3" element={<ProtectedRoute requiredRole="coordinator"><DepartmentStep3 /></ProtectedRoute>} />
+          <Route path="/admin/wtr/step-1" element={<ProtectedRoute requiredRole="coordinator"><WtrStep1 /></ProtectedRoute>} />
+          <Route path="/admin/wtr/step-2" element={<ProtectedRoute requiredRole="coordinator"><WtrStep2 /></ProtectedRoute>} />
+          <Route path="/admin/wtr/step-3" element={<ProtectedRoute requiredRole="coordinator"><WtrStep3 /></ProtectedRoute>} />
+          <Route path="/admin/wtr/step-4" element={<ProtectedRoute requiredRole="coordinator"><WtrStep4 /></ProtectedRoute>} />
+          <Route path="/admin/roster" element={<ProtectedRoute requiredRole="coordinator"><Roster /></ProtectedRoute>} />
+          <Route path="/admin/pre-rota-calendar" element={<ProtectedRoute requiredRole="coordinator"><PreRotaCalendarPage /></ProtectedRoute>} />
+          <Route path="/admin/pre-rota-targets" element={<ProtectedRoute requiredRole="coordinator"><PreRotaTargetsPage /></ProtectedRoute>} />
+          <Route path="/admin/survey-override/:doctorId/:step" element={<ProtectedRoute requiredRole="coordinator"><SurveyOverride /></ProtectedRoute>} />
           {/* Doctor survey — token-based, no auth required */}
           <Route path="/doctor/survey" element={<Survey />} />
           <Route path="/audit" element={<Audit />} />

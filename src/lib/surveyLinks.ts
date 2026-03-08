@@ -1,9 +1,12 @@
 import { supabase } from "@/integrations/supabase/client";
 
-// SECTION 2 — Survey link utilities
-
+// SECTION 6 COMPLETE
 export function buildSurveyLink(surveyToken: string): string {
-  const base = (import.meta.env.VITE_APP_URL as string | undefined) ?? window.location.origin;
+  const envUrl = import.meta.env.VITE_APP_URL as string | undefined;
+  if (!envUrl) {
+    console.warn("WARNING: VITE_APP_URL is not set. Survey links will use window.location.origin. Set this variable before sending real invites.");
+  }
+  const base = envUrl ?? window.location.origin;
   return `${base}/doctor/survey?token=${surveyToken}`;
 }
 
