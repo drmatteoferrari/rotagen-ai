@@ -1,14 +1,17 @@
+// SECTION 11 COMPLETE
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "@/components/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { ArrowLeft, CheckCircle, Lock, ClipboardCheck, Info } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { ArrowLeft, CheckCircle, Lock, ClipboardCheck, Info, ChevronDown, ChevronUp, Settings2 } from "lucide-react";
 import { useAdminSetup } from "@/contexts/AdminSetupContext";
 import { useRotaContext } from "@/contexts/RotaContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const onCallCards = [
   {
@@ -35,10 +38,15 @@ const onCallCards = [
 
 export default function WtrStep4() {
   const navigate = useNavigate();
-  const { setWtrComplete, maxAvgWeekly, maxIn7Days, maxConsecDays, maxConsecLong, maxConsecNights, restPostNights, restPostBlock, restAfter7, weekendFreq } = useAdminSetup();
+  const {
+    setWtrComplete, maxAvgWeekly, maxIn7Days, maxConsecDays, maxConsecLong, maxConsecNights, restPostNights, restPostBlock, restAfter7, weekendFreq,
+    oncallContinuousRestStart, oncallContinuousRestEnd, oncallIfRestNotMetMaxHours, oncallBreakReferenceWeeks, oncallBreakFineThresholdPct,
+    setOncallContinuousRestStart, setOncallContinuousRestEnd, setOncallIfRestNotMetMaxHours, setOncallBreakReferenceWeeks, setOncallBreakFineThresholdPct,
+  } = useAdminSetup();
   const { currentRotaConfigId, setCurrentRotaConfigId } = useRotaContext();
   const { user } = useAuth();
   const [saving, setSaving] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   return (
     <AdminLayout title="Working Time Regulations" subtitle="Step 4 of 4 — Review & Save">
@@ -80,12 +88,146 @@ export default function WtrStep4() {
           </CardContent>
         </Card>
 
+        {/* SECTION 11 — Advanced On-Call Settings */}
+        <Card>
+          <button
+            type="button"
+            onClick={() => setAdvancedOpen(!advancedOpen)}
+            className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-muted/30 transition-colors rounded-t-lg"
+          >
+            <div className="flex items-center gap-2">
+              <Settings2 className="h-5 w-5 text-red-600" />
+              <div>
+                <p className="text-sm font-medium text-card-foreground">Advanced On-Call Settings</p>
+                <p className="text-xs text-muted-foreground">Fine-tune rest windows, break references, and fine thresholds</p>
+              </div>
+            </div>
+            {advancedOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+          </button>
+
+          {advancedOpen && (
+            <CardContent className="space-y-5 pt-0">
+              <TooltipProvider>
+                {/* Continuous rest window start */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <label className="text-sm font-medium text-card-foreground">Continuous rest window — start</label>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p>The hours during which on-call doctors must have 5 continuous hours of rest (NHS standard: 22:00–07:00)</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <Input
+                    type="time"
+                    value={oncallContinuousRestStart}
+                    onChange={(e) => setOncallContinuousRestStart(e.target.value)}
+                    className="w-32"
+                  />
+                </div>
+
+                {/* Continuous rest window end */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <label className="text-sm font-medium text-card-foreground">Continuous rest window — end</label>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p>The hours during which on-call doctors must have 5 continuous hours of rest (NHS standard: 22:00–07:00)</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <Input
+                    type="time"
+                    value={oncallContinuousRestEnd}
+                    onChange={(e) => setOncallContinuousRestEnd(e.target.value)}
+                    className="w-32"
+                  />
+                </div>
+
+                {/* Max hours next day if rest not met */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <label className="text-sm font-medium text-card-foreground">Max hours next day if rest not met</label>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p>Maximum hours the following day if the rest requirement was not achieved (NHS standard: 5 hours)</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={12}
+                    value={oncallIfRestNotMetMaxHours}
+                    onChange={(e) => setOncallIfRestNotMetMaxHours(Number(e.target.value))}
+                    className="w-24"
+                  />
+                </div>
+
+                {/* Break reference period */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <label className="text-sm font-medium text-card-foreground">Break reference period (weeks)</label>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p>Number of weeks used to calculate on-call frequency limits (typically 4)</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={12}
+                    value={oncallBreakReferenceWeeks}
+                    onChange={(e) => setOncallBreakReferenceWeeks(Number(e.target.value))}
+                    className="w-24"
+                  />
+                </div>
+
+                {/* Fine threshold percentage */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <label className="text-sm font-medium text-card-foreground">Fine threshold (%)</label>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p>Percentage of reference periods where rest breaches trigger a Guardian of Safe Working fine (typically 25%)</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={oncallBreakFineThresholdPct}
+                    onChange={(e) => setOncallBreakFineThresholdPct(Number(e.target.value))}
+                    className="w-24"
+                  />
+                </div>
+              </TooltipProvider>
+            </CardContent>
+          )}
+        </Card>
+
         <div className="flex justify-between">
           <Button variant="outline" size="lg" onClick={() => navigate("/admin/wtr/step-3")}>
             <ArrowLeft className="mr-2 h-4 w-4" />Back
           </Button>
           <Button size="lg" disabled={saving} onClick={async () => {
-            // SECTION 6 — Save on /admin/wtr/step-4
             setSaving(true);
             try {
               let configId = currentRotaConfigId;
@@ -106,7 +248,6 @@ export default function WtrStep4() {
                   .eq("id", configId);
               }
 
-              // Upsert wtr_settings (all defaults from the locked on-call rules)
               const wtrFields = {
                 rota_config_id: configId,
                 max_hours_per_week: maxAvgWeekly,
@@ -124,18 +265,17 @@ export default function WtrStep4() {
                 oncall_day_after_max_hours: 10,
                 oncall_rest_per_24h: 8,
                 oncall_continuous_rest_hours: 5,
-                oncall_continuous_rest_start: "22:00",
-                oncall_continuous_rest_end: "07:00",
-                oncall_if_rest_not_met_max_hours: 5,
+                oncall_continuous_rest_start: oncallContinuousRestStart,
+                oncall_continuous_rest_end: oncallContinuousRestEnd,
+                oncall_if_rest_not_met_max_hours: oncallIfRestNotMetMaxHours,
                 oncall_no_simultaneous_shift: true,
-                oncall_break_fine_threshold_pct: 25,
-                oncall_break_reference_weeks: 4,
+                oncall_break_fine_threshold_pct: oncallBreakFineThresholdPct,
+                oncall_break_reference_weeks: oncallBreakReferenceWeeks,
                 oncall_clinical_exception_allowed: true,
                 oncall_saturday_sunday_paired: true,
                 oncall_day_after_last_consec_max_h: 10,
               };
 
-              // Check if wtr_settings exists
               const { data: existing } = await supabase
                 .from("wtr_settings")
                 .select("id")
@@ -155,7 +295,6 @@ export default function WtrStep4() {
                 if (error) throw error;
               }
 
-              // Check completion status
               const { count: shiftCount } = await supabase
                 .from("shift_types")
                 .select("id", { count: "exact", head: true })
@@ -181,7 +320,6 @@ export default function WtrStep4() {
 
               setWtrComplete(true);
               navigate("/admin/dashboard");
-              // SECTION 6 COMPLETE
             } catch (err: any) {
               console.error("WTR save failed:", err);
               toast.error("Save failed — please try again");

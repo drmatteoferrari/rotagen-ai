@@ -1,8 +1,7 @@
+// SECTION 9 COMPLETE
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { getRotaConfig, getCurrentRotaConfig, type RotaConfig } from "@/lib/rotaConfig";
-
-// SECTION 3 + 4 + 6 — App context for config ID, restored config, sessionStorage
 
 interface RotaContextType {
   currentRotaConfigId: string | null;
@@ -15,27 +14,26 @@ interface RotaContextType {
 
 const RotaContext = createContext<RotaContextType | undefined>(undefined);
 
-const SESSION_KEY = "rotaConfigId";
+const STORAGE_KEY = "currentRotaConfigId";
 
 export function RotaProvider({ children }: { children: ReactNode }) {
   const [currentRotaConfigId, setCurrentRotaConfigIdState] = useState<string | null>(
-    () => sessionStorage.getItem(SESSION_KEY)
+    () => localStorage.getItem(STORAGE_KEY)
   );
   const [restoredConfig, setRestoredConfig] = useState<RotaConfig | null>(null);
 
-  // SECTION 6 — Wrap setter to persist to sessionStorage
   const setCurrentRotaConfigId = useCallback((id: string | null) => {
     setCurrentRotaConfigIdState(id);
     if (id) {
-      sessionStorage.setItem(SESSION_KEY, id);
+      localStorage.setItem(STORAGE_KEY, id);
     } else {
-      sessionStorage.removeItem(SESSION_KEY);
+      localStorage.removeItem(STORAGE_KEY);
     }
   }, []);
 
-  // On mount, validate sessionStorage ID against DB
+  // On mount, validate localStorage ID against DB
   useEffect(() => {
-    const savedId = sessionStorage.getItem(SESSION_KEY);
+    const savedId = localStorage.getItem(STORAGE_KEY);
     if (!savedId) return;
     (async () => {
       try {
@@ -43,16 +41,14 @@ export function RotaProvider({ children }: { children: ReactNode }) {
         setRestoredConfig(config);
         setCurrentRotaConfigIdState(savedId);
       } catch {
-        // Row no longer exists
-        sessionStorage.removeItem(SESSION_KEY);
+        // Row no longer exists — clear stale ID
+        localStorage.removeItem(STORAGE_KEY);
         setCurrentRotaConfigIdState(null);
         setRestoredConfig(null);
       }
     })();
   }, []);
-  // SECTION 6 COMPLETE
 
-  // SECTION 4 — restoreForUser: called from AuthContext on login
   const restoreForUser = useCallback(async (username: string): Promise<RotaConfig | null> => {
     try {
       const config = await getCurrentRotaConfig(username);
@@ -68,12 +64,11 @@ export function RotaProvider({ children }: { children: ReactNode }) {
       return null;
     }
   }, [setCurrentRotaConfigId]);
-  // SECTION 4 COMPLETE
 
   const clearSession = useCallback(() => {
     setCurrentRotaConfigIdState(null);
     setRestoredConfig(null);
-    sessionStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(STORAGE_KEY);
   }, []);
 
   return (
@@ -95,5 +90,3 @@ export function useRotaContext() {
   if (!ctx) throw new Error("useRotaContext must be used within RotaProvider");
   return ctx;
 }
-
-// SECTION 3 + 4 + 6 COMPLETE

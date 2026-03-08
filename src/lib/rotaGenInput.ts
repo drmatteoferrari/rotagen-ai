@@ -498,3 +498,61 @@ export async function buildFinalRotaInput(configId: string): Promise<FinalRotaIn
 }
 
 // SECTION 9 COMPLETE
+
+// SECTION 10 COMPLETE — validateFinalRotaInput
+export interface ValidationResult {
+  isValid: boolean;
+  warnings: string[];
+  blockers: string[];
+}
+
+export async function validateFinalRotaInput(configId: string): Promise<ValidationResult> {
+  const warnings: string[] = [];
+  const blockers: string[] = [];
+
+  const responses = await getSurveyResponsesForConfig(configId);
+
+  // Blocker: no survey responses at all
+  if (responses.length === 0) {
+    blockers.push("No doctors have any survey responses. Cannot generate rota.");
+    return { isValid: false, warnings, blockers };
+  }
+
+  // Blocker: any doctor not submitted
+  const notSubmitted = responses.filter(r => r.status !== "submitted");
+  if (notSubmitted.length > 0) {
+    blockers.push(`${notSubmitted.length} doctor(s) have not submitted their survey: ${notSubmitted.map(r => r.full_name || r.doctor_id).join(", ")}`);
+  }
+
+  // Warnings per doctor
+  for (const r of responses) {
+    const name = r.full_name || r.doctor_id;
+
+    // WTE 100% with no LTFT days
+    if ((r.wte_percent ?? 100) === 100 && (!r.ltft_days_off || r.ltft_days_off.length === 0)) {
+      warnings.push(`${name}: WTE is 100% with no LTFT days off — confirm this is correct`);
+    }
+
+    // All competencies false
+    const compIp = (r as any).comp_ip_anaesthesia ?? false;
+    const compObs = (r as any).comp_obstetric ?? false;
+    const compIcu = (r as any).comp_icu ?? false;
+    if (!compIp && !compObs && !compIcu) {
+      warnings.push(`${name}: No competencies recorded (IP Anaesthesia, Obstetric, ICU all false)`);
+    }
+
+    // All leave arrays empty
+    const al = Array.isArray(r.annual_leave) ? r.annual_leave : [];
+    const sl = Array.isArray(r.study_leave) ? r.study_leave : [];
+    const noc = Array.isArray(r.noc_dates) ? r.noc_dates : [];
+    if (al.length === 0 && sl.length === 0 && noc.length === 0) {
+      warnings.push(`${name}: No annual leave, study leave, or NOC dates recorded`);
+    }
+  }
+
+  return {
+    isValid: blockers.length === 0,
+    warnings,
+    blockers,
+  };
+}

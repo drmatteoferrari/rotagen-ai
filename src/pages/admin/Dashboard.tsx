@@ -12,7 +12,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { generatePreRota } from "@/lib/preRotaGenerator";
-import { buildFinalRotaInput } from "@/lib/rotaGenInput";
+import { buildFinalRotaInput, validateFinalRotaInput } from "@/lib/rotaGenInput";
 import { toast } from "@/hooks/use-toast";
 import type { PreRotaResult } from "@/lib/preRotaTypes";
 // ✅ Section 1a complete — title changed to "Dashboard"
@@ -415,7 +415,7 @@ export default function Dashboard() {
         {(() => {
           const [finalLoading, setFinalLoading] = useState(false);
 
-          // SECTION 3 COMPLETE
+          // SECTION 3 + 10 COMPLETE
           const handleGenerateFinalRota = async () => {
             if (!currentRotaConfigId) {
               toast({ title: "No active rota config found", description: "Please complete setup first.", variant: "destructive" });
@@ -423,6 +423,20 @@ export default function Dashboard() {
             }
             setFinalLoading(true);
             try {
+              // Section 10 — validate before building
+              const validation = await validateFinalRotaInput(currentRotaConfigId);
+
+              if (validation.blockers.length > 0) {
+                toast({ title: "Generation blocked", description: validation.blockers.join("\n"), variant: "destructive" });
+                setFinalLoading(false);
+                return;
+              }
+
+              if (validation.warnings.length > 0) {
+                toast({ title: "Warnings found — proceeding in 2 seconds", description: validation.warnings.slice(0, 5).join("\n") });
+                await new Promise(resolve => setTimeout(resolve, 2000));
+              }
+
               const result = await buildFinalRotaInput(currentRotaConfigId);
               console.log("Final rota input:", result);
               toast({ title: "Final rota input built successfully", description: "Check console for output." });
