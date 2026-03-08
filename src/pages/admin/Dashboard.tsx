@@ -12,7 +12,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { generatePreRota } from "@/lib/preRotaGenerator";
-import { buildFinalRotaInput } from "@/lib/rotaGenInput";
+import { buildFinalRotaInput, validateFinalRotaInput } from "@/lib/rotaGenInput";
 import { toast } from "@/hooks/use-toast";
 import type { PreRotaResult } from "@/lib/preRotaTypes";
 // ✅ Section 1a complete — title changed to "Dashboard"
