@@ -629,7 +629,7 @@ export default function PreRotaCalendarPage() {
                     const primary = cell?.primary ?? 'AVAILABLE';
                     const isWknd = new Date(date + 'T00:00:00').getDay() === 0 || new Date(date + 'T00:00:00').getDay() === 6;
                     const isBH = bankHolidays.has(date);
-                    const isLtftDay = doctor.ltftDaysOff.includes(getDayName(date));
+                    const isLtftDay = getLtftDaysOff(doctor).includes(getDayNameFromISO(date));
                     const isNoc = primary === 'NOC';
 
                     const badgeEvents = (['AL', 'SL', 'ROT', 'PL'] as const).filter(e => primary === e);
