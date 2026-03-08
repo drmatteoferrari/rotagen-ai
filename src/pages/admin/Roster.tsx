@@ -160,10 +160,6 @@ export default function Roster() {
 
     if (!formattedDeadline) { toast.error("Set a survey deadline first."); return; }
 
-    // SECTION 6 COMPLETE — warn if VITE_APP_URL not set
-    if (!import.meta.env.VITE_APP_URL) {
-      toast.warning("Survey links will use the current URL origin. Set VITE_APP_URL in environment variables before sending production invites.");
-    }
 
     setSendingId(doctor.id);
 

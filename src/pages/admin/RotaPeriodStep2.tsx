@@ -52,10 +52,12 @@ const UK_BANK_HOLIDAYS: { date: [number, number, number]; name: string }[] = [
   { date: [2027, 11, 28], name: "Boxing Day (substitute)" },
 ];
 
+import { getRotaConfig } from "@/lib/rotaConfig";
+
 export default function RotaPeriodStep2() {
   const navigate = useNavigate();
   const { setPeriodComplete, rotaStartDate, rotaEndDate } = useAdminSetup();
-  const { currentRotaConfigId, setCurrentRotaConfigId } = useRotaContext();
+  const { currentRotaConfigId, setCurrentRotaConfigId, setRestoredConfig } = useRotaContext();
   const { user } = useAuth();
   const [saving, setSaving] = useState(false);
   const [bankHolidays, setBankHolidays] = useState<BankHoliday[]>([]);
@@ -158,6 +160,10 @@ export default function RotaPeriodStep2() {
         const { error: insertError } = await supabase.from("bank_holidays").insert(rows);
         if (insertError) throw insertError;
       }
+
+      // Refresh RotaContext so Roster and other pages see updated dates
+      const refreshedConfig = await getRotaConfig(configId!);
+      setRestoredConfig(refreshedConfig);
 
       toast.success("✓ Rota period saved");
       setPeriodComplete(true);
