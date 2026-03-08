@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Plus, Trash2, ArrowLeft, Info } from "lucide-react";
+import { CalendarCheck, CalendarIcon, Plus, Trash2, ArrowLeft, Save, Info } from "lucide-react";
 import { format, isWithinInterval, differenceInDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useAdminSetup } from "@/contexts/AdminSetupContext";
@@ -109,26 +109,87 @@ export default function RotaPeriodStep2() {
     setBankHolidays(bankHolidays.filter((h) => h.id !== id));
   };
 
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const startDateStr = rotaStartDate ? format(rotaStartDate, "yyyy-MM-dd") : null;
+      const endDateStr = rotaEndDate ? format(rotaEndDate, "yyyy-MM-dd") : null;
+      const durationDays = rotaStartDate && rotaEndDate ? differenceInDays(rotaEndDate, rotaStartDate) : null;
+      const durationWeeks = durationDays != null ? Number((durationDays / 7).toFixed(1)) : null;
+
+      let configId = currentRotaConfigId;
+      const configFields = {
+        rota_start_date: startDateStr,
+        rota_end_date: endDateStr,
+        rota_duration_days: durationDays,
+        rota_duration_weeks: durationWeeks,
+        rota_start_time: "08:00",
+        rota_end_time: "08:00",
+        bh_same_as_weekend: bhSameAsWeekend,
+        bh_custom_rules: bhSameAsWeekend === false ? bhCustomRules : null,
+      };
+
+      if (!configId) {
+        const { data, error } = await supabase
+          .from("rota_configs")
+          .insert({ ...configFields, owned_by: user?.username ?? "developer1" } as any)
+          .select("id")
+          .single();
+        if (error) throw error;
+        configId = data.id;
+        setCurrentRotaConfigId(configId);
+      } else {
+        const { error } = await supabase
+          .from("rota_configs")
+          .update({ ...configFields, updated_at: new Date().toISOString() })
+          .eq("id", configId);
+        if (error) throw error;
+      }
+
+      await supabase.from("bank_holidays").delete().eq("rota_config_id", configId);
+
+      if (bankHolidays.length > 0) {
+        const rows = bankHolidays.map((h) => ({
+          rota_config_id: configId!,
+          date: format(h.date, "yyyy-MM-dd"),
+          name: h.name,
+          is_auto_added: h.id.startsWith("bh-"),
+        }));
+        const { error: insertError } = await supabase.from("bank_holidays").insert(rows);
+        if (insertError) throw insertError;
+      }
+
+      toast.success("✓ Rota period saved");
+      setPeriodComplete(true);
+      navigate("/admin/dashboard");
+    } catch (err: any) {
+      console.error("Rota period save failed:", err);
+      toast.error("Save failed — please try again");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <AdminLayout title="Rota Period" subtitle="Step 2 of 2 — Bank Holidays">
       <div className="mx-auto max-w-3xl space-y-6">
-        {bankHolidays.length > 0 && (
-          <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-800">
-            <Info className="h-4 w-4 shrink-0" />
-            {bankHolidays.length} bank holiday{bankHolidays.length !== 1 ? "s" : ""} included in this rota period.
-          </div>
-        )}
+        {/* Info banner */}
+        <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-700">
+          <Info className="h-4 w-4 shrink-0 text-amber-600" />
+          Bank holidays within the rota period are auto-populated. You can modify or add custom dates.
+        </div>
 
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <CalendarIcon className="h-5 w-5 text-amber-500" />
+              <CalendarCheck className="h-5 w-5 text-amber-600" />
               Bank Holidays
             </CardTitle>
             <CardDescription>Bank holidays within the rota period are auto-populated. You can modify or add custom dates.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex flex-col gap-3 rounded-lg border border-dashed border-border p-4 sm:flex-row sm:items-end">
+            {/* Add holiday — dashed amber card */}
+            <div className="rounded-lg border border-dashed border-amber-300 p-3 flex flex-col gap-3 sm:flex-row sm:items-end">
               <div className="flex-1 space-y-2">
                 <Label>Holiday Name</Label>
                 <Input placeholder="e.g. Easter Monday" value={newHolidayName} onChange={(e) => setNewHolidayName(e.target.value)} />
@@ -147,15 +208,24 @@ export default function RotaPeriodStep2() {
                   </PopoverContent>
                 </Popover>
               </div>
-              <Button onClick={addBankHoliday} disabled={!newHolidayName || !newHolidayDate}>
+              <Button onClick={addBankHoliday} disabled={!newHolidayName || !newHolidayDate} className="bg-amber-600 hover:bg-amber-700 text-white">
                 <Plus className="mr-1.5 h-4 w-4" />Add
               </Button>
             </div>
 
+            {/* Holiday count banner */}
+            {bankHolidays.length > 0 && (
+              <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-700">
+                <Info className="h-4 w-4 shrink-0 text-amber-600" />
+                {bankHolidays.length} bank holiday{bankHolidays.length !== 1 ? "s" : ""} included in this rota period.
+              </div>
+            )}
+
+            {/* Holiday list — WTR card row style */}
             {bankHolidays.length > 0 ? (
-              <div className="divide-y divide-border rounded-lg border border-border">
+              <div className="space-y-2">
                 {bankHolidays.map((holiday) => (
-                  <div key={holiday.id} className="flex items-center justify-between px-4 py-3">
+                  <div key={holiday.id} className="rounded-lg border border-border p-4 flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-card-foreground">{holiday.name}</p>
                       <p className="text-xs text-muted-foreground">{format(holiday.date, "EEEE, d MMMM yyyy")}</p>
@@ -172,7 +242,7 @@ export default function RotaPeriodStep2() {
           </CardContent>
         </Card>
 
-        {/* ✅ Section 5a — Bank Holiday Rules Card */}
+        {/* Bank Holiday Rules Card */}
         <Card>
           <CardContent className="pt-6 space-y-4">
             <div>
@@ -184,14 +254,14 @@ export default function RotaPeriodStep2() {
                 type="button"
                 onClick={() => setBhSameAsWeekend(true)}
                 className={`px-6 py-2 rounded-lg text-sm font-semibold border-2 transition-colors ${
-                  bhSameAsWeekend === true ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-background text-muted-foreground'
+                  bhSameAsWeekend === true ? 'border-amber-600 bg-amber-50 text-amber-700' : 'border-border bg-background text-muted-foreground'
                 }`}
               >Yes</button>
               <button
                 type="button"
                 onClick={() => setBhSameAsWeekend(false)}
                 className={`px-6 py-2 rounded-lg text-sm font-semibold border-2 transition-colors ${
-                  bhSameAsWeekend === false ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-background text-muted-foreground'
+                  bhSameAsWeekend === false ? 'border-amber-600 bg-amber-50 text-amber-700' : 'border-border bg-background text-muted-foreground'
                 }`}
               >No — different rules apply</button>
             </div>
@@ -209,77 +279,15 @@ export default function RotaPeriodStep2() {
             )}
           </CardContent>
         </Card>
-        {/* ✅ Section 5a complete */}
+
+        {/* Navigation */}
         <div className="flex justify-between">
           <Button variant="outline" size="lg" onClick={() => navigate("/admin/rota-period/step-1")}>
             <ArrowLeft className="mr-2 h-4 w-4" />Back
           </Button>
-          <Button size="lg" disabled={saving} onClick={async () => {
-            // SECTION 5 — Save on /admin/rota-period/step-2
-            setSaving(true);
-            try {
-              const startDateStr = rotaStartDate ? format(rotaStartDate, "yyyy-MM-dd") : null;
-              const endDateStr = rotaEndDate ? format(rotaEndDate, "yyyy-MM-dd") : null;
-              const durationDays = rotaStartDate && rotaEndDate ? differenceInDays(rotaEndDate, rotaStartDate) : null;
-              const durationWeeks = durationDays != null ? Number((durationDays / 7).toFixed(1)) : null;
-
-              let configId = currentRotaConfigId;
-              const configFields = {
-                rota_start_date: startDateStr,
-                rota_end_date: endDateStr,
-                rota_duration_days: durationDays,
-                rota_duration_weeks: durationWeeks,
-                rota_start_time: "08:00",
-                rota_end_time: "08:00",
-                // ✅ Section 5c — persist BH rules
-                bh_same_as_weekend: bhSameAsWeekend,
-                bh_custom_rules: bhSameAsWeekend === false ? bhCustomRules : null,
-              };
-
-              if (!configId) {
-                const { data, error } = await supabase
-                  .from("rota_configs")
-                  .insert({ ...configFields, owned_by: user?.username ?? "developer1" } as any)
-                  .select("id")
-                  .single();
-                if (error) throw error;
-                configId = data.id;
-                setCurrentRotaConfigId(configId);
-              } else {
-                const { error } = await supabase
-                  .from("rota_configs")
-                  .update({ ...configFields, updated_at: new Date().toISOString() })
-                  .eq("id", configId);
-                if (error) throw error;
-              }
-
-              // Delete existing bank_holidays
-              await supabase.from("bank_holidays").delete().eq("rota_config_id", configId);
-
-              // Insert bank_holidays
-              if (bankHolidays.length > 0) {
-                const rows = bankHolidays.map((h) => ({
-                  rota_config_id: configId!,
-                  date: format(h.date, "yyyy-MM-dd"),
-                  name: h.name,
-                  is_auto_added: h.id.startsWith("bh-"),
-                }));
-                const { error: insertError } = await supabase.from("bank_holidays").insert(rows);
-                if (insertError) throw insertError;
-              }
-
-              toast.success("✓ Rota period saved");
-              setPeriodComplete(true);
-              navigate("/admin/dashboard");
-              // SECTION 5 COMPLETE
-            } catch (err: any) {
-              console.error("Rota period save failed:", err);
-              toast.error("Save failed — please try again");
-            } finally {
-              setSaving(false);
-            }
-          }} className="bg-amber-500 hover:bg-amber-600">
+          <Button size="lg" disabled={saving} onClick={handleSave} className="bg-amber-600 hover:bg-amber-700">
             {saving ? "Saving…" : "Save Rota Period"}
+            {!saving && <Save className="ml-2 h-4 w-4" />}
           </Button>
         </div>
       </div>
