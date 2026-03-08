@@ -93,6 +93,11 @@ export interface SurveyFormData {
   parentalLeaveEnd: string;
   parentalLeaveNotes: string;
   otherSchedulingRestrictions: string;
+  exemptFromNights: boolean;
+  exemptFromWeekends: boolean;
+  exemptFromOncall: boolean;
+  specificDaysOff: string[];
+  exemptionDetails: string;
 
   // Step 6
   specialtiesRequested: SpecialtyEntry[];
@@ -142,6 +147,11 @@ const DEFAULT_FORM_DATA: SurveyFormData = {
   parentalLeaveEnd: "",
   parentalLeaveNotes: "",
   otherSchedulingRestrictions: "",
+  exemptFromNights: false,
+  exemptFromWeekends: false,
+  exemptFromOncall: false,
+  specificDaysOff: [],
+  exemptionDetails: "",
   specialtiesRequested: [],
   specialSessions: [],
   signoffNeeds: "",
@@ -219,6 +229,11 @@ function formDataToDbRow(fd: SurveyFormData) {
     parental_leave_end: fd.parentalLeaveEnd || null,
     parental_leave_notes: fd.parentalLeaveNotes,
     additional_restrictions: fd.otherSchedulingRestrictions,
+    exempt_from_nights: fd.exemptFromNights,
+    exempt_from_weekends: fd.exemptFromWeekends,
+    exempt_from_oncall: fd.exemptFromOncall,
+    specific_days_off: fd.specificDaysOff,
+    exemption_details: fd.exemptionDetails,
     specialties_requested: fd.specialtiesRequested as any,
     special_sessions: fd.specialSessions,
     signoff_needs: fd.signoffNeeds,
@@ -265,6 +280,11 @@ function dbRowToFormData(draft: any, base: SurveyFormData): SurveyFormData {
     parentalLeaveEnd: draft.parental_leave_end || "",
     parentalLeaveNotes: draft.parental_leave_notes || "",
     otherSchedulingRestrictions: draft.additional_restrictions || "",
+    exemptFromNights: draft.exempt_from_nights || false,
+    exemptFromWeekends: draft.exempt_from_weekends || false,
+    exemptFromOncall: draft.exempt_from_oncall || false,
+    specificDaysOff: draft.specific_days_off || [],
+    exemptionDetails: draft.exemption_details || "",
     specialtiesRequested: draft.specialties_requested || [],
     specialSessions: draft.special_sessions || [],
     signoffNeeds: draft.signoff_needs || "",

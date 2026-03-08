@@ -1,3 +1,4 @@
+// SECTION 1 COMPLETE
 import { useState } from "react";
 import { useSurveyContext, type LeaveEntry, type RotationEntry } from "@/contexts/SurveyContext";
 import { StepNav } from "@/components/survey/StepNav";

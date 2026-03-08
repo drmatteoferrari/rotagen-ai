@@ -12,6 +12,8 @@ import {
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { generatePreRota } from "@/lib/preRotaGenerator";
+import { buildFinalRotaInput } from "@/lib/rotaGenInput";
+import { toast } from "@/hooks/use-toast";
 import type { PreRotaResult } from "@/lib/preRotaTypes";
 // ✅ Section 1a complete — title changed to "Dashboard"
 // ✅ Section 2 complete — icon sizes increased
@@ -33,6 +35,7 @@ export default function Dashboard() {
   const [preRotaError, setPreRotaError] = useState<string | null>(null);
   const [isStale, setIsStale] = useState(false);
   const [issuesPanelOpen, setIssuesPanelOpen] = useState(false);
+  const [finalLoading, setFinalLoading] = useState(false);
 
   // Live survey counts
 
@@ -409,28 +412,60 @@ export default function Dashboard() {
         </div>
 
         {/* 3. Final Allocation Rota */}
-        <div className="rounded-xl border border-border bg-card p-5 shadow-sm opacity-60">
-          <div className="flex items-center gap-2 mb-1">
-            <ShieldCheck className="h-6 w-6 text-muted-foreground" />
-            <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">3. Final Allocation Rota</h2>
-          </div>
-          {/* ✅ Section 1d complete — numbered heading */}
-          <p className="text-xs text-muted-foreground mb-4">
-            Verify data quality and run the allocation algorithm.
-          </p>
-          <div className="space-y-2 mb-4">
-            {["Pre-rota data generated", "All surveys completed", "No scheduling conflicts"].map((item) => (
-              <label key={item} className="flex items-center gap-2 text-sm text-muted-foreground">
-                <input type="checkbox" disabled className="rounded border-border" />
-                {item}
-              </label>
-            ))}
-          </div>
-          <Button size="lg" className="w-full" disabled>
-            <Lock className="mr-2 h-4 w-4" />
-            Run Allocation Algorithm
-          </Button>
-        </div>
+        {(() => {
+          const [finalLoading, setFinalLoading] = useState(false);
+
+          // SECTION 3 COMPLETE
+          const handleGenerateFinalRota = async () => {
+            if (!currentRotaConfigId) {
+              toast({ title: "No active rota config found", description: "Please complete setup first.", variant: "destructive" });
+              return;
+            }
+            setFinalLoading(true);
+            try {
+              const result = await buildFinalRotaInput(currentRotaConfigId);
+              console.log("Final rota input:", result);
+              toast({ title: "Final rota input built successfully", description: "Check console for output." });
+            } catch (err: any) {
+              console.error("Final rota build failed:", err);
+              toast({ title: "Final rota build failed", description: err?.message || "Unknown error", variant: "destructive" });
+            } finally {
+              setFinalLoading(false);
+            }
+          };
+
+          return (
+            <div className="rounded-xl border border-border bg-card p-5 shadow-sm opacity-60">
+              <div className="flex items-center gap-2 mb-1">
+                <ShieldCheck className="h-6 w-6 text-muted-foreground" />
+                <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">3. Final Allocation Rota</h2>
+              </div>
+              <p className="text-xs text-muted-foreground mb-4">
+                Verify data quality and run the allocation algorithm.
+              </p>
+              <div className="space-y-2 mb-4">
+                {["Pre-rota data generated", "All surveys completed", "No scheduling conflicts"].map((item) => (
+                  <label key={item} className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <input type="checkbox" disabled className="rounded border-border" />
+                    {item}
+                  </label>
+                ))}
+              </div>
+              <Button
+                size="lg"
+                className="w-full"
+                disabled={!canGeneratePreRota || finalLoading}
+                onClick={handleGenerateFinalRota}
+              >
+                {finalLoading ? (
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Building…</>
+                ) : (
+                  <><Play className="mr-2 h-4 w-4" /> Generate Final Rota Input</>
+                )}
+              </Button>
+            </div>
+          );
+        })()}
       </div>
     </AdminLayout>
   );

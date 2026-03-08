@@ -1,7 +1,9 @@
+// SECTION 2 COMPLETE
 import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { SurveyProvider, useSurveyContext } from "@/contexts/SurveyContext";
+import { SurveyModeProvider } from "@/contexts/SurveyModeContext";
 import { SurveyShell } from "@/components/survey/SurveyShell";
 import { DoctorLayout } from "@/components/DoctorLayout";
 import { Loader2, ShieldAlert } from "lucide-react";
@@ -11,8 +13,6 @@ import SurveyStep3 from "@/pages/doctor/SurveyStep3";
 import SurveyStep4 from "@/pages/doctor/SurveyStep4";
 import SurveyStep5 from "@/pages/doctor/SurveyStep5";
 import SurveyStep6 from "@/pages/doctor/SurveyStep6";
-
-// ✅ Section 13 complete
 
 const stepComponents: Record<number, React.ComponentType> = {
   1: SurveyStep1,
@@ -64,25 +64,36 @@ function OverrideInner() {
   );
 }
 
+interface DoctorRow {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string | null;
+  survey_token: string | null;
+}
+
 export default function SurveyOverride() {
   const { doctorId } = useParams();
-  const [token, setToken] = useState<string | null>(null);
+  const [doctor, setDoctor] = useState<DoctorRow | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
-    async function loadToken() {
-      if (!doctorId) return;
-      const { data } = await supabase
+    async function loadDoctor() {
+      if (!doctorId) { setError(true); setLoading(false); return; }
+      const { data, error: err } = await supabase
         .from("doctors")
-        .select("survey_token")
+        .select("id, first_name, last_name, email, survey_token")
         .eq("id", doctorId)
         .maybeSingle();
-      if (data?.survey_token) {
-        setToken(data.survey_token);
+      if (err || !data) {
+        setError(true);
+      } else {
+        setDoctor(data);
       }
       setLoading(false);
     }
-    loadToken();
+    loadDoctor();
   }, [doctorId]);
 
   if (loading) {
@@ -95,17 +106,26 @@ export default function SurveyOverride() {
     );
   }
 
-  if (!token) {
+  if (error || !doctor || !doctor.survey_token) {
     return (
       <DoctorLayout>
-        <div className="flex items-center justify-center min-h-full text-slate-500">Doctor not found</div>
+        <div className="flex items-center justify-center min-h-full text-slate-500">
+          Doctor not found. Please return to the Roster.
+        </div>
       </DoctorLayout>
     );
   }
 
   return (
-    <SurveyProvider token={token}>
-      <OverrideInner />
-    </SurveyProvider>
+    <SurveyModeProvider
+      isAdminMode
+      doctorId={doctor.id}
+      doctorName={`${doctor.first_name} ${doctor.last_name}`}
+      doctorEmail={doctor.email ?? undefined}
+    >
+      <SurveyProvider token={doctor.survey_token} adminMode>
+        <OverrideInner />
+      </SurveyProvider>
+    </SurveyModeProvider>
   );
 }
