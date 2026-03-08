@@ -31,6 +31,13 @@ export default function SurveyStep7() {
   if (!ctx) return null;
   const { formData, setField, submitSurvey, submitting, submitError, saveDraft, setStep, isAdminMode } = ctx;
 
+  // Auto-set signature date to today if not already set
+  if (!formData.signatureDate) {
+    const today = new Date().toISOString().split("T")[0];
+    // Use setTimeout to avoid setting state during render
+    setTimeout(() => setField("signatureDate", today), 0);
+  }
+
   const validate = (): boolean => {
     const e: Record<string, string> = {};
     if (!formData.confirmedAccurate) e.confirmed = "You must confirm this is accurate";
@@ -297,7 +304,7 @@ export default function SurveyStep7() {
                     <span className="text-sm font-medium text-card-foreground">Date</span>
                     <span className="text-[11px] font-semibold text-teal-600 mt-0.5">Required</span>
                   </div>
-                  <Input type="date" value={formData.signatureDate || new Date().toISOString().split("T")[0]} onChange={(e) => setField("signatureDate", e.target.value)} className="w-full bg-muted border-border" />
+                  <Input type="date" value={formData.signatureDate || new Date().toISOString().split("T")[0]} onChange={(e) => setField("signatureDate", e.target.value)} className="w-full bg-muted border-border" readOnly />
                 </div>
                 <FieldError message={errors.sigDate} />
               </div>
