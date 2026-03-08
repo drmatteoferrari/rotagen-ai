@@ -305,11 +305,14 @@ export default function PreRotaCalendarPage() {
       const sMap: Record<string, SurveyMap> = {};
       for (const s of surveyRows ?? []) {
         sMap[(s as any).doctor_id] = {
-          ltftDaysOff: (s as any).ltft_days_off ?? [],
-          ltftNightFlexibility: (s as any).ltft_night_flexibility ?? [],
+          ltftDaysOff: ((s as any).ltft_days_off ?? []).map(normaliseDayName),
+          ltftNightFlexibility: ((s as any).ltft_night_flexibility ?? []).map((f: any) => ({
+            ...f, day: normaliseDayName(f.day ?? ''),
+          })),
         };
       }
       setSurveysMap(sMap);
+      // ✅ Section 3.2 complete — survey map with normalised day names
 
       // Account settings
       const { data: config } = await supabase
