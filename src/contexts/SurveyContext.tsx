@@ -418,11 +418,12 @@ export function SurveyProvider({ token, children }: { token: string | null; chil
     }
   };
 
-  // Auto-save
+  // ✅ Section 4 complete — Auto-save with status indicator
   const saveDraft = useCallback(async () => {
     const doc = doctorRef.current;
     if (!doc) return;
     const fd = formDataRef.current;
+    setSaveStatus('saving');
     try {
       const row = formDataToDbRow(fd);
       const { error } = await supabase
@@ -447,8 +448,11 @@ export function SurveyProvider({ token, children }: { token: string | null; chil
         .in("survey_status", ["not_started", "not_sent"]);
 
       setDraftSavedAt(new Date());
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 2000);
     } catch (err) {
       console.error("Auto-save failed:", err);
+      setSaveStatus('error');
     }
   }, []);
 
