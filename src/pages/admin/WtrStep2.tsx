@@ -5,25 +5,24 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ArrowLeft, ArrowRight, Minus, Plus, Layers, CheckCircle, AlertTriangle, Info } from "lucide-react";
 
-function ConsecWarning({ value, threshold, label }: { value: number; threshold: number; label: string }) {
-  if (value < threshold) {
+function ConsecWarning({ value, max, label }: { value: number; max: number; label: string }) {
+  if (value <= max) {
     return (
       <div className="flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-700 mt-2">
         <CheckCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-        ✅ More restrictive than WTR default.
+        {value === max
+          ? `Matches the WTR maximum of ${max} consecutive ${label} — compliant.`
+          : `More restrictive than the WTR maximum of ${max} consecutive ${label} — compliant.`}
       </div>
     );
   }
-  if (value > threshold) {
-    const extra = label === "night" ? " Rest of at least 46 hours must follow." : "";
-    return (
-      <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 mt-2">
-        <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-        ⚠️ WTR WARNING: Exceeding {threshold} consecutive {label} shifts may breach Working Time Regulations.{extra}
-      </div>
-    );
-  }
-  return null;
+  const extra = label === "nights" ? " Rest of at least 46 hours must follow." : "";
+  return (
+    <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 mt-2">
+      <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+      ⚠️ WTR WARNING: Exceeding {max} consecutive {label} may breach Working Time Regulations.{extra}
+    </div>
+  );
 }
 
 export default function WtrStep2() {
@@ -31,9 +30,9 @@ export default function WtrStep2() {
   const { maxConsecDays, setMaxConsecDays, maxConsecLong, setMaxConsecLong, maxConsecNights, setMaxConsecNights } = useAdminSetup();
 
   const limits = [
-    { label: "Max Consecutive Days", sub: "Standard shifts", value: maxConsecDays, set: setMaxConsecDays, threshold: 7, type: "standard" },
-    { label: "Max Consecutive Long Shifts", sub: "Consecutive long shifts", value: maxConsecLong, set: setMaxConsecLong, threshold: 7, type: "long" },
-    { label: "Max Consecutive Nights", sub: "Consecutive nights", value: maxConsecNights, set: setMaxConsecNights, threshold: 4, type: "night" },
+    { label: "Max Consecutive Days", sub: "Standard shifts", hint: "WTR maximum: 7 days", value: maxConsecDays, set: setMaxConsecDays, max: 7, type: "days" },
+    { label: "Max Consecutive Long Shifts", sub: "Consecutive long shifts", hint: "WTR maximum: 7 shifts", value: maxConsecLong, set: setMaxConsecLong, max: 7, type: "long shifts" },
+    { label: "Max Consecutive Nights", sub: "Consecutive nights", hint: "WTR maximum: 4 nights", value: maxConsecNights, set: setMaxConsecNights, max: 4, type: "nights" },
   ];
 
   return (
@@ -59,6 +58,7 @@ export default function WtrStep2() {
                   <div className="flex flex-col">
                     <span className="text-sm font-medium text-card-foreground">{item.label}</span>
                     <span className="text-xs text-muted-foreground">{item.sub}</span>
+                    <span className="text-[11px] font-semibold text-red-600 mt-0.5">{item.hint}</span>
                   </div>
                   <div className="flex items-center gap-3 bg-muted p-1.5 rounded-lg border border-border">
                     <button
@@ -76,7 +76,7 @@ export default function WtrStep2() {
                     </button>
                   </div>
                 </div>
-                <ConsecWarning value={item.value} threshold={item.threshold} label={item.type} />
+                <ConsecWarning value={item.value} max={item.max} label={item.type} />
               </div>
             ))}
           </CardContent>

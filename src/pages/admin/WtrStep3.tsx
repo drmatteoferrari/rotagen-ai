@@ -5,24 +5,23 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ArrowLeft, ArrowRight, Minus, Plus, Clock, CheckCircle, AlertTriangle, XCircle, Info } from "lucide-react";
 
-function RestWarning({ value, min, fieldName }: { value: number; min: number; fieldName: string }) {
-  if (value > min) {
+function MinWarning({ value, min, label }: { value: number; min: number; label: string }) {
+  if (value >= min) {
     return (
       <div className="flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-700 mt-2">
         <CheckCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-        ✅ More protective than WTR minimum.
+        {value === min
+          ? `Matches the WTR minimum of ${min} hrs — compliant.`
+          : `More protective than the WTR minimum of ${min} hrs — compliant.`}
       </div>
     );
   }
-  if (value < min) {
-    return (
-      <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 mt-2">
-        <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-        ⚠️ WTR WARNING: {fieldName} must be at least {min} hours. Setting below this may breach Working Time Regulations.
-      </div>
-    );
-  }
-  return null;
+  return (
+    <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 mt-2">
+      <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+      ⚠️ WTR WARNING: {label} must be at least {min} hrs. Setting below this may breach Working Time Regulations.
+    </div>
+  );
 }
 
 export default function WtrStep3() {
@@ -30,9 +29,9 @@ export default function WtrStep3() {
   const { restPostNights, setRestPostNights, restPostBlock, setRestPostBlock, restAfter7, setRestAfter7, weekendFreq, setWeekendFreq } = useAdminSetup();
 
   const restFields = [
-    { label: "Rest After Consecutive Nights", sub: "Minimum mandatory rest period", value: restPostNights, set: setRestPostNights, min: 46, fieldName: "Rest after consecutive nights" },
-    { label: "Rest After 4 Long Shifts", sub: "Post-block recovery period", value: restPostBlock, set: setRestPostBlock, min: 48, fieldName: "Rest after 4 consecutive long shifts" },
-    { label: "Rest After 7 Standard Shifts", sub: "Weekly recovery requirement", value: restAfter7, set: setRestAfter7, min: 48, fieldName: "Rest after 7 consecutive standard shifts" },
+    { label: "Rest After Consecutive Nights", sub: "Minimum mandatory rest period", hint: "WTR minimum: 46 hrs", value: restPostNights, set: setRestPostNights, min: 46, warnLabel: "Rest after consecutive nights" },
+    { label: "Rest After 4 Long Shifts", sub: "Post-block recovery period", hint: "WTR minimum: 48 hrs", value: restPostBlock, set: setRestPostBlock, min: 48, warnLabel: "Rest after 4 consecutive long shifts" },
+    { label: "Rest After 7 Standard Shifts", sub: "Weekly recovery requirement", hint: "WTR minimum: 48 hrs", value: restAfter7, set: setRestAfter7, min: 48, warnLabel: "Rest after 7 consecutive standard shifts" },
   ];
 
   return (
@@ -60,6 +59,7 @@ export default function WtrStep3() {
                   <div className="flex flex-col">
                     <span className="text-sm font-medium text-card-foreground">{field.label}</span>
                     <span className="text-xs text-muted-foreground">{field.sub}</span>
+                    <span className="text-[11px] font-semibold text-red-600 mt-0.5">{field.hint}</span>
                   </div>
                   <div className="flex items-center gap-3 bg-muted p-1.5 rounded-lg border border-border">
                     <button
@@ -77,7 +77,7 @@ export default function WtrStep3() {
                     </button>
                   </div>
                 </div>
-                <RestWarning value={field.value} min={field.min} fieldName={field.fieldName} />
+                <MinWarning value={field.value} min={field.min} label={field.warnLabel} />
               </div>
             ))}
 
@@ -88,6 +88,7 @@ export default function WtrStep3() {
                 <div className="flex flex-col">
                   <span className="text-sm font-medium text-card-foreground">Weekend frequency: 1 in</span>
                   <span className="text-xs text-muted-foreground">Maximum weekend working ratio</span>
+                  <span className="text-[11px] font-semibold text-red-600 mt-0.5">WTR advised: 1 in 3 or less frequent</span>
                 </div>
                 <div className="flex items-center gap-3 bg-muted p-1.5 rounded-lg border border-border">
                   <button
@@ -114,7 +115,13 @@ export default function WtrStep3() {
               {weekendFreq === 2 && (
                 <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 mt-2">
                   <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-                  ⚠️ AUTHORISATION REQUIRED: A rota pattern of 1 in 2 weekends requires authorisation. A clearly identified clinical reason must be agreed by the Clinical Director and deemed appropriate by the Guardian of Safe Working Hours.
+                  ⚠️ AUTHORISATION REQUIRED: 1 in 2 weekends requires authorisation from the Clinical Director and Guardian of Safe Working Hours.
+                </div>
+              )}
+              {weekendFreq >= 3 && (
+                <div className="flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-700 mt-2">
+                  <CheckCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                  1 in {weekendFreq} weekends — compliant with WTR guidance.
                 </div>
               )}
             </div>
