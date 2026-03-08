@@ -352,7 +352,7 @@ function ExpandedCard({
         <div className="space-y-2">
           <Label className="text-xs font-medium">Minimum competency cover required on this shift</Label>
           <p className="text-[10px] text-muted-foreground">The algorithm will ensure at least this many doctors with each competency are assigned. Set to 0 if no requirement.</p>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 sm:grid-cols-3 gap-3">
             {([
               { key: "reqIac" as const, label: "IAC" },
               { key: "reqIaoc" as const, label: "IAOC" },
