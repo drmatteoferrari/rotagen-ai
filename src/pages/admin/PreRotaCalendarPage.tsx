@@ -327,15 +327,14 @@ export default function PreRotaCalendarPage() {
         .eq('id', rotaConfigId)
         .single();
       if (config) {
+        // ✅ Section 1 complete — .maybeSingle() prevents crash when no account_settings exist
         const { data: acct } = await supabase
           .from('account_settings')
           .select('department_name, trust_name')
           .eq('owned_by', (config as any).owned_by)
-          .single();
-        if (acct) {
-          setDeptName((acct as any).department_name ?? cd.departmentName ?? '');
-          setHospitalName((acct as any).trust_name ?? cd.hospitalName ?? '');
-        }
+          .maybeSingle();
+        setDeptName((acct as any)?.department_name ?? cd.departmentName ?? 'Department');
+        setHospitalName((acct as any)?.trust_name ?? cd.hospitalName ?? 'Trust');
       }
 
       // ✅ Section 3.3 complete — merge ltftDaysOff from surveys into calendar doctors
