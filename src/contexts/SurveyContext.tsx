@@ -93,6 +93,11 @@ export interface SurveyFormData {
   parentalLeaveEnd: string;
   parentalLeaveNotes: string;
   otherSchedulingRestrictions: string;
+  exemptFromNights: boolean;
+  exemptFromWeekends: boolean;
+  exemptFromOncall: boolean;
+  specificDaysOff: string[];
+  exemptionDetails: string;
 
   // Step 6
   specialtiesRequested: SpecialtyEntry[];
