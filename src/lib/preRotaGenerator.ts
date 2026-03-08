@@ -110,7 +110,7 @@ export async function generatePreRota(
 
     // 10. If blocked: save issues only, return early
     if (hasCritical) {
-      const { data: saved } = await supabase.from('pre_rota_results' as any).upsert({
+      const { data: saved } = await supabase.from('pre_rota_results').upsert({
         rota_config_id: rotaConfigId,
         generated_at: new Date().toISOString(),
         generated_by: generatedBy,
