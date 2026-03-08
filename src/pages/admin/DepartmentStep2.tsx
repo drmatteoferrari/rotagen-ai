@@ -92,15 +92,21 @@ function CollapsedCard({
       className="rounded-lg border border-border bg-card p-4 space-y-3 transition-all hover:shadow-md cursor-pointer"
     >
       <div className="flex justify-between items-start">
-        <div className="flex flex-col gap-2">
-          <h3 className="text-sm font-medium text-card-foreground">{shift.name}</h3>
+        <div className="flex flex-col gap-2 min-w-0 flex-1">
+          <h3 className="text-sm font-medium text-card-foreground truncate">{shift.name}</h3>
           <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-            <Clock className="h-3.5 w-3.5" />
+            <Clock className="h-3.5 w-3.5 shrink-0" />
             {shift.startTime} – {shift.endTime} ({shift.durationHours}h)
           </p>
-          <BadgeRow shift={shift} editable={false} />
+          {/* Show icon-only badges on mobile, full badges on sm+ */}
+          <div className="sm:hidden">
+            <BadgeRow shift={shift} editable={false} compact />
+          </div>
+          <div className="hidden sm:block">
+            <BadgeRow shift={shift} editable={false} />
+          </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 shrink-0 ml-2">
           {canRemove && (
             <button
               onClick={(e) => { e.stopPropagation(); onRemove(); }}
