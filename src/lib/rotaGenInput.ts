@@ -235,6 +235,15 @@ export interface DoctorSurveyResponse {
   additional_notes: string | null;
   status: string;
   submitted_at: string | null;
+  // Previously missing fields — eliminates `as any` casts
+  parental_leave_expected: boolean | null;
+  parental_leave_start: string | null;
+  parental_leave_end: string | null;
+  parental_leave_notes: string | null;
+  competencies_json: Record<string, any> | null;
+  comp_ip_anaesthesia: boolean | null;
+  comp_obstetric: boolean | null;
+  comp_icu: boolean | null;
 }
 
 export async function getSurveyResponsesForConfig(configId: string): Promise<DoctorSurveyResponse[]> {
