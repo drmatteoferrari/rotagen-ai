@@ -159,6 +159,9 @@ export interface DoctorPreference {
   annualLeave: Array<{ startDate: string; endDate: string; notes: string }>;
   studyLeave: Array<{ startDate: string; endDate: string; reason: string }>;
   nocDates: string[];
+  // ✅ Section 3 complete — parental leave added to DoctorPreference
+  parentalLeaveDates: string[];
+  parentalLeaveNotes?: string;
   exemptFromNights: boolean;
   exemptFromWeekends: boolean;
   exemptFromOncall: boolean;
