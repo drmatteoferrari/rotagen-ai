@@ -14,14 +14,35 @@ import {
 const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 const SESSION_KEY = 'rotaConfigId';
 
-function addDays(isoDate: string, n: number): string {
-  const d = new Date(isoDate + 'T00:00:00');
-  d.setDate(d.getDate() + n);
-  return d.toISOString().split('T')[0];
+// ✅ Section 2.1 complete — UTC-safe day name derivation
+const FULL_DAY_NAMES: Record<string, string> = {
+  sun: 'sunday', mon: 'monday', tue: 'tuesday', wed: 'wednesday',
+  thu: 'thursday', fri: 'friday', sat: 'saturday',
+  sunday: 'sunday', monday: 'monday', tuesday: 'tuesday', wednesday: 'wednesday',
+  thursday: 'thursday', friday: 'friday', saturday: 'saturday',
+};
+
+function normaliseDayName(raw: string): string {
+  return FULL_DAY_NAMES[raw.toLowerCase()] ?? raw.toLowerCase();
+}
+// ✅ Section 2.2 complete — case + abbreviation normalisation
+
+function getDayNameFromISO(isoDate: string): string {
+  const [year, month, day] = isoDate.split('-').map(Number);
+  const d = new Date(Date.UTC(year, month - 1, day));
+  return DAY_NAMES[d.getUTCDay()];
 }
 
-function getDayName(date: string): string {
-  return DAY_NAMES[new Date(date + 'T00:00:00').getDay()];
+function getLtftDaysOff(doctor: any): string[] {
+  const raw = doctor.ltftDaysOff ?? doctor.ltft_days_off ?? [];
+  return (Array.isArray(raw) ? raw : []).map(normaliseDayName);
+}
+// ✅ Section 4 complete — snake_case vs camelCase safe accessor
+
+function addDays(isoDate: string, n: number): string {
+  const [y, m, d] = isoDate.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d + n));
+  return dt.toISOString().split('T')[0];
 }
 
 function availabilityColour(count: number, min: number): string {
