@@ -445,7 +445,6 @@ export default function PreRotaCalendarPage() {
   const { weeks, doctors } = calendarData;
 
   // ── MOBILE: single-day view ──
-  const [showBreakdown, setShowBreakdown] = useState(false);
 
   if (isMobile) {
     const currentDate = allDates[currentDayIndex] ?? allDates[0];
