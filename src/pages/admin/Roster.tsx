@@ -518,7 +518,7 @@ export default function Roster() {
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-muted-foreground">Grade: {doctor.grade}</span>
                       <div className="flex items-center gap-0.5">
-                        {renderSendButton(doctor, sendState, isSending, isSuccess)}
+                        {renderSendButton(doctor, sendState, isSending, isSuccess, "mobile")}
                         {renderCopyButton(doctor, isCopied)}
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => doctor.survey_token && navigate(`/doctor/survey?token=${doctor.survey_token}&admin=true`)} disabled={!doctor.survey_token}>
                           <Pencil className="h-3.5 w-3.5" />
