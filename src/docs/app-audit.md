@@ -25,7 +25,7 @@
 
 **Foreign Keys:** None
 
-**Unique Constraints:** None explicit (upsert uses `owned_by` as conflict target in code)
+**Unique Constraints:** `owned_by` (added Section 8 fix)
 
 **RLS Policies:**
 
