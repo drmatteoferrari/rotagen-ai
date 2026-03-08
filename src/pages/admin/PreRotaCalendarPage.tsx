@@ -465,7 +465,7 @@ export default function PreRotaCalendarPage() {
             {doctors.map(doctor => {
               const cell = doctor.availability[currentDate];
               const primary = cell?.primary ?? 'AVAILABLE';
-              const isLtftDay = doctor.ltftDaysOff.includes(getDayName(currentDate));
+              const isLtftDay = getLtftDaysOff(doctor).includes(getDayNameFromISO(currentDate));
 
               return (
                 <div key={doctor.doctorId} className="rounded-lg border border-border bg-card p-3 min-h-[44px]">
