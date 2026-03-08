@@ -454,6 +454,10 @@ export default function PreRotaCalendarPage() {
       const p = doc.availability[currentDate]?.primary ?? 'AVAILABLE';
       return !['AL', 'SL', 'ROT', 'PL', 'NOC'].includes(p);
     }).length;
+    const nocOnlyCount = doctors.filter(doc => {
+      const p = doc.availability[currentDate]?.primary ?? 'AVAILABLE';
+      return p === 'NOC';
+    }).length;
 
     return (
       <AdminLayout title="Availability Calendar">
