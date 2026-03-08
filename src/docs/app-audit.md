@@ -352,18 +352,22 @@ No triggers are currently registered in the database.
 |----------|-----------|---------------|------|---------------------|
 | `/login` | `Login` | No | Any | None |
 | `/` | `Index` | Yes | Coordinator | Redirects to `/admin/dashboard` |
-| `/admin/dashboard` | `Dashboard` | Yes | Coordinator | Account settings (via `loadAccountSettings`), survey counts from `doctors` table |
+| `/admin/dashboard` | `Dashboard` | Yes | Coordinator | Account settings (via `loadAccountSettings`), survey counts from `doctors` table, existing `pre_rota_results` |
 | `/admin/rota-period/step-1` | `RotaPeriodStep1` | Yes | Coordinator | None (reads from AdminSetupContext) |
-| `/admin/rota-period/step-2` | `RotaPeriodStep2` | Yes | Coordinator | UK bank holidays (hardcoded), existing config via context |
-| `/admin/department/step-1` | `DepartmentStep1` | Yes | Coordinator | None (reads from DepartmentSetupContext) |
-| `/admin/department/step-2` | `DepartmentStep2` | Yes | Coordinator | None (reads from DepartmentSetupContext) |
+| `/admin/rota-period/step-2` | `RotaPeriodStep2` | Yes | Coordinator | UK bank holidays (hardcoded), existing config via context, BH rules from `rota_configs` |
+| `/admin/department/step-1` | `DepartmentStep1` | Yes | Coordinator | `account_settings` for department/trust name |
+| `/admin/department/step-2` | `DepartmentStep2` | Yes | Coordinator | Shift types from DB (via DepartmentSetupContext) |
+| `/admin/department/step-3` | `DepartmentStep3` | Yes | Coordinator | Shifts from DepartmentSetupContext, global split |
 | `/admin/wtr/step-1` | `WtrStep1` | Yes | Coordinator | None (reads from AdminSetupContext) |
 | `/admin/wtr/step-2` | `WtrStep2` | Yes | Coordinator | None (reads from AdminSetupContext) |
 | `/admin/wtr/step-3` | `WtrStep3` | Yes | Coordinator | None (reads from AdminSetupContext) |
 | `/admin/wtr/step-4` | `WtrStep4` | Yes | Coordinator | None (reads from AdminSetupContext), saves to `wtr_settings` |
 | `/admin/roster` | `Roster` | Yes | Coordinator | `doctors` table, `rota_configs.survey_deadline` |
-| `/admin/survey-override/:doctorId/:step` | `SurveyOverride` | Yes | Coordinator | Static doctor lookup (hardcoded) |
-| `/doctor/survey` | `Survey` | No | Doctor | Resolves `?token=` param → `doctors` + `rota_configs` + `doctor_survey_responses` |
+| `/admin/pre-rota-calendar` | `PreRotaCalendarPage` | Yes | Coordinator | `pre_rota_results`, `shift_types`, `bank_holidays`, `doctor_survey_responses`, `account_settings` |
+| `/admin/pre-rota-targets` | `PreRotaTargetsPage` | Yes | Coordinator | `pre_rota_results`, `rota_configs`, `account_settings` |
+| `/admin/survey-override/:doctorId/:step` | `SurveyOverride` | Yes | Coordinator | Via SurveyProvider token resolution |
+| `/doctor/survey` | `Survey` | No | Doctor | Resolves `?token=` param → `doctors` + `rota_configs` + `doctor_survey_responses` + `account_settings` |
+| `/audit` | `Audit` | No | Any | Renders `src/docs/app-audit.md` |
 | `*` | `NotFound` | No | Any | None |
 
 ---
