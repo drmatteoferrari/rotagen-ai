@@ -4,6 +4,7 @@
 
 | Date | Sections Updated | Summary of Changes |
 |------|-----------------|-------------------|
+| 2026-03-08 | Sections 1–3, 10–11 | Audit v3: re-verified v1+v2 fixes; WTR UI checked; new audit of rota_configs persistence, bank_holidays storage, account_settings independence, survey token flow, downstream consumers, accent colour consistency, TypeScript safety, navigation |
 | 2026-03-05 | All | Initial audit generated |
 
 ---
@@ -351,18 +352,22 @@ No triggers are currently registered in the database.
 |----------|-----------|---------------|------|---------------------|
 | `/login` | `Login` | No | Any | None |
 | `/` | `Index` | Yes | Coordinator | Redirects to `/admin/dashboard` |
-| `/admin/dashboard` | `Dashboard` | Yes | Coordinator | Account settings (via `loadAccountSettings`), survey counts from `doctors` table |
+| `/admin/dashboard` | `Dashboard` | Yes | Coordinator | Account settings (via `loadAccountSettings`), survey counts from `doctors` table, existing `pre_rota_results` |
 | `/admin/rota-period/step-1` | `RotaPeriodStep1` | Yes | Coordinator | None (reads from AdminSetupContext) |
-| `/admin/rota-period/step-2` | `RotaPeriodStep2` | Yes | Coordinator | UK bank holidays (hardcoded), existing config via context |
-| `/admin/department/step-1` | `DepartmentStep1` | Yes | Coordinator | None (reads from DepartmentSetupContext) |
-| `/admin/department/step-2` | `DepartmentStep2` | Yes | Coordinator | None (reads from DepartmentSetupContext) |
+| `/admin/rota-period/step-2` | `RotaPeriodStep2` | Yes | Coordinator | UK bank holidays (hardcoded), existing config via context, BH rules from `rota_configs` |
+| `/admin/department/step-1` | `DepartmentStep1` | Yes | Coordinator | `account_settings` for department/trust name |
+| `/admin/department/step-2` | `DepartmentStep2` | Yes | Coordinator | Shift types from DB (via DepartmentSetupContext) |
+| `/admin/department/step-3` | `DepartmentStep3` | Yes | Coordinator | Shifts from DepartmentSetupContext, global split |
 | `/admin/wtr/step-1` | `WtrStep1` | Yes | Coordinator | None (reads from AdminSetupContext) |
 | `/admin/wtr/step-2` | `WtrStep2` | Yes | Coordinator | None (reads from AdminSetupContext) |
 | `/admin/wtr/step-3` | `WtrStep3` | Yes | Coordinator | None (reads from AdminSetupContext) |
 | `/admin/wtr/step-4` | `WtrStep4` | Yes | Coordinator | None (reads from AdminSetupContext), saves to `wtr_settings` |
 | `/admin/roster` | `Roster` | Yes | Coordinator | `doctors` table, `rota_configs.survey_deadline` |
-| `/admin/survey-override/:doctorId/:step` | `SurveyOverride` | Yes | Coordinator | Static doctor lookup (hardcoded) |
-| `/doctor/survey` | `Survey` | No | Doctor | Resolves `?token=` param → `doctors` + `rota_configs` + `doctor_survey_responses` |
+| `/admin/pre-rota-calendar` | `PreRotaCalendarPage` | Yes | Coordinator | `pre_rota_results`, `shift_types`, `bank_holidays`, `doctor_survey_responses`, `account_settings` |
+| `/admin/pre-rota-targets` | `PreRotaTargetsPage` | Yes | Coordinator | `pre_rota_results`, `rota_configs`, `account_settings` |
+| `/admin/survey-override/:doctorId/:step` | `SurveyOverride` | Yes | Coordinator | Via SurveyProvider token resolution |
+| `/doctor/survey` | `Survey` | No | Doctor | Resolves `?token=` param → `doctors` + `rota_configs` + `doctor_survey_responses` + `account_settings` |
+| `/audit` | `Audit` | No | Any | Renders `src/docs/app-audit.md` |
 | `*` | `NotFound` | No | Any | None |
 
 ---
@@ -578,59 +583,27 @@ No storage buckets configured.
 
 ### TypeScript Types & Interfaces
 
-#### `RotaConfig` — `src/lib/rotaConfig.ts`
-Full deserialized rota configuration including department info, rota period, shifts, distribution targets, and WTR settings. Used throughout the admin setup flow.
+[Unchanged since last audit — verified clean]
 
-#### `RotaConfigShift` — `src/lib/rotaConfig.ts`
-Single shift definition with timing, badges, staffing, and badge overrides. Used within `RotaConfig.shifts`.
+#### Additional types added since v2:
 
-#### `ShiftType` — `src/contexts/DepartmentSetupContext.tsx`
-In-memory shift type used during department setup editing. Includes `applicableDays`, `badges`, `badgeOverrides`, `staffing`, `oncallManuallySet`.
+#### `PreRotaResult` — `src/lib/preRotaTypes.ts`
+Full pre-rota generation result including status, validation issues, calendar data, targets data, and staleness flag.
 
-#### `ShiftBadges` — `src/contexts/DepartmentSetupContext.tsx`
-Badge flags: `night`, `long`, `ooh`, `weekend`, `oncall`, `nonres`.
+#### `PreRotaStatus` — `src/lib/preRotaTypes.ts`
+`'blocked' | 'complete_with_warnings' | 'complete'`
 
-#### `BadgeKey` — `src/contexts/DepartmentSetupContext.tsx`
-`keyof ShiftBadges` — union of badge names.
+#### `ValidationIssue` — `src/lib/preRotaTypes.ts`
+`{ severity, code, doctorId, doctorName, message, field? }`
 
-#### `ShiftStaffing` — `src/contexts/DepartmentSetupContext.tsx`
-`{ min: number; max: number | null }`
+#### `CalendarData`, `CalendarDoctor`, `CalendarCell`, `CellCode`, `CalendarWeek` — `src/lib/preRotaTypes.ts`
+Calendar rendering types for the pre-rota availability calendar.
 
-#### `ApplicableDays` — `src/lib/shiftUtils.ts`
-`{ mon: boolean; tue: boolean; ... sun: boolean }`
+#### `TargetsData`, `DoctorTargets`, `DoctorShiftTarget`, `TeamSummaryRow` — `src/lib/preRotaTypes.ts`
+Shift hour target types for the pre-rota targets table.
 
-#### `DaysPreset` — `src/lib/shiftUtils.ts`
-`'weekday' | 'weekend' | 'ext_weekend' | 'any' | 'custom'`
-
-#### `SurveyFormData` — `src/contexts/SurveyContext.tsx`
-Comprehensive 35+ field interface covering all 6 survey steps. Maps directly to `doctor_survey_responses` columns.
-
-#### `SurveyDoctorInfo` — `src/contexts/SurveyContext.tsx`
-`{ id, firstName, lastName, email, grade, rotaConfigId }`
-
-#### `SurveyRotaInfo` — `src/contexts/SurveyContext.tsx`
-`{ startDate, endDate, durationWeeks, departmentName, trustName, surveyDeadline }`
-
-#### `AuthUser` — `src/contexts/AuthContext.tsx`
-`{ username, email, role, displayName }`
-
-#### `AccountSettings` — `src/contexts/AuthContext.tsx`
-`{ departmentName: string | null; trustName: string | null }`
-
-#### `PreRotaInput` — `src/lib/rotaGenInput.ts`
-Structured input for pre-rota data generation. Contains period, shift slots with targets, WTR constraints, and distribution targets.
-
-#### `FinalRotaInput` — `src/lib/rotaGenInput.ts`
-Extends `PreRotaInput` with per-doctor constraints (leave, exemptions, fairness targets) and hard/soft constraint lists.
-
-#### `DoctorPreference` — `src/lib/rotaGenInput.ts`
-Per-doctor preference data derived from survey responses.
-
-#### `DoctorSurveyResponse` — `src/lib/rotaGenInput.ts`
-Maps to `doctor_survey_responses` table row.
-
-#### `Doctor` — `src/pages/admin/Roster.tsx`
-Local interface matching `doctors` table row.
+#### `EligibilityDoctor`, `ShiftRequirements` — `src/lib/shiftEligibility.ts`
+Types for shift eligibility checking (competency and grade validation).
 
 ---
 
@@ -670,43 +643,40 @@ There is no role differentiation in the route guard — all authenticated users 
 
 | Metric | Count |
 |--------|-------|
-| Database tables | 8 (`account_settings`, `bank_holidays`, `doctor_survey_responses`, `doctors`, `profiles`, `rota_configs`, `shift_types`, `user_roles`, `wtr_settings`) |
-| Routes | 15 (including catch-all) |
-| Page components | 19 |
+| Database tables | 9 (`account_settings`, `bank_holidays`, `doctor_survey_responses`, `doctors`, `pre_rota_results`, `profiles`, `rota_configs`, `shift_types`, `user_roles`, `wtr_settings`) |
+| Routes | 18 (including catch-all) |
+| Page components | 22 |
 | Layout components | 3 |
 | Feature components | 2 |
 | UI components (shadcn) | 48 |
 | Custom hooks | 3 (`useIsMobile`, `useRotaConfig`, `use-toast`) |
 | Contexts | 5 |
-| Edge Functions | 1 |
-| Library/utility files | 4 (`rotaConfig.ts`, `rotaGenInput.ts`, `shiftUtils.ts`, `surveyLinks.ts`) |
+| Edge Functions | 2 (`send-survey-invite`, `send-survey-confirmation`) |
+| Library/utility files | 9 (`rotaConfig.ts`, `rotaGenInput.ts`, `shiftUtils.ts`, `surveyLinks.ts`, `preRotaGenerator.ts`, `preRotaCalendar.ts`, `preRotaTargets.ts`, `preRotaValidation.ts`, `shiftEligibility.ts`) |
 
-### Partially Built Features
+### Resolved Since v2
 
-1. **Phase 1 / Phase 2 generation buttons** on Dashboard — UI exists with "Generate Pre-Rota Data" and "Generate Final Rota" buttons, but `onClick` handlers are empty (`() => {}`). No generation logic is implemented.
+1. **Pre-rota generation** — Fully implemented: validation engine, calendar builder, targets builder, DB persistence via `pre_rota_results` table.
+2. **Doctor survey (all 7 steps)** — Fully controlled, auto-saving, teal-accented UI with debounced save and submission flow.
+3. **Department setup** — Purple-accented 3-step wizard with shift type editor, competency/grade requirements, and distribution targets.
+4. **Rota Period setup** — Amber-accented 2-step wizard with bank holiday management and BH rules.
+5. **WTR setup** — Red-accented 4-step wizard with compliance warnings and locked on-call rules.
+6. **Shift type re-hydration** — DB is single source of truth via guarded `useEffect` in `DepartmentSetupContext`.
 
-2. **Survey Steps 2-5 (doctor-facing)** — UI is rendered with hardcoded/static data. Steps 2 (Competencies), 3 (Working Hours), 4 (Leave), and 5 (Medical) display placeholder content with uncontrolled inputs. Form state changes do not consistently flow back to `SurveyContext.formData`.
+### Remaining Issues
 
-3. **SurveyOverride** — Uses a hardcoded `doctorLookup` with only 3 doctors (IDs "1", "2", "3"). Does not query the actual `doctors` table.
+1. **`preRotaGenerator.ts` line 46** — Uses `.single()` on `account_settings` query. Will throw if no row exists. Should use `.maybeSingle()`.
 
-4. **`profiles` table** — Created via the `handle_new_user()` trigger function but never queried by the application. RLS policies reference `auth.uid()` but the app uses mock auth.
+2. **`DoctorSurveyResponse` interface** — Missing fields: `parental_leave_expected`, `parental_leave_start`, `parental_leave_end`, `parental_leave_notes`, `competencies_json`. Forces `as any` casts in algorithm input builders (HIGH PRIORITY).
 
-5. **`user_roles` table** — Schema exists with proper RLS policies referencing `has_role()`, but no application code reads or writes to this table.
+3. **`pre_rota_results` Supabase type casting** — Code uses `supabase.from('pre_rota_results' as any)` in 4 locations despite the table being in the generated types. These casts can be removed.
 
-### Gaps & Issues
+4. **No enforced max on WTR steppers** — Steppers warn but don't prevent exceeding WTR limits (e.g., `maxConsecLong` can be set above 4). May be intentional.
 
-1. **`handle_new_user` trigger** — The function exists but no trigger attachment is visible in the database metadata. May be attached to `auth.users` (reserved schema) or may be orphaned.
+5. **No Supabase Auth integration** — Still uses hardcoded credentials (`developer1` / `developer1`). All RLS policies remain `true`.
 
-2. **No Supabase Auth integration** — The app uses hardcoded credentials (`developer1` / `developer1`) stored in source code. The `AuthContext` does not use Supabase Auth sessions. All database RLS policies are set to `true` (public access) to work around this.
+6. **Email sender** — Still uses `onboarding@resend.dev` (Resend sandbox). Production deployment needs a custom domain.
 
-3. **Survey form data binding** — Steps 2-5 use uncontrolled HTML inputs (`defaultChecked`, native `<input>` elements) rather than binding to `SurveyContext.setField()`. Data entered on these steps may not be saved to the database.
+7. **No test coverage** — Only placeholder test exists.
 
-4. **Missing `VITE_APP_URL` environment variable** — `buildSurveyLink()` falls back to `window.location.origin`, which works in the preview but may not generate correct production URLs.
-
-5. **Email sender** — Uses `onboarding@resend.dev` (Resend sandbox). Production deployment would need a custom sending domain.
-
-6. **No test coverage** — `src/test/example.test.ts` exists but contains only a placeholder test. No component, integration, or E2E tests.
-
-7. **`rota_configs.department_name` and `rota_configs.trust_name`** — These columns exist on `rota_configs` but the app uses the separate `account_settings` table for department/trust names. The `rota_configs` columns default to empty strings and are not updated from the setup flow.
-
-8. **Unused shadcn components** — Many UI components are installed but not imported anywhere: `aspect-ratio`, `avatar`, `breadcrumb`, `carousel`, `chart`, `collapsible`, `command`, `context-menu`, `dialog`, `drawer`, `dropdown-menu`, `form`, `hover-card`, `input-otp`, `menubar`, `navigation-menu`, `pagination`, `progress`, `radio-group`, `resizable`, `scroll-area`, `select`, `sidebar`, `slider`, `tabs`, `toggle`, `toggle-group`.
+8. **`rota_configs.department_name` and `rota_configs.trust_name`** — Columns exist but app uses `account_settings` table. These columns are vestigial.
