@@ -467,7 +467,7 @@ export default function Roster() {
                         <TableCell>{statusBadge(doctor)}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1">
-                            {renderSendButton(doctor, sendState, isSending, isSuccess)}
+                            {renderSendButton(doctor, sendState, isSending, isSuccess, "desktop")}
                             {renderCopyButton(doctor, isCopied)}
                             <Tooltip>
                               <TooltipTrigger asChild>
