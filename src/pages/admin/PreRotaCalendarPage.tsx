@@ -425,7 +425,24 @@ export default function PreRotaCalendarPage() {
     );
   }
 
-  if (errorMsg || !calendarData) {
+  if (loadError || errorMsg || !calendarData) {
+    return (
+      <AdminLayout title="Availability Calendar">
+        <div className="mx-auto max-w-lg mt-12">
+          <div className="rounded-xl border border-border bg-card p-6 text-center space-y-4">
+            <AlertTriangle className="h-8 w-8 text-amber-500 mx-auto" />
+            <p className="text-sm text-foreground">{loadError ?? errorMsg ?? 'No calendar data available.'}</p>
+            <Button variant="outline" onClick={() => navigate('/admin/dashboard')}>
+              <ArrowLeft className="h-4 w-4 mr-2" /> Back to Dashboard
+            </Button>
+          </div>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  // original errorMsg block replaced above
+  if (false) {
     return (
       <AdminLayout title="Availability Calendar">
         <div className="mx-auto max-w-lg mt-12">
