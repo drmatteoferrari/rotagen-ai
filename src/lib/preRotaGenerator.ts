@@ -110,15 +110,15 @@ export async function generatePreRota(
 
     // 10. If blocked: save issues only, return early
     if (hasCritical) {
-      const { data: saved } = await supabase.from('pre_rota_results').upsert({
+      const { data: saved } = await supabase.from('pre_rota_results').upsert([{
         rota_config_id: rotaConfigId,
         generated_at: new Date().toISOString(),
         generated_by: generatedBy,
         status: 'blocked',
-        validation_issues: validationIssues,
-        calendar_data: {},
-        targets_data: {},
-      }, { onConflict: 'rota_config_id' }).select().single()
+        validation_issues: validationIssues as unknown as Json,
+        calendar_data: {} as Json,
+        targets_data: {} as Json,
+      }], { onConflict: 'rota_config_id' }).select().single()
 
       return {
         success: true,
