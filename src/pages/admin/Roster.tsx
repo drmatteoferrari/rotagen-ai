@@ -279,24 +279,68 @@ export default function Roster() {
     return { disabled: false, tooltip: "Send survey invite", color: "", badge: null };
   };
 
+  const renderSendButton = (doctor: Doctor, sendState: ReturnType<typeof getSendIconState>, isSending: boolean, isSuccess: boolean) => {
+    if (isSending) return <Button variant="ghost" size="icon" disabled><Loader2 className="h-4 w-4 animate-spin" /></Button>;
+    if (isSuccess) return <Button variant="ghost" size="icon" disabled><Check className="h-4 w-4 text-emerald-600" /></Button>;
+    if (sendState.disabled) return (
+      <Tooltip><TooltipTrigger asChild><span><Button variant="ghost" size="icon" disabled className="text-muted-foreground"><Send className="h-4 w-4" /></Button></span></TooltipTrigger><TooltipContent>{sendState.tooltip}</TooltipContent></Tooltip>
+    );
+    return (
+      <Popover open={popoverId === doctor.id} onOpenChange={(open) => setPopoverId(open ? doctor.id : null)}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="icon" className={cn("relative", sendState.color)}>
+                <Send className="h-4 w-4" />
+                {sendState.badge && <span className="absolute -top-1 -right-1 text-[9px] font-bold bg-emerald-100 text-emerald-700 rounded-full px-1">{sendState.badge}</span>}
+              </Button>
+            </PopoverTrigger>
+          </TooltipTrigger>
+          <TooltipContent>{sendState.tooltip}</TooltipContent>
+        </Tooltip>
+        <PopoverContent className="w-72" align="end">
+          <div className="space-y-3">
+            <p className="text-sm font-medium">Send invite to {doctor.first_name} {doctor.last_name}?</p>
+            {formattedDeadline && <p className="text-xs text-muted-foreground">Deadline: {formattedDeadline}</p>}
+            <div className="flex gap-2 justify-end">
+              <Button variant="ghost" size="sm" onClick={() => setPopoverId(null)}>Cancel</Button>
+              <Button size="sm" onClick={() => sendInvite(doctor)}>Send</Button>
+            </div>
+          </div>
+        </PopoverContent>
+      </Popover>
+    );
+  };
+
+  const renderCopyButton = (doctor: Doctor, isCopied: boolean) => (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button variant="ghost" size="icon" onClick={() => copyMagicLink(doctor)}>
+          {isCopied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{isCopied ? "Copied!" : doctor.survey_token ? buildSurveyLink(doctor.survey_token) : "No token"}</TooltipContent>
+    </Tooltip>
+  );
+
   return (
     <AdminLayout title="Roster & Invites" subtitle="Build the team and send survey invitations">
-      <div className="mx-auto max-w-5xl space-y-6">
+      <div className="mx-auto max-w-5xl space-y-4 sm:space-y-6">
 
         {/* Deadline picker */}
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="pt-4 sm:pt-6 pb-4">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
               <div className="flex items-center gap-2">
-                <CalendarIcon className="h-5 w-5 text-primary" />
-                <span className="font-semibold text-card-foreground">Survey submission deadline</span>
+                <CalendarIcon className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                <span className="text-sm sm:text-base font-semibold text-card-foreground">Survey deadline</span>
               </div>
               <Popover open={deadlineOpen} onOpenChange={setDeadlineOpen}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     className={cn(
-                      "w-[280px] justify-start text-left font-normal",
+                      "w-full sm:w-[280px] justify-start text-left font-normal",
                       !surveyDeadline && "text-muted-foreground"
                     )}
                   >
@@ -328,11 +372,8 @@ export default function Roster() {
                 </PopoverContent>
               </Popover>
             </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              Doctors will be asked to submit their preferences by this date.
-            </p>
             {!rotaStartDate && (
-              <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+              <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
                 <AlertTriangle className="h-3 w-3" />
                 Rota start date not set — set it in Rota Period settings.
               </p>
@@ -340,75 +381,61 @@ export default function Roster() {
           </CardContent>
         </Card>
 
-        {/* SECTION 7 — Summary with new statuses */}
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Card>
-            <CardContent className="flex items-center gap-4 pt-6">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                <Users className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-card-foreground">{doctors.length}</p>
-                <p className="text-xs text-muted-foreground">Total Doctors</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="flex items-center gap-4 pt-6">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500/10">
-                <Check className="h-5 w-5 text-emerald-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-card-foreground">{submitted}</p>
-                <p className="text-xs text-muted-foreground">Submitted</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="flex items-center gap-4 pt-6">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/10">
-                <Pencil className="h-5 w-5 text-amber-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-card-foreground">{inProgress}</p>
-                <p className="text-xs text-muted-foreground">In Progress</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Aggregate summary text */}
-        {doctors.length > 0 && (
-          <p className="text-sm text-muted-foreground text-center">
-            Survey responses: <span className="font-semibold text-emerald-600">{submitted} submitted</span> / <span className="font-semibold text-amber-600">{inProgress} in progress</span> / <span className="font-semibold">{notStarted} not started</span> out of {doctors.length} doctors
-          </p>
-        )}
-
-        {/* Add doctor + table */}
+        {/* Team Roster with integrated summary */}
         <Card>
-          <CardHeader>
-            <CardTitle>Team Roster</CardTitle>
-            <CardDescription>Add doctors to this rota period and track their survey progress.</CardDescription>
+          <CardHeader className="pb-3 sm:pb-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <CardTitle className="text-base sm:text-lg">Team Roster</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">Add doctors and track survey progress.</CardDescription>
+              </div>
+              {/* Inline summary stats */}
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="flex items-center gap-1.5">
+                  <div className="flex h-6 w-6 items-center justify-center rounded bg-primary/10">
+                    <Users className="h-3.5 w-3.5 text-primary" />
+                  </div>
+                  <div className="leading-tight">
+                    <p className="text-sm font-bold text-card-foreground">{doctors.length}</p>
+                    <p className="text-[10px] text-muted-foreground">Total</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="flex h-6 w-6 items-center justify-center rounded bg-emerald-500/10">
+                    <Check className="h-3.5 w-3.5 text-emerald-500" />
+                  </div>
+                  <div className="leading-tight">
+                    <p className="text-sm font-bold text-card-foreground">{submitted}</p>
+                    <p className="text-[10px] text-muted-foreground">Done</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="flex h-6 w-6 items-center justify-center rounded bg-amber-500/10">
+                    <Pencil className="h-3.5 w-3.5 text-amber-500" />
+                  </div>
+                  <div className="leading-tight">
+                    <p className="text-sm font-bold text-card-foreground">{inProgress}</p>
+                    <p className="text-[10px] text-muted-foreground">WIP</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pt-0">
             {/* Quick add row */}
-            <div className="flex flex-col gap-3 rounded-lg border border-dashed border-border p-4 sm:flex-row sm:items-end">
-              <div className="flex-1">
-                <Input placeholder="First Name" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
+            <div className="flex flex-col gap-2 rounded-lg border border-dashed border-border p-3 sm:flex-row sm:items-end sm:gap-3 sm:p-4">
+              <div className="grid grid-cols-2 gap-2 sm:contents">
+                <Input placeholder="First Name" value={firstName} onChange={(e) => setFirstName(e.target.value)} className="sm:flex-1" />
+                <Input placeholder="Last Name" value={lastName} onChange={(e) => setLastName(e.target.value)} className="sm:flex-1" />
               </div>
-              <div className="flex-1">
-                <Input placeholder="Last Name" value={lastName} onChange={(e) => setLastName(e.target.value)} />
-              </div>
-              <div className="flex-[2]">
-                <Input placeholder="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-              </div>
-              <Button onClick={addDoctor} disabled={!firstName || !lastName || !email}>
-                <UserPlus className="mr-1.5 h-4 w-4" /> Add Doctor
+              <Input placeholder="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="sm:flex-[2]" />
+              <Button onClick={addDoctor} disabled={!firstName || !lastName || !email} className="w-full sm:w-auto">
+                <UserPlus className="mr-1.5 h-4 w-4" /> Add
               </Button>
             </div>
 
-            {/* Table */}
-            <div className="rounded-lg border border-border">
+            {/* Desktop table */}
+            <div className="hidden sm:block rounded-lg border border-border">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -434,143 +461,70 @@ export default function Roster() {
                         <TableCell>{statusBadge(doctor)}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1">
-                            {/* Send icon with popover */}
-                            {isSending ? (
-                              <Button variant="ghost" size="icon" disabled>
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              </Button>
-                            ) : isSuccess ? (
-                              <Button variant="ghost" size="icon" disabled>
-                                <Check className="h-4 w-4 text-emerald-600" />
-                              </Button>
-                            ) : sendState.disabled ? (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span>
-                                    <Button variant="ghost" size="icon" disabled className="text-muted-foreground">
-                                      <Send className="h-4 w-4" />
-                                    </Button>
-                                  </span>
-                                </TooltipTrigger>
-                                <TooltipContent>{sendState.tooltip}</TooltipContent>
-                              </Tooltip>
-                            ) : (
-                              <Popover
-                                open={popoverId === doctor.id}
-                                onOpenChange={(open) => setPopoverId(open ? doctor.id : null)}
-                              >
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <PopoverTrigger asChild>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className={cn("relative", sendState.color)}
-                                      >
-                                        <Send className="h-4 w-4" />
-                                        {sendState.badge && (
-                                          <span className="absolute -top-1 -right-1 text-[9px] font-bold bg-emerald-100 text-emerald-700 rounded-full px-1">
-                                            {sendState.badge}
-                                          </span>
-                                        )}
-                                      </Button>
-                                    </PopoverTrigger>
-                                  </TooltipTrigger>
-                                  <TooltipContent>{sendState.tooltip}</TooltipContent>
-                                </Tooltip>
-                                <PopoverContent className="w-72" align="end">
-                                  <div className="space-y-3">
-                                    <p className="text-sm font-medium">
-                                      Send survey invite to {doctor.first_name} {doctor.last_name} at {doctor.email}?
-                                    </p>
-                                    {formattedDeadline && (
-                                      <p className="text-xs text-muted-foreground">
-                                        Survey deadline: {formattedDeadline}
-                                      </p>
-                                    )}
-                                    <div className="flex gap-2 justify-end">
-                                      <Button variant="ghost" size="sm" onClick={() => setPopoverId(null)}>Cancel</Button>
-                                      <Button size="sm" onClick={() => sendInvite(doctor)}>Send</Button>
-                                    </div>
-                                  </div>
-                                </PopoverContent>
-                              </Popover>
-                            )}
-
-                            {/* SECTION 2 — Copy link with Copied! feedback */}
+                            {renderSendButton(doctor, sendState, isSending, isSuccess)}
+                            {renderCopyButton(doctor, isCopied)}
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => copyMagicLink(doctor)}
-                                  title="Copy survey link"
-                                >
-                                  {isCopied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>{isCopied ? "Copied!" : doctor.survey_token ? buildSurveyLink(doctor.survey_token) : "No token"}</TooltipContent>
-                            </Tooltip>
-
-                            {/* SECTION 2 — Open survey in new tab */}
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => doctor.survey_token && window.open(buildSurveyLink(doctor.survey_token), "_blank")}
-                                  disabled={!doctor.survey_token}
-                                  title="Open survey"
-                                >
-                                  <ExternalLink className="h-4 w-4" />
-                                </Button>
+                                <Button variant="ghost" size="icon" onClick={() => doctor.survey_token && window.open(buildSurveyLink(doctor.survey_token), "_blank")} disabled={!doctor.survey_token}><ExternalLink className="h-4 w-4" /></Button>
                               </TooltipTrigger>
                               <TooltipContent>Open survey in new tab</TooltipContent>
                             </Tooltip>
-                            {/* SECTION 2 COMPLETE */}
-
-                            {/* SECTION 8 — Edit button opens slide-over panel */}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => { setEditDoctor(doctor); setEditPanelOpen(true); }}
-                              title="Edit survey responses"
-                              className={doctor.survey_status === "submitted" ? "text-amber-600 hover:text-amber-700" : ""}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            {/* SECTION 8 COMPLETE */}
-
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => removeDoctor(doctor.id)}
-                              className="text-muted-foreground hover:text-destructive"
-                              title="Remove doctor"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => { setEditDoctor(doctor); setEditPanelOpen(true); }} className={doctor.survey_status === "submitted" ? "text-amber-600 hover:text-amber-700" : ""}><Pencil className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="icon" onClick={() => removeDoctor(doctor.id)} className="text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
                           </div>
                         </TableCell>
                       </TableRow>
                     );
                   })}
                   {!loading && doctors.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                        No doctors added yet. Use the form above to add team members.
-                      </TableCell>
-                    </TableRow>
+                    <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">No doctors added yet.</TableCell></TableRow>
                   )}
                   {loading && (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                        <Loader2 className="h-5 w-5 animate-spin mx-auto" />
-                      </TableCell>
-                    </TableRow>
+                    <TableRow><TableCell colSpan={5} className="text-center py-8"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></TableCell></TableRow>
                   )}
                 </TableBody>
               </Table>
+            </div>
+
+            {/* Mobile card list */}
+            <div className="sm:hidden space-y-2">
+              {loading && (
+                <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin" /></div>
+              )}
+              {!loading && doctors.length === 0 && (
+                <p className="text-center text-sm text-muted-foreground py-6">No doctors added yet.</p>
+              )}
+              {doctors.map((doctor) => {
+                const sendState = getSendIconState(doctor);
+                const isSending = sendingId === doctor.id;
+                const isSuccess = successId === doctor.id;
+                const isCopied = copiedId === doctor.id;
+
+                return (
+                  <div key={doctor.id} className="rounded-lg border border-border p-3 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-card-foreground truncate">{doctor.first_name} {doctor.last_name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{doctor.email ?? "No email"}</p>
+                      </div>
+                      {statusBadge(doctor)}
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">Grade: {doctor.grade}</span>
+                      <div className="flex items-center gap-0.5">
+                        {renderSendButton(doctor, sendState, isSending, isSuccess)}
+                        {renderCopyButton(doctor, isCopied)}
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditDoctor(doctor); setEditPanelOpen(true); }}>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => removeDoctor(doctor.id)}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </CardContent>
         </Card>
