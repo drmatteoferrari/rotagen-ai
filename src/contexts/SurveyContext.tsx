@@ -180,6 +180,7 @@ interface SurveyContextType {
   setSubmittedAt: (v: string | null) => void;
   setLoadState: (s: LoadState) => void;
   saveStatus: SaveStatus;
+  isAdminMode: boolean;
 }
 
 const SurveyContext = createContext<SurveyContextType | null>(null);
