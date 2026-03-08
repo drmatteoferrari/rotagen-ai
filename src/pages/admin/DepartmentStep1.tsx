@@ -13,6 +13,7 @@ import { toast } from "sonner";
 export default function DepartmentStep1New() {
   const navigate = useNavigate();
   const { user, setAccountSettings } = useAuth();
+  const { currentRotaConfigId } = useRotaContext();
   const [deptName, setDeptName] = useState("");
   const [trustName, setTrustName] = useState("");
   const [saving, setSaving] = useState(false);
