@@ -112,13 +112,13 @@ export default function PreRotaTargetsPage() {
     );
   }
 
-  if (errorMsg || !targetsData) {
+  if (loadError || errorMsg || !targetsData) {
     return (
       <AdminLayout title="Shift Hour Targets">
         <div className="mx-auto max-w-lg mt-12">
           <div className="rounded-xl border border-border bg-card p-6 text-center space-y-4">
             <AlertTriangle className="h-8 w-8 text-amber-500 mx-auto" />
-            <p className="text-sm text-foreground">{errorMsg ?? 'No targets data available.'}</p>
+            <p className="text-sm text-foreground">{loadError ?? errorMsg ?? 'No targets data available.'}</p>
             <Button variant="outline" onClick={() => navigate('/admin/dashboard')}>
               <ArrowLeft className="h-4 w-4 mr-2" /> Back to Dashboard
             </Button>
