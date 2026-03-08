@@ -17,7 +17,7 @@
 | Column | Type | Nullable | Default | Constraints |
 |--------|------|----------|---------|-------------|
 | id | uuid | No | `gen_random_uuid()` | PRIMARY KEY |
-| owned_by | text | No | — | |
+| owned_by | text | No | — | UNIQUE (added v4) |
 | department_name | text | Yes | — | |
 | trust_name | text | Yes | — | |
 | created_at | timestamptz | Yes | `now()` | |
