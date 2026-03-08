@@ -20,10 +20,14 @@ function addDays(isoDate: string, n: number): string {
   return d.toISOString().split('T')[0];
 }
 
+function getDayName(date: string): string {
+  return DAY_NAMES[new Date(date + 'T00:00:00').getDay()];
+}
+
 function availabilityColour(count: number, min: number): string {
-  if (count < min) return 'bg-red-500 text-white';
-  if (count === min) return 'bg-amber-400 text-white';
-  return 'bg-green-500 text-white';
+  if (count < min) return '#dc2626';
+  if (count === min) return '#d97706';
+  return '#16a34a';
 }
 
 interface ShiftTypeRow {
@@ -60,7 +64,6 @@ function isDoctorEligible(
     return !isLtftDayOff;
   }
 
-  // Night shift LTFT logic
   if (isLtftDayOff) {
     if (!survey) return false;
     const flex = survey.ltftNightFlexibility.find(f => f.day === dayNameOfDate);
@@ -83,6 +86,138 @@ function isDoctorEligible(
   return true;
 }
 // ✅ Section 3.2 complete (eligibility)
+
+// ── Badge components ──────────────────────────────────────────
+
+const BADGE_STYLES = {
+  AL:  { bg: '#16a34a', text: '#fff', label: 'AL'  },
+  SL:  { bg: '#2563eb', text: '#fff', label: 'SL'  },
+  ROT: { bg: '#c2410c', text: '#fff', label: 'ROT' },
+  PL:  { bg: '#7c3aed', text: '#fff', label: 'PL'  },
+} as const;
+
+function LeaveBadge({ type }: { type: keyof typeof BADGE_STYLES }) {
+  const s = BADGE_STYLES[type];
+  return (
+    <span style={{
+      background: s.bg, color: s.text,
+      fontSize: 10, fontWeight: 700,
+      padding: '2px 7px', borderRadius: 5,
+      letterSpacing: '0.04em', lineHeight: 1.4,
+      display: 'inline-block',
+    }}>{s.label}</span>
+  );
+}
+// ✅ Section 2.4 complete (badge components)
+
+// ── Cell background logic ─────────────────────────────────────
+
+function getCellBackground(doctor: CalendarDoctor, date: string, isBH: boolean, isWeekend: boolean): string {
+  const cell = doctor.availability[date];
+  const primary = cell?.primary ?? 'AVAILABLE';
+  const isLtftDay = doctor.ltftDaysOff.includes(getDayName(date));
+
+  if (primary === 'ROT') return '#ffedd5';
+  if (primary === 'PL')  return '#ede9fe';
+  // AL, SL, NOC → no background override
+  if (isLtftDay) return '#fef9c3';
+  if (isBH) return '#fee2e2';
+  if (isWeekend) return '#f3f4f6';
+  return '#ffffff';
+}
+// ✅ Section 2.2 complete (cell background)
+
+function getColumnHeaderBg(isBH: boolean, isWeekend: boolean): string {
+  if (isBH) return '#fecaca';
+  if (isWeekend) return '#e5e7eb';
+  return '#ffffff';
+}
+
+function getColumnHeaderTextColor(isBH: boolean, isWeekend: boolean): string {
+  if (isBH) return '#b91c1c';
+  if (isWeekend) return '#6b7280';
+  return '#374151';
+}
+
+function getColumnBg(date: string, bankHolidays: Set<string>): string {
+  const d = new Date(date + 'T00:00:00');
+  const isWeekend = d.getDay() === 0 || d.getDay() === 6;
+  if (bankHolidays.has(date)) return '#fee2e2';
+  if (isWeekend) return '#f3f4f6';
+  return '#ffffff';
+}
+// ✅ Section 2.3 complete (column headers)
+
+// ── Legend components ─────────────────────────────────────────
+
+function LegendBadgeItem({ bg, label, text }: { bg: string; label: string; text: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+      <span style={{
+        background: bg, color: '#fff',
+        fontSize: 10, fontWeight: 700,
+        padding: '2px 7px', borderRadius: 5, letterSpacing: '0.04em',
+      }}>{label}</span>
+      <span style={{ fontSize: 12, color: '#374151' }}>{text}</span>
+    </div>
+  );
+}
+
+function LegendFusedItem({ badgeBg, label, cellBg, cellBorder, text }: {
+  badgeBg: string; label: string; cellBg: string; cellBorder: string; text: string;
+}) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+      <div style={{
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+        width: 32, height: 20, borderRadius: 4,
+        background: cellBg, border: `1.5px solid ${cellBorder}`,
+      }}>
+        <span style={{
+          background: badgeBg, color: '#fff',
+          fontSize: 9, fontWeight: 700,
+          padding: '1px 4px', borderRadius: 3, letterSpacing: '0.04em',
+        }}>{label}</span>
+      </div>
+      <span style={{ fontSize: 12, color: '#374151' }}>{text}</span>
+    </div>
+  );
+}
+
+function LegendSwatchItem({ color, border, text }: { color: string; border: string; text: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+      <span style={{
+        display: 'inline-block', width: 13, height: 13, borderRadius: 3,
+        background: color, border: `1.5px solid ${border}`, flexShrink: 0,
+      }} />
+      <span style={{ fontSize: 12, color: '#374151' }}>{text}</span>
+    </div>
+  );
+}
+
+function CalendarLegend() {
+  return (
+    <div style={{
+      display: 'flex', flexWrap: 'wrap', gap: '8px 16px',
+      marginTop: 16, fontSize: 12, color: '#374151',
+      background: '#fff', border: '1px solid #e2e8f0',
+      borderRadius: 8, padding: '10px 16px', alignItems: 'center',
+    }}>
+      <LegendBadgeItem bg="#16a34a" label="AL" text="Annual Leave" />
+      <LegendBadgeItem bg="#2563eb" label="SL" text="Study Leave" />
+      <LegendFusedItem badgeBg="#c2410c" label="ROT" cellBg="#ffedd5" cellBorder="#ea580c" text="Rotation" />
+      <LegendFusedItem badgeBg="#7c3aed" label="PL" cellBg="#ede9fe" cellBorder="#7c3aed" text="Parental Leave" />
+      <LegendBadgeItem bg="#ec4899" label="NOC" text="Not On-Call" />
+      <div style={{ width: 1, height: 16, background: '#e2e8f0', margin: '0 2px' }} />
+      <LegendSwatchItem color="#fef9c3" border="#fde68a" text="LTFT day off" />
+      <LegendSwatchItem color="#fee2e2" border="#fecaca" text="Bank Holiday" />
+      <LegendSwatchItem color="#f3f4f6" border="#e5e7eb" text="Weekend" />
+      <LegendSwatchItem color="#ffffff" border="#e2e8f0" text="Available" />
+    </div>
+  );
+}
+// ✅ Section 2.7 complete (legend)
 
 export default function PreRotaCalendarPage() {
   const navigate = useNavigate();
@@ -268,7 +403,6 @@ export default function PreRotaCalendarPage() {
     const currentDate = allDates[currentDayIndex] ?? allDates[0];
     if (!currentDate) return null;
     const d = new Date(currentDate + 'T00:00:00');
-    const isWeekend = d.getDay() === 0 || d.getDay() === 6;
     const isBH = bankHolidays.has(currentDate);
 
     const totalAvailable = doctors.filter(doc => {
@@ -279,7 +413,6 @@ export default function PreRotaCalendarPage() {
     return (
       <AdminLayout title="Availability Calendar">
         <div className="space-y-4">
-          {/* Header */}
           <div className="space-y-2">
             <button onClick={() => navigate('/admin/dashboard')} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
               <ArrowLeft className="h-3.5 w-3.5" /> Back to Dashboard
@@ -299,7 +432,7 @@ export default function PreRotaCalendarPage() {
               <p className="text-sm font-medium text-foreground">
                 {d.toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'short', year: 'numeric' })}
               </p>
-              {isBH && <span className="text-[10px] text-red-600 font-medium">Bank Holiday</span>}
+              {isBH && <span style={{ display: 'inline-block', background: '#b91c1c', color: '#fff', fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4, marginTop: 3 }}>BH</span>}
             </div>
             <button onClick={() => setCurrentDayIndex(i => Math.min(allDates.length - 1, i + 1))} disabled={currentDayIndex >= allDates.length - 1} className="p-2 rounded-md hover:bg-muted disabled:opacity-30 min-h-[44px]">
               <ChevronRight className="h-4 w-4" />
@@ -311,22 +444,30 @@ export default function PreRotaCalendarPage() {
             {doctors.map(doctor => {
               const cell = doctor.availability[currentDate];
               const primary = cell?.primary ?? 'AVAILABLE';
-              const pillLabel = primary === 'AVAILABLE' ? 'Available'
-                : primary === 'LTFT' ? 'LTFT day off'
-                : primary === 'NOC' ? 'Not On-Call'
-                : primary === 'BH' ? 'Bank Holiday'
-                : primary;
-              const pillClass = getCellBg(primary) + ' ' + getCellText(primary);
+              const isLtftDay = doctor.ltftDaysOff.includes(getDayName(currentDate));
 
               return (
-                <div key={doctor.doctorId} className="rounded-lg border border-border bg-card p-3 flex items-center justify-between min-h-[44px]">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">{doctor.doctorName}</p>
-                    <p className="text-[11px] text-muted-foreground">{doctor.grade} · {doctor.wte}%</p>
+                <div key={doctor.doctorId} className="rounded-lg border border-border bg-card p-3 min-h-[44px]">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{doctor.doctorName}</p>
+                      <p className="text-[11px] text-muted-foreground">{doctor.grade} · {doctor.wte}%</p>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      {['AL', 'SL', 'ROT', 'PL'].includes(primary) && (
+                        <LeaveBadge type={primary as keyof typeof BADGE_STYLES} />
+                      )}
+                      {primary === 'NOC' && (
+                        <span style={{ background: '#ec4899', color: '#fff', fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 5 }}>NOC</span>
+                      )}
+                      {isLtftDay && (
+                        <span style={{ background: 'rgba(253,230,138,0.7)', color: '#92400e', border: '1px solid #fde68a', fontSize: 9, fontWeight: 600, padding: '1px 5px', borderRadius: 4 }}>LTFT</span>
+                      )}
+                      {!['AL', 'SL', 'ROT', 'PL', 'NOC'].includes(primary) && !isLtftDay && (
+                        <span className="text-[11px] text-muted-foreground">Available</span>
+                      )}
+                    </div>
                   </div>
-                  <span className={`text-[11px] font-semibold px-2 py-1 rounded ${pillClass}`}>
-                    {pillLabel}
-                  </span>
                 </div>
               );
             })}
@@ -334,20 +475,27 @@ export default function PreRotaCalendarPage() {
 
           {/* Availability chips */}
           <div className="flex flex-wrap gap-2">
-            <span className={`text-xs font-semibold px-2.5 py-1 rounded ${availabilityColour(totalAvailable, maxMinDoctors)}`}>
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 6,
+              background: availabilityColour(totalAvailable, maxMinDoctors), color: '#fff',
+            }}>
               Total: {totalAvailable} available
             </span>
             {shiftTypes.map(shift => {
               const count = eligibility[shift.id]?.[currentDate] ?? 0;
               return (
-                <span key={shift.id} className={`text-xs font-semibold px-2.5 py-1 rounded ${availabilityColour(count, shift.min_doctors)}`}>
+                <span key={shift.id} style={{
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 6,
+                  background: availabilityColour(count, shift.min_doctors), color: '#fff',
+                }}>
                   {shift.name}: {count}
                 </span>
               );
             })}
           </div>
 
-          {/* Legend */}
           <CalendarLegend />
         </div>
       </AdminLayout>
@@ -357,8 +505,6 @@ export default function PreRotaCalendarPage() {
   // ── DESKTOP: weekly table ──
   const week = weeks[currentWeekIndex];
   if (!week) return null;
-
-  const totalDoctors = doctors.length;
 
   return (
     <AdminLayout title="Availability Calendar" subtitle={`${deptName}${deptName && hospitalName ? ' · ' : ''}${hospitalName}`}>
@@ -393,7 +539,7 @@ export default function PreRotaCalendarPage() {
           <table className="w-full text-xs border-collapse">
             <thead>
               <tr>
-                <th className="sticky left-0 bg-card z-10 text-left py-2 px-2 font-medium text-muted-foreground border-b border-r border-border min-w-[140px]">
+                <th style={{ minWidth: 260, maxWidth: 260, position: 'sticky', left: 0, zIndex: 10, background: '#fff', textAlign: 'left', padding: '8px 16px', fontWeight: 500, color: '#6b7280', borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0' }}>
                   Doctor
                 </th>
                 {week.dates.map(date => {
@@ -401,10 +547,22 @@ export default function PreRotaCalendarPage() {
                   const isWknd = dd.getDay() === 0 || dd.getDay() === 6;
                   const isBH = bankHolidays.has(date);
                   return (
-                    <th key={date} className={`text-center py-2 px-1 font-medium border-b border-border min-w-[56px] ${isBH ? 'bg-red-50 text-red-700' : isWknd ? 'bg-gray-100 text-muted-foreground' : 'bg-muted/30 text-muted-foreground'}`}>
-                      <div className="text-[10px]">{dd.toLocaleDateString('en-GB', { weekday: 'short' })}</div>
-                      <div className="text-[10px] font-normal">{dd.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</div>
-                      {isBH && <div className="text-[10px] text-red-500 font-medium">BH</div>}
+                    <th key={date} style={{
+                      textAlign: 'center', padding: '8px 4px', fontWeight: 500,
+                      background: getColumnHeaderBg(isBH, isWknd),
+                      color: getColumnHeaderTextColor(isBH, isWknd),
+                      borderBottom: '1px solid #e2e8f0', borderLeft: '1px solid #e2e8f0',
+                      minWidth: 64,
+                    }}>
+                      <div style={{ fontSize: 10 }}>{dd.toLocaleDateString('en-GB', { weekday: 'short' })}</div>
+                      <div style={{ fontSize: 10, fontWeight: 400 }}>{dd.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</div>
+                      {isBH && (
+                        <span style={{
+                          display: 'inline-block', background: '#b91c1c', color: '#fff',
+                          fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4,
+                          letterSpacing: '0.04em', marginTop: 3,
+                        }}>BH</span>
+                      )}
                     </th>
                   );
                 })}
@@ -412,134 +570,152 @@ export default function PreRotaCalendarPage() {
             </thead>
             <tbody>
               {doctors.map(doctor => (
-                <tr key={doctor.doctorId} className="border-b border-border/50">
-                  <td className="sticky left-0 bg-white z-10 px-2 py-1.5 border-r border-border min-w-[140px]">
-                    <div className="font-medium text-foreground text-xs truncate">{doctor.doctorName}</div>
-                    <div className="text-[10px] text-muted-foreground">{doctor.grade} · {doctor.wte}%</div>
+                <tr key={doctor.doctorId} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                  {/* Doctor name cell — 2.1 */}
+                  <td style={{
+                    minWidth: 260, maxWidth: 260,
+                    position: 'sticky', left: 0, zIndex: 10, background: '#fff',
+                    padding: '6px 16px',
+                    borderRight: '1px solid #e2e8f0', borderBottom: '1px solid #f1f5f9',
+                    minHeight: 52, height: 1, verticalAlign: 'middle',
+                  }}>
+                    <div style={{ fontWeight: 600, fontSize: 13, color: '#1e293b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {doctor.doctorName}
+                    </div>
+                    <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {doctor.grade} · {doctor.wte}%
+                    </div>
+                    {doctor.ltftDaysOff.length > 0 && (
+                      <div style={{ marginTop: 2 }}>
+                        <span style={{
+                          fontSize: 10, fontWeight: 600, color: '#b45309',
+                          background: '#fef3c7', borderRadius: 3, padding: '1px 5px',
+                        }}>
+                          LTFT: {doctor.ltftDaysOff.map(d => d.slice(0, 3).charAt(0).toUpperCase() + d.slice(1, 3)).join(', ')}
+                        </span>
+                      </div>
+                    )}
                   </td>
+                  {/* ✅ Section 2.1 complete (doctor name column) */}
+
                   {week.dates.map(date => {
                     const cell = doctor.availability[date];
                     const primary = cell?.primary ?? 'AVAILABLE';
                     const isWknd = new Date(date + 'T00:00:00').getDay() === 0 || new Date(date + 'T00:00:00').getDay() === 6;
                     const isBH = bankHolidays.has(date);
-                    const dayName = DAY_NAMES[new Date(date + 'T00:00:00').getDay()];
-                    const isLtftDay = doctor.ltftDaysOff.includes(dayName);
+                    const isLtftDay = doctor.ltftDaysOff.includes(getDayName(date));
+                    const isNoc = primary === 'NOC';
 
-                    let bg = '';
-                    let text = '';
-                    let label = '';
-
-                    if (['AL', 'SL', 'ROT', 'PL'].includes(primary)) {
-                      bg = getCellBg(primary);
-                      text = 'text-white';
-                      label = primary;
-                    } else if (primary === 'NOC') {
-                      bg = 'bg-purple-100';
-                      text = '';
-                      label = '';
-                    } else if (isLtftDay && (primary === 'AVAILABLE' || primary === 'BH')) {
-                      bg = 'bg-amber-100';
-                      text = '';
-                      label = '';
-                    } else if (isWknd) {
-                      bg = 'bg-gray-100';
-                      text = '';
-                      label = '';
-                    } else {
-                      bg = 'bg-white';
-                      text = '';
-                      label = '';
-                    }
+                    const badgeEvents = (['AL', 'SL', 'ROT', 'PL'] as const).filter(e => primary === e);
+                    const bg = getCellBackground(doctor, date, isBH, isWknd);
 
                     return (
-                      <td key={date} className={`text-center py-1 px-0.5 ${bg} ${isBH ? 'border-t-2 border-red-300' : ''}`}>
-                        {label && <span className={`text-[9px] font-semibold ${text}`}>{label}</span>}
+                      <td key={date} style={{
+                        background: bg,
+                        borderBottom: '1px solid #f1f5f9', borderLeft: '1px solid #e2e8f0',
+                        textAlign: 'center',
+                        minHeight: 52, height: 1, verticalAlign: 'middle',
+                        padding: 0,
+                      }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '6px 4px' }}>
+                          {badgeEvents.map(event => <LeaveBadge key={event} type={event} />)}
+                          {isNoc && (
+                            <span style={{
+                              background: '#ec4899', color: '#fff',
+                              fontSize: 10, fontWeight: 700,
+                              padding: '2px 7px', borderRadius: 5,
+                              letterSpacing: '0.04em', lineHeight: 1.4,
+                            }}>NOC</span>
+                          )}
+                          {isLtftDay && (
+                            <span style={{
+                              background: 'rgba(253,230,138,0.7)', color: '#92400e',
+                              border: '1px solid #fde68a',
+                              fontSize: 9, fontWeight: 600,
+                              padding: '1px 5px', borderRadius: 4,
+                              letterSpacing: '0.03em',
+                            }}>LTFT</span>
+                          )}
+                        </div>
                       </td>
                     );
                   })}
                 </tr>
               ))}
+              {/* ✅ Section 2.4 complete (multi-badge cells) */}
+              {/* ✅ Section 2.5 complete (consistent row heights) */}
 
               {/* Divider */}
-              <tr><td colSpan={week.dates.length + 1} className="h-1 bg-border"></td></tr>
+              <tr>
+                <td colSpan={week.dates.length + 1} style={{ padding: 0 }}>
+                  <div style={{ height: 3, background: '#e2e8f0' }} />
+                </td>
+              </tr>
 
               {/* Total available row */}
-              <tr className="font-semibold">
-                <td className="sticky left-0 bg-white z-10 px-2 py-1.5 border-r border-border text-xs text-foreground">Total available</td>
+              <tr style={{ background: '#f8fafc' }}>
+                <td style={{
+                  padding: '10px 16px', fontWeight: 700, fontSize: 13, color: '#1e293b',
+                  borderBottom: '2px solid #e2e8f0', borderRight: '1px solid #e2e8f0',
+                  position: 'sticky', left: 0, background: '#f8fafc', zIndex: 1,
+                  minHeight: 44, height: 1,
+                }}>Total available</td>
                 {week.dates.map(date => {
                   const available = doctors.filter(doc => {
                     const p = doc.availability[date]?.primary ?? 'AVAILABLE';
                     return !['AL', 'SL', 'ROT', 'PL', 'NOC'].includes(p);
                   }).length;
+                  const bg = availabilityColour(available, maxMinDoctors);
                   return (
-                    <td key={date} className="text-center py-1.5 px-0.5">
-                      <span className={`inline-block rounded px-1.5 py-0.5 text-[10px] font-bold ${availabilityColour(available, maxMinDoctors)}`}>
-                        {available}
-                      </span>
+                    <td key={date} style={{
+                      background: getColumnBg(date, bankHolidays),
+                      borderBottom: '2px solid #e2e8f0', borderLeft: '1px solid #e2e8f0',
+                      textAlign: 'center', minHeight: 44, height: 1,
+                    }}>
+                      <span style={{
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                        width: 28, height: 28, borderRadius: 6,
+                        background: bg, color: '#fff', fontSize: 13, fontWeight: 700,
+                      }}>{available}</span>
                     </td>
                   );
                 })}
               </tr>
 
               {/* Per-shift eligibility rows */}
-              {shiftTypes.map(shift => (
-                <tr key={shift.id}>
-                  <td className="sticky left-0 bg-white z-10 px-2 py-1 border-r border-border text-[10px] text-muted-foreground truncate">{shift.name}</td>
+              {shiftTypes.map((shift, si) => (
+                <tr key={shift.id} style={{ background: si % 2 === 0 ? '#fff' : '#fafafa' }}>
+                  <td style={{
+                    padding: '7px 16px 7px 24px',
+                    fontSize: 12, color: '#64748b',
+                    borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #e2e8f0',
+                    position: 'sticky', left: 0, background: si % 2 === 0 ? '#fff' : '#fafafa', zIndex: 1,
+                    minHeight: 44, height: 1,
+                  }}>{shift.name}</td>
                   {week.dates.map(date => {
                     const count = eligibility[shift.id]?.[date] ?? 0;
+                    const color = availabilityColour(count, shift.min_doctors);
                     return (
-                      <td key={date} className="text-center py-1 px-0.5">
-                        <span className={`inline-block rounded px-1.5 py-0.5 text-[9px] font-semibold ${availabilityColour(count, shift.min_doctors)}`}>
-                          {count}
-                        </span>
+                      <td key={date} style={{
+                        background: getColumnBg(date, bankHolidays),
+                        borderBottom: '1px solid #f1f5f9', borderLeft: '1px solid #e2e8f0',
+                        textAlign: 'center', minHeight: 44, height: 1,
+                      }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color }}>{count}</span>
                       </td>
                     );
                   })}
                 </tr>
               ))}
+              {/* ✅ Section 2.6 complete (availability rows) */}
             </tbody>
           </table>
         </div>
 
-        {/* Legend */}
         <CalendarLegend />
       </div>
     </AdminLayout>
   );
 }
-
-function getCellBg(code: string): string {
-  const map: Record<string, string> = {
-    AL: 'bg-green-500', SL: 'bg-blue-500', NOC: 'bg-purple-100',
-    ROT: 'bg-orange-500', PL: 'bg-pink-500', BH: 'bg-red-500',
-    LTFT: 'bg-amber-100', AVAILABLE: 'bg-white',
-  };
-  return map[code] ?? 'bg-white';
-}
-
-function getCellText(code: string): string {
-  const map: Record<string, string> = {
-    AL: 'text-white', SL: 'text-white', ROT: 'text-white',
-    PL: 'text-white', BH: 'text-white', NOC: 'text-purple-700',
-    LTFT: 'text-amber-700', AVAILABLE: 'text-foreground',
-  };
-  return map[code] ?? 'text-foreground';
-}
-
-function CalendarLegend() {
-  return (
-    <div className="flex flex-wrap gap-3 mt-3 text-xs text-muted-foreground">
-      <span><span className="inline-block w-3 h-3 rounded-sm bg-green-500 mr-1" />Annual Leave</span>
-      <span><span className="inline-block w-3 h-3 rounded-sm bg-blue-500 mr-1" />Study Leave</span>
-      <span><span className="inline-block w-3 h-3 rounded-sm bg-orange-500 mr-1" />Rotation</span>
-      <span><span className="inline-block w-3 h-3 rounded-sm bg-pink-500 mr-1" />Parental Leave</span>
-      <span><span className="inline-block w-3 h-3 rounded-sm bg-purple-100 border border-purple-300 mr-1" />Not On-Call</span>
-      <span><span className="inline-block w-3 h-3 rounded-sm bg-amber-100 border border-amber-300 mr-1" />LTFT day off</span>
-      <span><span className="inline-block w-3 h-3 rounded-sm bg-red-50 border border-red-300 mr-1" />Bank Holiday column</span>
-      <span><span className="inline-block w-3 h-3 rounded-sm bg-gray-100 border border-gray-200 mr-1" />Weekend</span>
-      <span><span className="inline-block w-3 h-3 rounded-sm bg-white border border-gray-200 mr-1" />Available</span>
-    </div>
-  );
-}
-// ✅ Section 3 complete
+// ✅ Section 2 complete
 // ✅ Section 5 complete (responsive design applied)
