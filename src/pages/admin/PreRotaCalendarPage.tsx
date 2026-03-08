@@ -92,15 +92,15 @@ function isDoctorEligible(
   }
 
   const nextDate = addDays(date, 1);
-  const dayNameOfNextDate = DAY_NAMES[new Date(nextDate + 'T00:00:00').getDay()];
-  const isNextDayLtftOff = doctor.ltftDaysOff.includes(dayNameOfNextDate);
+  const dayNameOfNextDate = getDayNameFromISO(nextDate);
+  const isNextDayLtftOff = getLtftDaysOff(doctor).includes(dayNameOfNextDate);
 
   if (isNextDayLtftOff) {
     if (!survey) return false;
     const nextCell = doctor.availability[nextDate];
     const nextPrimary = nextCell?.primary ?? 'AVAILABLE';
     if (['AL', 'SL', 'ROT', 'PL'].includes(nextPrimary)) return false;
-    const flex = survey.ltftNightFlexibility.find(f => f.day === dayNameOfNextDate);
+    const flex = survey.ltftNightFlexibility.find(f => normaliseDayName(f.day) === dayNameOfNextDate);
     return flex?.canEnd === true;
   }
 
