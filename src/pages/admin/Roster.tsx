@@ -511,7 +511,7 @@ export default function Roster() {
                       <div className="flex items-center gap-0.5">
                         {renderSendButton(doctor, sendState, isSending, isSuccess)}
                         {renderCopyButton(doctor, isCopied)}
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditDoctor(doctor); setEditPanelOpen(true); }}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => doctor.survey_token && navigate(`/doctor/survey?token=${doctor.survey_token}&admin=true`)} disabled={!doctor.survey_token}>
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => removeDoctor(doctor.id)}>
