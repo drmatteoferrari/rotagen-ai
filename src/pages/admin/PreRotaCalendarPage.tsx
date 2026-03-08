@@ -5,14 +5,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { generatePreRotaExcel } from "@/lib/preRotaExcel";
 import type { CalendarData, CalendarDoctor, TargetsData, CellCode } from "@/lib/preRotaTypes";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useRotaContext } from "@/contexts/RotaContext";
 import { Button } from "@/components/ui/button";
 import {
   ChevronLeft, ChevronRight, Download, ArrowLeft, Loader2, AlertTriangle,
 } from "lucide-react";
-// ✅ Section 1 complete (imports)
+// ✅ Section 5 complete (imports — useRotaContext replaces sessionStorage)
 
 const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-const SESSION_KEY = 'rotaConfigId';
 
 // ✅ Section 2.1 complete — UTC-safe day name derivation
 const FULL_DAY_NAMES: Record<string, string> = {
