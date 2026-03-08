@@ -288,7 +288,7 @@ export default function Roster() {
       <Tooltip><TooltipTrigger asChild><span><Button variant="ghost" size="icon" disabled className="text-muted-foreground"><Send className="h-4 w-4" /></Button></span></TooltipTrigger><TooltipContent>{sendState.tooltip}</TooltipContent></Tooltip>
     );
     return (
-      <Popover open={popoverId === doctor.id} onOpenChange={(open) => setPopoverId(open ? doctor.id : null)}>
+      <Popover modal open={popoverId === doctor.id} onOpenChange={(open) => setPopoverId(open ? doctor.id : null)}>
         <PopoverTrigger asChild>
           <Button variant="ghost" size="icon" className={cn("relative", sendState.color)} title={sendState.tooltip}>
             <Send className="h-4 w-4" />
