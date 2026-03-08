@@ -472,12 +472,12 @@ export function SurveyProvider({ token, children }: { token: string | null; chil
   }, [scheduleAutoSave]);
 
   const setStep = useCallback((n: number) => {
-    setCurrentStep(Math.max(1, Math.min(6, n)));
+    setCurrentStep(Math.max(1, Math.min(7, n)));
   }, []);
 
   const nextStep = useCallback(() => {
     saveDraft();
-    setCurrentStep((s) => Math.min(s + 1, 6));
+    setCurrentStep((s) => Math.min(s + 1, 7));
   }, [saveDraft]);
 
   const prevStep = useCallback(() => {
