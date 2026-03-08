@@ -78,8 +78,8 @@ function isDoctorEligible(
 
   const isNightShift = shift.badge_night === true;
   const survey = surveys[doctor.doctorId];
-  const dayNameOfDate = DAY_NAMES[new Date(date + 'T00:00:00').getDay()];
-  const isLtftDayOff = doctor.ltftDaysOff.includes(dayNameOfDate);
+  const dayNameOfDate = getDayNameFromISO(date);
+  const isLtftDayOff = getLtftDaysOff(doctor).includes(dayNameOfDate);
 
   if (!isNightShift) {
     return !isLtftDayOff;
@@ -87,7 +87,7 @@ function isDoctorEligible(
 
   if (isLtftDayOff) {
     if (!survey) return false;
-    const flex = survey.ltftNightFlexibility.find(f => f.day === dayNameOfDate);
+    const flex = survey.ltftNightFlexibility.find(f => normaliseDayName(f.day) === dayNameOfDate);
     return flex?.canStart === true;
   }
 
