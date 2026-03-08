@@ -57,7 +57,7 @@ import { getRotaConfig } from "@/lib/rotaConfig";
 export default function RotaPeriodStep2() {
   const navigate = useNavigate();
   const { setPeriodComplete, rotaStartDate, rotaEndDate } = useAdminSetup();
-  const { currentRotaConfigId, setCurrentRotaConfigId } = useRotaContext();
+  const { currentRotaConfigId, setCurrentRotaConfigId, setRestoredConfig } = useRotaContext();
   const { user } = useAuth();
   const [saving, setSaving] = useState(false);
   const [bankHolidays, setBankHolidays] = useState<BankHoliday[]>([]);
