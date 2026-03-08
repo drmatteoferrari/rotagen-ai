@@ -697,31 +697,42 @@ export default function PreRotaCalendarPage() {
                 </td>
               </tr>
 
-              {/* Total available row */}
+              {/* ✅ Section 2 complete — Total available row with NOC sub-count */}
               <tr style={{ background: '#f8fafc' }}>
                 <td style={{
                   padding: '10px 16px', fontWeight: 700, fontSize: 13, color: '#1e293b',
                   borderBottom: '2px solid #e2e8f0', borderRight: '1px solid #e2e8f0',
                   position: 'sticky', left: 0, background: '#f8fafc', zIndex: 1,
                   minHeight: 44, height: 1,
-                }}>Total available</td>
+                }}>All shifts</td>
                 {week.dates.map(date => {
-                  const available = doctors.filter(doc => {
+                  const availableAll = doctors.filter(doc => {
                     const p = doc.availability[date]?.primary ?? 'AVAILABLE';
                     return !['AL', 'SL', 'ROT', 'PL', 'NOC'].includes(p);
                   }).length;
-                  const bg = availabilityColour(available, maxMinDoctors);
+                  const availableNonOcOnly = doctors.filter(doc => {
+                    const p = doc.availability[date]?.primary ?? 'AVAILABLE';
+                    return p === 'NOC';
+                  }).length;
+                  const bg = availabilityColour(availableAll, maxMinDoctors);
                   return (
                     <td key={date} style={{
                       background: getColumnBg(date, bankHolidays),
                       borderBottom: '2px solid #e2e8f0', borderLeft: '1px solid #e2e8f0',
                       textAlign: 'center', minHeight: 44, height: 1,
                     }}>
-                      <span style={{
-                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                        width: 28, height: 28, borderRadius: 6,
-                        background: bg, color: '#fff', fontSize: 13, fontWeight: 700,
-                      }}>{available}</span>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                          width: 28, height: 28, borderRadius: 6,
+                          background: bg, color: '#fff', fontSize: 13, fontWeight: 700,
+                        }}>{availableAll}</span>
+                        {availableNonOcOnly > 0 && (
+                          <span style={{ fontSize: 10, color: '#ec4899', fontWeight: 600 }}>
+                            +{availableNonOcOnly} NOC
+                          </span>
+                        )}
+                      </div>
                     </td>
                   );
                 })}
