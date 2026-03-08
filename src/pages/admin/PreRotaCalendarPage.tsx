@@ -5,14 +5,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { generatePreRotaExcel } from "@/lib/preRotaExcel";
 import type { CalendarData, CalendarDoctor, TargetsData, CellCode } from "@/lib/preRotaTypes";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useRotaContext } from "@/contexts/RotaContext";
 import { Button } from "@/components/ui/button";
 import {
   ChevronLeft, ChevronRight, Download, ArrowLeft, Loader2, AlertTriangle,
 } from "lucide-react";
-// ✅ Section 1 complete (imports)
+// ✅ Section 5 complete (imports — useRotaContext replaces sessionStorage)
 
 const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-const SESSION_KEY = 'rotaConfigId';
 
 // ✅ Section 2.1 complete — UTC-safe day name derivation
 const FULL_DAY_NAMES: Record<string, string> = {
@@ -243,6 +243,8 @@ function CalendarLegend() {
 export default function PreRotaCalendarPage() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  // ✅ Section 5 complete — use RotaContext as single source of truth
+  const { currentRotaConfigId: rotaConfigId } = useRotaContext();
 
   const [loading, setLoading] = useState(true);
   const [calendarData, setCalendarData] = useState<CalendarData | null>(null);
@@ -252,16 +254,19 @@ export default function PreRotaCalendarPage() {
   const [surveysMap, setSurveysMap] = useState<Record<string, SurveyMap>>({});
   const [eligibility, setEligibility] = useState<Record<string, Record<string, number>>>({});
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
   const [currentDayIndex, setCurrentDayIndex] = useState(0);
   const [deptName, setDeptName] = useState('');
   const [hospitalName, setHospitalName] = useState('');
 
-  // Load data
+  // ✅ Section 6 complete — data load wrapped in try/catch
   useEffect(() => {
     const load = async () => {
-      const rotaConfigId = sessionStorage.getItem(SESSION_KEY);
+      setLoadError(null);
       if (!rotaConfigId) { setErrorMsg('No rota config found. Go back to the dashboard.'); setLoading(false); return; }
+
+      try {
 
       const { data: preRota } = await supabase
         .from('pre_rota_results' as any)
@@ -361,10 +366,15 @@ export default function PreRotaCalendarPage() {
         setEligibility(elig);
       }
 
-      setLoading(false);
+      } catch (err) {
+        console.error('Failed to load calendar data:', err);
+        setLoadError('Failed to load data. Please go back and try again.');
+      } finally {
+        setLoading(false);
+      }
     };
     load();
-  }, []);
+  }, [rotaConfigId]);
 
   // Keyboard navigation
   useEffect(() => {
@@ -415,13 +425,13 @@ export default function PreRotaCalendarPage() {
     );
   }
 
-  if (errorMsg || !calendarData) {
+  if (loadError || errorMsg || !calendarData) {
     return (
       <AdminLayout title="Availability Calendar">
         <div className="mx-auto max-w-lg mt-12">
           <div className="rounded-xl border border-border bg-card p-6 text-center space-y-4">
             <AlertTriangle className="h-8 w-8 text-amber-500 mx-auto" />
-            <p className="text-sm text-foreground">{errorMsg ?? 'No calendar data available.'}</p>
+            <p className="text-sm text-foreground">{loadError ?? errorMsg ?? 'No calendar data available.'}</p>
             <Button variant="outline" onClick={() => navigate('/admin/dashboard')}>
               <ArrowLeft className="h-4 w-4 mr-2" /> Back to Dashboard
             </Button>
@@ -430,6 +440,7 @@ export default function PreRotaCalendarPage() {
       </AdminLayout>
     );
   }
+
 
   const { weeks, doctors } = calendarData;
 

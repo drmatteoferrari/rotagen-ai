@@ -5,27 +5,28 @@ import { supabase } from "@/integrations/supabase/client";
 import { generatePreRotaExcel } from "@/lib/preRotaExcel";
 import { computeShiftTargets, type ComputeShiftTargetsResult } from "@/lib/shiftTargets";
 import { useRotaConfig } from "@/lib/rotaConfig";
+import { useRotaContext } from "@/contexts/RotaContext";
 import type { CalendarData, TargetsData, DoctorTargets } from "@/lib/preRotaTypes";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Download, Loader2, AlertTriangle, BarChart3 } from "lucide-react";
-// ✅ Section 1 complete (imports)
-
-const SESSION_KEY = 'rotaConfigId';
+// ✅ Section 5 complete (imports — useRotaContext replaces sessionStorage)
 
 const displayContractedHours = (doctor: DoctorTargets, wtrMaxHoursPerWeek: number): number => {
   return Math.round(wtrMaxHoursPerWeek * (doctor.wte / 100) * 10) / 10;
 };
-// ✅ Section 4.2 complete (contracted hours fix)
 
 export default function PreRotaTargetsPage() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  // ✅ Section 5 complete — use RotaContext as single source of truth
+  const { currentRotaConfigId: rotaConfigId } = useRotaContext();
 
   const [loading, setLoading] = useState(true);
   const [targetsData, setTargetsData] = useState<TargetsData | null>(null);
   const [calendarData, setCalendarData] = useState<CalendarData | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [deptName, setDeptName] = useState('');
   const [hospitalName, setHospitalName] = useState('');
 
@@ -50,38 +51,44 @@ export default function PreRotaTargetsPage() {
     });
   }, [fullConfig]);
 
+  // ✅ Section 6 complete — data load wrapped in try/catch
   useEffect(() => {
     const load = async () => {
-      const rotaConfigId = sessionStorage.getItem(SESSION_KEY);
+      setLoadError(null);
       if (!rotaConfigId) { setErrorMsg('No rota config found. Go back to the dashboard.'); setLoading(false); return; }
 
-      const { data: preRota } = await supabase
-        .from('pre_rota_results' as any)
-        .select('*')
-        .eq('rota_config_id', rotaConfigId)
-        .single();
+      try {
+        const { data: preRota } = await supabase
+          .from('pre_rota_results' as any)
+          .select('*')
+          .eq('rota_config_id', rotaConfigId)
+          .single();
 
-      if (!preRota) { setErrorMsg('No pre-rota generated yet. Go back to the dashboard and generate the pre-rota first.'); setLoading(false); return; }
-      const pr = preRota as any;
-      if (pr.status === 'blocked') { setErrorMsg('Pre-rota is blocked due to critical issues. Resolve them on the dashboard before viewing targets.'); setLoading(false); return; }
+        if (!preRota) { setErrorMsg('No pre-rota generated yet. Go back to the dashboard and generate the pre-rota first.'); setLoading(false); return; }
+        const pr = preRota as any;
+        if (pr.status === 'blocked') { setErrorMsg('Pre-rota is blocked due to critical issues. Resolve them on the dashboard before viewing targets.'); setLoading(false); return; }
 
-      setTargetsData(pr.targets_data as TargetsData);
-      setCalendarData(pr.calendar_data as CalendarData);
+        setTargetsData(pr.targets_data as TargetsData);
+        setCalendarData(pr.calendar_data as CalendarData);
 
-      // Account settings
-      const { data: config } = await supabase.from('rota_configs').select('owned_by, rota_start_date, rota_end_date').eq('id', rotaConfigId).single();
-      if (config) {
-        const { data: acct } = await supabase.from('account_settings').select('department_name, trust_name').eq('owned_by', (config as any).owned_by).single();
-        if (acct) {
-          setDeptName((acct as any).department_name ?? '');
-          setHospitalName((acct as any).trust_name ?? '');
+        // Account settings
+        const { data: config } = await supabase.from('rota_configs').select('owned_by, rota_start_date, rota_end_date').eq('id', rotaConfigId).single();
+        if (config) {
+          const { data: acct } = await supabase.from('account_settings').select('department_name, trust_name').eq('owned_by', (config as any).owned_by).single();
+          if (acct) {
+            setDeptName((acct as any).department_name ?? '');
+            setHospitalName((acct as any).trust_name ?? '');
+          }
         }
+      } catch (err) {
+        console.error('Failed to load targets data:', err);
+        setLoadError('Failed to load data. Please go back and try again.');
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     };
     load();
-  }, []);
+  }, [rotaConfigId]);
 
   const handleDownload = useCallback(() => {
     if (!calendarData || !targetsData) return;
@@ -105,13 +112,13 @@ export default function PreRotaTargetsPage() {
     );
   }
 
-  if (errorMsg || !targetsData) {
+  if (loadError || errorMsg || !targetsData) {
     return (
       <AdminLayout title="Shift Hour Targets">
         <div className="mx-auto max-w-lg mt-12">
           <div className="rounded-xl border border-border bg-card p-6 text-center space-y-4">
             <AlertTriangle className="h-8 w-8 text-amber-500 mx-auto" />
-            <p className="text-sm text-foreground">{errorMsg ?? 'No targets data available.'}</p>
+            <p className="text-sm text-foreground">{loadError ?? errorMsg ?? 'No targets data available.'}</p>
             <Button variant="outline" onClick={() => navigate('/admin/dashboard')}>
               <ArrowLeft className="h-4 w-4 mr-2" /> Back to Dashboard
             </Button>

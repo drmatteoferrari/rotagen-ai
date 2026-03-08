@@ -261,8 +261,16 @@ function expandDateRange(start: string, end: string): string[] {
 function mapResponseToPreference(resp: DoctorSurveyResponse): DoctorPreference {
   const annualLeave = Array.isArray(resp.annual_leave) ? resp.annual_leave : [];
   const studyLeave = Array.isArray(resp.study_leave) ? resp.study_leave : [];
+  // ✅ Section 1 complete — NOC dates expanded from {startDate, endDate} ranges
   const nocDates = Array.isArray(resp.noc_dates)
-    ? resp.noc_dates.map((n: any) => typeof n === "string" ? n : n?.date ?? "")
+    ? resp.noc_dates.flatMap((n: any) => {
+        if (typeof n === "string") return [n];
+        const start = n?.startDate ?? n?.start_date ?? n?.date ?? '';
+        const end   = n?.endDate   ?? n?.end_date   ?? n?.date ?? '';
+        if (!start) return [];
+        if (!end || end === start) return [start];
+        return expandDateRange(start, end);
+      })
     : [];
   const ltftNightFlex = Array.isArray(resp.ltft_night_flexibility) ? resp.ltft_night_flexibility : [];
 
@@ -271,9 +279,13 @@ function mapResponseToPreference(resp: DoctorSurveyResponse): DoctorPreference {
     name: resp.full_name ?? "",
     grade: resp.grade ?? "",
     wtePct: resp.wte_percent ?? 100,
-    ltftDaysOff: resp.ltft_days_off ?? [],
-    ltftNightFlexibility: ltftNightFlex,
-    maxConsecNights: 4,
+    // ✅ Section 3 complete — normalise day names to lowercase
+    ltftDaysOff: (resp.ltft_days_off ?? []).map((d: string) => d.toLowerCase()),
+    ltftNightFlexibility: ltftNightFlex.map((f: any) => ({
+      ...f,
+      day: (f.day ?? '').toLowerCase(),
+    })),
+    maxConsecNights: 0, // placeholder — replaced in buildFinalRotaInput with WTR value
     annualLeave: annualLeave.map((l: any) => ({
       startDate: l.startDate ?? l.start_date ?? "",
       endDate: l.endDate ?? l.end_date ?? "",
@@ -297,10 +309,17 @@ export async function buildFinalRotaInput(configId: string): Promise<FinalRotaIn
   const cfg = await getRotaConfig(configId);
   const totalWeeks = preRotaInput.period.totalWeeks || 1;
 
+  // ✅ Section 2 complete — read maxConsecNights from WTR settings instead of hardcoding
+  const maxConsecNights = cfg.wtr?.maxConsecNights ?? 4;
+
   // Fetch submitted survey responses
   const responses = await getSurveyResponsesForConfig(configId);
   const submittedResponses = responses.filter((r) => r.status === "submitted");
-  const doctors = submittedResponses.map(mapResponseToPreference);
+  const doctors = submittedResponses.map((r) => {
+    const pref = mapResponseToPreference(r);
+    pref.maxConsecNights = maxConsecNights;
+    return pref;
+  });
 
   const totalNightSlots = preRotaInput.shiftSlots
     .filter((s) => s.badges.includes("night"))
