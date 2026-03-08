@@ -219,6 +219,7 @@ export function DepartmentSetupProvider({ children }: { children: ReactNode }) {
             };
           });
           setShifts(restored);
+          hasLoadedShiftsFromDB.current = true;
         }
       } catch (err) {
         console.error('Failed to load shift types from DB:', err);
