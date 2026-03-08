@@ -10,34 +10,35 @@ import { Stethoscope, Info } from "lucide-react";
 interface CompBlock {
   key: "iac" | "iaoc" | "icu" | "transfer";
   title: string;
+  shortName: string;
   achievedField: "iacAchieved" | "iaocAchieved" | "icuAchieved" | "transferAchieved";
   workingField: "iacWorkingTowards" | "iaocWorkingTowards" | "icuWorkingTowards" | "transferWorkingTowards";
   remoteField: "iacRemoteSupervision" | "iaocRemoteSupervision" | "icuRemoteSupervision" | "transferRemoteSupervision";
 }
 
 const BLOCKS: CompBlock[] = [
-  { key: "iac", title: "IAC — Initial Assessment of Competency", achievedField: "iacAchieved", workingField: "iacWorkingTowards", remoteField: "iacRemoteSupervision" },
-  { key: "iaoc", title: "IAOC — Initial Assessment of Obstetrics Competency", achievedField: "iaocAchieved", workingField: "iaocWorkingTowards", remoteField: "iaocRemoteSupervision" },
-  { key: "icu", title: "ICU — Intensive Care Medicine", achievedField: "icuAchieved", workingField: "icuWorkingTowards", remoteField: "icuRemoteSupervision" },
-  { key: "transfer", title: "Transfer", achievedField: "transferAchieved", workingField: "transferWorkingTowards", remoteField: "transferRemoteSupervision" },
+  { key: "iac", shortName: "IAC", title: "IAC — Initial Assessment of Competency", achievedField: "iacAchieved", workingField: "iacWorkingTowards", remoteField: "iacRemoteSupervision" },
+  { key: "iaoc", shortName: "IAOC", title: "IAOC — Initial Assessment of Obstetrics Competency", achievedField: "iaocAchieved", workingField: "iaocWorkingTowards", remoteField: "iaocRemoteSupervision" },
+  { key: "icu", shortName: "ICU", title: "ICU — Intensive Care Medicine", achievedField: "icuAchieved", workingField: "icuWorkingTowards", remoteField: "icuRemoteSupervision" },
+  { key: "transfer", shortName: "Transfer", title: "Transfer", achievedField: "transferAchieved", workingField: "transferWorkingTowards", remoteField: "transferRemoteSupervision" },
 ];
 
 function RadioYesNo({ value, onChange, label }: { value: boolean | null; onChange: (v: boolean) => void; label: string }) {
   return (
     <div className="space-y-1.5">
-      <p className="text-sm font-medium text-card-foreground">{label}</p>
+      <p className="text-xs sm:text-sm font-medium text-card-foreground">{label}</p>
       <div className="flex gap-2">
         <button
           type="button"
           onClick={() => onChange(true)}
-          className={`flex-1 py-2.5 rounded-lg text-sm font-bold border transition-all ${value === true ? "bg-teal-600 text-white border-teal-600" : "bg-card text-muted-foreground border-border hover:border-teal-300"}`}
+          className={`flex-1 py-2 rounded-lg text-sm font-bold border transition-all ${value === true ? "bg-teal-600 text-white border-teal-600" : "bg-card text-muted-foreground border-border hover:border-teal-300"}`}
         >
           Yes
         </button>
         <button
           type="button"
           onClick={() => onChange(false)}
-          className={`flex-1 py-2.5 rounded-lg text-sm font-bold border transition-all ${value === false ? "bg-teal-600 text-white border-teal-600" : "bg-card text-muted-foreground border-border hover:border-teal-300"}`}
+          className={`flex-1 py-2 rounded-lg text-sm font-bold border transition-all ${value === false ? "bg-teal-600 text-white border-teal-600" : "bg-card text-muted-foreground border-border hover:border-teal-300"}`}
         >
           No
         </button>
@@ -68,27 +69,27 @@ export default function SurveyStep2() {
 
   return (
     <>
-      <div className="p-4 pb-32 space-y-6">
+      <div className="p-3 sm:p-4 pb-32 space-y-4">
         {/* Info banner */}
-        <div className="flex items-center gap-2 rounded-lg border border-teal-200 bg-teal-50 px-4 py-2.5 text-sm font-medium text-teal-700">
-          <Info className="h-4 w-4 shrink-0 text-teal-600" />
+        <div className="flex items-start gap-2 rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-xs sm:text-sm font-medium text-teal-700">
+          <Info className="h-4 w-4 shrink-0 mt-0.5 text-teal-600" />
           Only tick competencies where you have confirmed clinical sign-off.
         </div>
 
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
+          <CardHeader className="px-3 sm:px-6 py-3 sm:py-4">
+            <CardTitle className="flex items-center gap-2 text-base">
               <Stethoscope className="h-5 w-5 text-teal-600" />
               Clinical Competencies
             </CardTitle>
-            <CardDescription>Areas you are trained and signed off to work in.</CardDescription>
+            <CardDescription className="text-xs">Areas you are trained and signed off to work in.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="px-3 sm:px-6 space-y-4">
             {BLOCKS.map((b) => (
               <SurveySection key={b.key} number={BLOCKS.indexOf(b) + 1} title={b.title}>
-                <div className="space-y-4">
+                <div className="space-y-3">
                   <RadioYesNo
-                    label={`Have you achieved ${b.title.split(" — ")[0]}?`}
+                    label={`Have you achieved ${b.shortName}?`}
                     value={formData[b.achievedField]}
                     onChange={(v) => {
                       setField(b.achievedField, v);
@@ -101,7 +102,7 @@ export default function SurveyStep2() {
                   {formData[b.achievedField] === false && (
                     <>
                       <RadioYesNo
-                        label={`Working towards ${b.title.split(" — ")[0]} this rotation?`}
+                        label={`Working towards ${b.shortName} this rotation?`}
                         value={formData[b.workingField]}
                         onChange={(v) => setField(b.workingField, v)}
                       />
@@ -112,7 +113,7 @@ export default function SurveyStep2() {
                   {formData[b.achievedField] === true && (
                     <>
                       <RadioYesNo
-                        label={`Already covered ${b.title.split(" — ")[0]} with remote supervision?`}
+                        label={`Covered ${b.shortName} with remote supervision?`}
                         value={formData[b.remoteField]}
                         onChange={(v) => setField(b.remoteField, v)}
                       />
