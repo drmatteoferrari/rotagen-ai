@@ -36,7 +36,7 @@ export function SurveyShell({ children }: SurveyShellProps) {
     try { return format(parseISO(d), "dd MMM yyyy"); } catch { return d; }
   };
 
-  const progress = ((ctx?.currentStep || 1) / 6) * 100;
+  const progress = ((ctx?.currentStep || 1) / TOTAL_STEPS) * 100;
   const step = ctx?.currentStep || 1;
 
   return (
