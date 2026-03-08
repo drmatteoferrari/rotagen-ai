@@ -151,6 +151,44 @@ export default function RotaPeriodStep2() {
           </CardContent>
         </Card>
 
+        {/* ✅ Section 5a — Bank Holiday Rules Card */}
+        <Card>
+          <CardContent className="pt-6 space-y-4">
+            <div>
+              <p className="text-sm font-semibold text-card-foreground">Bank Holiday Shift Rules</p>
+              <p className="text-xs text-muted-foreground mt-1">Do bank holidays follow the same staffing rules as weekends?</p>
+            </div>
+            <div className="flex gap-2.5">
+              <button
+                type="button"
+                onClick={() => setBhSameAsWeekend(true)}
+                className={`px-6 py-2 rounded-lg text-sm font-semibold border-2 transition-colors ${
+                  bhSameAsWeekend === true ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-background text-muted-foreground'
+                }`}
+              >Yes</button>
+              <button
+                type="button"
+                onClick={() => setBhSameAsWeekend(false)}
+                className={`px-6 py-2 rounded-lg text-sm font-semibold border-2 transition-colors ${
+                  bhSameAsWeekend === false ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-background text-muted-foreground'
+                }`}
+              >No — different rules apply</button>
+            </div>
+            {bhSameAsWeekend === false && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-foreground">Describe the bank holiday rules for your department:</label>
+                <textarea
+                  value={bhCustomRules}
+                  onChange={e => setBhCustomRules(e.target.value)}
+                  placeholder="e.g. BH are treated as standard weekdays with reduced staffing. Night shifts still run as normal."
+                  rows={4}
+                  className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                />
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        {/* ✅ Section 5a complete */}
         <div className="flex justify-between">
           <Button variant="outline" size="lg" onClick={() => navigate("/admin/rota-period/step-1")}>
             <ArrowLeft className="mr-2 h-4 w-4" />Back
