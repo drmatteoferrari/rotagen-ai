@@ -10,6 +10,7 @@ import SurveyStep3 from "./SurveyStep3";
 import SurveyStep4 from "./SurveyStep4";
 import SurveyStep5 from "./SurveyStep5";
 import SurveyStep6 from "./SurveyStep6";
+import SurveyStep7 from "./SurveyStep7";
 
 const stepComponents: Record<number, React.ComponentType> = {
   1: SurveyStep1,
@@ -18,6 +19,7 @@ const stepComponents: Record<number, React.ComponentType> = {
   4: SurveyStep4,
   5: SurveyStep5,
   6: SurveyStep6,
+  7: SurveyStep7,
 };
 
 function SurveyInner() {

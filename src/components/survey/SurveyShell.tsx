@@ -7,13 +7,16 @@ interface SurveyShellProps {
   children: ReactNode;
 }
 
+const TOTAL_STEPS = 7;
+
 const STEP_SUBTITLES: Record<number, string> = {
-  1: "Step 1 of 6 — Personal details",
-  2: "Step 2 of 6 — Competencies",
-  3: "Step 3 of 6 — Working pattern",
-  4: "Step 4 of 6 — Leave & unavailability",
-  5: "Step 5 of 6 — Exemptions & preferences",
-  6: "Step 6 of 6 — Review & submit",
+  1: "Step 1 of 7 — Personal details",
+  2: "Step 2 of 7 — Competencies",
+  3: "Step 3 of 7 — Working pattern",
+  4: "Step 4 of 7 — Leave & unavailability",
+  5: "Step 5 of 7 — Exemptions & preferences",
+  6: "Step 6 of 7 — Preferences & sessions",
+  7: "Step 7 of 7 — Review & submit",
 };
 
 export function SurveyShell({ children }: SurveyShellProps) {
@@ -33,7 +36,7 @@ export function SurveyShell({ children }: SurveyShellProps) {
     try { return format(parseISO(d), "dd MMM yyyy"); } catch { return d; }
   };
 
-  const progress = ((ctx?.currentStep || 1) / 6) * 100;
+  const progress = ((ctx?.currentStep || 1) / TOTAL_STEPS) * 100;
   const step = ctx?.currentStep || 1;
 
   return (
@@ -51,7 +54,7 @@ export function SurveyShell({ children }: SurveyShellProps) {
             </div>
           </div>
           <div className="text-xs font-medium bg-teal-50 text-teal-700 border border-teal-200 rounded-full px-3 py-1">
-            {step} / 6
+            {step} / {TOTAL_STEPS}
           </div>
         </div>
         <div className="mt-2 h-1.5 bg-muted rounded-full overflow-hidden">
