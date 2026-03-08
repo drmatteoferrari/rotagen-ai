@@ -5,24 +5,23 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ShieldCheck, CheckCircle, AlertTriangle, ArrowRight, Info, Minus, Plus } from "lucide-react";
 
-function WtrWarning({ value, threshold, aboveMsg, belowMsg }: { value: number; threshold: number; aboveMsg: string; belowMsg: string }) {
-  if (value < threshold) {
+function MaxWarning({ value, max, label }: { value: number; max: number; label: string }) {
+  if (value <= max) {
     return (
       <div className="flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-700 mt-2">
         <CheckCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-        {belowMsg}
+        {value === max
+          ? `Matches the WTR maximum of ${max} hrs — compliant.`
+          : `More restrictive than the WTR maximum of ${max} hrs — compliant.`}
       </div>
     );
   }
-  if (value > threshold) {
-    return (
-      <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 mt-2">
-        <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-        {aboveMsg}
-      </div>
-    );
-  }
-  return null;
+  return (
+    <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 mt-2">
+      <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+      ⚠️ WTR WARNING: {label} exceeds the legal maximum of {max} hrs. A Guardian of Safe Working Hours fine may apply.
+    </div>
+  );
 }
 
 export default function WtrStep1() {
@@ -33,20 +32,20 @@ export default function WtrStep1() {
     {
       label: "Max Avg Weekly Hours",
       sub: "Calculated over a 17-week reference period",
+      hint: "WTR maximum: 48 hrs",
       value: maxAvgWeekly,
       set: setMaxAvgWeekly,
-      threshold: 48,
-      belowMsg: "✅ More restrictive than WTR minimum — compliant.",
-      aboveMsg: "⚠️ WTR WARNING: Setting above 48 hours may breach Working Time Regulations. A Guardian of Safe Working Hours fine may apply.",
+      max: 48,
+      warnLabel: "Average weekly hours",
     },
     {
       label: "Max Hours in 7 Days",
-      sub: "Absolute maximum for any single rolling week",
+      sub: "Absolute maximum for any single rolling 168-hour period",
+      hint: "WTR maximum: 72 hrs",
       value: maxIn7Days,
       set: setMaxIn7Days,
-      threshold: 72,
-      belowMsg: "✅ More restrictive than WTR minimum — compliant.",
-      aboveMsg: "⚠️ WTR WARNING: Setting above 72 hours in any 168-hour period may breach Working Time Regulations. A Guardian of Safe Working Hours fine may apply.",
+      max: 72,
+      warnLabel: "Hours in any 7-day period",
     },
   ];
 
@@ -73,6 +72,7 @@ export default function WtrStep1() {
                   <div className="flex flex-col">
                     <span className="text-sm font-medium text-card-foreground">{item.label}</span>
                     <span className="text-xs text-muted-foreground">{item.sub}</span>
+                    <span className="text-[11px] font-semibold text-red-600 mt-0.5">{item.hint}</span>
                   </div>
                   <div className="flex items-center gap-3 bg-muted p-1.5 rounded-lg border border-border">
                     <button
@@ -90,7 +90,7 @@ export default function WtrStep1() {
                     </button>
                   </div>
                 </div>
-                <WtrWarning value={item.value} threshold={item.threshold} belowMsg={item.belowMsg} aboveMsg={item.aboveMsg} />
+                <MaxWarning value={item.value} max={item.max} label={item.warnLabel} />
               </div>
             ))}
           </CardContent>
