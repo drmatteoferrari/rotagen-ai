@@ -14,8 +14,6 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useRotaConfig } from "@/lib/rotaConfig";
-import { computeShiftTargets, type ComputeShiftTargetsResult } from "@/lib/shiftTargets";
 import { generatePreRota } from "@/lib/preRotaGenerator";
 import type { PreRotaResult } from "@/lib/preRotaTypes";
 // ✅ Section 1 complete
