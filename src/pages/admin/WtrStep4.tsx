@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "@/components/AdminLayout";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, CheckCircle, Lock } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { ArrowLeft, CheckCircle, Lock, ClipboardCheck, Info } from "lucide-react";
 import { useAdminSetup } from "@/contexts/AdminSetupContext";
 import { useRotaContext } from "@/contexts/RotaContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -40,47 +41,46 @@ export default function WtrStep4() {
   const [saving, setSaving] = useState(false);
 
   return (
-    <AdminLayout title="WTR Setup" subtitle="Step 4 of 4 — On-Call Rules">
+    <AdminLayout title="Working Time Regulations" subtitle="Step 4 of 4 — Review & Save">
       <div className="mx-auto max-w-3xl space-y-6">
-        <div className="flex justify-between items-end">
-          <span className="text-sm font-semibold text-red-500">Step 4 of 4</span>
-          <span className="text-xs font-medium text-muted-foreground">Final Configuration</span>
-        </div>
-        <div className="h-2 w-full bg-red-500/10 rounded-full overflow-hidden">
-          <div className="h-full bg-red-500 w-full rounded-full" />
+        <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700">
+          <Info className="h-4 w-4 shrink-0 text-red-600" />
+          These on-call rules are fixed by the 2016 Terms and Conditions of Service, Schedule 3. They cannot be modified.
         </div>
 
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight text-foreground">On-Call Working Patterns</h2>
-          <p className="text-muted-foreground text-sm mt-1">
-            These rules are fixed by the 2016 Terms and Conditions of Service, Schedule 3, and apply to all on-call rotas. They cannot be modified.
-          </p>
-        </div>
-
-        <div className="flex flex-col gap-4">
-          {onCallCards.map((card) => (
-            <div key={card.title} className="rounded-xl bg-card border border-border p-5 shadow-sm space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-base font-bold text-card-foreground">{card.title}</h3>
-                <span className="inline-flex items-center gap-1 bg-red-500/10 text-red-500 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide">
-                  <Lock className="h-3 w-3" /> Locked
-                </span>
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Rule</p>
-                  <p className="text-sm text-card-foreground leading-relaxed">{card.rule}</p>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ClipboardCheck className="h-5 w-5 text-red-600" />
+              Review & Save
+            </CardTitle>
+            <CardDescription>Confirm your WTR configuration before saving.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {onCallCards.map((card) => (
+              <div key={card.title} className="rounded-lg border border-border p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-medium text-card-foreground">{card.title}</h3>
+                  <span className="inline-flex items-center gap-1 bg-red-50 text-red-600 border border-red-200 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide">
+                    <Lock className="h-3 w-3" /> Locked
+                  </span>
                 </div>
-                <div>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Notes</p>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{card.notes}</p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Rule</p>
+                    <p className="text-sm text-card-foreground leading-relaxed">{card.rule}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Notes</p>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{card.notes}</p>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </CardContent>
+        </Card>
 
-        <div className="flex justify-between pt-4">
+        <div className="flex justify-between">
           <Button variant="outline" size="lg" onClick={() => navigate("/admin/wtr/step-3")}>
             <ArrowLeft className="mr-2 h-4 w-4" />Back
           </Button>
@@ -188,8 +188,8 @@ export default function WtrStep4() {
             } finally {
               setSaving(false);
             }
-          }} className="bg-red-500 hover:bg-red-600">
-            <CheckCircle className="mr-2 h-4 w-4" />{saving ? "Saving…" : "Save WTR Configuration"}
+          }} className="bg-red-600 hover:bg-red-700">
+            <CheckCircle className="mr-2 h-4 w-4" />{saving ? "Saving…" : "Save WTR Settings"}
           </Button>
         </div>
       </div>
