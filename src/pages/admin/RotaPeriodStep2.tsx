@@ -76,6 +76,27 @@ export default function RotaPeriodStep2() {
     setInitialized(true);
   }, [rotaStartDate, rotaEndDate, initialized]);
 
+  // ✅ Section 5d — restore BH rules from config on mount
+  useEffect(() => {
+    if (!currentRotaConfigId) return;
+    const loadBhRules = async () => {
+      const { data: config } = await supabase
+        .from("rota_configs")
+        .select("bh_same_as_weekend, bh_custom_rules")
+        .eq("id", currentRotaConfigId)
+        .maybeSingle();
+      if (config) {
+        if ((config as any).bh_same_as_weekend !== undefined && (config as any).bh_same_as_weekend !== null) {
+          setBhSameAsWeekend((config as any).bh_same_as_weekend);
+        }
+        if ((config as any).bh_custom_rules) {
+          setBhCustomRules((config as any).bh_custom_rules);
+        }
+      }
+    };
+    loadBhRules();
+  }, [currentRotaConfigId]);
+
   const addBankHoliday = () => {
     if (newHolidayDate && newHolidayName) {
       setBankHolidays([...bankHolidays, { id: Date.now().toString(), date: newHolidayDate, name: newHolidayName }]);
