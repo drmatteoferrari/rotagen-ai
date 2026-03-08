@@ -31,9 +31,11 @@ import PreRotaTargetsPage from "./pages/admin/PreRotaTargetsPage";
 const queryClient = new QueryClient();
 // ✅ Section 2 complete
 
-function ProtectedRoute({ children }: { children: ReactNode }) {
-  const { isAuthenticated } = useAuth();
+// SECTION 7 COMPLETE
+function ProtectedRoute({ children, requiredRole }: { children: ReactNode; requiredRole?: "coordinator" | "doctor" }) {
+  const { isAuthenticated, user } = useAuth();
   if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (requiredRole && user?.role !== requiredRole) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }
 
