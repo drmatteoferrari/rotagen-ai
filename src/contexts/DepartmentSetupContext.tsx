@@ -161,11 +161,18 @@ export function DepartmentSetupProvider({ children }: { children: ReactNode }) {
   // SECTION 5 — Restore shifts from config
   const { restoredConfig, currentRotaConfigId } = useRotaContext();
   const [isLoadingShifts, setIsLoadingShifts] = useState(false);
+  // ✅ Section 5 complete — ref guard to prevent dual restore race
+  const hasLoadedShiftsFromDB = useRef(false);
+
+  // Reset ref when config changes
+  useEffect(() => {
+    hasLoadedShiftsFromDB.current = false;
+  }, [currentRotaConfigId]);
 
   // ✅ Section 4 complete — Re-hydrate shift types from DB when context is empty
   useEffect(() => {
     if (!currentRotaConfigId) return;
-    if (shifts !== defaultShifts && shifts.length > 0) return; // already hydrated
+    if (hasLoadedShiftsFromDB.current) return; // already hydrated
 
     const loadFromDb = async () => {
       setIsLoadingShifts(true);
