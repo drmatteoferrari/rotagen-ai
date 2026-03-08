@@ -279,9 +279,13 @@ function mapResponseToPreference(resp: DoctorSurveyResponse): DoctorPreference {
     name: resp.full_name ?? "",
     grade: resp.grade ?? "",
     wtePct: resp.wte_percent ?? 100,
-    ltftDaysOff: resp.ltft_days_off ?? [],
-    ltftNightFlexibility: ltftNightFlex,
-    maxConsecNights: 4,
+    // ✅ Section 3 complete — normalise day names to lowercase
+    ltftDaysOff: (resp.ltft_days_off ?? []).map((d: string) => d.toLowerCase()),
+    ltftNightFlexibility: ltftNightFlex.map((f: any) => ({
+      ...f,
+      day: (f.day ?? '').toLowerCase(),
+    })),
+    maxConsecNights: 0, // placeholder — replaced in buildFinalRotaInput with WTR value
     annualLeave: annualLeave.map((l: any) => ({
       startDate: l.startDate ?? l.start_date ?? "",
       endDate: l.endDate ?? l.end_date ?? "",
