@@ -634,7 +634,7 @@ The `ProtectedRoute` component in `App.tsx` checks `useAuth().isAuthenticated`. 
 
 The doctor survey route (`/doctor/survey`) is **not** protected — it uses token-based access via the `?token=` query parameter.
 
-There is no role differentiation in the route guard — all authenticated users are treated as coordinators. The `role` field on `AuthUser` is set to `"coordinator"` but is not checked anywhere.
+The `ProtectedRoute` component supports a `requiredRole` prop. All `/admin/*` routes require `requiredRole="coordinator"`. The doctor survey route uses token-based access.
 
 ---
 
