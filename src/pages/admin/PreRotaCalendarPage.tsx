@@ -275,7 +275,8 @@ export default function PreRotaCalendarPage() {
 
       const cd = pr.calendar_data as CalendarData;
       const td = pr.targets_data as TargetsData;
-      setCalendarData(cd);
+      // Merge ltftDaysOff from survey responses into calendar doctors (Section 3.3)
+      // Done after surveys are loaded — see below
       setTargetsData(td);
 
       // Fetch shift types
