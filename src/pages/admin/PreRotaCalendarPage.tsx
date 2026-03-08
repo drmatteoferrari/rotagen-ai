@@ -874,7 +874,7 @@ export default function PreRotaCalendarPage() {
               {shiftTypes.map((shift, si) => (
                 <tr key={shift.id} style={{ background: si % 2 === 0 ? '#fff' : '#fafafa' }}>
                   <td style={{
-                    padding: '7px 16px 7px 24px',
+                    padding: '7px 12px 7px 20px',
                     fontSize: 12, color: '#64748b',
                     borderBottom: '1px solid #f1f5f9', borderRight: '1px solid #e2e8f0',
                     position: 'sticky', left: 0, background: si % 2 === 0 ? '#fff' : '#fafafa', zIndex: 1,
