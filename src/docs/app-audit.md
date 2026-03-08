@@ -666,11 +666,11 @@ The `ProtectedRoute` component supports a `requiredRole` prop. All `/admin/*` ro
 
 ### Remaining Issues
 
-1. **`preRotaGenerator.ts` line 46** — Uses `.single()` on `account_settings` query. Will throw if no row exists. Should use `.maybeSingle()`.
+1. ~~**`preRotaGenerator.ts` line 46**~~ — **RESOLVED (v4):** Changed `.single()` to `.maybeSingle()`.
 
-2. **`DoctorSurveyResponse` interface** — Missing fields: `parental_leave_expected`, `parental_leave_start`, `parental_leave_end`, `parental_leave_notes`, `competencies_json`. Forces `as any` casts in algorithm input builders (HIGH PRIORITY).
+2. ~~**`DoctorSurveyResponse` interface**~~ — **RESOLVED (v4):** Added `parental_leave_*`, `competencies_json`, and `comp_*` fields. Removed all `as any` casts.
 
-3. **`pre_rota_results` Supabase type casting** — Code uses `supabase.from('pre_rota_results' as any)` in 4 locations despite the table being in the generated types. These casts can be removed.
+3. ~~**`pre_rota_results` Supabase type casting**~~ — **RESOLVED (v4):** Removed all `as any` casts; queries now use typed `.from('pre_rota_results')` and `.maybeSingle()`.
 
 4. **No enforced max on WTR steppers** — Steppers warn but don't prevent exceeding WTR limits (e.g., `maxConsecLong` can be set above 4). May be intentional.
 
@@ -680,4 +680,4 @@ The `ProtectedRoute` component supports a `requiredRole` prop. All `/admin/*` ro
 
 7. **No test coverage** — Only placeholder test exists.
 
-8. **`rota_configs.department_name` and `rota_configs.trust_name`** — Columns exist but app uses `account_settings` table. These columns are vestigial.
+8. ~~**`rota_configs.department_name` and `rota_configs.trust_name`**~~ — **RESOLVED (Section 4):** Now synced from `account_settings` on save.
