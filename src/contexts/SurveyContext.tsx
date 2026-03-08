@@ -155,6 +155,8 @@ const DEFAULT_FORM_DATA: SurveyFormData = {
 };
 
 type LoadState = "loading" | "error" | "submitted" | "ready";
+// ✅ Section 4 complete — SaveStatus type
+type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
 interface SurveyContextType {
   loadState: LoadState;
@@ -177,6 +179,7 @@ interface SurveyContextType {
   submittedAt: string | null;
   setSubmittedAt: (v: string | null) => void;
   setLoadState: (s: LoadState) => void;
+  saveStatus: SaveStatus;
 }
 
 const SurveyContext = createContext<SurveyContextType | null>(null);
@@ -287,6 +290,7 @@ export function SurveyProvider({ token, children }: { token: string | null; chil
   const [submitError, setSubmitError] = useState("");
   const [draftSavedAt, setDraftSavedAt] = useState<Date | null>(null);
   const [submittedAt, setSubmittedAt] = useState<string | null>(null);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const formDataRef = useRef(formData);
   const doctorRef = useRef(doctor);
@@ -414,11 +418,12 @@ export function SurveyProvider({ token, children }: { token: string | null; chil
     }
   };
 
-  // Auto-save
+  // ✅ Section 4 complete — Auto-save with status indicator
   const saveDraft = useCallback(async () => {
     const doc = doctorRef.current;
     if (!doc) return;
     const fd = formDataRef.current;
+    setSaveStatus('saving');
     try {
       const row = formDataToDbRow(fd);
       const { error } = await supabase
@@ -443,8 +448,11 @@ export function SurveyProvider({ token, children }: { token: string | null; chil
         .in("survey_status", ["not_started", "not_sent"]);
 
       setDraftSavedAt(new Date());
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 2000);
     } catch (err) {
       console.error("Auto-save failed:", err);
+      setSaveStatus('error');
     }
   }, []);
 
@@ -568,7 +576,7 @@ export function SurveyProvider({ token, children }: { token: string | null; chil
         loadState, errorMessage, doctor, rotaInfo, formData, currentStep,
         setField, setFields, setStep, nextStep, prevStep, goToStep,
         submitSurvey, saveDraft, submitting, submitError, draftSavedAt, submittedAt,
-        setSubmittedAt, setLoadState,
+        setSubmittedAt, setLoadState, saveStatus,
       }}
     >
       {children}

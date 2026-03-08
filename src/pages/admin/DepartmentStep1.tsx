@@ -418,7 +418,7 @@ function ExpandedCard({
 
 export default function DepartmentStep1() {
   const navigate = useNavigate();
-  const { shifts, updateShift, addShift, removeShift, expandedShiftId, setExpandedShiftId, setShifts } = useDepartmentSetup();
+  const { shifts, updateShift, addShift, removeShift, expandedShiftId, setExpandedShiftId, setShifts, isLoadingShifts } = useDepartmentSetup();
 
   const handleSaveCard = (updated: ShiftType) => {
     setShifts((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
@@ -440,6 +440,13 @@ export default function DepartmentStep1() {
             <span className="font-semibold">🏷️ Badge meanings:</span> NIGHT = ≥3h between 23:00–06:00 | LONG = duration &gt;10h | OOH = any hours 19:00–07:00 or weekend | WEEKEND = shift falls on Sat/Sun | ON-CALL = resident doctor on-site | NON-RES OC = on-call from home
           </p>
         </div>
+
+        {/* ✅ Section 6 complete — loading indicator */}
+        {isLoadingShifts && (
+          <div className="text-sm text-muted-foreground py-2 italic">
+            Loading your saved shift types…
+          </div>
+        )}
 
         {/* Shift cards */}
         <div className="flex flex-col gap-4">
@@ -467,8 +474,8 @@ export default function DepartmentStep1() {
 
         {/* Add + Next */}
         <div className="flex flex-col gap-3 sm:flex-row sm:justify-between pt-4">
-          <Button variant="outline" size="lg" onClick={() => addShift()}>
-            <Plus className="mr-2 h-4 w-4" /> Add Custom Shift Type
+          <Button variant="outline" size="lg" onClick={() => addShift()} disabled={isLoadingShifts}>
+            <Plus className="mr-2 h-4 w-4" /> {isLoadingShifts ? 'Loading saved shifts…' : 'Add Custom Shift Type'}
           </Button>
           <Button
             size="lg"
