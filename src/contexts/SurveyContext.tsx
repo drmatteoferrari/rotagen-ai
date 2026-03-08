@@ -583,7 +583,7 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
         loadState, errorMessage, doctor, rotaInfo, formData, currentStep,
         setField, setFields, setStep, nextStep, prevStep, goToStep,
         submitSurvey, saveDraft, submitting, submitError, draftSavedAt, submittedAt,
-        setSubmittedAt, setLoadState, saveStatus,
+        setSubmittedAt, setLoadState, saveStatus, isAdminMode: adminMode,
       }}
     >
       {children}

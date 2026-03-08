@@ -527,13 +527,6 @@ export default function Roster() {
         </Card>
       </div>
 
-      {/* SECTION 8 — Edit panel */}
-      <SurveyResponsePanel
-        doctor={editDoctor}
-        open={editPanelOpen}
-        onClose={() => setEditPanelOpen(false)}
-        onSaved={() => loadDoctors()}
-      />
     </AdminLayout>
   );
 }

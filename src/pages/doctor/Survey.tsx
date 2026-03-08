@@ -1,9 +1,9 @@
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, Link } from "react-router-dom";
 import { DoctorLayout } from "@/components/DoctorLayout";
 import { SurveyProvider, useSurveyContext } from "@/contexts/SurveyContext";
 import { SurveyConfirmation } from "@/components/SurveyConfirmation";
 import { SurveyShell } from "@/components/survey/SurveyShell";
-import { Loader2, AlertTriangle } from "lucide-react";
+import { Loader2, AlertTriangle, ShieldCheck, ArrowLeft } from "lucide-react";
 import SurveyStep1 from "./SurveyStep1";
 import SurveyStep2 from "./SurveyStep2";
 import SurveyStep3 from "./SurveyStep3";
@@ -26,7 +26,7 @@ function SurveyInner() {
   const ctx = useSurveyContext();
 
   if (!ctx) return null;
-  const { loadState, errorMessage, doctor, rotaInfo, currentStep, submittedAt } = ctx;
+  const { loadState, errorMessage, doctor, rotaInfo, currentStep, submittedAt, isAdminMode } = ctx;
 
   if (loadState === "loading") {
     return (
@@ -53,7 +53,7 @@ function SurveyInner() {
     );
   }
 
-  if (loadState === "submitted" && doctor) {
+  if (loadState === "submitted" && doctor && !isAdminMode) {
     return (
       <DoctorLayout>
         <SurveyConfirmation />
@@ -65,6 +65,16 @@ function SurveyInner() {
 
   return (
     <DoctorLayout>
+      {isAdminMode && (
+        <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 flex items-center gap-2 text-amber-800 text-sm">
+          <ShieldCheck className="h-4 w-4 shrink-0" />
+          <span className="font-semibold">Admin Edit Mode</span>
+          <span className="text-amber-600">— Editing {doctor?.firstName} {doctor?.lastName}'s survey</span>
+          <Link to="/admin/roster" className="ml-auto flex items-center gap-1 text-xs font-medium text-amber-700 hover:text-amber-900 hover:underline">
+            <ArrowLeft className="h-3 w-3" /> Back to Roster
+          </Link>
+        </div>
+      )}
       <SurveyShell>
         <StepComponent />
       </SurveyShell>
@@ -75,9 +85,10 @@ function SurveyInner() {
 export default function Survey() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token");
+  const adminMode = searchParams.get("admin") === "true";
 
   return (
-    <SurveyProvider token={token}>
+    <SurveyProvider token={token} adminMode={adminMode}>
       <SurveyInner />
     </SurveyProvider>
   );

@@ -45,7 +45,11 @@ export default function SurveyStep7() {
 
   const handleSubmit = async () => {
     if (!validate()) return;
-    await submitSurvey();
+    const success = await submitSurvey();
+    if (success && isAdminMode) {
+      toast.success("Survey updated successfully");
+      navigate("/admin/roster");
+    }
   };
 
   const handleSaveAndReturn = async () => {
