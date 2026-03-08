@@ -322,7 +322,7 @@ function mapResponseToPreference(resp: DoctorSurveyResponse): DoctorPreference {
     })),
     nocDates,
     parentalLeaveDates,
-    parentalLeaveNotes: (resp as any).parental_leave_notes ?? undefined,
+    parentalLeaveNotes: resp.parental_leave_notes ?? undefined,
     exemptFromNights: resp.exempt_from_nights ?? false,
     exemptFromWeekends: resp.exempt_from_weekends ?? false,
     exemptFromOncall: resp.exempt_from_oncall ?? false,
