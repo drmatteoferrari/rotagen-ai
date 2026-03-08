@@ -2,9 +2,8 @@ import { useState, useEffect } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { useAdminSetup } from "@/contexts/AdminSetupContext";
 import { useRotaContext } from "@/contexts/RotaContext";
-import { useAuth, loadAccountSettings } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   CheckCircle, Zap, Target, Users, ShieldCheck, Lock,
   Building2, Loader2, Pencil, ClipboardList, CalendarDays,
