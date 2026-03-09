@@ -30,6 +30,13 @@ const navItems = [
 
 function AdminShellInner() {
   const { title, subtitle, accentColor } = useAdminShell();
+  const { contextReady, restoredConfig, currentRotaConfigId } = useRotaContext();
+  const { restoredFromDb } = useAdminSetup();
+
+  // Gate: no saved config means ready immediately; otherwise wait for restore
+  const hasSavedId = !!currentRotaConfigId;
+  const isAppReady = !hasSavedId || (contextReady && (restoredFromDb || !restoredConfig));
+
   const bgColorMap: Record<string, string> = {
     blue:   '#eff6ff',
     red:    '#fff5f5',
