@@ -807,30 +807,118 @@ export default function Roster() {
         }
       }
 
-      // Assign parental leave to 2 random doctors
+      // Assign parental leave to 2 random doctors — no overlap with their existing leave
+
       const plCandidates = [...doctorsList].sort(() => Math.random() - 0.5).slice(0, 2);
+
       for (const plDoctor of plCandidates) {
+
         const rotaStartMs = new Date(rotaStart).getTime();
+
         const rotaEndMs   = new Date(rotaEnd).getTime();
-        const maxOffset   = Math.max(0, Math.floor((rotaEndMs - rotaStartMs) / 86400000) - 14);
-        const offsetDays  = Math.floor(Math.random() * maxOffset);
-        const candidate   = new Date(rotaStartMs + offsetDays * 86400000);
-        const dow         = candidate.getDay();
-        const toMonday    = dow === 1 ? 0 : (8 - dow) % 7 || 7;
-        const plStart     = new Date(candidate.getTime() + toMonday * 86400000);
-        const plEnd       = new Date(plStart.getTime() + 13 * 86400000);
-        if (plEnd.getTime() <= rotaEndMs) {
-          await supabase
-            .from('doctor_survey_responses')
-            .update({
-              parental_leave_expected: true,
-              parental_leave_start:    plStart.toISOString().split('T')[0],
-              parental_leave_end:      plEnd.toISOString().split('T')[0],
-              parental_leave_notes:    'Parental leave — dates confirmed with HR.',
-            })
-            .eq('doctor_id', plDoctor.id)
-            .eq('rota_config_id', rotaConfigId);
+
+        // Fetch this doctor's existing survey to get their booked ranges
+
+        const { data: existing } = await supabase
+
+          .from('doctor_survey_responses')
+
+          .select('annual_leave, study_leave, noc_dates, other_unavailability')
+
+          .eq('doctor_id', plDoctor.id)
+
+          .eq('rota_config_id', rotaConfigId)
+
+          .single();
+
+        const existingRanges: { start: number; end: number }[] = [];
+
+        const addRanges = (arr: { startDate: string; endDate: string }[] | null) => {
+
+          if (!arr) return;
+
+          for (const e of arr) {
+
+            if (e.startDate && e.endDate) {
+
+              existingRanges.push({
+
+                start: new Date(e.startDate).getTime(),
+
+                end:   new Date(e.endDate).getTime(),
+
+              });
+
+            }
+
+          }
+
+        };
+
+        if (existing) {
+
+          addRanges(existing.annual_leave as any);
+
+          addRanges(existing.study_leave as any);
+
+          addRanges(existing.noc_dates as any);
+
+          addRanges(existing.other_unavailability as any);
+
         }
+
+        const plOverlaps = (s: Date, e: Date) =>
+
+          existingRanges.some(r => s.getTime() <= r.end && e.getTime() >= r.start);
+
+        // Try up to 40 times to find a non-overlapping Mon→Sun 14-day window
+
+        const maxOffset = Math.max(0, Math.floor((rotaEndMs - rotaStartMs) / 86400000) - 14);
+
+        let plPlaced = false;
+
+        for (let attempt = 0; attempt < 40 && !plPlaced; attempt++) {
+
+          const offsetDays = Math.floor(Math.random() * maxOffset);
+
+          const candidate  = new Date(rotaStartMs + offsetDays * 86400000);
+
+          const dow        = candidate.getDay();
+
+          const toMonday   = dow === 1 ? 0 : (8 - dow) % 7 || 7;
+
+          const plStart    = new Date(candidate.getTime() + toMonday * 86400000);
+
+          const plEnd      = new Date(plStart.getTime() + 13 * 86400000);
+
+          if (plEnd.getTime() <= rotaEndMs && !plOverlaps(plStart, plEnd)) {
+
+            await supabase
+
+              .from('doctor_survey_responses')
+
+              .update({
+
+                parental_leave_expected: true,
+
+                parental_leave_start:    plStart.toISOString().split('T')[0],
+
+                parental_leave_end:      plEnd.toISOString().split('T')[0],
+
+                parental_leave_notes:    'Parental leave — dates confirmed with HR.',
+
+              })
+
+              .eq('doctor_id', plDoctor.id)
+
+              .eq('rota_config_id', rotaConfigId);
+
+            plPlaced = true;
+
+          }
+
+        }
+
       }
 
       // 5. Refresh roster
