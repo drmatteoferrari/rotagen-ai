@@ -152,7 +152,7 @@ export default function DepartmentStep1New() {
         </Card>
 
         <div className="flex justify-end">
-          <Button size="sm" onClick={handleSaveAndContinue} disabled={saving || loading} className="bg-purple-600 hover:bg-purple-700 text-white">
+          <Button size="lg" onClick={handleSaveAndContinue} disabled={saving || loading} className="bg-purple-600 hover:bg-purple-700 text-white">
             {saving ? "Saving…" : "Continue"}
             {!saving && <ArrowRight className="ml-2 h-4 w-4" />}
           </Button>
