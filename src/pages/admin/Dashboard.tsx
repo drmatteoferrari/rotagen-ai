@@ -194,7 +194,7 @@ export default function Dashboard() {
 
         {/* 1. Setup */}
         <div className="rounded-xl border border-border bg-card p-3 shadow-sm">
-          <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-2">1. Setup</h2>
+          <h2 className="text-sm font-bold uppercase tracking-wider text-foreground mb-2">1. Setup</h2>
 
           <div className="space-y-1">
             {steps.map((s) => {
