@@ -57,6 +57,10 @@ function AdminShellInner() {
     navigate("/login", { replace: true });
   };
 
+  if (!isAppReady) {
+    return <div className="min-h-screen bg-background" />;
+  }
+
   // Mobile and tablet both use bottom nav bar layout
   if (isMobile || isTablet) {
     return (

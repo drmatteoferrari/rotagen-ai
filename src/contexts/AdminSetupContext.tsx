@@ -143,6 +143,7 @@ export function AdminSetupProvider({ children }: { children: ReactNode }) {
         oncallContinuousRestStart, oncallContinuousRestEnd, oncallIfRestNotMetMaxHours, oncallBreakReferenceWeeks, oncallBreakFineThresholdPct,
         setOncallContinuousRestStart, setOncallContinuousRestEnd, setOncallIfRestNotMetMaxHours, setOncallBreakReferenceWeeks, setOncallBreakFineThresholdPct,
         restoredFromDb,
+        isRestoring,
       }}
     >
       {children}
