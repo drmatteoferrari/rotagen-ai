@@ -28,68 +28,17 @@ export default function Dashboard() {
   const surveyTotal = doctorsData?.length ?? 0;
   const surveySubmitted = doctorsData?.filter((d: any) => d.survey_status === "submitted").length ?? 0;
 
-  // Cached pre-rota from React Query
-  const { data: cachedPreRota } = usePreRotaResultQuery();
+  // Pre-rota state (local for generation flow)
+  const [preRotaLoading, setPreRotaLoading] = useState(false);
+  const [preRotaError, setPreRotaError] = useState<string | null>(null);
+  const [issuesPanelOpen, setIssuesPanelOpen] = useState(false);
+  const [finalLoading, setFinalLoading] = useState(false);
+  const [showFinalChecklist, setShowFinalChecklist] = useState(false);
 
-  // Load existing pre-rota on mount
-  useEffect(() => {
-    const loadPreRota = async () => {
-      if (!currentRotaConfigId) return;
-      try {
-        const { data: existingPreRota } = await supabase
-          .from('pre_rota_results')
-          .select('*')
-          .eq('rota_config_id', currentRotaConfigId)
-          .maybeSingle();
-
-        if (existingPreRota) {
-          const pr = existingPreRota as any;
-          const result: PreRotaResult = {
-            id: pr.id,
-            rotaConfigId: pr.rota_config_id,
-            generatedAt: pr.generated_at,
-            generatedBy: pr.generated_by,
-            status: pr.status,
-            validationIssues: pr.validation_issues ?? [],
-            calendarData: pr.calendar_data ?? {},
-            targetsData: pr.targets_data ?? {},
-            isStale: false,
-          };
-
-          const generatedAt = new Date(pr.generated_at);
-
-          const { data: latestDoctors } = await supabase
-            .from('doctors')
-            .select('updated_at')
-            .eq('rota_config_id', currentRotaConfigId)
-            .order('updated_at', { ascending: false })
-            .limit(1);
-
-          const { data: latestSurveys } = await supabase
-            .from('doctor_survey_responses')
-            .select('updated_at')
-            .eq('rota_config_id', currentRotaConfigId)
-            .order('updated_at', { ascending: false })
-            .limit(1);
-
-          const latestDoctorUpdate = latestDoctors?.[0]?.updated_at ? new Date(latestDoctors[0].updated_at) : null;
-          const latestSurveyUpdate = latestSurveys?.[0]?.updated_at ? new Date(latestSurveys[0].updated_at) : null;
-
-          const stale =
-            (latestDoctorUpdate && latestDoctorUpdate > generatedAt) ||
-            (latestSurveyUpdate && latestSurveyUpdate > generatedAt);
-
-          result.isStale = !!stale;
-          setPreRotaResult(result);
-          setIsStale(!!stale);
-          setIssuesPanelOpen(result.validationIssues.length > 0 && result.status !== 'complete');
-        }
-      } catch (err) {
-        console.error('Failed to load existing pre-rota:', err);
-      }
-    };
-    loadPreRota();
-  }, [currentRotaConfigId]);
+  // Use cached pre-rota, fall back to local override after generation
+  const [localPreRota, setLocalPreRota] = useState<PreRotaResult | null>(null);
+  const preRotaResult = localPreRota ?? cachedPreRota ?? null;
+  const isStale = preRotaResult?.isStale ?? false;
 
   // Handler functions
   const handleGeneratePreRota = async () => {
@@ -109,8 +58,8 @@ export default function Dashboard() {
       return;
     }
 
-    setPreRotaResult(result);
-    setIsStale(false);
+    setLocalPreRota(result);
+    invalidatePreRota();
     setIssuesPanelOpen(result.validationIssues.length > 0);
     navigate('/admin/pre-rota');
   };
