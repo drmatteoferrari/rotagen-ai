@@ -325,9 +325,306 @@ export default function Roster() {
     </Tooltip>
   );
 
+  // DEV TOOLS — state for loading
+  const [fillingAll, setFillingAll] = useState(false);
+  const [cancellingAll, setCancellingAll] = useState(false);
+
+  // Helper functions for realistic data generation
+  const juniorGrades = ['CT1', 'CT2', 'ACCS CT1', 'ACCS CT2'];
+  const midGrades = ['CT3', 'ACCS CT3', 'ST4', 'ST5'];
+  const seniorGrades = ['ST6', 'ST7', 'ST8', 'ST9', 'SAS', 'Post-CCT Fellow', 'Consultant'];
+
+  const isJunior = (g: string) => juniorGrades.some(x => g.includes(x));
+  const isMid = (g: string) => midGrades.some(x => g.includes(x));
+  const isSenior = (g: string) => seniorGrades.some(x => g.includes(x));
+  const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+  const rand = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+  const randomLeaveBlock = (rotaStart: string, rotaEnd: string, lengthDays: number) => {
+    const start = new Date(rotaStart).getTime();
+    const end = new Date(rotaEnd).getTime();
+    const blockMs = lengthDays * 86400000;
+    const maxOffset = Math.max(1, end - start - blockMs);
+    const offset = Math.floor(Math.random() * maxOffset);
+    const s = new Date(start + offset);
+    const e = new Date(start + offset + blockMs);
+    return {
+      start_date: s.toISOString().split('T')[0],
+      end_date: e.toISOString().split('T')[0],
+    };
+  };
+
+  const buildSurveyPayload = (
+    doctor: { id: string; first_name: string; last_name: string; email: string | null; grade: string | null },
+    rotaConfigId: string,
+    rotaStart: string,
+    rotaEnd: string
+  ) => {
+    const grade = doctor.grade || 'ST4';
+    const wte = Math.random() < 0.88 ? 100 : pick([80, 60]);
+    const isLtft = wte < 100;
+
+    // Competencies — fresh random each call
+    const comp_ip_anaesthesia = !isJunior(grade);
+    const comp_ip_anaesthesia_here = comp_ip_anaesthesia && Math.random() < 0.8;
+    const comp_obstetric = isSenior(grade) || (isMid(grade) && Math.random() < 0.5);
+    const comp_obstetric_here = comp_obstetric && Math.random() < 0.7;
+    const comp_icu = isSenior(grade) && Math.random() < 0.6;
+    const comp_icu_here = comp_icu && Math.random() < 0.5;
+
+    const competencies_json = {
+      ip_anaesthesia: comp_ip_anaesthesia,
+      ip_anaesthesia_here: comp_ip_anaesthesia_here,
+      obstetric: comp_obstetric,
+      obstetric_here: comp_obstetric_here,
+      icu: comp_icu,
+      icu_here: comp_icu_here,
+    };
+
+    // LTFT
+    const ltft_days_off: string[] = isLtft ? (wte === 80 ? ['Wednesday'] : ['Wednesday', 'Friday']) : [];
+    const ltft_night_flexibility = isLtft
+      ? [{ preference: pick(['reduced_nights', 'no_nights', 'standard']), notes: '' }]
+      : [];
+
+    // Leave — fresh random each call
+    const numAL = rand(1, 2);
+    const annual_leave = Array.from({ length: numAL }, () =>
+      randomLeaveBlock(rotaStart, rotaEnd, rand(5, 10))
+    );
+    const study_leave = Math.random() < 0.5
+      ? [randomLeaveBlock(rotaStart, rotaEnd, 5)]
+      : [];
+
+    // Exemptions — rare
+    const exempt_from_nights = !isSenior(grade) && Math.random() < 0.04;
+    const exempt_from_weekends = Math.random() < 0.03;
+    const exempt_from_oncall = false;
+    const exemption_details = exempt_from_nights
+      ? 'Occupational Health restriction — no night shifts'
+      : exempt_from_weekends
+      ? 'Occupational Health restriction — weekends only'
+      : null;
+
+    // Preferences — fresh random
+    const preferred_shift_types: string[] = isSenior(grade)
+      ? pick([['Long Day'], ['Night'], ['Long Day', 'Night']])
+      : pick([['Standard Day'], ['Long Day'], []]);
+    const preferred_days_off: string[] = pick([['Saturday'], ['Sunday'], ['Saturday', 'Sunday'], []]);
+
+    // Specialties
+    const specialties_requested = isSenior(grade)
+      ? [{ specialty: pick(['Cardiac', 'Neuro', 'Paediatric', 'Obstetric', 'Pain']), notes: '' }]
+      : [];
+
+    const want_pain_sessions = isSenior(grade) && Math.random() < 0.3;
+    const want_preop = Math.random() < 0.2;
+
+    return {
+      doctor_id: doctor.id,
+      rota_config_id: rotaConfigId,
+      full_name: `${doctor.first_name} ${doctor.last_name}`,
+      nhs_email: doctor.email ?? `${doctor.first_name.toLowerCase()}.${doctor.last_name.toLowerCase()}@nhs.net`,
+      grade,
+      specialty: 'Anaesthetics',
+      comp_ip_anaesthesia,
+      comp_ip_anaesthesia_here,
+      comp_obstetric,
+      comp_obstetric_here,
+      comp_icu,
+      comp_icu_here,
+      competencies_json,
+      wte_percent: wte,
+      wte_other_value: wte < 100 && ![80, 60].includes(wte) ? wte : null,
+      ltft_days_off,
+      ltft_night_flexibility,
+      annual_leave,
+      study_leave,
+      noc_dates: [],
+      other_unavailability: [],
+      exempt_from_nights,
+      exempt_from_weekends,
+      exempt_from_oncall,
+      specific_days_off: [],
+      exemption_details,
+      additional_restrictions: null,
+      preferred_shift_types,
+      preferred_days_off,
+      dates_to_avoid: [],
+      other_requests: null,
+      specialties_requested,
+      want_pain_sessions,
+      pain_session_notes: want_pain_sessions ? 'Interested in chronic pain sessions' : null,
+      want_preop,
+      signoff_requirements: null,
+      confirmed_accurate: true,
+      additional_notes: null,
+      status: 'submitted',
+      submitted_at: new Date().toISOString(),
+      last_saved_at: new Date().toISOString(),
+    };
+  };
+
+  const handleFillAllSurveys = async () => {
+    // 1. Get rota config id from localStorage (matching RotaContext storage key)
+    const rotaConfigId = localStorage.getItem('currentRotaConfigId');
+    if (!rotaConfigId) {
+      toast.error('No active rota config');
+      return;
+    }
+
+    setFillingAll(true);
+
+    try {
+      // 2. Fetch rota dates
+      const { data: rotaConfig, error: rotaError } = await supabase
+        .from('rota_configs')
+        .select('rota_start_date, rota_end_date')
+        .eq('id', rotaConfigId)
+        .single();
+
+      if (rotaError) {
+        console.error('Supabase rota_configs error:', rotaError);
+        throw rotaError;
+      }
+
+      const rotaStart = rotaConfig.rota_start_date ??
+        new Date().toISOString().split('T')[0];
+      const rotaEnd = rotaConfig.rota_end_date ??
+        new Date(Date.now() + 90 * 86400000).toISOString().split('T')[0];
+
+      // 3. Fetch doctors
+      const { data: doctorsList, error: doctorsError } = await supabase
+        .from('doctors')
+        .select('id, first_name, last_name, email, grade')
+        .eq('rota_config_id', rotaConfigId);
+
+      if (doctorsError) {
+        console.error('Supabase doctors error:', doctorsError);
+        throw doctorsError;
+      }
+
+      if (!doctorsList || doctorsList.length === 0) {
+        toast.error('No doctors found in roster');
+        return;
+      }
+
+      // 4. Upsert survey response for each doctor — sequential for reliability
+      for (const doctor of doctorsList) {
+        const payload = buildSurveyPayload(doctor, rotaConfigId, rotaStart, rotaEnd);
+
+        const { error: upsertError } = await supabase
+          .from('doctor_survey_responses')
+          .upsert(payload, { onConflict: 'doctor_id,rota_config_id' });
+
+        if (upsertError) {
+          console.error(`Survey upsert failed for ${doctor.id}:`, upsertError);
+          throw upsertError;
+        }
+
+        const { error: statusError } = await supabase
+          .from('doctors')
+          .update({
+            survey_status: 'submitted',
+            survey_submitted_at: new Date().toISOString(),
+          })
+          .eq('id', doctor.id);
+
+        if (statusError) {
+          console.error(`Status update failed for ${doctor.id}:`, statusError);
+          throw statusError;
+        }
+      }
+
+      // 5. Refresh roster
+      await loadDoctors();
+
+      // 6. Success toast — only fires if everything above succeeded
+      toast.success(`✅ ${doctorsList.length} surveys filled with test data`);
+
+    } catch (err) {
+      console.error('handleFillAllSurveys failed:', err);
+      toast.error(`Failed to fill surveys: ${String(err)}`);
+    } finally {
+      setFillingAll(false);
+    }
+  };
+
+  const handleCancelAllSurveys = async () => {
+    const rotaConfigId = localStorage.getItem('currentRotaConfigId');
+    if (!rotaConfigId) {
+      toast.error('No active rota config');
+      return;
+    }
+
+    setCancellingAll(true);
+
+    try {
+      // Delete all survey responses for this config
+      const { error: deleteError } = await supabase
+        .from('doctor_survey_responses')
+        .delete()
+        .eq('rota_config_id', rotaConfigId);
+
+      if (deleteError) {
+        console.error('Supabase delete error:', deleteError);
+        throw deleteError;
+      }
+
+      // Reset doctor statuses
+      const { error: updateError } = await supabase
+        .from('doctors')
+        .update({
+          survey_status: 'not_started',
+          survey_submitted_at: null,
+        })
+        .eq('rota_config_id', rotaConfigId);
+
+      if (updateError) {
+        console.error('Supabase update error:', updateError);
+        throw updateError;
+      }
+
+      await loadDoctors();
+      toast.success('🗑️ All survey responses cleared');
+
+    } catch (err) {
+      console.error('handleCancelAllSurveys failed:', err);
+      toast.error(`Failed to cancel surveys: ${String(err)}`);
+    } finally {
+      setCancellingAll(false);
+    }
+  };
+
   return (
     <AdminLayout title="Roster & Invites" subtitle="Build the team and send survey invitations">
       <div className="mx-auto max-w-5xl space-y-4 sm:space-y-6">
+
+        {/* DEV TOOLS Banner */}
+        <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 flex flex-col sm:flex-row sm:items-center gap-3">
+          <span className="text-sm font-medium text-amber-800">⚙️ DEV TOOLS — not visible in production</span>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              className="bg-amber-500 hover:bg-amber-600 text-white"
+              onClick={handleFillAllSurveys}
+              disabled={fillingAll || cancellingAll}
+            >
+              {fillingAll ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+              🧪 Fill All Surveys
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              className="bg-rose-500 hover:bg-rose-600"
+              onClick={handleCancelAllSurveys}
+              disabled={fillingAll || cancellingAll}
+            >
+              {cancellingAll ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+              🗑️ Cancel All Surveys
+            </Button>
+          </div>
+        </div>
 
         {/* Deadline picker */}
         <Card>
