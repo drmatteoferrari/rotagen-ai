@@ -59,7 +59,7 @@ export function AdminLayout({ children, title, subtitle, accentColor = 'blue' }:
   // Mobile and tablet both use bottom nav bar layout
   if (isMobile || isTablet) {
     return (
-      <div className={`flex min-h-screen w-full flex-col ${bgClass}`}>
+      <div style={{ backgroundColor: bgColor }} className="flex min-h-screen w-full flex-col">
         {/* Header */}
         <header className="flex h-14 items-center justify-between border-b border-border bg-card px-4">
           <div className="flex items-center gap-2 min-w-0 flex-1">
