@@ -84,42 +84,50 @@ export function AdminSetupProvider({ children }: { children: ReactNode }) {
   const { restoredConfig } = useRotaContext();
 
   useEffect(() => {
-    if (!restoredConfig) return;
-    const config = restoredConfig;
-
-    if (config.rotaPeriod.startDate) {
-      setRotaStartDate(new Date(config.rotaPeriod.startDate));
-      setPeriodComplete(true);
+    if (!restoredConfig) {
+      setIsRestoring(false);
+      return;
     }
-    if (config.rotaPeriod.endDate) {
-      setRotaEndDate(new Date(config.rotaPeriod.endDate));
-    }
+    try {
+      const config = restoredConfig;
 
-    if (config.shifts.length > 0) {
-      setDepartmentComplete(true);
-    }
+      if (config.rotaPeriod.startDate) {
+        setRotaStartDate(new Date(config.rotaPeriod.startDate));
+        setPeriodComplete(true);
+      }
+      if (config.rotaPeriod.endDate) {
+        setRotaEndDate(new Date(config.rotaPeriod.endDate));
+      }
 
-    if (config.wtr) {
-      const w = config.wtr;
-      setMaxAvgWeekly(w.maxHoursPerWeek);
-      setMaxIn7Days(w.maxHoursPer168h);
-      setMaxConsecDays(w.maxConsecStandard);
-      setMaxConsecLong(w.maxConsecLong);
-      setMaxConsecNights(w.maxConsecNights);
-      setRestPostNights(w.restAfterNightsH);
-      setRestPostBlock(w.restAfterLongH);
-      setRestAfter7(w.restAfterStandardH);
-      setWeekendFreq(w.weekendFrequency);
-      // Advanced on-call fields
-      setOncallContinuousRestStart(w.oncall.continuousRestStart ?? "22:00");
-      setOncallContinuousRestEnd(w.oncall.continuousRestEnd ?? "07:00");
-      setOncallIfRestNotMetMaxHours(w.oncall.ifRestNotMetMaxHours ?? 5);
-      setOncallBreakReferenceWeeks(w.oncall.breakReferenceWeeks ?? 4);
-      setOncallBreakFineThresholdPct(w.oncall.breakFineThresholdPct ?? 25);
-      setWtrComplete(true);
-    }
+      if (config.shifts.length > 0) {
+        setDepartmentComplete(true);
+      }
 
-    setRestoredFromDb(true);
+      if (config.wtr) {
+        const w = config.wtr;
+        setMaxAvgWeekly(w.maxHoursPerWeek);
+        setMaxIn7Days(w.maxHoursPer168h);
+        setMaxConsecDays(w.maxConsecStandard);
+        setMaxConsecLong(w.maxConsecLong);
+        setMaxConsecNights(w.maxConsecNights);
+        setRestPostNights(w.restAfterNightsH);
+        setRestPostBlock(w.restAfterLongH);
+        setRestAfter7(w.restAfterStandardH);
+        setWeekendFreq(w.weekendFrequency);
+        setOncallContinuousRestStart(w.oncall.continuousRestStart ?? "22:00");
+        setOncallContinuousRestEnd(w.oncall.continuousRestEnd ?? "07:00");
+        setOncallIfRestNotMetMaxHours(w.oncall.ifRestNotMetMaxHours ?? 5);
+        setOncallBreakReferenceWeeks(w.oncall.breakReferenceWeeks ?? 4);
+        setOncallBreakFineThresholdPct(w.oncall.breakFineThresholdPct ?? 25);
+        setWtrComplete(true);
+      }
+
+      setRestoredFromDb(true);
+    } catch {
+      // ensure we never get stuck
+    } finally {
+      setIsRestoring(false);
+    }
   }, [restoredConfig]);
 
   return (
