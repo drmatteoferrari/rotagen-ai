@@ -115,7 +115,7 @@ export default function Roster() {
   const removeDoctor = async (id: string) => {
     const { error } = await supabase.from("doctors").delete().eq("id", id);
     if (error) { toast.error("Failed to remove doctor"); return; }
-    setDoctors(doctors.filter((d) => d.id !== id));
+    invalidateDoctors();
     toast("Doctor removed from roster");
   };
 
