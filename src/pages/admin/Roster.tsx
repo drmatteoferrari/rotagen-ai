@@ -349,8 +349,10 @@ export default function Roster() {
     const s = new Date(start + offset);
     const e = new Date(start + offset + blockMs);
     return {
-      start_date: s.toISOString().split('T')[0],
-      end_date: e.toISOString().split('T')[0],
+      id: crypto.randomUUID(),
+      startDate: s.toISOString().split('T')[0],
+      endDate: e.toISOString().split('T')[0],
+      reason: "",
     };
   };
 
