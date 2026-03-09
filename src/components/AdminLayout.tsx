@@ -30,9 +30,20 @@ interface AdminLayoutProps {
   children: ReactNode;
   title: string;
   subtitle?: string;
+  accentColor?: 'blue' | 'red' | 'yellow' | 'purple' | 'teal' | 'pink' | 'green';
 }
 
-export function AdminLayout({ children, title, subtitle }: AdminLayoutProps) {
+export function AdminLayout({ children, title, subtitle, accentColor = 'blue' }: AdminLayoutProps) {
+  const bgMap: Record<string, string> = {
+    blue:   'bg-blue-100',
+    red:    'bg-red-100',
+    yellow: 'bg-yellow-100',
+    purple: 'bg-purple-100',
+    teal:   'bg-teal-100',
+    pink:   'bg-pink-100',
+    green:  'bg-green-100',
+  };
+  const bgClass = bgMap[accentColor];
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
