@@ -318,7 +318,6 @@ export default function PreRotaPage() {
             )}
           </div>
         )}
-        )}
       </div>
     )}
     </AdminLayout>
