@@ -362,7 +362,8 @@ export default function Roster() {
     rotaStart: string,
     rotaEnd: string
   ) => {
-    const grade = doctor.grade || 'ST4';
+    const GRADE_POOL = ['CT1 (or ACCS)', 'CT2 (or ACCS)', 'CT3 (or ACCS)', 'ST4', 'ST5', 'ST6', 'ST7', 'SAS', 'Post-CCT Fellow', 'Consultant'];
+    const grade = (doctor.grade && doctor.grade !== '—') ? doctor.grade : GRADE_POOL[Math.floor(Math.random() * GRADE_POOL.length)];
     const wte = Math.random() < 0.88 ? 100 : pick([80, 60]);
     const isLtft = wte < 100;
 
