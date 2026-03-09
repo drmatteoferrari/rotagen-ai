@@ -634,7 +634,7 @@ export default function PreRotaCalendarPage() {
   if (!week) return null;
 
   return (
-    <AdminLayout title="Availability Calendar" subtitle={`${deptName}${deptName && hospitalName ? ' · ' : ''}${hospitalName}`}>
+    <AdminLayout title="Availability Calendar" subtitle={`${deptName}${deptName && hospitalName ? ' · ' : ''}${hospitalName}`} accentColor="blue">
       <div className="space-y-4">
         {/* Header bar */}
         <div className="flex items-center justify-between">

@@ -130,7 +130,7 @@ export default function PreRotaTargetsPage() {
   const { doctors, shiftTypes, wtrMaxHoursPerWeek, hardWeeklyCap } = targetsData;
 
   return (
-    <AdminLayout title="Shift Hour Targets" subtitle={`${deptName}${deptName && hospitalName ? ' · ' : ''}${hospitalName}`}>
+    <AdminLayout title="Shift Hour Targets" subtitle={`${deptName}${deptName && hospitalName ? ' · ' : ''}${hospitalName}`} accentColor="blue">
       <div className="space-y-4">
         {/* Header bar */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
