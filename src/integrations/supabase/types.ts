@@ -92,6 +92,9 @@ export type Database = {
           comp_obstetric: boolean | null
           comp_obstetric_here: boolean | null
           competencies_json: Json | null
+          confirm_algorithm_understood: boolean | null
+          confirm_exemptions_understood: boolean | null
+          confirm_fairness_understood: boolean | null
           confirmed_accurate: boolean | null
           created_at: string | null
           dates_to_avoid: string[] | null
@@ -123,6 +126,8 @@ export type Database = {
           preferred_days_off: string[] | null
           preferred_shift_types: string[] | null
           rota_config_id: string
+          signature_date: string | null
+          signature_name: string | null
           signoff_needs: string | null
           signoff_requirements: string | null
           special_sessions: string[] | null
@@ -150,6 +155,9 @@ export type Database = {
           comp_obstetric?: boolean | null
           comp_obstetric_here?: boolean | null
           competencies_json?: Json | null
+          confirm_algorithm_understood?: boolean | null
+          confirm_exemptions_understood?: boolean | null
+          confirm_fairness_understood?: boolean | null
           confirmed_accurate?: boolean | null
           created_at?: string | null
           dates_to_avoid?: string[] | null
@@ -181,6 +189,8 @@ export type Database = {
           preferred_days_off?: string[] | null
           preferred_shift_types?: string[] | null
           rota_config_id: string
+          signature_date?: string | null
+          signature_name?: string | null
           signoff_needs?: string | null
           signoff_requirements?: string | null
           special_sessions?: string[] | null
@@ -208,6 +218,9 @@ export type Database = {
           comp_obstetric?: boolean | null
           comp_obstetric_here?: boolean | null
           competencies_json?: Json | null
+          confirm_algorithm_understood?: boolean | null
+          confirm_exemptions_understood?: boolean | null
+          confirm_fairness_understood?: boolean | null
           confirmed_accurate?: boolean | null
           created_at?: string | null
           dates_to_avoid?: string[] | null
@@ -239,6 +252,8 @@ export type Database = {
           preferred_days_off?: string[] | null
           preferred_shift_types?: string[] | null
           rota_config_id?: string
+          signature_date?: string | null
+          signature_name?: string | null
           signoff_needs?: string | null
           signoff_requirements?: string | null
           special_sessions?: string[] | null
