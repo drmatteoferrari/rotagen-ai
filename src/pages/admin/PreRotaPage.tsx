@@ -3,6 +3,7 @@ import { AdminLayout } from "@/components/AdminLayout";
 import { useRotaContext } from "@/contexts/RotaContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   CalendarDays, Target, AlertTriangle, CheckCircle,
   XCircle, Info, RefreshCw, Loader2, ArrowLeft,
