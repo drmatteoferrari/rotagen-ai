@@ -286,7 +286,7 @@ export default function Dashboard() {
             size="sm"
             className="w-full"
             disabled={!canGeneratePreRota || preRotaLoading}
-            onClick={handleGeneratePreRota}
+            onClick={(e) => { e.stopPropagation(); handleGeneratePreRota(); }}
           >
             {!canGeneratePreRota && <Lock className="mr-2 h-3.5 w-3.5" />}
             {preRotaLoading ? (
