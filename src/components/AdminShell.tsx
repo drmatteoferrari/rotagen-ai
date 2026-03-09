@@ -59,6 +59,15 @@ function AdminShellInner() {
     navigate("/login", { replace: true });
   };
 
+  // Loading gate: wait for shared context data before rendering pages
+  if (!isAppReady) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="h-8 w-8 rounded-full border-4 border-primary border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+
   // Mobile and tablet both use bottom nav bar layout
   if (isMobile || isTablet) {
     return (
