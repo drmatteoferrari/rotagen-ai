@@ -414,71 +414,229 @@ export default function Roster() {
     }));
 
     // ── STEP 4: LEAVE ──
+
     const rotaMs = new Date(rotaEnd).getTime() - new Date(rotaStart).getTime();
+
     const rotaWeeks = rotaMs / (7 * 86400000);
+
     const effectiveWte = isLtft ? wte : 100;
+
     const al_entitlement = Math.random() < 0.5 ? 27 : 32;
 
-    const proRataAL = Math.round((rotaWeeks / 52) * al_entitlement * (effectiveWte / 100));
+    // Pro-rata AL for this rota — this is the hard cap
 
-    const targetAL = Math.max(5, Math.min(proRataAL, 30));
+    const proRataAL = Math.max(1, Math.round((rotaWeeks / 52) * al_entitlement * (effectiveWte / 100)));
+
+    // Track all booked date ranges to prevent any overlap
+
+    const bookedRanges: { start: number; end: number }[] = [];
+
+    const overlaps = (s: Date, e: Date): boolean =>
+
+      bookedRanges.some(r => s.getTime() <= r.end && e.getTime() >= r.start);
+
+    const book = (s: Date, e: Date) =>
+
+      bookedRanges.push({ start: s.getTime(), end: e.getTime() });
+
+    // Try to place a leave block of exactly lengthDays without overlapping booked ranges
+
+    // Returns a LeaveEntry or null if no gap found after maxAttempts
+
+    const tryPlaceBlock = (
+
+      lengthDays: number,
+
+      maxAttempts = 40
+
+    ): { id: string; startDate: string; endDate: string; reason: string } | null => {
+
+      const rotaStartMs = new Date(rotaStart).getTime();
+
+      const rotaEndMs   = new Date(rotaEnd).getTime();
+
+      const blockMs     = lengthDays * 86400000;
+
+      const window      = rotaEndMs - rotaStartMs - blockMs;
+
+      if (window <= 0) return null;
+
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+
+        const offset  = Math.floor(Math.random() * window);
+
+        const s       = new Date(rotaStartMs + offset);
+
+        const e       = new Date(rotaStartMs + offset + blockMs);
+
+        if (!overlaps(s, e)) {
+
+          book(s, e);
+
+          return {
+
+            id:        crypto.randomUUID(),
+
+            startDate: s.toISOString().split('T')[0],
+
+            endDate:   e.toISOString().split('T')[0],
+
+            reason:    '',
+
+          };
+
+        }
+
+      }
+
+      return null;
+
+    };
+
+    // Annual Leave: 2-5 blocks, total days <= proRataAL
+
+    const targetAL    = proRataAL; // never exceed pro-rata
+
     const numALBlocks = rand(2, 5);
+
     const annual_leave: { id: string; startDate: string; endDate: string; reason: string }[] = [];
+
     let alRemaining = targetAL;
-    for (let i = 0; i < numALBlocks; i++) {
-      const isLast = i === numALBlocks - 1;
-      const maxBlock = Math.min(5, alRemaining - (numALBlocks - i - 1));
-      const blockLen = isLast ? Math.max(1, alRemaining) : rand(1, Math.max(1, maxBlock));
-      annual_leave.push(randomLeaveBlock(rotaStart, rotaEnd, blockLen));
-      alRemaining -= blockLen;
-      if (alRemaining <= 0) break;
+
+    for (let i = 0; i < numALBlocks && alRemaining > 0; i++) {
+
+      const isLast   = i === numALBlocks - 1;
+
+      const maxBlock = Math.min(5, alRemaining - (isLast ? 0 : numALBlocks - i - 1));
+
+      const blockLen = isLast ? Math.max(1, Math.min(5, alRemaining)) : rand(1, Math.max(1, maxBlock));
+
+      const entry    = tryPlaceBlock(blockLen);
+
+      if (entry) {
+
+        annual_leave.push(entry);
+
+        alRemaining -= blockLen;
+
+      }
+
     }
+
+    // Study Leave: 2-4 blocks, total 3-10 days, no overlap with AL
 
     const numSLBlocks = rand(2, 4);
-    const targetSL = rand(3, 10);
+
+    const targetSL    = rand(3, 10);
+
+    const slReasons   = ['FRCA Primary', 'FRCA Final', 'ALS Course', 'ATLS Course', 'Conference', 'Exam', 'Teaching'];
+
     const study_leave: { id: string; startDate: string; endDate: string; reason: string }[] = [];
+
     let slRemaining = targetSL;
-    const slReasons = ['FRCA Primary', 'FRCA Final', 'ALS Course', 'ATLS Course', 'Conference', 'Exam', 'Teaching'];
-    for (let i = 0; i < numSLBlocks; i++) {
-      const isLast = i === numSLBlocks - 1;
-      const blockLen = isLast ? Math.max(1, slRemaining) : rand(1, Math.min(3, Math.max(1, slRemaining - (numSLBlocks - i - 1))));
-      study_leave.push({ ...randomLeaveBlock(rotaStart, rotaEnd, blockLen), reason: pick(slReasons) });
-      slRemaining -= blockLen;
-      if (slRemaining <= 0) break;
+
+    for (let i = 0; i < numSLBlocks && slRemaining > 0; i++) {
+
+      const isLast   = i === numSLBlocks - 1;
+
+      const maxBlock = Math.min(3, slRemaining - (isLast ? 0 : numSLBlocks - i - 1));
+
+      const blockLen = isLast ? Math.max(1, Math.min(3, slRemaining)) : rand(1, Math.max(1, maxBlock));
+
+      const entry    = tryPlaceBlock(blockLen);
+
+      if (entry) {
+
+        study_leave.push({ ...entry, reason: pick(slReasons) });
+
+        slRemaining -= blockLen;
+
+      }
+
     }
+
+    // NOC: 2-5 blocks, total 5-15 days, no overlap with AL or SL
 
     const numNOCBlocks = rand(2, 5);
-    const targetNOC = rand(5, 15);
+
+    const targetNOC    = rand(5, 15);
+
     const noc_dates: { id: string; startDate: string; endDate: string; reason: string }[] = [];
+
     let nocRemaining = targetNOC;
-    for (let i = 0; i < numNOCBlocks; i++) {
-      const isLast = i === numNOCBlocks - 1;
-      const blockLen = isLast ? Math.max(1, nocRemaining) : rand(1, Math.min(5, Math.max(1, nocRemaining - (numNOCBlocks - i - 1))));
-      noc_dates.push(randomLeaveBlock(rotaStart, rotaEnd, blockLen));
-      nocRemaining -= blockLen;
-      if (nocRemaining <= 0) break;
+
+    for (let i = 0; i < numNOCBlocks && nocRemaining > 0; i++) {
+
+      const isLast   = i === numNOCBlocks - 1;
+
+      const maxBlock = Math.min(5, nocRemaining - (isLast ? 0 : numNOCBlocks - i - 1));
+
+      const blockLen = isLast ? Math.max(1, Math.min(5, nocRemaining)) : rand(1, Math.max(1, maxBlock));
+
+      const entry    = tryPlaceBlock(blockLen);
+
+      if (entry) {
+
+        noc_dates.push(entry);
+
+        nocRemaining -= blockLen;
+
+      }
+
     }
 
+    // Rotation: 1 in 5 doctors, exactly 14 days Mon→Sun, no overlap with AL/SL/NOC
+
     const hasRotation = Math.random() < 0.2;
+
     const other_unavailability: { id: string; startDate: string; endDate: string; location: string }[] = [];
+
     if (hasRotation) {
-      const rotaStartMs = new Date(rotaStart).getTime();
-      const rotaEndMs   = new Date(rotaEnd).getTime();
+
+      const rotaStartMs   = new Date(rotaStart).getTime();
+
+      const rotaEndMs     = new Date(rotaEnd).getTime();
+
       const maxOffsetDays = Math.max(0, Math.floor((rotaEndMs - rotaStartMs) / 86400000) - 14);
-      const offsetDays = Math.floor(Math.random() * maxOffsetDays);
-      const candidateDate = new Date(rotaStartMs + offsetDays * 86400000);
-      const dayOfWeek = candidateDate.getDay();
-      const daysToMonday = dayOfWeek === 1 ? 0 : (8 - dayOfWeek) % 7 || 7;
-      const mondayDate = new Date(candidateDate.getTime() + daysToMonday * 86400000);
-      const sundayDate = new Date(mondayDate.getTime() + 13 * 86400000);
-      if (sundayDate.getTime() <= new Date(rotaEnd).getTime()) {
-        other_unavailability.push({
-          id: crypto.randomUUID(),
-          startDate: mondayDate.toISOString().split('T')[0],
-          endDate:   sundayDate.toISOString().split('T')[0],
-          location:  pick(['Royal Liverpool Hospital', 'Aintree University Hospital', 'Arrowe Park Hospital', 'Warrington Hospital', 'Countess of Chester Hospital']),
-        });
+
+      let placed = false;
+
+      for (let attempt = 0; attempt < 40 && !placed; attempt++) {
+
+        const offsetDays    = Math.floor(Math.random() * maxOffsetDays);
+
+        const candidate     = new Date(rotaStartMs + offsetDays * 86400000);
+
+        const dow           = candidate.getDay();
+
+        const toMonday      = dow === 1 ? 0 : (8 - dow) % 7 || 7;
+
+        const mondayDate    = new Date(candidate.getTime() + toMonday * 86400000);
+
+        const sundayDate    = new Date(mondayDate.getTime() + 13 * 86400000);
+
+        if (sundayDate.getTime() <= rotaEndMs && !overlaps(mondayDate, sundayDate)) {
+
+          book(mondayDate, sundayDate);
+
+          other_unavailability.push({
+
+            id:        crypto.randomUUID(),
+
+            startDate: mondayDate.toISOString().split('T')[0],
+
+            endDate:   sundayDate.toISOString().split('T')[0],
+
+            location:  pick(['Royal Liverpool Hospital', 'Aintree University Hospital', 'Arrowe Park Hospital', 'Warrington Hospital', 'Countess of Chester Hospital']),
+
+          });
+
+          placed = true;
+
+        }
+
       }
+
     }
 
     // ── STEP 5: EXEMPTIONS ──
