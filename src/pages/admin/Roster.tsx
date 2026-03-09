@@ -385,8 +385,13 @@ export default function Roster() {
 
     // LTFT
     const ltft_days_off: string[] = isLtft ? (wte === 80 ? ['Wednesday'] : ['Wednesday', 'Friday']) : [];
+    const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
     const ltft_night_flexibility = isLtft
-      ? [{ preference: pick(['reduced_nights', 'no_nights', 'standard']), notes: '' }]
+      ? days.map(day => ({
+          day,
+          canStart: Math.random() < 0.8,
+          canEnd: Math.random() < 0.8,
+        }))
       : [];
 
     // Leave — fresh random each call
