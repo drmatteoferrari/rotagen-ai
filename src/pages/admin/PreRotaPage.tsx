@@ -141,7 +141,7 @@ export default function PreRotaPage() {
           <button
             onClick={() => navigate("/admin/pre-rota-calendar")}
             disabled={!preRotaResult || preRotaResult.status === "blocked"}
-            className="rounded-lg border border-border p-3 text-center hover:bg-muted/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="rounded-lg border border-border bg-white p-3 text-center hover:bg-muted/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <CalendarDays className="h-6 w-6 mx-auto text-muted-foreground mb-1" />
             <p className="text-xs font-medium text-muted-foreground">View Calendar →</p>
@@ -152,7 +152,7 @@ export default function PreRotaPage() {
           <button
             onClick={() => navigate("/admin/pre-rota-targets")}
             disabled={!preRotaResult || preRotaResult.status === "blocked"}
-            className="rounded-lg border border-border p-3 text-center hover:bg-muted/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="rounded-lg border border-border bg-white p-3 text-center hover:bg-muted/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <Target className="h-6 w-6 mx-auto text-muted-foreground mb-1" />
             <p className="text-xs font-medium text-muted-foreground">View Targets →</p>
