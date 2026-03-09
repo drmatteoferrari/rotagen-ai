@@ -1,42 +1,103 @@
 
 
-# UI/UX Improvements Plan
+## Plan: Add DEV TOOLS Banner to `/admin/roster`
 
-## Section 1 — Remove "Welcome back" toast
-Remove lines 98-100 in `src/contexts/AuthContext.tsx` (the `if (config)` block with `toast.info`). Config restoration continues silently.
+### Overview
+Add a development tools banner at the top of the Roster page with two buttons:
+1. **Fill All Surveys** - Generates realistic fake survey data for all doctors
+2. **Cancel All Surveys** - Clears all survey responses and resets doctor statuses
 
-## Section 2 — Collapsible Department & Hospital on Dashboard
-Replace the current full card (lines 121-187 in Dashboard.tsx) with two-state logic:
+### File to Modify
+`src/pages/admin/Roster.tsx`
 
-- **STATE A** (not saved): `accountSettings.departmentName` and `accountSettings.trustName` are both null/empty after loading. Show full form as-is with helper text.
-- **STATE B** (saved): Show a compact single-line bar: `Building2` icon, department · trust, `Pencil` edit icon. Add `editing` state — clicking pencil expands inline inputs with Save/Cancel. Save calls existing `handleSaveAccountSettings`, then collapses. Cancel resets local state and collapses.
+---
 
-Determine state from loaded values (after `loadingSettings` resolves). The compact line is the first element in the content area.
+### Section 1: DEV TOOLS Banner UI
 
-## Section 3 — Setup Progress redesign
-- Add step numbers as circular badges (1-4)
-- Rename: "Department", "Contract Rules (WTR)", "Rota Period", "Doctor Preferences"
-- Add icons: `Building2`, `ClipboardList`, `CalendarDays`, `Users`
-- Add `Pencil` edit icon at right of each row (always clickable)
-- Doctor Preferences row: clickable, navigates to `/admin/roster`
-- Fetch live survey counts from `doctors` table where `rota_config_id = currentRotaConfigId`. Show `X / Y responses received`. Remove hardcoded 10/16 and "Active" label.
+Add at the very top of the component's return JSX (inside `<AdminLayout>`, before the deadline picker card):
 
-## Section 4 — Pointer events on DepartmentStep2 drag bars
-The drag bars already use pointer events (`onPointerDown`, `onPointerMove`, `onPointerUp`) — lines 32-53 and 104-123. The fix needed is:
-- Add `style={{ touchAction: 'none' }}` to the draggable bar `div` elements (lines 70-76 and 132-138)
-- Ensure min height of 44px for touch targets (currently `h-5` = 20px on DragBar, `h-8` = 32px on GlobalSplitBar — increase both to `h-11` = 44px)
+```text
+┌─────────────────────────────────────────────────────────────────────┐
+│ ⚙️ DEV TOOLS — not visible in production                           │
+│ ┌────────────────────┐   ┌────────────────────┐                    │
+│ │ 🧪 Fill All Surveys│   │ 🗑️ Cancel All Surveys│                   │
+│ │    (amber)         │   │    (red/rose)       │                    │
+│ └────────────────────┘   └────────────────────┘                    │
+└─────────────────────────────────────────────────────────────────────┘
+```
 
-## Section 5 — Reset button visual states
-- **"Reset all to auto" button**: Compare each shift's current value to `autoShare`. If any differ by >0.5pp, show red style; otherwise muted/ghost.
-- **Per-shift reset icon**: Compare individual value to `autoShare`. If differs >0.5pp, show red with tooltip "Reset to auto (X%)"; otherwise grey/muted with tooltip "Percentage is at auto value".
-- Add a one-time pulse animation class for the red "Reset all" button.
+- Amber/yellow background (`bg-amber-50 border-amber-200`)
+- Both buttons show `<Loader2>` spinner when their operation is running
+- Disabled state during operation
 
-## Files Changed
+---
 
-| File | Changes |
-|---|---|
-| `src/contexts/AuthContext.tsx` | Remove toast.info on login |
-| `src/pages/admin/Dashboard.tsx` | Two-state dept/hospital, redesigned setup progress with numbered badges/icons/edit icons, live survey count fetch |
-| `src/pages/admin/DepartmentStep2.tsx` | Add `touchAction: 'none'`, increase drag target height to 44px, reset button visual states based on auto-value comparison |
-| `src/index.css` | Add pulse-once keyframe animation for red reset button |
+### Section 2: State Variables
+
+Add two loading states:
+- `fillingAll: boolean` - true while Fill All Surveys is running
+- `cancellingAll: boolean` - true while Cancel All Surveys is running
+
+---
+
+### Section 3: `handleFillAllSurveys()` Implementation
+
+1. **Get config ID** from localStorage (`currentRotaConfigId` key - matching RotaContext storage key)
+2. **Fetch rota_configs row** to get `rota_start_date` and `rota_end_date`
+3. **Fetch all doctors** for this rota_config_id
+4. **Generate payloads** using the exact grade-based logic provided in the task spec:
+   - Grade mapping for junior/mid/senior determines competencies, exemptions, preferences
+   - Random leave blocks within rota period
+   - WTE distribution (88% full-time, 12% LTFT)
+5. **Upsert to doctor_survey_responses** using `onConflict: 'doctor_id,rota_config_id'`
+6. **Update doctors table** - set `survey_status = 'submitted'`, `survey_submitted_at = now()`
+7. **Refresh UI** via existing `loadDoctors()` callback
+8. **Toast** success or error
+
+---
+
+### Section 4: `handleCancelAllSurveys()` Implementation
+
+1. **Get config ID** from localStorage
+2. **Delete from doctor_survey_responses** where `rota_config_id` matches
+3. **Update doctors** - set `survey_status = 'not_started'`, `survey_submitted_at = null`
+4. **Refresh UI** via `loadDoctors()`
+5. **Toast** success or error
+
+---
+
+### Technical Details
+
+**Storage key correction**: Task says sessionStorage but the app uses localStorage with key `"currentRotaConfigId"` (see RotaContext line 26). Will use localStorage to match existing behavior.
+
+**Helper functions** (defined inside component):
+```typescript
+const juniorGrades = ['CT1', 'CT2', 'ACCS CT1', 'ACCS CT2'];
+const midGrades = ['CT3', 'ACCS CT3', 'ST4', 'ST5'];
+const seniorGrades = ['ST6', 'ST7', 'ST8', 'ST9', 'SAS', 'Post-CCT Fellow', 'Consultant'];
+
+const isJunior = (g: string) => juniorGrades.some(x => g.includes(x));
+const isMid = (g: string) => midGrades.some(x => g.includes(x));
+const isSenior = (g: string) => seniorGrades.some(x => g.includes(x));
+const pick = <T,>(arr: T[]) => arr[Math.floor(Math.random() * arr.length)];
+const rand = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
+const randomLeaveBlock = (rotaStart: string, rotaEnd: string, lengthDays: number) => { ... };
+```
+
+**Existing imports used**: `supabase`, `toast`, `Loader2`, `Button`
+
+**No new dependencies required** - all logic is pure TypeScript
+
+---
+
+### Completion Checklist
+- [ ] Banner renders at top with amber styling
+- [ ] Fill button upserts realistic data per doctor
+- [ ] status='submitted' and submitted_at set on all rows
+- [ ] survey_status='submitted' set on doctors table
+- [ ] Cancel button deletes all survey responses
+- [ ] Reset survey_status='not_started' and survey_submitted_at=null
+- [ ] UI refreshes after both operations
+- [ ] Loading states and toasts functional
+- [ ] No other files modified
 
