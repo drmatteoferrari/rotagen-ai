@@ -201,7 +201,7 @@ export default function PreRotaPage() {
 
         {/* Validation issues panel */}
         {preRotaResult && (
-          <div className="rounded-lg border border-border overflow-hidden">
+          <div className="rounded-lg border border-border bg-white overflow-hidden">
             <button
               onClick={() => setIssuesPanelOpen((o) => !o)}
               className="w-full flex items-center justify-between px-4 py-3 bg-muted/50 text-sm font-medium text-foreground hover:bg-muted transition-colors"
