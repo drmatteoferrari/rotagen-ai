@@ -469,6 +469,19 @@ export default function Roster() {
       status: 'submitted',
       submitted_at: new Date().toISOString(),
       last_saved_at: new Date().toISOString(),
+      // Additional fields expected by dbRowToFormData
+      other_restrictions: "",
+      parental_leave_expected: false,
+      parental_leave_start: null,
+      parental_leave_end: null,
+      parental_leave_notes: "",
+      special_sessions: [] as string[],
+      signoff_needs: "",
+      dual_specialty: false,
+      dual_specialty_types: [] as string[],
+      personal_email: null,
+      phone_number: null,
+      al_entitlement: null,
     };
   };
 
