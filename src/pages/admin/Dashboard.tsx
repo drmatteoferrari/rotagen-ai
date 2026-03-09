@@ -321,21 +321,21 @@ export default function Dashboard() {
               </span>
               <div className="flex items-center gap-1.5">
                 <button
-                  onClick={() => navigate('/admin/pre-rota-calendar')}
+                  onClick={(e) => { e.stopPropagation(); navigate('/admin/pre-rota-calendar'); }}
                   className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
                   title="View Calendar"
                 >
                   <CalendarDays className="h-3.5 w-3.5" />
                 </button>
                 <button
-                  onClick={() => navigate('/admin/pre-rota-targets')}
+                  onClick={(e) => { e.stopPropagation(); navigate('/admin/pre-rota-targets'); }}
                   className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
                   title="View Targets"
                 >
                   <Target className="h-3.5 w-3.5" />
                 </button>
                 <button
-                  onClick={() => navigate('/admin/pre-rota')}
+                  onClick={(e) => { e.stopPropagation(); navigate('/admin/pre-rota'); }}
                   className="text-[11px] font-semibold text-primary bg-primary/10 hover:bg-primary/20 px-2.5 py-1 rounded-md transition-colors"
                 >
                   View details →
