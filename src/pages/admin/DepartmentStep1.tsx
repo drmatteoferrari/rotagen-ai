@@ -63,6 +63,7 @@ export default function DepartmentStep1New() {
       }
 
       setAccountSettings({ departmentName: deptName.trim(), trustName: trustName.trim() });
+      invalidateAccountSettings();
       toast.success("✓ Department details saved");
       navigate("/admin/department/step-2");
     } catch (err) {
