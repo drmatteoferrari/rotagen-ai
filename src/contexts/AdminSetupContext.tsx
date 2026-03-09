@@ -49,6 +49,7 @@ interface AdminSetupContextType {
   setOncallBreakFineThresholdPct: (v: number) => void;
   // Source tracking
   restoredFromDb: boolean;
+  isRestoring: boolean;
 }
 
 const AdminSetupContext = createContext<AdminSetupContextType | undefined>(undefined);
