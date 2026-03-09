@@ -3,6 +3,7 @@ import { AdminLayout } from "@/components/AdminLayout";
 import { useRotaContext } from "@/contexts/RotaContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   CalendarDays, Target, AlertTriangle, CheckCircle,
   XCircle, Info, RefreshCw, Loader2, ArrowLeft,
@@ -22,19 +23,34 @@ export default function PreRotaPage() {
   const [preRotaError, setPreRotaError] = useState<string | null>(null);
   const [isStale, setIsStale] = useState(false);
   const [issuesPanelOpen, setIssuesPanelOpen] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
 
   // Load existing pre-rota
   useEffect(() => {
+    let cancelled = false;
+
     const load = async () => {
-      if (!currentRotaConfigId) return;
+      setPageLoading(true);
       try {
+        if (!currentRotaConfigId) {
+          setPreRotaResult(null);
+          setIsStale(false);
+          setIssuesPanelOpen(false);
+          return;
+        }
+
         const { data: pr } = await supabase
           .from("pre_rota_results")
           .select("*")
           .eq("rota_config_id", currentRotaConfigId)
           .maybeSingle();
 
-        if (!pr) return;
+        if (!pr) {
+          setPreRotaResult(null);
+          setIsStale(false);
+          setIssuesPanelOpen(false);
+          return;
+        }
 
         const result: PreRotaResult = {
           id: pr.id,
@@ -77,9 +93,15 @@ export default function PreRotaPage() {
         setIssuesPanelOpen(result.validationIssues.length > 0 && result.status !== "complete");
       } catch (err) {
         console.error("Failed to load pre-rota:", err);
+      } finally {
+        if (!cancelled) setPageLoading(false);
       }
     };
+
     load();
+    return () => {
+      cancelled = true;
+    };
   }, [currentRotaConfigId]);
 
   const handleGeneratePreRota = async () => {
@@ -106,7 +128,16 @@ export default function PreRotaPage() {
 
   return (
     <AdminLayout title="Pre-Rota" subtitle="Calendar, targets and data validation" accentColor="blue">
-      <div className="mx-auto max-w-3xl space-y-5 animate-fadeSlideUp">
+      {pageLoading ? (
+        <div className="mx-auto max-w-3xl space-y-5 animate-fadeSlideUp">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-24 w-full" />
+        </div>
+      ) : (
+        <div className="mx-auto max-w-3xl space-y-5 animate-fadeSlideUp">
+
         {/* Back link + re-generate */}
         <div className="flex items-center justify-between">
           <button
@@ -288,6 +319,7 @@ export default function PreRotaPage() {
           </div>
         )}
       </div>
+    )}
     </AdminLayout>
   );
 }

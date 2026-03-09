@@ -4,6 +4,7 @@ import { useAdminSetup } from "@/contexts/AdminSetupContext";
 import { useRotaContext } from "@/contexts/RotaContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   CheckCircle, Target, Users, Lock,
   Building2, Loader2, ClipboardList, CalendarDays,
@@ -38,79 +39,106 @@ export default function Dashboard() {
   const [finalLoading, setFinalLoading] = useState(false);
   const [showFinalChecklist, setShowFinalChecklist] = useState(false);
 
-  // Fetch live survey counts
-  useEffect(() => {
-    const fetchCounts = async () => {
-      if (!currentRotaConfigId) { setSurveySubmitted(0); setSurveyTotal(0); return; }
-      const { data, error } = await supabase
-        .from("doctors")
-        .select("survey_status")
-        .eq("rota_config_id", currentRotaConfigId);
-      if (error) { console.error("Failed to fetch survey counts:", error); return; }
-      setSurveyTotal(data?.length ?? 0);
-      setSurveySubmitted(data?.filter((d) => d.survey_status === "submitted").length ?? 0);
-    };
-    fetchCounts();
-  }, [currentRotaConfigId]);
+  // Page-level load gate (prevents brief empty/zero-state flash)
+  const [pageLoading, setPageLoading] = useState(true);
 
-  // Load existing pre-rota on mount
+  // Load dashboard data on mount / when rota changes
   useEffect(() => {
-    const loadPreRota = async () => {
-      if (!currentRotaConfigId) return;
+    let cancelled = false;
+
+    const load = async () => {
+      setPageLoading(true);
+
+      if (!currentRotaConfigId) {
+        setSurveySubmitted(0);
+        setSurveyTotal(0);
+        setPreRotaResult(null);
+        setIsStale(false);
+        setIssuesPanelOpen(false);
+        setPreRotaError(null);
+        if (!cancelled) setPageLoading(false);
+        return;
+      }
+
       try {
+        // 1) Survey counts
+        const { data: doctorStatuses, error: countsErr } = await supabase
+          .from("doctors")
+          .select("survey_status")
+          .eq("rota_config_id", currentRotaConfigId);
+
+        if (!countsErr) {
+          setSurveyTotal(doctorStatuses?.length ?? 0);
+          setSurveySubmitted(doctorStatuses?.filter((d) => d.survey_status === "submitted").length ?? 0);
+        } else {
+          console.error("Failed to fetch survey counts:", countsErr);
+        }
+
+        // 2) Existing pre-rota
         const { data: existingPreRota } = await supabase
-          .from('pre_rota_results')
-          .select('*')
-          .eq('rota_config_id', currentRotaConfigId)
+          .from("pre_rota_results")
+          .select("*")
+          .eq("rota_config_id", currentRotaConfigId)
           .maybeSingle();
 
-        if (existingPreRota) {
-          const pr = existingPreRota as any;
-          const result: PreRotaResult = {
-            id: pr.id,
-            rotaConfigId: pr.rota_config_id,
-            generatedAt: pr.generated_at,
-            generatedBy: pr.generated_by,
-            status: pr.status,
-            validationIssues: pr.validation_issues ?? [],
-            calendarData: pr.calendar_data ?? {},
-            targetsData: pr.targets_data ?? {},
-            isStale: false,
-          };
-
-          const generatedAt = new Date(pr.generated_at);
-
-          const { data: latestDoctors } = await supabase
-            .from('doctors')
-            .select('updated_at')
-            .eq('rota_config_id', currentRotaConfigId)
-            .order('updated_at', { ascending: false })
-            .limit(1);
-
-          const { data: latestSurveys } = await supabase
-            .from('doctor_survey_responses')
-            .select('updated_at')
-            .eq('rota_config_id', currentRotaConfigId)
-            .order('updated_at', { ascending: false })
-            .limit(1);
-
-          const latestDoctorUpdate = latestDoctors?.[0]?.updated_at ? new Date(latestDoctors[0].updated_at) : null;
-          const latestSurveyUpdate = latestSurveys?.[0]?.updated_at ? new Date(latestSurveys[0].updated_at) : null;
-
-          const stale =
-            (latestDoctorUpdate && latestDoctorUpdate > generatedAt) ||
-            (latestSurveyUpdate && latestSurveyUpdate > generatedAt);
-
-          result.isStale = !!stale;
-          setPreRotaResult(result);
-          setIsStale(!!stale);
-          setIssuesPanelOpen(result.validationIssues.length > 0 && result.status !== 'complete');
+        if (!existingPreRota) {
+          setPreRotaResult(null);
+          setIsStale(false);
+          setIssuesPanelOpen(false);
+          return;
         }
+
+        const pr = existingPreRota as any;
+        const result: PreRotaResult = {
+          id: pr.id,
+          rotaConfigId: pr.rota_config_id,
+          generatedAt: pr.generated_at,
+          generatedBy: pr.generated_by,
+          status: pr.status,
+          validationIssues: pr.validation_issues ?? [],
+          calendarData: pr.calendar_data ?? {},
+          targetsData: pr.targets_data ?? {},
+          isStale: false,
+        };
+
+        const generatedAt = new Date(pr.generated_at);
+
+        const { data: latestDoctors } = await supabase
+          .from("doctors")
+          .select("updated_at")
+          .eq("rota_config_id", currentRotaConfigId)
+          .order("updated_at", { ascending: false })
+          .limit(1);
+
+        const { data: latestSurveys } = await supabase
+          .from("doctor_survey_responses")
+          .select("updated_at")
+          .eq("rota_config_id", currentRotaConfigId)
+          .order("updated_at", { ascending: false })
+          .limit(1);
+
+        const latestDoctorUpdate = latestDoctors?.[0]?.updated_at ? new Date(latestDoctors[0].updated_at) : null;
+        const latestSurveyUpdate = latestSurveys?.[0]?.updated_at ? new Date(latestSurveys[0].updated_at) : null;
+
+        const stale =
+          (latestDoctorUpdate && latestDoctorUpdate > generatedAt) ||
+          (latestSurveyUpdate && latestSurveyUpdate > generatedAt);
+
+        result.isStale = !!stale;
+        setPreRotaResult(result);
+        setIsStale(!!stale);
+        setIssuesPanelOpen(result.validationIssues.length > 0 && result.status !== "complete");
       } catch (err) {
-        console.error('Failed to load existing pre-rota:', err);
+        console.error("Failed to load dashboard data:", err);
+      } finally {
+        if (!cancelled) setPageLoading(false);
       }
     };
-    loadPreRota();
+
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, [currentRotaConfigId]);
 
   // Handler functions
@@ -190,7 +218,14 @@ export default function Dashboard() {
 
   return (
     <AdminLayout title="Dashboard" subtitle="Track setup progress and generate the rota" accentColor="blue">
-      <div className="mx-auto max-w-3xl space-y-4 animate-fadeSlideUp">
+      {pageLoading ? (
+        <div className="mx-auto max-w-3xl space-y-4 animate-fadeSlideUp">
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-40 w-full" />
+          <Skeleton className="h-32 w-full" />
+        </div>
+      ) : (
+        <div className="mx-auto max-w-3xl space-y-4 animate-fadeSlideUp">
 
         {/* 1. Setup */}
         <div className="rounded-xl border border-border bg-card p-3 shadow-sm">
@@ -404,7 +439,8 @@ export default function Dashboard() {
             </div>
           )}
         </div>
-      </div>
+        </div>
+      )}
     </AdminLayout>
   );
 }
