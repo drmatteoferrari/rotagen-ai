@@ -355,14 +355,14 @@ export default function DepartmentStep3() {
         </Card>
 
         {/* Navigation */}
-        <div className="flex flex-col-reverse sm:flex-row sm:justify-between gap-3 mt-6">
-          <Button variant="outline" size="lg" onClick={() => navigate("/admin/department/step-2")} className="w-full sm:w-auto">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back
+        <div className="flex justify-between">
+          <Button variant="outline" size="sm" onClick={() => navigate("/admin/department/step-2")}>
+            <ArrowLeft className="mr-2 h-4 w-4" />Back
           </Button>
           <Button
-            size="lg"
+            size="sm"
             disabled={!canSave || saving}
-            className="bg-purple-600 hover:bg-purple-700 text-white w-full sm:w-auto"
+            className="bg-purple-600 hover:bg-purple-700 text-white"
             onClick={async () => {
               setSaving(true);
               try {
@@ -462,7 +462,7 @@ export default function DepartmentStep3() {
               }
             }}
           >
-            {saving ? "Saving…" : "Save Department Setup"}
+            {saving ? "Saving…" : "Save & Continue"}
             {!saving && <Save className="ml-2 h-4 w-4" />}
           </Button>
         </div>
