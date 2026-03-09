@@ -49,7 +49,6 @@ interface AdminSetupContextType {
   setOncallBreakFineThresholdPct: (v: number) => void;
   // Source tracking
   restoredFromDb: boolean;
-  isRestoring: boolean;
 }
 
 const AdminSetupContext = createContext<AdminSetupContextType | undefined>(undefined);
@@ -62,7 +61,6 @@ export function AdminSetupProvider({ children }: { children: ReactNode }) {
   const [rotaStartDate, setRotaStartDate] = useState<Date | undefined>();
   const [rotaEndDate, setRotaEndDate] = useState<Date | undefined>();
   const [restoredFromDb, setRestoredFromDb] = useState(false);
-  const [isRestoring, setIsRestoring] = useState(true);
   // WTR Step 1
   const [maxAvgWeekly, setMaxAvgWeekly] = useState(48);
   const [maxIn7Days, setMaxIn7Days] = useState(72);
@@ -85,50 +83,42 @@ export function AdminSetupProvider({ children }: { children: ReactNode }) {
   const { restoredConfig } = useRotaContext();
 
   useEffect(() => {
-    if (!restoredConfig) {
-      setIsRestoring(false);
-      return;
+    if (!restoredConfig) return;
+    const config = restoredConfig;
+
+    if (config.rotaPeriod.startDate) {
+      setRotaStartDate(new Date(config.rotaPeriod.startDate));
+      setPeriodComplete(true);
     }
-    try {
-      const config = restoredConfig;
-
-      if (config.rotaPeriod.startDate) {
-        setRotaStartDate(new Date(config.rotaPeriod.startDate));
-        setPeriodComplete(true);
-      }
-      if (config.rotaPeriod.endDate) {
-        setRotaEndDate(new Date(config.rotaPeriod.endDate));
-      }
-
-      if (config.shifts.length > 0) {
-        setDepartmentComplete(true);
-      }
-
-      if (config.wtr) {
-        const w = config.wtr;
-        setMaxAvgWeekly(w.maxHoursPerWeek);
-        setMaxIn7Days(w.maxHoursPer168h);
-        setMaxConsecDays(w.maxConsecStandard);
-        setMaxConsecLong(w.maxConsecLong);
-        setMaxConsecNights(w.maxConsecNights);
-        setRestPostNights(w.restAfterNightsH);
-        setRestPostBlock(w.restAfterLongH);
-        setRestAfter7(w.restAfterStandardH);
-        setWeekendFreq(w.weekendFrequency);
-        setOncallContinuousRestStart(w.oncall.continuousRestStart ?? "22:00");
-        setOncallContinuousRestEnd(w.oncall.continuousRestEnd ?? "07:00");
-        setOncallIfRestNotMetMaxHours(w.oncall.ifRestNotMetMaxHours ?? 5);
-        setOncallBreakReferenceWeeks(w.oncall.breakReferenceWeeks ?? 4);
-        setOncallBreakFineThresholdPct(w.oncall.breakFineThresholdPct ?? 25);
-        setWtrComplete(true);
-      }
-
-      setRestoredFromDb(true);
-    } catch {
-      // ensure we never get stuck
-    } finally {
-      setIsRestoring(false);
+    if (config.rotaPeriod.endDate) {
+      setRotaEndDate(new Date(config.rotaPeriod.endDate));
     }
+
+    if (config.shifts.length > 0) {
+      setDepartmentComplete(true);
+    }
+
+    if (config.wtr) {
+      const w = config.wtr;
+      setMaxAvgWeekly(w.maxHoursPerWeek);
+      setMaxIn7Days(w.maxHoursPer168h);
+      setMaxConsecDays(w.maxConsecStandard);
+      setMaxConsecLong(w.maxConsecLong);
+      setMaxConsecNights(w.maxConsecNights);
+      setRestPostNights(w.restAfterNightsH);
+      setRestPostBlock(w.restAfterLongH);
+      setRestAfter7(w.restAfterStandardH);
+      setWeekendFreq(w.weekendFrequency);
+      // Advanced on-call fields
+      setOncallContinuousRestStart(w.oncall.continuousRestStart ?? "22:00");
+      setOncallContinuousRestEnd(w.oncall.continuousRestEnd ?? "07:00");
+      setOncallIfRestNotMetMaxHours(w.oncall.ifRestNotMetMaxHours ?? 5);
+      setOncallBreakReferenceWeeks(w.oncall.breakReferenceWeeks ?? 4);
+      setOncallBreakFineThresholdPct(w.oncall.breakFineThresholdPct ?? 25);
+      setWtrComplete(true);
+    }
+
+    setRestoredFromDb(true);
   }, [restoredConfig]);
 
   return (
@@ -143,7 +133,6 @@ export function AdminSetupProvider({ children }: { children: ReactNode }) {
         oncallContinuousRestStart, oncallContinuousRestEnd, oncallIfRestNotMetMaxHours, oncallBreakReferenceWeeks, oncallBreakFineThresholdPct,
         setOncallContinuousRestStart, setOncallContinuousRestEnd, setOncallIfRestNotMetMaxHours, setOncallBreakReferenceWeeks, setOncallBreakFineThresholdPct,
         restoredFromDb,
-        isRestoring,
       }}
     >
       {children}

@@ -17,8 +17,6 @@ import { cn } from "@/lib/utils";
 import { useIsMobile, useIsTablet } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdminShell, AdminShellProvider } from "@/contexts/AdminShellContext";
-import { useRotaContext } from "@/contexts/RotaContext";
-import { useAdminSetup } from "@/contexts/AdminSetupContext";
 
 const navItems = [
   { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
@@ -29,10 +27,6 @@ const navItems = [
 ];
 
 function AdminShellInner() {
-  const { isRestoring: rotaRestoring } = useRotaContext();
-  const { isRestoring: setupRestoring } = useAdminSetup();
-  const isAppReady = !rotaRestoring && !setupRestoring;
-
   const { title, subtitle, accentColor } = useAdminShell();
   const bgColorMap: Record<string, string> = {
     blue:   '#eff6ff',
@@ -56,10 +50,6 @@ function AdminShellInner() {
     logout();
     navigate("/login", { replace: true });
   };
-
-  if (!isAppReady) {
-    return <div className="min-h-screen bg-background" />;
-  }
 
   // Mobile and tablet both use bottom nav bar layout
   if (isMobile || isTablet) {
