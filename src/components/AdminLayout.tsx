@@ -113,7 +113,7 @@ export function AdminLayout({ children, title, subtitle, accentColor = 'blue' }:
   }
 
   return (
-    <div className="flex min-h-screen w-full bg-background">
+    <div className={`flex min-h-screen w-full ${bgClass}`}>
       {/* Sidebar */}
       <aside
         className={cn(
