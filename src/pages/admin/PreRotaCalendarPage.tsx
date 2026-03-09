@@ -715,7 +715,7 @@ export default function PreRotaCalendarPage() {
           <table style={{ width: '100%', tableLayout: 'fixed' }} className="text-xs border-collapse">
             <thead>
               <tr>
-                <th style={{ minWidth: 140, maxWidth: 140, position: 'sticky', left: 0, zIndex: 10, background: '#fff', textAlign: 'left', padding: '8px 8px', fontWeight: 500, color: '#6b7280', borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0' }}>
+                <th style={{ width: '18%', minWidth: 100, maxWidth: 140, position: 'sticky', left: 0, zIndex: 10, background: '#fff', textAlign: 'left', padding: '8px 6px', fontWeight: 500, color: '#6b7280', borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0' }}>
                   Doctor
                 </th>
                 {week.dates.map(date => {
