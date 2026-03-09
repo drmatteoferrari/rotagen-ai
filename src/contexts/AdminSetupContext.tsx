@@ -80,7 +80,7 @@ export function AdminSetupProvider({ children }: { children: ReactNode }) {
   const [oncallBreakReferenceWeeks, setOncallBreakReferenceWeeks] = useState(4);
   const [oncallBreakFineThresholdPct, setOncallBreakFineThresholdPct] = useState(25);
 
-  const { restoredConfig } = useRotaContext();
+  const { restoredConfig, contextReady } = useRotaContext();
 
   useEffect(() => {
     if (!restoredConfig) {
