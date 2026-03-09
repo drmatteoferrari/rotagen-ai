@@ -329,7 +329,7 @@ export default function Dashboard() {
         {/* 3. Final Allocation Rota */}
         <div className="rounded-xl border border-border bg-card p-3 shadow-sm">
           <div className="flex items-center justify-between mb-1">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-foreground">
               3. Final Allocation Rota
             </h2>
           </div>
