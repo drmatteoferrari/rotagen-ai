@@ -367,20 +367,32 @@ export default function Roster() {
     const isLtft = wte < 100;
 
     // Competencies — fresh random each call
-    const comp_ip_anaesthesia = !isJunior(grade);
-    const comp_ip_anaesthesia_here = comp_ip_anaesthesia && Math.random() < 0.8;
-    const comp_obstetric = isSenior(grade) || (isMid(grade) && Math.random() < 0.5);
-    const comp_obstetric_here = comp_obstetric && Math.random() < 0.7;
-    const comp_icu = isSenior(grade) && Math.random() < 0.6;
-    const comp_icu_here = comp_icu && Math.random() < 0.5;
+    const iacAchieved = !isJunior(grade);
+    const iaocAchieved = isSenior(grade) || (isMid(grade) && Math.random() < 0.5);
+    const icuAchieved = isSenior(grade) && Math.random() < 0.6;
+    const transferAchieved = isSenior(grade) && Math.random() < 0.5;
 
     const competencies_json = {
-      ip_anaesthesia: comp_ip_anaesthesia,
-      ip_anaesthesia_here: comp_ip_anaesthesia_here,
-      obstetric: comp_obstetric,
-      obstetric_here: comp_obstetric_here,
-      icu: comp_icu,
-      icu_here: comp_icu_here,
+      iac: {
+        achieved: iacAchieved,
+        workingTowards: iacAchieved ? null : (isJunior(grade) && Math.random() < 0.6),
+        remoteSupervision: iacAchieved ? Math.random() < 0.7 : null,
+      },
+      iaoc: {
+        achieved: iaocAchieved,
+        workingTowards: iaocAchieved ? null : (isMid(grade) && Math.random() < 0.4),
+        remoteSupervision: iaocAchieved ? Math.random() < 0.7 : null,
+      },
+      icu: {
+        achieved: icuAchieved,
+        workingTowards: icuAchieved ? null : (isSenior(grade) && Math.random() < 0.3),
+        remoteSupervision: icuAchieved ? Math.random() < 0.6 : null,
+      },
+      transfer: {
+        achieved: transferAchieved,
+        workingTowards: transferAchieved ? null : (isSenior(grade) && Math.random() < 0.3),
+        remoteSupervision: transferAchieved ? Math.random() < 0.6 : null,
+      },
     };
 
     // LTFT
