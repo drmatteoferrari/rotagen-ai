@@ -467,7 +467,7 @@ export default function Roster() {
 
   const handleFillAllSurveys = async () => {
     // 1. Get rota config id from localStorage (matching RotaContext storage key)
-    const rotaConfigId = localStorage.getItem('currentRotaConfigId');
+    const rotaConfigId = currentRotaConfigId;
     if (!rotaConfigId) {
       toast.error('No active rota config');
       return;
@@ -551,7 +551,7 @@ export default function Roster() {
   };
 
   const handleCancelAllSurveys = async () => {
-    const rotaConfigId = localStorage.getItem('currentRotaConfigId');
+    const rotaConfigId = currentRotaConfigId;
     if (!rotaConfigId) {
       toast.error('No active rota config');
       return;
