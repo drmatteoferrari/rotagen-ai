@@ -1,8 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { useAdminSetup } from "@/contexts/AdminSetupContext";
 import { useRotaContext } from "@/contexts/RotaContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSurveyCounts } from "@/hooks/useSurveyCounts";
+import { usePreRotaResult } from "@/hooks/usePreRotaResult";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -11,140 +13,32 @@ import {
   RefreshCw, Play, AlertTriangle, XCircle,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { generatePreRota } from "@/lib/preRotaGenerator";
 import { buildFinalRotaInput, validateFinalRotaInput } from "@/lib/rotaGenInput";
 import { toast } from "@/hooks/use-toast";
-import type { PreRotaResult } from "@/lib/preRotaTypes";
-// ✅ Section 1a complete — title changed to "Dashboard"
-// ✅ Section 2 complete — icon sizes increased
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { isDepartmentComplete, isWtrComplete, isPeriodComplete, areSurveysDone, restoredFromDb, rotaStartDate, rotaEndDate } = useAdminSetup();
+  const { isDepartmentComplete, isWtrComplete, isPeriodComplete, restoredFromDb, rotaStartDate, rotaEndDate } = useAdminSetup();
   const { restoredConfig, currentRotaConfigId } = useRotaContext();
   const { user } = useAuth();
 
+  // React Query hooks — cached across navigation
+  const { surveySubmitted, surveyTotal, isLoading: surveysLoading } = useSurveyCounts();
+  const { preRotaResult, isStale, isLoading: preRotaLoading, invalidate: invalidatePreRota } = usePreRotaResult();
 
-  // Live survey counts
-  const [surveySubmitted, setSurveySubmitted] = useState(0);
-  const [surveyTotal, setSurveyTotal] = useState(0);
-
-  // Pre-rota state
-  const [preRotaResult, setPreRotaResult] = useState<PreRotaResult | null>(null);
-  const [preRotaLoading, setPreRotaLoading] = useState(false);
+  // Local UI state
+  const [generating, setGenerating] = useState(false);
   const [preRotaError, setPreRotaError] = useState<string | null>(null);
-  const [isStale, setIsStale] = useState(false);
   const [issuesPanelOpen, setIssuesPanelOpen] = useState(false);
   const [finalLoading, setFinalLoading] = useState(false);
   const [showFinalChecklist, setShowFinalChecklist] = useState(false);
 
-  // Page-level load gate (prevents brief empty/zero-state flash)
-  const [pageLoading, setPageLoading] = useState(true);
+  const pageLoading = surveysLoading || preRotaLoading;
 
-  // Load dashboard data on mount / when rota changes
-  useEffect(() => {
-    let cancelled = false;
-
-    const load = async () => {
-      setPageLoading(true);
-
-      if (!currentRotaConfigId) {
-        setSurveySubmitted(0);
-        setSurveyTotal(0);
-        setPreRotaResult(null);
-        setIsStale(false);
-        setIssuesPanelOpen(false);
-        setPreRotaError(null);
-        if (!cancelled) setPageLoading(false);
-        return;
-      }
-
-      try {
-        // 1) Survey counts
-        const { data: doctorStatuses, error: countsErr } = await supabase
-          .from("doctors")
-          .select("survey_status")
-          .eq("rota_config_id", currentRotaConfigId);
-
-        if (!countsErr) {
-          setSurveyTotal(doctorStatuses?.length ?? 0);
-          setSurveySubmitted(doctorStatuses?.filter((d) => d.survey_status === "submitted").length ?? 0);
-        } else {
-          console.error("Failed to fetch survey counts:", countsErr);
-        }
-
-        // 2) Existing pre-rota
-        const { data: existingPreRota } = await supabase
-          .from("pre_rota_results")
-          .select("*")
-          .eq("rota_config_id", currentRotaConfigId)
-          .maybeSingle();
-
-        if (!existingPreRota) {
-          setPreRotaResult(null);
-          setIsStale(false);
-          setIssuesPanelOpen(false);
-          return;
-        }
-
-        const pr = existingPreRota as any;
-        const result: PreRotaResult = {
-          id: pr.id,
-          rotaConfigId: pr.rota_config_id,
-          generatedAt: pr.generated_at,
-          generatedBy: pr.generated_by,
-          status: pr.status,
-          validationIssues: pr.validation_issues ?? [],
-          calendarData: pr.calendar_data ?? {},
-          targetsData: pr.targets_data ?? {},
-          isStale: false,
-        };
-
-        const generatedAt = new Date(pr.generated_at);
-
-        const { data: latestDoctors } = await supabase
-          .from("doctors")
-          .select("updated_at")
-          .eq("rota_config_id", currentRotaConfigId)
-          .order("updated_at", { ascending: false })
-          .limit(1);
-
-        const { data: latestSurveys } = await supabase
-          .from("doctor_survey_responses")
-          .select("updated_at")
-          .eq("rota_config_id", currentRotaConfigId)
-          .order("updated_at", { ascending: false })
-          .limit(1);
-
-        const latestDoctorUpdate = latestDoctors?.[0]?.updated_at ? new Date(latestDoctors[0].updated_at) : null;
-        const latestSurveyUpdate = latestSurveys?.[0]?.updated_at ? new Date(latestSurveys[0].updated_at) : null;
-
-        const stale =
-          (latestDoctorUpdate && latestDoctorUpdate > generatedAt) ||
-          (latestSurveyUpdate && latestSurveyUpdate > generatedAt);
-
-        result.isStale = !!stale;
-        setPreRotaResult(result);
-        setIsStale(!!stale);
-        setIssuesPanelOpen(result.validationIssues.length > 0 && result.status !== "complete");
-      } catch (err) {
-        console.error("Failed to load dashboard data:", err);
-      } finally {
-        if (!cancelled) setPageLoading(false);
-      }
-    };
-
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [currentRotaConfigId]);
-
-  // Handler functions
   const handleGeneratePreRota = async () => {
     if (!currentRotaConfigId) return;
-    setPreRotaLoading(true);
+    setGenerating(true);
     setPreRotaError(null);
 
     const { success, result, error } = await generatePreRota(
@@ -152,15 +46,14 @@ export default function Dashboard() {
       user?.username ?? 'developer1'
     );
 
-    setPreRotaLoading(false);
+    setGenerating(false);
 
     if (!success || !result) {
       setPreRotaError(error ?? 'Generation failed. Check the console for details.');
       return;
     }
 
-    setPreRotaResult(result);
-    setIsStale(false);
+    invalidatePreRota();
     setIssuesPanelOpen(result.validationIssues.length > 0);
     navigate('/admin/pre-rota');
   };
@@ -320,11 +213,11 @@ export default function Dashboard() {
           <Button
             size="sm"
             className="w-full"
-            disabled={!canGeneratePreRota || preRotaLoading}
+            disabled={!canGeneratePreRota || generating}
             onClick={(e) => { e.stopPropagation(); handleGeneratePreRota(); }}
           >
             {!canGeneratePreRota && <Lock className="mr-2 h-3.5 w-3.5" />}
-            {preRotaLoading ? (
+            {generating ? (
               <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> Generating…</>
             ) : preRotaResult ? (
               <><RefreshCw className="mr-2 h-3.5 w-3.5" /> Re-generate Pre-Rota</>
