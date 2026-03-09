@@ -465,7 +465,7 @@ export default function PreRotaCalendarPage() {
 
     return (
       <AdminLayout title="Availability Calendar" accentColor="blue">
-        <div className="space-y-2">
+        <div className="space-y-2 animate-fadeSlideUp">
           {/* Top bar */}
           <div className="flex items-center justify-between">
             <button onClick={() => navigate('/admin/dashboard')} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
