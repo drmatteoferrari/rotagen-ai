@@ -61,6 +61,7 @@ export function AdminSetupProvider({ children }: { children: ReactNode }) {
   const [rotaStartDate, setRotaStartDate] = useState<Date | undefined>();
   const [rotaEndDate, setRotaEndDate] = useState<Date | undefined>();
   const [restoredFromDb, setRestoredFromDb] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(true);
   // WTR Step 1
   const [maxAvgWeekly, setMaxAvgWeekly] = useState(48);
   const [maxIn7Days, setMaxIn7Days] = useState(72);
