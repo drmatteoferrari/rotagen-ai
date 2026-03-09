@@ -10,7 +10,7 @@ interface RotaContextType {
   setRestoredConfig: (config: RotaConfig | null) => void;
   restoreForUser: (username: string) => Promise<RotaConfig | null>;
   clearSession: () => void;
-  contextReady: boolean;
+  isRestoring: boolean;
 }
 
 const RotaContext = createContext<RotaContextType | undefined>(undefined);
@@ -22,7 +22,7 @@ export function RotaProvider({ children }: { children: ReactNode }) {
     () => localStorage.getItem(STORAGE_KEY)
   );
   const [restoredConfig, setRestoredConfig] = useState<RotaConfig | null>(null);
-  const [contextReady, setContextReady] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(true);
 
   const setCurrentRotaConfigId = useCallback((id: string | null) => {
     setCurrentRotaConfigIdState(id);
@@ -36,17 +36,21 @@ export function RotaProvider({ children }: { children: ReactNode }) {
   // On mount, validate localStorage ID against DB
   useEffect(() => {
     const savedId = localStorage.getItem(STORAGE_KEY);
-    if (!savedId) return;
+    if (!savedId) {
+      setIsRestoring(false);
+      return;
+    }
     (async () => {
       try {
         const config = await getRotaConfig(savedId);
         setRestoredConfig(config);
         setCurrentRotaConfigIdState(savedId);
       } catch {
-        // Row no longer exists — clear stale ID
         localStorage.removeItem(STORAGE_KEY);
         setCurrentRotaConfigIdState(null);
         setRestoredConfig(null);
+      } finally {
+        setIsRestoring(false);
       }
     })();
   }, []);
@@ -81,6 +85,7 @@ export function RotaProvider({ children }: { children: ReactNode }) {
       setRestoredConfig,
       restoreForUser,
       clearSession,
+      isRestoring,
     }}>
       {children}
     </RotaContext.Provider>
