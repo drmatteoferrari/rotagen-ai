@@ -405,8 +405,10 @@ export default function Roster() {
     };
 
     // ── STEP 3: LTFT ──
+    const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+    const shuffledDays = [...WEEKDAYS].sort(() => Math.random() - 0.5);
     const ltft_days_off: string[] = isLtft
-      ? (wte === 80 ? ['Wednesday'] : ['Wednesday', 'Friday'])
+      ? (wte === 80 ? [shuffledDays[0]] : [shuffledDays[0], shuffledDays[1]])
       : [];
     const ltft_night_flexibility = ltft_days_off.map(day => ({
       day,
