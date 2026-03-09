@@ -259,7 +259,10 @@ export default function Dashboard() {
         </div>
 
         {/* 2. Pre-allocation Rota */}
-        <div className="rounded-xl border border-border bg-card p-3 shadow-sm">
+        <div 
+          className="rounded-xl border border-border bg-card p-3 shadow-sm cursor-pointer hover:border-primary/30 transition-colors"
+          onClick={() => navigate('/admin/pre-rota')}
+        >
           <div className="flex items-center justify-between mb-1">
             <h2 className="text-sm font-bold uppercase tracking-wider text-foreground">
               2. Pre-allocation Rota
