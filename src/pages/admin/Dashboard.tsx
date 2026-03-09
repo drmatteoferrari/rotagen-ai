@@ -160,7 +160,7 @@ export default function Dashboard() {
   };
 
   return (
-    <AdminLayout title="Dashboard" subtitle="Track setup progress and generate the rota">
+    <AdminLayout title="Dashboard" subtitle="Track setup progress and generate the rota" accentColor="blue">
       <div className="mx-auto max-w-3xl space-y-6">
 
 
