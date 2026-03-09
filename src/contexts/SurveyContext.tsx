@@ -239,6 +239,11 @@ function formDataToDbRow(fd: SurveyFormData) {
     signoff_needs: fd.signoffNeeds,
     additional_notes: fd.additionalNotes,
     confirmed_accurate: fd.confirmedAccurate,
+    confirm_algorithm_understood: fd.confirmAlgorithmUnderstood ?? false,
+    confirm_exemptions_understood: fd.confirmExemptionsUnderstood ?? false,
+    confirm_fairness_understood: fd.confirmFairnessUnderstood ?? false,
+    signature_name: fd.signatureName ?? '',
+    signature_date: fd.signatureDate ?? null,
   };
 }
 
