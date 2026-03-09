@@ -11,6 +11,8 @@ import { ReactNode } from "react";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
+import ForgotPassword from "./pages/ForgotPassword";
+import Signup from "./pages/Signup";
 import Roster from "./pages/admin/Roster";
 import Dashboard from "./pages/admin/Dashboard";
 import RotaPeriodStep1 from "./pages/admin/RotaPeriodStep1";
@@ -52,6 +54,8 @@ const App = () => (
         <DepartmentSetupProvider>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/signup" element={<Signup />} />
           <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
           <Route path="/admin/dashboard" element={<ProtectedRoute requiredRole="coordinator"><Dashboard /></ProtectedRoute>} />
           <Route path="/admin/rota-period/step-1" element={<ProtectedRoute requiredRole="coordinator"><RotaPeriodStep1 /></ProtectedRoute>} />

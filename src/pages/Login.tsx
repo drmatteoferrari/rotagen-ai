@@ -60,15 +60,15 @@ export default function Login() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-[hsl(213,94%,48%)] to-[hsl(260,60%,50%)] p-4">
+    <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <div className="flex w-full max-w-[420px] flex-col items-center gap-6">
         {/* Logo + branding */}
         <div className="flex flex-col items-center gap-2">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg">
-            <span className="text-2xl font-black tracking-tighter">RE</span>
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-card border border-border shadow-sm">
+            <span className="text-2xl font-black tracking-tighter text-primary">RE</span>
           </div>
-          <h1 className="text-3xl font-bold text-white">RotaGen</h1>
-          <p className="text-sm text-white/70">Fair NHS rotas in minutes, not hours</p>
+          <h1 className="text-3xl font-bold text-foreground">RotaGen</h1>
+          <p className="text-sm text-muted-foreground">Fair NHS rotas in minutes, not hours</p>
         </div>
 
         {/* Login card */}
@@ -121,6 +121,17 @@ export default function Login() {
               </Button>
             </form>
 
+            {/* Forgot password */}
+            <div className="mt-2 text-right">
+              <button
+                type="button"
+                onClick={() => navigate('/forgot-password')}
+                className="text-xs text-primary hover:underline"
+              >
+                Forgot password?
+              </button>
+            </div>
+
             {/* Divider */}
             <div className="my-5 flex items-center gap-3">
               <div className="h-px flex-1 bg-border" />
@@ -128,22 +139,37 @@ export default function Login() {
               <div className="h-px flex-1 bg-border" />
             </div>
 
-            {/* Dev quick login */}
+            {/* Create account */}
             <Button
               type="button"
               variant="outline"
-              className="w-full gap-2 border-primary/30 bg-primary/5 text-primary hover:bg-primary/10"
-              onClick={handleDevLogin}
+              className="w-full"
+              onClick={() => navigate('/signup')}
               disabled={loading}
             >
-              <Code className="h-4 w-4" />
-              Developer login — developer1
+              Create an account
             </Button>
+
+            {/* Dev divider */}
+            <div className="my-4 flex items-center gap-3">
+              <div className="h-px flex-1 bg-border" />
+              <div className="h-px flex-1 bg-border" />
+            </div>
+
+            {/* Dev quick login */}
+            <button
+              type="button"
+              onClick={handleDevLogin}
+              className="w-full flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Code className="h-3 w-3" />
+              Dev login (developer1)
+            </button>
           </CardContent>
         </Card>
 
         {/* Footer */}
-        <p className="text-center text-xs text-white/50">
+        <p className="text-center text-xs text-muted-foreground">
           RotaGen · NHS Rota Management · For authorised users only
         </p>
       </div>
