@@ -17,6 +17,8 @@ import { cn } from "@/lib/utils";
 import { useIsMobile, useIsTablet } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdminShell, AdminShellProvider } from "@/contexts/AdminShellContext";
+import { useRotaContext } from "@/contexts/RotaContext";
+import { useAdminSetup } from "@/contexts/AdminSetupContext";
 
 const navItems = [
   { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
