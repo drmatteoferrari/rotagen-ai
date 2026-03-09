@@ -54,10 +54,29 @@ interface AdminSetupContextType {
 const AdminSetupContext = createContext<AdminSetupContextType | undefined>(undefined);
 
 export function AdminSetupProvider({ children }: { children: ReactNode }) {
-  const [isDepartmentComplete, setDepartmentComplete] = useState(false);
-  const [isWtrComplete, setWtrComplete] = useState(false);
-  const [isPeriodComplete, setPeriodComplete] = useState(false);
+  const [isDepartmentComplete, setDepartmentCompleteRaw] = useState(
+    () => sessionStorage.getItem('isDepartmentComplete') === 'true'
+  );
+  const [isWtrComplete, setWtrCompleteRaw] = useState(
+    () => sessionStorage.getItem('isWtrComplete') === 'true'
+  );
+  const [isPeriodComplete, setPeriodCompleteRaw] = useState(
+    () => sessionStorage.getItem('isPeriodComplete') === 'true'
+  );
   const [areSurveysDone, setSurveysDone] = useState(false);
+
+  const setDepartmentComplete = (v: boolean) => {
+    sessionStorage.setItem('isDepartmentComplete', String(v));
+    setDepartmentCompleteRaw(v);
+  };
+  const setWtrComplete = (v: boolean) => {
+    sessionStorage.setItem('isWtrComplete', String(v));
+    setWtrCompleteRaw(v);
+  };
+  const setPeriodComplete = (v: boolean) => {
+    sessionStorage.setItem('isPeriodComplete', String(v));
+    setPeriodCompleteRaw(v);
+  };
   const [rotaStartDate, setRotaStartDate] = useState<Date | undefined>();
   const [rotaEndDate, setRotaEndDate] = useState<Date | undefined>();
   const [restoredFromDb, setRestoredFromDb] = useState(false);
