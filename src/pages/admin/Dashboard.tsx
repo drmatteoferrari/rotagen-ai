@@ -139,7 +139,6 @@ export default function Dashboard() {
 
   const canGeneratePreRota = isDepartmentComplete && isWtrComplete && isPeriodComplete;
 
-  // ✅ Section 1e complete — setup items with numbered circles
   const steps = [
     { num: 1, label: "Department", done: isDepartmentComplete, link: "/admin/department/step-1", icon: Building2 },
     { num: 2, label: "Contract Rules (WTR)", done: isWtrComplete, link: "/admin/wtr/step-1", icon: ClipboardList },
@@ -158,15 +157,44 @@ export default function Dashboard() {
     return { color: '#dc2626', text: `${surveySubmitted} / ${surveyTotal} submitted` };
   };
 
+  const handleGenerateFinalRota = async () => {
+    if (!currentRotaConfigId) {
+      toast({ title: "No active rota config found", description: "Please complete setup first.", variant: "destructive" });
+      return;
+    }
+    setFinalLoading(true);
+    try {
+      const validation = await validateFinalRotaInput(currentRotaConfigId);
+
+      if (validation.blockers.length > 0) {
+        toast({ title: "Generation blocked", description: validation.blockers.join("\n"), variant: "destructive" });
+        setFinalLoading(false);
+        return;
+      }
+
+      if (validation.warnings.length > 0) {
+        toast({ title: "Warnings found — proceeding in 2 seconds", description: validation.warnings.slice(0, 5).join("\n") });
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+
+      const result = await buildFinalRotaInput(currentRotaConfigId);
+      console.log("Final rota input:", result);
+      toast({ title: "Final rota input built successfully", description: "Check console for output." });
+    } catch (err: any) {
+      console.error("Final rota build failed:", err);
+      toast({ title: "Final rota build failed", description: err?.message || "Unknown error", variant: "destructive" });
+    } finally {
+      setFinalLoading(false);
+    }
+  };
+
   return (
     <AdminLayout title="Dashboard" subtitle="Track setup progress and generate the rota" accentColor="blue">
-      <div className="mx-auto max-w-3xl space-y-6">
-
+      <div className="mx-auto max-w-3xl space-y-4">
 
         {/* 1. Setup */}
-        <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-          <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-4">1. Setup</h2>
-          {/* ✅ Section 1d complete — numbered heading, progress bar removed */}
+        <div className="rounded-xl border border-border bg-card p-3 shadow-sm">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-2">1. Setup</h2>
 
           <div className="space-y-1">
             {steps.map((s) => {
@@ -175,11 +203,9 @@ export default function Dashboard() {
               return (
                 <div
                   key={s.label}
-                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 cursor-pointer hover:bg-muted/50 transition-colors"
+                  className="flex items-center gap-3 rounded-lg px-3 py-1.5 cursor-pointer hover:bg-muted/50 transition-colors"
                   onClick={() => navigate(s.link)}
-                  style={{ borderBottom: '1px solid hsl(var(--border) / 0.5)' }}
                 >
-                  {/* Numbered circle */}
                   <div style={{
                     width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -213,7 +239,7 @@ export default function Dashboard() {
               const surveyStatus = getSurveyStatus();
               return (
                 <div
-                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 cursor-pointer hover:bg-muted/50 transition-colors"
+                  className="flex items-center gap-3 rounded-lg px-3 py-1.5 cursor-pointer hover:bg-muted/50 transition-colors"
                   onClick={() => navigate("/admin/roster")}
                 >
                   <div style={{
@@ -233,81 +259,68 @@ export default function Dashboard() {
         </div>
 
         {/* 2. Pre-allocation Rota */}
-        <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
-          <div className="flex items-center gap-2 mb-1">
-            <Zap className="h-6 w-6 text-primary" />
-            <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">2. Pre-allocation Rota</h2>
+        <div className="rounded-xl border border-border bg-card p-3 shadow-sm">
+          <div className="flex items-center justify-between mb-1">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
+              2. Pre-allocation Rota
+            </h2>
+            {preRotaResult && (
+              <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                preRotaResult.status === 'complete' ? 'text-emerald-700 bg-emerald-100' :
+                preRotaResult.status === 'complete_with_warnings' ? 'text-amber-700 bg-amber-100' :
+                'text-red-700 bg-red-100'
+              }`}>
+                {preRotaResult.status === 'complete' && <><CheckCircle className="h-3 w-3" /> Complete</>}
+                {preRotaResult.status === 'complete_with_warnings' && <><AlertTriangle className="h-3 w-3" /> Warnings</>}
+                {preRotaResult.status === 'blocked' && <><XCircle className="h-3 w-3" /> Blocked</>}
+              </span>
+            )}
           </div>
-          <p className="text-xs text-muted-foreground mb-4">
+          <p className="text-xs text-muted-foreground mb-2">
             Generate the master calendar and shift targets.
           </p>
           <Button
-            size="lg"
+            size="sm"
             className="w-full"
             disabled={!canGeneratePreRota || preRotaLoading}
             onClick={handleGeneratePreRota}
           >
-            {!canGeneratePreRota && <Lock className="mr-2 h-4 w-4" />}
+            {!canGeneratePreRota && <Lock className="mr-2 h-3.5 w-3.5" />}
             {preRotaLoading ? (
-              <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating…</>
+              <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> Generating…</>
             ) : preRotaResult ? (
-              <><RefreshCw className="mr-2 h-4 w-4" /> Re-generate Pre-Rota</>
+              <><RefreshCw className="mr-2 h-3.5 w-3.5" /> Re-generate Pre-Rota</>
             ) : (
-              <><Play className="mr-2 h-4 w-4" /> Generate Pre-Rota Data</>
+              <><Play className="mr-2 h-3.5 w-3.5" /> Generate Pre-Rota Data</>
             )}
           </Button>
           {!canGeneratePreRota && (
-            <p className="text-xs text-muted-foreground mt-2 text-center">
-              Complete all setup steps above to unlock generation.
+            <p className="text-[11px] text-muted-foreground mt-1 text-center">
+              Complete setup steps above to unlock.
             </p>
           )}
-
-          {/* Error banner */}
           {preRotaError && (
-            <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 flex items-start gap-3">
-              <XCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
-              <p className="text-sm text-destructive">{preRotaError}</p>
+            <div className="mt-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-1.5 flex items-center gap-2">
+              <XCircle className="h-3.5 w-3.5 text-destructive shrink-0" />
+              <p className="text-xs text-destructive">{preRotaError}</p>
             </div>
           )}
-
-          {/* Stale warning — compact */}
           {isStale && preRotaResult && (
-            <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 flex items-start gap-2">
-              <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-              <p className="text-xs text-amber-800">
-                Data changed since{' '}
-                {new Date(preRotaResult.generatedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}.
-                Re-generate to reflect latest submissions.
+            <div className="mt-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 flex items-center gap-2">
+              <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+              <p className="text-[11px] text-amber-800">
+                Data changed — re-generate to reflect latest submissions.
               </p>
             </div>
           )}
-
-          {/* Status badge + timestamp + link to pre-rota page */}
           {preRotaResult && (
-            <div className="mt-3 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                {preRotaResult.status === 'complete' && (
-                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-full">
-                    <CheckCircle className="h-3.5 w-3.5" /> Pre-rota complete
-                  </span>
-                )}
-                {preRotaResult.status === 'complete_with_warnings' && (
-                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-amber-100 px-2.5 py-1 rounded-full">
-                    <AlertTriangle className="h-3.5 w-3.5" /> Complete with warnings
-                  </span>
-                )}
-                {preRotaResult.status === 'blocked' && (
-                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-700 bg-red-100 px-2.5 py-1 rounded-full">
-                    <XCircle className="h-3.5 w-3.5" /> Blocked
-                  </span>
-                )}
-                <span className="text-[10px] text-muted-foreground">
-                  Generated {new Date(preRotaResult.generatedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-                </span>
-              </div>
+            <div className="mt-2 flex items-center justify-between">
+              <span className="text-[10px] text-muted-foreground">
+                Generated {new Date(preRotaResult.generatedAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+              </span>
               <button
                 onClick={() => navigate('/admin/pre-rota')}
-                className="text-xs font-medium text-primary hover:underline"
+                className="text-[11px] font-medium text-primary hover:underline"
               >
                 View details →
               </button>
@@ -316,79 +329,65 @@ export default function Dashboard() {
         </div>
 
         {/* 3. Final Allocation Rota */}
-        {(() => {
-          const [finalLoading, setFinalLoading] = useState(false);
-
-          // SECTION 3 + 10 COMPLETE
-          const handleGenerateFinalRota = async () => {
-            if (!currentRotaConfigId) {
-              toast({ title: "No active rota config found", description: "Please complete setup first.", variant: "destructive" });
-              return;
-            }
-            setFinalLoading(true);
-            try {
-              // Section 10 — validate before building
-              const validation = await validateFinalRotaInput(currentRotaConfigId);
-
-              if (validation.blockers.length > 0) {
-                toast({ title: "Generation blocked", description: validation.blockers.join("\n"), variant: "destructive" });
-                setFinalLoading(false);
-                return;
-              }
-
-              if (validation.warnings.length > 0) {
-                toast({ title: "Warnings found — proceeding in 2 seconds", description: validation.warnings.slice(0, 5).join("\n") });
-                await new Promise(resolve => setTimeout(resolve, 2000));
-              }
-
-              const result = await buildFinalRotaInput(currentRotaConfigId);
-              console.log("Final rota input:", result);
-              toast({ title: "Final rota input built successfully", description: "Check console for output." });
-            } catch (err: any) {
-              console.error("Final rota build failed:", err);
-              toast({ title: "Final rota build failed", description: err?.message || "Unknown error", variant: "destructive" });
-            } finally {
-              setFinalLoading(false);
-            }
-          };
-
-          return (
-            <div className="rounded-xl border border-border bg-card p-5 shadow-sm opacity-60">
-              <div className="flex items-center gap-2 mb-1">
-                <ShieldCheck className="h-6 w-6 text-muted-foreground" />
-                <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">3. Final Allocation Rota</h2>
+        <div className="rounded-xl border border-border bg-card p-3 shadow-sm">
+          <div className="flex items-center justify-between mb-1">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
+              3. Final Allocation Rota
+            </h2>
+          </div>
+          <p className="text-xs text-muted-foreground mb-2">
+            Run the allocation algorithm.
+          </p>
+          <Button
+            size="sm"
+            className="w-full"
+            disabled={!canGeneratePreRota || finalLoading}
+            onClick={() => setShowFinalChecklist(true)}
+          >
+            {finalLoading ? (
+              <><Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" /> Building…</>
+            ) : (
+              <><Play className="mr-2 h-3.5 w-3.5" /> Generate Final Rota</>
+            )}
+          </Button>
+          {showFinalChecklist && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+              <div className="bg-card rounded-xl border border-border shadow-xl p-6 w-full max-w-sm mx-4">
+                <h3 className="text-sm font-bold mb-3">Before you generate</h3>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Confirm the following before running the final rota:
+                </p>
+                <div className="space-y-3 mb-5">
+                  {["Pre-rota data generated", "All surveys completed", "No scheduling conflicts"].map((item) => (
+                    <label key={item} className="flex items-center gap-2 text-sm cursor-pointer">
+                      <input type="checkbox" className="rounded border-border accent-primary" />
+                      {item}
+                    </label>
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => setShowFinalChecklist(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="flex-1"
+                    disabled={finalLoading}
+                    onClick={() => { setShowFinalChecklist(false); handleGenerateFinalRota(); }}
+                  >
+                    {finalLoading ? 'Building…' : 'Confirm & Generate'}
+                  </Button>
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground mb-4">
-                Verify data quality and run the allocation algorithm.
-              </p>
-              <div className="space-y-2 mb-4">
-                {["Pre-rota data generated", "All surveys completed", "No scheduling conflicts"].map((item) => (
-                  <label key={item} className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <input type="checkbox" disabled className="rounded border-border" />
-                    {item}
-                  </label>
-                ))}
-              </div>
-              <Button
-                size="lg"
-                className="w-full"
-                disabled={!canGeneratePreRota || finalLoading}
-                onClick={handleGenerateFinalRota}
-              >
-                {finalLoading ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Building…</>
-                ) : (
-                  <><Play className="mr-2 h-4 w-4" /> Generate Final Rota Input</>
-                )}
-              </Button>
             </div>
-          );
-        })()}
+          )}
+        </div>
       </div>
     </AdminLayout>
   );
 }
-// ✅ Section 1 complete
-// ✅ Section 2 complete
-// ✅ Section 4d complete
-// ✅ Section 4e complete
