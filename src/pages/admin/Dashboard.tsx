@@ -36,6 +36,7 @@ export default function Dashboard() {
   const [isStale, setIsStale] = useState(false);
   const [issuesPanelOpen, setIssuesPanelOpen] = useState(false);
   const [finalLoading, setFinalLoading] = useState(false);
+  const [showFinalChecklist, setShowFinalChecklist] = useState(false);
 
   // Live survey counts
 
