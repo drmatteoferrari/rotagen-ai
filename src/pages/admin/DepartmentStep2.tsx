@@ -506,11 +506,11 @@ export default function DepartmentStep2() {
 
         {/* Navigation */}
         <div className="flex justify-between">
-          <Button variant="outline" size="sm" onClick={() => navigate("/admin/department/step-1")}>
+          <Button variant="outline" size="lg" onClick={() => navigate("/admin/department/step-1")}>
             <ArrowLeft className="mr-2 h-4 w-4" />Back
           </Button>
           <Button
-            size="sm"
+            size="lg"
             onClick={() => navigate("/admin/department/step-3")}
             className="bg-purple-600 hover:bg-purple-700 text-white"
           >
