@@ -9,35 +9,29 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRotaContext } from "@/contexts/RotaContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAccountSettingsQuery, useInvalidateQuery } from "@/hooks/useAdminQueries";
 
 export default function DepartmentStep1New() {
   const navigate = useNavigate();
   const { user, setAccountSettings } = useAuth();
   const { currentRotaConfigId } = useRotaContext();
+  const { invalidateAccountSettings } = useInvalidateQuery();
+  const { data: accountData, isLoading: loading } = useAccountSettingsQuery();
   const [deptName, setDeptName] = useState("");
   const [trustName, setTrustName] = useState("");
   const [saving, setSaving] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [deptError, setDeptError] = useState("");
   const [trustError, setTrustError] = useState("");
+  const [initialized, setInitialized] = useState(false);
 
-  // Restore on mount
+  // Sync from cached query
   useEffect(() => {
-    const load = async () => {
-      if (!user?.username) { setLoading(false); return; }
-      const { data } = await supabase
-        .from("account_settings")
-        .select("department_name, trust_name")
-        .eq("owned_by", user.username)
-        .maybeSingle();
-      if (data) {
-        setDeptName(data.department_name ?? "");
-        setTrustName(data.trust_name ?? "");
-      }
-      setLoading(false);
-    };
-    load();
-  }, [user?.username]);
+    if (accountData && !initialized) {
+      setDeptName(accountData.department_name ?? "");
+      setTrustName(accountData.trust_name ?? "");
+      setInitialized(true);
+    }
+  }, [accountData, initialized]);
 
   const handleSaveAndContinue = async () => {
     setDeptError("");
