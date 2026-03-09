@@ -417,7 +417,7 @@ export default function PreRotaCalendarPage() {
 
   if (loading) {
     return (
-      <AdminLayout title="Availability Calendar">
+      <AdminLayout title="Availability Calendar" accentColor="blue">
         <div className="flex items-center justify-center min-h-[300px]">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           <span className="ml-2 text-sm text-muted-foreground">Loading calendar…</span>
