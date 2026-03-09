@@ -19,23 +19,27 @@ const STORAGE_KEY = "currentRotaConfigId";
 
 export function RotaProvider({ children }: { children: ReactNode }) {
   const [currentRotaConfigId, setCurrentRotaConfigIdState] = useState<string | null>(
-    () => localStorage.getItem(STORAGE_KEY)
+    () => sessionStorage.getItem(STORAGE_KEY) || localStorage.getItem(STORAGE_KEY)
   );
   const [restoredConfig, setRestoredConfig] = useState<RotaConfig | null>(null);
-  const [contextReady, setContextReady] = useState(false);
+  const [contextReady, setContextReady] = useState(
+    () => !sessionStorage.getItem(STORAGE_KEY) && !localStorage.getItem(STORAGE_KEY)
+  );
 
   const setCurrentRotaConfigId = useCallback((id: string | null) => {
     setCurrentRotaConfigIdState(id);
     if (id) {
       localStorage.setItem(STORAGE_KEY, id);
+      sessionStorage.setItem(STORAGE_KEY, id);
     } else {
       localStorage.removeItem(STORAGE_KEY);
+      sessionStorage.removeItem(STORAGE_KEY);
     }
   }, []);
 
   // On mount, validate localStorage ID against DB
   useEffect(() => {
-    const savedId = localStorage.getItem(STORAGE_KEY);
+    const savedId = sessionStorage.getItem(STORAGE_KEY) || localStorage.getItem(STORAGE_KEY);
     if (!savedId) return;
     (async () => {
       try {
@@ -43,10 +47,12 @@ export function RotaProvider({ children }: { children: ReactNode }) {
         setRestoredConfig(config);
         setCurrentRotaConfigIdState(savedId);
       } catch {
-        // Row no longer exists — clear stale ID
         localStorage.removeItem(STORAGE_KEY);
+        sessionStorage.removeItem(STORAGE_KEY);
         setCurrentRotaConfigIdState(null);
         setRestoredConfig(null);
+      } finally {
+        setContextReady(true);
       }
     })();
   }, []);
@@ -71,6 +77,7 @@ export function RotaProvider({ children }: { children: ReactNode }) {
     setCurrentRotaConfigIdState(null);
     setRestoredConfig(null);
     localStorage.removeItem(STORAGE_KEY);
+    sessionStorage.removeItem(STORAGE_KEY);
   }, []);
 
   return (
@@ -81,6 +88,7 @@ export function RotaProvider({ children }: { children: ReactNode }) {
       setRestoredConfig,
       restoreForUser,
       clearSession,
+      contextReady,
     }}>
       {children}
     </RotaContext.Provider>
