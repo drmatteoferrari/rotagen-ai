@@ -36,10 +36,7 @@ export function RotaProvider({ children }: { children: ReactNode }) {
   // On mount, validate localStorage ID against DB
   useEffect(() => {
     const savedId = localStorage.getItem(STORAGE_KEY);
-    if (!savedId) {
-      setContextReady(true);
-      return;
-    }
+    if (!savedId) return;
     (async () => {
       try {
         const config = await getRotaConfig(savedId);
@@ -50,8 +47,6 @@ export function RotaProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem(STORAGE_KEY);
         setCurrentRotaConfigIdState(null);
         setRestoredConfig(null);
-      } finally {
-        setContextReady(true);
       }
     })();
   }, []);
@@ -86,7 +81,7 @@ export function RotaProvider({ children }: { children: ReactNode }) {
       setRestoredConfig,
       restoreForUser,
       clearSession,
-      contextReady,
+      contextReady: true,
     }}>
       {children}
     </RotaContext.Provider>

@@ -17,8 +17,6 @@ import { cn } from "@/lib/utils";
 import { useIsMobile, useIsTablet } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdminShell, AdminShellProvider } from "@/contexts/AdminShellContext";
-import { useRotaContext } from "@/contexts/RotaContext";
-import { useAdminSetup } from "@/contexts/AdminSetupContext";
 
 const navItems = [
   { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
@@ -30,12 +28,6 @@ const navItems = [
 
 function AdminShellInner() {
   const { title, subtitle, accentColor } = useAdminShell();
-  const { contextReady } = useRotaContext();
-  const { restoredFromDb } = useAdminSetup();
-
-  // Gate: don't render pages until shared context data is ready
-  const isAppReady = contextReady && restoredFromDb;
-
   const bgColorMap: Record<string, string> = {
     blue:   '#eff6ff',
     red:    '#fff5f5',
@@ -58,15 +50,6 @@ function AdminShellInner() {
     logout();
     navigate("/login", { replace: true });
   };
-
-  // Loading gate: wait for shared context data before rendering pages
-  if (!isAppReady) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="h-8 w-8 rounded-full border-4 border-primary border-t-transparent animate-spin" />
-      </div>
-    );
-  }
 
   // Mobile and tablet both use bottom nav bar layout
   if (isMobile || isTablet) {
