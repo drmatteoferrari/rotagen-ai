@@ -428,7 +428,7 @@ export default function PreRotaCalendarPage() {
 
   if (loadError || errorMsg || !calendarData) {
     return (
-      <AdminLayout title="Availability Calendar">
+      <AdminLayout title="Availability Calendar" accentColor="blue">
         <div className="mx-auto max-w-lg mt-12">
           <div className="rounded-xl border border-border bg-card p-6 text-center space-y-4">
             <AlertTriangle className="h-8 w-8 text-amber-500 mx-auto" />
