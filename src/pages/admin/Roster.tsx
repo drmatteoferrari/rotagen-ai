@@ -364,136 +364,216 @@ export default function Roster() {
   ) => {
     const GRADE_POOL = ['CT1 (or ACCS)', 'CT2 (or ACCS)', 'CT3 (or ACCS)', 'ST4', 'ST5', 'ST6', 'ST7', 'SAS', 'Post-CCT Fellow', 'Consultant'];
     const grade = (doctor.grade && doctor.grade !== '—') ? doctor.grade : GRADE_POOL[Math.floor(Math.random() * GRADE_POOL.length)];
+
     const wte = Math.random() < 0.88 ? 100 : pick([80, 60]);
     const isLtft = wte < 100;
 
-    // Competencies — fresh random each call
-    const iacAchieved = !isJunior(grade);
-    const iaocAchieved = isSenior(grade) || (isMid(grade) && Math.random() < 0.5);
-    const icuAchieved = isSenior(grade) && Math.random() < 0.6;
-    const transferAchieved = isSenior(grade) && Math.random() < 0.5;
+    // ── GRADE GROUPS ──
+    const isCT1   = (g: string) => g.includes('CT1');
+    const isCT2up = (g: string) => ['CT2','CT3','ST4','ST5','ST6','ST7','ST8','ST9','SAS','Fellow','Consultant'].some(x => g.includes(x));
+    const isCT3up = (g: string) => ['CT3','ST4','ST5','ST6','ST7','ST8','ST9','SAS','Fellow','Consultant'].some(x => g.includes(x));
+    const isSeniorGrade = (g: string) => ['ST6','ST7','ST8','ST9','SAS','Fellow','Consultant'].some(x => g.includes(x));
+
+    // ── STEP 2: COMPETENCIES ──
+    const iacAchieved      = isCT2up(grade);
+    const iaocAchieved     = isCT3up(grade);
+    const icuAchieved      = isCT3up(grade);
+    const transferAchieved = isCT3up(grade);
 
     const competencies_json = {
       iac: {
         achieved: iacAchieved,
-        workingTowards: iacAchieved ? null : (isJunior(grade) && Math.random() < 0.6),
+        workingTowards: iacAchieved ? null : (isCT1(grade) ? Math.random() < 0.7 : false),
         remoteSupervision: iacAchieved ? Math.random() < 0.7 : null,
       },
       iaoc: {
         achieved: iaocAchieved,
-        workingTowards: iaocAchieved ? null : (isMid(grade) && Math.random() < 0.4),
+        workingTowards: iaocAchieved ? null : Math.random() < 0.5,
         remoteSupervision: iaocAchieved ? Math.random() < 0.7 : null,
       },
       icu: {
         achieved: icuAchieved,
-        workingTowards: icuAchieved ? null : (isSenior(grade) && Math.random() < 0.3),
+        workingTowards: icuAchieved ? null : Math.random() < 0.4,
         remoteSupervision: icuAchieved ? Math.random() < 0.6 : null,
       },
       transfer: {
         achieved: transferAchieved,
-        workingTowards: transferAchieved ? null : (isSenior(grade) && Math.random() < 0.3),
+        workingTowards: transferAchieved ? null : Math.random() < 0.4,
         remoteSupervision: transferAchieved ? Math.random() < 0.6 : null,
       },
     };
 
-    // LTFT
-    const ltft_days_off: string[] = isLtft ? (wte === 80 ? ['Wednesday'] : ['Wednesday', 'Friday']) : [];
-    const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
-    const ltft_night_flexibility = isLtft
-      ? days.map(day => ({
-          day,
-          canStart: Math.random() < 0.8,
-          canEnd: Math.random() < 0.8,
-        }))
+    // ── LTFT ──
+    const ltft_days_off: string[] = isLtft
+      ? (wte === 80 ? ['Wednesday'] : ['Wednesday', 'Friday'])
       : [];
+    const ltft_night_flexibility = ltft_days_off.map(day => ({
+      day,
+      canStart: Math.random() < 0.8,
+      canEnd:   Math.random() < 0.8,
+    }));
 
-    // Leave — fresh random each call
-    const numAL = rand(1, 2);
-    const annual_leave = Array.from({ length: numAL }, () =>
-      randomLeaveBlock(rotaStart, rotaEnd, rand(5, 10))
-    );
-    const study_leave = Math.random() < 0.5
-      ? [randomLeaveBlock(rotaStart, rotaEnd, 5)]
-      : [];
+    // ── STEP 4: LEAVE ──
+    const rotaMs = new Date(rotaEnd).getTime() - new Date(rotaStart).getTime();
+    const rotaWeeks = rotaMs / (7 * 86400000);
+    const effectiveWte = isLtft ? wte : 100;
+    const al_entitlement = Math.random() < 0.5 ? 27 : 32;
 
-    // Exemptions — rare
-    const exempt_from_nights = !isSenior(grade) && Math.random() < 0.04;
+    const proRataAL = Math.round((rotaWeeks / 52) * al_entitlement * (effectiveWte / 100));
+
+    const targetAL = Math.max(5, Math.min(proRataAL, 30));
+    const numALBlocks = rand(2, 5);
+    const annual_leave: { id: string; startDate: string; endDate: string; reason: string }[] = [];
+    let alRemaining = targetAL;
+    for (let i = 0; i < numALBlocks; i++) {
+      const isLast = i === numALBlocks - 1;
+      const maxBlock = Math.min(5, alRemaining - (numALBlocks - i - 1));
+      const blockLen = isLast ? Math.max(1, alRemaining) : rand(1, Math.max(1, maxBlock));
+      annual_leave.push(randomLeaveBlock(rotaStart, rotaEnd, blockLen));
+      alRemaining -= blockLen;
+      if (alRemaining <= 0) break;
+    }
+
+    const numSLBlocks = rand(2, 4);
+    const targetSL = rand(3, 10);
+    const study_leave: { id: string; startDate: string; endDate: string; reason: string }[] = [];
+    let slRemaining = targetSL;
+    const slReasons = ['FRCA Primary', 'FRCA Final', 'ALS Course', 'ATLS Course', 'Conference', 'Exam', 'Teaching'];
+    for (let i = 0; i < numSLBlocks; i++) {
+      const isLast = i === numSLBlocks - 1;
+      const blockLen = isLast ? Math.max(1, slRemaining) : rand(1, Math.min(3, Math.max(1, slRemaining - (numSLBlocks - i - 1))));
+      study_leave.push({ ...randomLeaveBlock(rotaStart, rotaEnd, blockLen), reason: pick(slReasons) });
+      slRemaining -= blockLen;
+      if (slRemaining <= 0) break;
+    }
+
+    const numNOCBlocks = rand(2, 5);
+    const targetNOC = rand(5, 15);
+    const noc_dates: { id: string; startDate: string; endDate: string; reason: string }[] = [];
+    let nocRemaining = targetNOC;
+    for (let i = 0; i < numNOCBlocks; i++) {
+      const isLast = i === numNOCBlocks - 1;
+      const blockLen = isLast ? Math.max(1, nocRemaining) : rand(1, Math.min(5, Math.max(1, nocRemaining - (numNOCBlocks - i - 1))));
+      noc_dates.push(randomLeaveBlock(rotaStart, rotaEnd, blockLen));
+      nocRemaining -= blockLen;
+      if (nocRemaining <= 0) break;
+    }
+
+    const hasRotation = Math.random() < 0.2;
+    const other_unavailability: { id: string; startDate: string; endDate: string; location: string }[] = [];
+    if (hasRotation) {
+      const rotaStartMs = new Date(rotaStart).getTime();
+      const rotaEndMs   = new Date(rotaEnd).getTime();
+      const maxOffsetDays = Math.max(0, Math.floor((rotaEndMs - rotaStartMs) / 86400000) - 14);
+      const offsetDays = Math.floor(Math.random() * maxOffsetDays);
+      const candidateDate = new Date(rotaStartMs + offsetDays * 86400000);
+      const dayOfWeek = candidateDate.getDay();
+      const daysToMonday = dayOfWeek === 1 ? 0 : (8 - dayOfWeek) % 7 || 7;
+      const mondayDate = new Date(candidateDate.getTime() + daysToMonday * 86400000);
+      const sundayDate = new Date(mondayDate.getTime() + 13 * 86400000);
+      if (sundayDate.getTime() <= new Date(rotaEnd).getTime()) {
+        other_unavailability.push({
+          id: crypto.randomUUID(),
+          startDate: mondayDate.toISOString().split('T')[0],
+          endDate:   sundayDate.toISOString().split('T')[0],
+          location:  pick(['Royal Liverpool Hospital', 'Aintree University Hospital', 'Arrowe Park Hospital', 'Warrington Hospital', 'Countess of Chester Hospital']),
+        });
+      }
+    }
+
+    // ── STEP 5: EXEMPTIONS ──
+    const exempt_from_nights   = Math.random() < 0.04;
     const exempt_from_weekends = Math.random() < 0.03;
-    const exempt_from_oncall = false;
-    const exemption_details = exempt_from_nights
-      ? 'Occupational Health restriction — no night shifts'
+    const exemption_details    = exempt_from_nights
+      ? 'Exempt from night shifts — Occupational Health recommendation.'
       : exempt_from_weekends
-      ? 'Occupational Health restriction — weekends only'
-      : null;
+        ? 'Exempt from weekend shifts — Occupational Health recommendation.'
+        : '';
 
-    // Preferences — fresh random
-    const preferred_shift_types: string[] = isSenior(grade)
-      ? pick([['Long Day'], ['Night'], ['Long Day', 'Night']])
-      : pick([['Standard Day'], ['Long Day'], []]);
-    const preferred_days_off: string[] = pick([['Saturday'], ['Sunday'], ['Saturday', 'Sunday'], []]);
+    // ── STEP 6: PREFERENCES ──
+    const ALL_SPECIALTIES = [
+      'Paediatric', 'Obstetric', 'Cardiothoracic', 'Neuro', 'Vascular',
+      'T&O and regional anaesthesia', 'ENT and maxillofacial', 'Ophthalmology',
+      'Plastics and reconstructive', 'Gynaecology', 'Urology', 'Hepatobiliary',
+      'Breast surgery', 'Remote anaesthesia (MRI, radiology, cardioversions)',
+    ];
+    const shuffled = [...ALL_SPECIALTIES].sort(() => Math.random() - 0.5);
+    const numSpecs = rand(3, 6);
+    const specialties_requested = shuffled.slice(0, numSpecs).map(name => ({ name, notes: '' }));
 
-    // Specialties
-    const specialties_requested = isSenior(grade)
-      ? [{ name: pick(['Cardiac', 'Neuro', 'Paediatric', 'Obstetric', 'Pain']), notes: '' }]
+    const signoff_needs = Math.random() < 0.5
+      ? pick([
+          '10 T&O cases for regional anaesthesia sign-off',
+          '5 obstetric epidurals',
+          'Fibreoptic intubation sign-off — need 3 supervised cases',
+          'Cardiac anaesthesia level 1 sign-off',
+          'Neuroanaesthesia introductory sign-off',
+          'Paediatric anaesthesia — 10 cases under 5 years',
+        ])
+      : '';
+
+    const special_sessions: string[] = isSeniorGrade(grade) && Math.random() < 0.3
+      ? [pick(['Pain medicine', 'Pre-op clinics'])]
       : [];
-
-    const want_pain_sessions = isSenior(grade) && Math.random() < 0.3;
-    const want_preop = Math.random() < 0.2;
 
     return {
-      doctor_id: doctor.id,
-      rota_config_id: rotaConfigId,
-      full_name: `${doctor.first_name} ${doctor.last_name}`,
-      nhs_email: doctor.email ?? `${doctor.first_name.toLowerCase()}.${doctor.last_name.toLowerCase()}@nhs.net`,
+      doctor_id:               doctor.id,
+      rota_config_id:          rotaConfigId,
+      full_name:               `${doctor.first_name} ${doctor.last_name}`,
+      nhs_email:               doctor.email ?? `${doctor.first_name.toLowerCase()}.${doctor.last_name.toLowerCase()}@nhs.net`,
+      personal_email:          null,
+      phone_number:            `07${Math.floor(700000000 + Math.random() * 299999999)}`,
       grade,
-      specialty: 'Anaesthetics',
+      dual_specialty:          false,
+      dual_specialty_types:    [] as string[],
       competencies_json,
-      wte_percent: wte,
-      wte_other_value: wte < 100 && ![80, 60].includes(wte) ? wte : null,
+      comp_ip_anaesthesia:     false,
+      comp_ip_anaesthesia_here: false,
+      comp_obstetric:          false,
+      comp_obstetric_here:     false,
+      comp_icu:                false,
+      comp_icu_here:           false,
+      wte_percent:             wte,
+      wte_other_value:         null,
       ltft_days_off,
       ltft_night_flexibility,
+      al_entitlement,
       annual_leave,
       study_leave,
-      noc_dates: [],
-      other_unavailability: [],
+      noc_dates,
+      other_unavailability,
       exempt_from_nights,
       exempt_from_weekends,
-      exempt_from_oncall,
-      specific_days_off: [],
+      exempt_from_oncall:      false,
+      specific_days_off:       [] as string[],
       exemption_details,
-      additional_restrictions: null,
-      preferred_shift_types,
-      preferred_days_off,
-      dates_to_avoid: [],
-      other_requests: null,
-      specialties_requested,
-      want_pain_sessions,
-      pain_session_notes: want_pain_sessions ? 'Interested in chronic pain sessions' : null,
-      want_preop,
-      signoff_requirements: null,
-      confirmed_accurate: true,
-      additional_notes: null,
-      status: 'submitted',
-      submitted_at: new Date().toISOString(),
-      last_saved_at: new Date().toISOString(),
-      // Additional fields expected by dbRowToFormData
-      other_restrictions: "",
+      other_restrictions:      '',
+      additional_restrictions: '',
       parental_leave_expected: false,
-      parental_leave_start: null,
-      parental_leave_end: null,
-      parental_leave_notes: "",
-      special_sessions: [] as string[],
-      signoff_needs: "",
-      dual_specialty: false,
-      dual_specialty_types: [] as string[],
-      personal_email: null,
-      phone_number: `07${Math.floor(700000000 + Math.random() * 299999999)}`,
-      al_entitlement: Math.random() < 0.5 ? 27 : 32,
-      confirm_algorithm_understood: true,
+      parental_leave_start:    null,
+      parental_leave_end:      null,
+      parental_leave_notes:    '',
+      preferred_shift_types:   [] as string[],
+      preferred_days_off:      [] as string[],
+      dates_to_avoid:          [] as string[],
+      other_requests:          null,
+      specialties_requested,
+      special_sessions,
+      want_pain_sessions:      special_sessions.includes('Pain medicine'),
+      pain_session_notes:      null,
+      want_preop:              special_sessions.includes('Pre-op clinics'),
+      signoff_needs,
+      signoff_requirements:    null,
+      additional_notes:        '',
+      confirmed_accurate:      true,
+      confirm_algorithm_understood:  true,
       confirm_exemptions_understood: true,
-      confirm_fairness_understood: true,
-      signature_name: `${doctor.first_name} ${doctor.last_name}`,
-      signature_date: new Date().toISOString().split('T')[0],
+      confirm_fairness_understood:   true,
+      signature_name:          `${doctor.first_name} ${doctor.last_name}`,
+      signature_date:          new Date().toISOString().split('T')[0],
+      status:                  'submitted',
+      submitted_at:            new Date().toISOString(),
+      last_saved_at:           new Date().toISOString(),
     };
   };
 
