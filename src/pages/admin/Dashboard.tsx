@@ -152,9 +152,9 @@ export default function Dashboard() {
 
   const getSurveyStatus = (): { color: string; text: string } => {
     if (surveyTotal === 0) return { color: '#dc2626', text: 'No doctors added' };
-    if (surveySubmitted === surveyTotal) return { color: '#16a34a', text: `${surveySubmitted} / ${surveyTotal} submitted` };
-    if (surveySubmitted > 0) return { color: '#d97706', text: `${surveySubmitted} / ${surveyTotal} submitted` };
-    return { color: '#dc2626', text: `${surveySubmitted} / ${surveyTotal} submitted` };
+    if (surveySubmitted === surveyTotal) return { color: '#16a34a', text: `${surveySubmitted} / ${surveyTotal}` };
+    if (surveySubmitted > 0) return { color: '#d97706', text: `${surveySubmitted} / ${surveyTotal}` };
+    return { color: '#dc2626', text: `${surveySubmitted} / ${surveyTotal}` };
   };
 
   const handleGenerateFinalRota = async () => {
