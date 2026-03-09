@@ -464,7 +464,7 @@ export default function PreRotaCalendarPage() {
     }).length;
 
     return (
-      <AdminLayout title="Availability Calendar">
+      <AdminLayout title="Availability Calendar" accentColor="blue">
         <div className="space-y-2">
           {/* Top bar */}
           <div className="flex items-center justify-between">
