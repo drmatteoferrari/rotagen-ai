@@ -106,3 +106,8 @@
 .animate-pulse-once {
   animation: pulse-once 0.6s ease-out;
 }
+
+body, #root {
+  background-color: #dbeafe; /* matches your default blue-100 */
+  min-height: 100vh;
+}
