@@ -80,10 +80,16 @@ export function AdminSetupProvider({ children }: { children: ReactNode }) {
   const [oncallBreakReferenceWeeks, setOncallBreakReferenceWeeks] = useState(4);
   const [oncallBreakFineThresholdPct, setOncallBreakFineThresholdPct] = useState(25);
 
-  const { restoredConfig } = useRotaContext();
+  const { restoredConfig, contextReady } = useRotaContext();
 
   useEffect(() => {
-    if (!restoredConfig) return;
+    if (!restoredConfig) {
+      // If contextReady is true but no config exists, mark as restored (no data to hydrate)
+      if (contextReady) {
+        setRestoredFromDb(true);
+      }
+      return;
+    }
     const config = restoredConfig;
 
     if (config.rotaPeriod.startDate) {
@@ -119,7 +125,7 @@ export function AdminSetupProvider({ children }: { children: ReactNode }) {
     }
 
     setRestoredFromDb(true);
-  }, [restoredConfig]);
+  }, [restoredConfig, contextReady]);
 
   return (
     <AdminSetupContext.Provider
