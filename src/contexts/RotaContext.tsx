@@ -10,6 +10,7 @@ interface RotaContextType {
   setRestoredConfig: (config: RotaConfig | null) => void;
   restoreForUser: (username: string) => Promise<RotaConfig | null>;
   clearSession: () => void;
+  contextReady: boolean;
 }
 
 const RotaContext = createContext<RotaContextType | undefined>(undefined);
@@ -21,6 +22,7 @@ export function RotaProvider({ children }: { children: ReactNode }) {
     () => localStorage.getItem(STORAGE_KEY)
   );
   const [restoredConfig, setRestoredConfig] = useState<RotaConfig | null>(null);
+  const [contextReady, setContextReady] = useState(false);
 
   const setCurrentRotaConfigId = useCallback((id: string | null) => {
     setCurrentRotaConfigIdState(id);
