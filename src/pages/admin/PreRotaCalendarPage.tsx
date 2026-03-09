@@ -793,7 +793,7 @@ export default function PreRotaCalendarPage() {
                         minHeight: 52, height: 1, verticalAlign: 'middle',
                         padding: 0,
                       }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '6px 4px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '4px 2px' }}>
                           {badgeEvents.map(event => <LeaveBadge key={event} type={event} />)}
                           {isNoc && (
                             <span style={{
