@@ -362,7 +362,8 @@ export default function Roster() {
     rotaStart: string,
     rotaEnd: string
   ) => {
-    const grade = doctor.grade || 'ST4';
+    const GRADE_POOL = ['CT1 (or ACCS)', 'CT2 (or ACCS)', 'CT3 (or ACCS)', 'ST4', 'ST5', 'ST6', 'ST7', 'SAS', 'Post-CCT Fellow', 'Consultant'];
+    const grade = (doctor.grade && doctor.grade !== '—') ? doctor.grade : GRADE_POOL[Math.floor(Math.random() * GRADE_POOL.length)];
     const wte = Math.random() < 0.88 ? 100 : pick([80, 60]);
     const isLtft = wte < 100;
 
@@ -486,8 +487,8 @@ export default function Roster() {
       dual_specialty: false,
       dual_specialty_types: [] as string[],
       personal_email: null,
-      phone_number: null,
-      al_entitlement: null,
+      phone_number: `07${Math.floor(700000000 + Math.random() * 299999999)}`,
+      al_entitlement: Math.random() < 0.5 ? 27 : 32,
       confirm_algorithm_understood: true,
       confirm_exemptions_understood: true,
       confirm_fairness_understood: true,
