@@ -28,6 +28,9 @@ export default function Dashboard() {
   const surveyTotal = doctorsData?.length ?? 0;
   const surveySubmitted = doctorsData?.filter((d: any) => d.survey_status === "submitted").length ?? 0;
 
+  // Cached pre-rota from React Query
+  const { data: cachedPreRota } = usePreRotaResultQuery();
+
   // Pre-rota state (local for generation flow)
   const [preRotaLoading, setPreRotaLoading] = useState(false);
   const [preRotaError, setPreRotaError] = useState<string | null>(null);
