@@ -135,6 +135,7 @@ export default function Dashboard() {
     setPreRotaResult(result);
     setIsStale(false);
     setIssuesPanelOpen(result.validationIssues.length > 0);
+    navigate('/admin/pre-rota');
   };
 
   const canGeneratePreRota = isDepartmentComplete && isWtrComplete && isPeriodComplete;

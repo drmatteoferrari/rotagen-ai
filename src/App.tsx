@@ -27,6 +27,7 @@ import SurveyOverride from "./pages/admin/SurveyOverride";
 import Audit from "./pages/Audit";
 import PreRotaCalendarPage from "./pages/admin/PreRotaCalendarPage";
 import PreRotaTargetsPage from "./pages/admin/PreRotaTargetsPage";
+import PreRotaPage from "./pages/admin/PreRotaPage";
 
 const queryClient = new QueryClient();
 // ✅ Section 2 complete
