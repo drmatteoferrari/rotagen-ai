@@ -23,6 +23,7 @@ export default function PreRotaPage() {
   const [preRotaError, setPreRotaError] = useState<string | null>(null);
   const [isStale, setIsStale] = useState(false);
   const [issuesPanelOpen, setIssuesPanelOpen] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
 
   // Load existing pre-rota
   useEffect(() => {
