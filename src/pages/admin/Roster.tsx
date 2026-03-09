@@ -349,8 +349,10 @@ export default function Roster() {
     const s = new Date(start + offset);
     const e = new Date(start + offset + blockMs);
     return {
-      start_date: s.toISOString().split('T')[0],
-      end_date: e.toISOString().split('T')[0],
+      id: crypto.randomUUID(),
+      startDate: s.toISOString().split('T')[0],
+      endDate: e.toISOString().split('T')[0],
+      reason: "",
     };
   };
 
@@ -383,8 +385,13 @@ export default function Roster() {
 
     // LTFT
     const ltft_days_off: string[] = isLtft ? (wte === 80 ? ['Wednesday'] : ['Wednesday', 'Friday']) : [];
+    const days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
     const ltft_night_flexibility = isLtft
-      ? [{ preference: pick(['reduced_nights', 'no_nights', 'standard']), notes: '' }]
+      ? days.map(day => ({
+          day,
+          canStart: Math.random() < 0.8,
+          canEnd: Math.random() < 0.8,
+        }))
       : [];
 
     // Leave — fresh random each call
@@ -414,7 +421,7 @@ export default function Roster() {
 
     // Specialties
     const specialties_requested = isSenior(grade)
-      ? [{ specialty: pick(['Cardiac', 'Neuro', 'Paediatric', 'Obstetric', 'Pain']), notes: '' }]
+      ? [{ name: pick(['Cardiac', 'Neuro', 'Paediatric', 'Obstetric', 'Pain']), notes: '' }]
       : [];
 
     const want_pain_sessions = isSenior(grade) && Math.random() < 0.3;
@@ -462,6 +469,19 @@ export default function Roster() {
       status: 'submitted',
       submitted_at: new Date().toISOString(),
       last_saved_at: new Date().toISOString(),
+      // Additional fields expected by dbRowToFormData
+      other_restrictions: "",
+      parental_leave_expected: false,
+      parental_leave_start: null,
+      parental_leave_end: null,
+      parental_leave_notes: "",
+      special_sessions: [] as string[],
+      signoff_needs: "",
+      dual_specialty: false,
+      dual_specialty_types: [] as string[],
+      personal_email: null,
+      phone_number: null,
+      al_entitlement: null,
     };
   };
 
