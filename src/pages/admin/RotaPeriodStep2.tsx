@@ -68,6 +68,10 @@ export default function RotaPeriodStep2() {
   // ✅ Section 5b — BH rules state
   const [bhSameAsWeekend, setBhSameAsWeekend] = useState<boolean | null>(null);
   const [bhCustomRules, setBhCustomRules] = useState<string>("");
+  const [bhInitialized, setBhInitialized] = useState(false);
+
+  // Use cached config details
+  const { data: configDetails } = useRotaConfigDetailsQuery();
 
   useEffect(() => {
     if (initialized || !rotaStartDate || !rotaEndDate) return;
