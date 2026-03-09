@@ -62,7 +62,7 @@ export function usePreRotaResultQuery() {
         rotaConfigId: pr.rota_config_id,
         generatedAt: pr.generated_at,
         generatedBy: pr.generated_by,
-        status: pr.status,
+        status: pr.status as PreRotaStatus,
         validationIssues: (pr.validation_issues as any) ?? [],
         calendarData: (pr.calendar_data as any) ?? {},
         targetsData: (pr.targets_data as any) ?? {},
