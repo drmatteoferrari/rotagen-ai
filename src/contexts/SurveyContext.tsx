@@ -295,11 +295,11 @@ function dbRowToFormData(draft: any, base: SurveyFormData): SurveyFormData {
     signoffNeeds: draft.signoff_needs || "",
     additionalNotes: draft.additional_notes || "",
     confirmedAccurate: draft.confirmed_accurate || false,
-    confirmAlgorithmUnderstood: false,
-    confirmExemptionsUnderstood: false,
-    confirmFairnessUnderstood: false,
-    signatureName: "",
-    signatureDate: "",
+    confirmAlgorithmUnderstood: draft.confirm_algorithm_understood ?? false,
+    confirmExemptionsUnderstood: draft.confirm_exemptions_understood ?? false,
+    confirmFairnessUnderstood: draft.confirm_fairness_understood ?? false,
+    signatureName: draft.signature_name ?? '',
+    signatureDate: draft.signature_date ?? '',
   };
 }
 

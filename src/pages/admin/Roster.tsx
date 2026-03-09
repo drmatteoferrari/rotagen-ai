@@ -488,6 +488,11 @@ export default function Roster() {
       personal_email: null,
       phone_number: null,
       al_entitlement: null,
+      confirm_algorithm_understood: true,
+      confirm_exemptions_understood: true,
+      confirm_fairness_understood: true,
+      signature_name: `${doctor.first_name} ${doctor.last_name}`,
+      signature_date: new Date().toISOString().split('T')[0],
     };
   };
 
