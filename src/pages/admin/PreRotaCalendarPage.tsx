@@ -715,7 +715,7 @@ export default function PreRotaCalendarPage() {
           <table style={{ minWidth: 800 }} className="w-full text-xs border-collapse">
             <thead>
               <tr>
-                <th style={{ minWidth: 200, maxWidth: 200, position: 'sticky', left: 0, zIndex: 10, background: '#fff', textAlign: 'left', padding: '8px 12px', fontWeight: 500, color: '#6b7280', borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0' }}>
+                <th style={{ minWidth: 140, maxWidth: 140, position: 'sticky', left: 0, zIndex: 10, background: '#fff', textAlign: 'left', padding: '8px 8px', fontWeight: 500, color: '#6b7280', borderBottom: '1px solid #e2e8f0', borderRight: '1px solid #e2e8f0' }}>
                   Doctor
                 </th>
                 {week.dates.map(date => {
@@ -749,9 +749,9 @@ export default function PreRotaCalendarPage() {
                 <tr key={doctor.doctorId} style={{ borderBottom: '1px solid #f1f5f9' }}>
                   {/* Doctor name cell — 2.1 */}
                   <td style={{
-                    minWidth: 200, maxWidth: 200,
+                    minWidth: 140, maxWidth: 140,
                     position: 'sticky', left: 0, zIndex: 10, background: '#fff',
-                    padding: '6px 12px',
+                    padding: '6px 8px',
                     borderRight: '1px solid #e2e8f0', borderBottom: '1px solid #f1f5f9',
                     minHeight: 52, height: 1, verticalAlign: 'middle',
                   }}>
