@@ -15,6 +15,7 @@ import { useRotaContext } from "@/contexts/RotaContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useRotaConfigDetailsQuery } from "@/hooks/useAdminQueries";
 
 interface BankHoliday {
   id: string;
@@ -67,6 +68,10 @@ export default function RotaPeriodStep2() {
   // ✅ Section 5b — BH rules state
   const [bhSameAsWeekend, setBhSameAsWeekend] = useState<boolean | null>(null);
   const [bhCustomRules, setBhCustomRules] = useState<string>("");
+  const [bhInitialized, setBhInitialized] = useState(false);
+
+  // Use cached config details
+  const { data: configDetails } = useRotaConfigDetailsQuery();
 
   useEffect(() => {
     if (initialized || !rotaStartDate || !rotaEndDate) return;
@@ -78,26 +83,18 @@ export default function RotaPeriodStep2() {
     setInitialized(true);
   }, [rotaStartDate, rotaEndDate, initialized]);
 
-  // ✅ Section 5d — restore BH rules from config on mount
+  // Sync BH rules from cached query
   useEffect(() => {
-    if (!currentRotaConfigId) return;
-    const loadBhRules = async () => {
-      const { data: config } = await supabase
-        .from("rota_configs")
-        .select("bh_same_as_weekend, bh_custom_rules")
-        .eq("id", currentRotaConfigId)
-        .maybeSingle();
-      if (config) {
-        if ((config as any).bh_same_as_weekend !== undefined && (config as any).bh_same_as_weekend !== null) {
-          setBhSameAsWeekend((config as any).bh_same_as_weekend);
-        }
-        if ((config as any).bh_custom_rules) {
-          setBhCustomRules((config as any).bh_custom_rules);
-        }
+    if (configDetails && !bhInitialized) {
+      if ((configDetails as any).bh_same_as_weekend !== undefined && (configDetails as any).bh_same_as_weekend !== null) {
+        setBhSameAsWeekend((configDetails as any).bh_same_as_weekend);
       }
-    };
-    loadBhRules();
-  }, [currentRotaConfigId]);
+      if ((configDetails as any).bh_custom_rules) {
+        setBhCustomRules((configDetails as any).bh_custom_rules);
+      }
+      setBhInitialized(true);
+    }
+  }, [configDetails, bhInitialized]);
 
   const addBankHoliday = () => {
     if (newHolidayDate && newHolidayName) {

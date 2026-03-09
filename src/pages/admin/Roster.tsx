@@ -21,6 +21,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useRotaContext } from "@/contexts/RotaContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { buildSurveyLink } from "@/lib/surveyLinks";
+import { useDoctorsQuery, useRotaConfigDetailsQuery, useInvalidateQuery } from "@/hooks/useAdminQueries";
 
 
 // SECTION 6 — Doctor interface from DB
@@ -43,25 +44,38 @@ export default function Roster() {
   const navigate = useNavigate();
   const { currentRotaConfigId, restoredConfig } = useRotaContext();
   const { accountSettings } = useAuth();
+  const { invalidateDoctors, invalidateRotaConfigDetails } = useInvalidateQuery();
 
   // Local form state
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
 
-  // DB-backed doctors
-  const [doctors, setDoctors] = useState<Doctor[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Cached doctors from React Query
+  const { data: doctorsData, isLoading: loading, refetch: refetchDoctors } = useDoctorsQuery();
+  const doctors = (doctorsData as Doctor[]) ?? [];
+
+  // Cached deadline from React Query
+  const { data: configDetails } = useRotaConfigDetailsQuery();
 
   // SECTION 8 — Deadline picker state
   const [surveyDeadline, setSurveyDeadline] = useState<Date | undefined>(undefined);
   const [deadlineOpen, setDeadlineOpen] = useState(false);
+  const [deadlineInitialized, setDeadlineInitialized] = useState(false);
+
+  // Sync deadline from cached query
+  useEffect(() => {
+    if (configDetails?.survey_deadline && !deadlineInitialized) {
+      const [y, m, d] = configDetails.survey_deadline.split("-").map(Number);
+      setSurveyDeadline(new Date(y, m - 1, d));
+      setDeadlineInitialized(true);
+    }
+  }, [configDetails, deadlineInitialized]);
 
   // SECTION 5 — Send state per doctor
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [successId, setSuccessId] = useState<string | null>(null);
   const [popoverId, setPopoverId] = useState<string | null>(null);
-
 
   // Copy tooltip state
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -74,36 +88,11 @@ export default function Roster() {
   // SECTION 5 — Read from accountSettings context
   const departmentName = accountSettings.departmentName ?? "";
   const hospitalName = accountSettings.trustName ?? "";
-  // SECTION 5 COMPLETE
 
-  // ─── Load doctors from DB ───
+  // ─── Reload doctors (invalidate cache) ───
   const loadDoctors = useCallback(async () => {
-    if (!currentRotaConfigId) { setLoading(false); return; }
-    const { data, error } = await supabase
-      .from("doctors")
-      .select("*")
-      .eq("rota_config_id", currentRotaConfigId)
-      .order("created_at", { ascending: true });
-    if (error) { console.error(error); toast.error("Failed to load doctors"); }
-    setDoctors((data as Doctor[]) ?? []);
-    setLoading(false);
-  }, [currentRotaConfigId]);
-
-  // ─── Load deadline from DB ───
-  const loadDeadline = useCallback(async () => {
-    if (!currentRotaConfigId) return;
-    const { data } = await supabase
-      .from("rota_configs")
-      .select("survey_deadline")
-      .eq("id", currentRotaConfigId)
-      .single();
-    if (data?.survey_deadline) {
-      const [y, m, d] = data.survey_deadline.split("-").map(Number);
-      setSurveyDeadline(new Date(y, m - 1, d));
-    }
-  }, [currentRotaConfigId]);
-
-  useEffect(() => { loadDoctors(); loadDeadline(); }, [loadDoctors, loadDeadline]);
+    invalidateDoctors();
+  }, [invalidateDoctors]);
 
   // ─── Add doctor to DB ───
   const addDoctor = async () => {
@@ -126,7 +115,7 @@ export default function Roster() {
   const removeDoctor = async (id: string) => {
     const { error } = await supabase.from("doctors").delete().eq("id", id);
     if (error) { toast.error("Failed to remove doctor"); return; }
-    setDoctors(doctors.filter((d) => d.id !== id));
+    invalidateDoctors();
     toast("Doctor removed from roster");
   };
 
