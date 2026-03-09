@@ -38,8 +38,6 @@ export default function Dashboard() {
   const [finalLoading, setFinalLoading] = useState(false);
   const [showFinalChecklist, setShowFinalChecklist] = useState(false);
 
-  // Live survey counts
-
   // Fetch live survey counts
   useEffect(() => {
     const fetchCounts = async () => {
