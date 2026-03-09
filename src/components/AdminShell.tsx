@@ -83,7 +83,7 @@ function AdminShellInner() {
         </header>
 
         {/* Content */}
-        <main className="flex-1 overflow-y-auto p-4 pb-20 animate-fadeSlideUp">
+        <main className="flex-1 overflow-y-auto p-4 pb-20">
           <Outlet />
         </main>
 
@@ -193,7 +193,7 @@ function AdminShellInner() {
             </div>
           )}
         </header>
-        <main className="flex-1 overflow-y-auto p-6 animate-fadeSlideUp">
+        <main className="flex-1 overflow-y-auto p-6">
           <Outlet />
         </main>
       </div>

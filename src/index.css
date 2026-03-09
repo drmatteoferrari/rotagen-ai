@@ -108,8 +108,12 @@
 }
 
 body, #root {
-  background-color: #dbeafe; /* matches your default blue-100 */
+  background-color: #dbeafe;
   min-height: 100vh;
+}
+
+main {
+  animation: fadeSlideUp 0.35s ease-out forwards;
 }
 
 @keyframes fadeSlideUp {
