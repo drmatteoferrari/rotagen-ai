@@ -29,6 +29,10 @@ const navItems = [
 ];
 
 function AdminShellInner() {
+  const { isRestoring: rotaRestoring } = useRotaContext();
+  const { isRestoring: setupRestoring } = useAdminSetup();
+  const isAppReady = !rotaRestoring && !setupRestoring;
+
   const { title, subtitle, accentColor } = useAdminShell();
   const bgColorMap: Record<string, string> = {
     blue:   '#eff6ff',
