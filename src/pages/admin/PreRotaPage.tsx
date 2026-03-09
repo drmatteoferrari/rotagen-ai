@@ -27,16 +27,30 @@ export default function PreRotaPage() {
 
   // Load existing pre-rota
   useEffect(() => {
+    let cancelled = false;
+
     const load = async () => {
-      if (!currentRotaConfigId) return;
+      setPageLoading(true);
       try {
+        if (!currentRotaConfigId) {
+          setPreRotaResult(null);
+          setIsStale(false);
+          setIssuesPanelOpen(false);
+          return;
+        }
+
         const { data: pr } = await supabase
           .from("pre_rota_results")
           .select("*")
           .eq("rota_config_id", currentRotaConfigId)
           .maybeSingle();
 
-        if (!pr) return;
+        if (!pr) {
+          setPreRotaResult(null);
+          setIsStale(false);
+          setIssuesPanelOpen(false);
+          return;
+        }
 
         const result: PreRotaResult = {
           id: pr.id,
@@ -79,9 +93,15 @@ export default function PreRotaPage() {
         setIssuesPanelOpen(result.validationIssues.length > 0 && result.status !== "complete");
       } catch (err) {
         console.error("Failed to load pre-rota:", err);
+      } finally {
+        if (!cancelled) setPageLoading(false);
       }
     };
+
     load();
+    return () => {
+      cancelled = true;
+    };
   }, [currentRotaConfigId]);
 
   const handleGeneratePreRota = async () => {
