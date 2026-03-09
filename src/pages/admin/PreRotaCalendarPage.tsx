@@ -711,7 +711,7 @@ export default function PreRotaCalendarPage() {
         </div>
 
         {/* Calendar table — ✅ Section 1f: scrollable container with minWidth */}
-        <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        <div style={{ overflowX: 'hidden' }}>
           <table style={{ minWidth: 800 }} className="w-full text-xs border-collapse">
             <thead>
               <tr>
