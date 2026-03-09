@@ -33,7 +33,7 @@ export default function ForgotPassword() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary/10 via-background to-accent/10 p-4">
+    <div className="flex min-h-screen items-center justify-center bg-primary/8 p-4">
       <div className="flex w-full max-w-[420px] flex-col items-center gap-6">
         {/* Logo */}
         <div className="flex flex-col items-center gap-2">
