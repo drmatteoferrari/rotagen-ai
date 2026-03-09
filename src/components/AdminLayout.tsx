@@ -34,16 +34,16 @@ interface AdminLayoutProps {
 }
 
 export function AdminLayout({ children, title, subtitle, accentColor = 'blue' }: AdminLayoutProps) {
-  const bgMap: Record<string, string> = {
-    blue:   'bg-blue-100',
-    red:    'bg-red-100',
-    yellow: 'bg-yellow-100',
-    purple: 'bg-purple-100',
-    teal:   'bg-teal-100',
-    pink:   'bg-pink-100',
-    green:  'bg-green-100',
+  const bgColorMap: Record<string, string> = {
+    blue:   '#eff6ff',
+    red:    '#fff5f5',
+    yellow: '#fefce8',
+    purple: '#f5f3ff',
+    teal:   '#f0fdfa',
+    pink:   '#fdf4ff',
+    green:  '#f0fdf4',
   };
-  const bgClass = bgMap[accentColor];
+  const bgColor = bgColorMap[accentColor ?? 'blue'];
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
