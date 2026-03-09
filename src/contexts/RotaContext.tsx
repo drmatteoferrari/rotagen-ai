@@ -10,6 +10,7 @@ interface RotaContextType {
   setRestoredConfig: (config: RotaConfig | null) => void;
   restoreForUser: (username: string) => Promise<RotaConfig | null>;
   clearSession: () => void;
+  contextReady: boolean;
 }
 
 const RotaContext = createContext<RotaContextType | undefined>(undefined);
