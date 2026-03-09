@@ -10,10 +10,12 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useIsMobile, useIsTablet } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
 
 const navItems = [
@@ -35,6 +37,7 @@ export function AdminLayout({ children, title, subtitle }: AdminLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const isTablet = useIsTablet();
   const { user, logout } = useAuth();
 
   const handleLogout = () => {
@@ -42,7 +45,8 @@ export function AdminLayout({ children, title, subtitle }: AdminLayoutProps) {
     navigate("/login", { replace: true });
   };
 
-  if (isMobile) {
+  // Mobile and tablet both use bottom nav bar layout
+  if (isMobile || isTablet) {
     return (
       <div className="flex min-h-screen w-full flex-col bg-background">
         {/* Header */}
@@ -138,7 +142,7 @@ export function AdminLayout({ children, title, subtitle }: AdminLayoutProps) {
           ))}
         </nav>
 
-        {/* Collapse toggle */}
+        {/* Collapse toggle at bottom */}
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="flex h-12 items-center justify-center border-t border-sidebar-border text-sidebar-foreground hover:text-sidebar-accent-foreground transition-colors"
@@ -150,9 +154,18 @@ export function AdminLayout({ children, title, subtitle }: AdminLayoutProps) {
       {/* Main Content */}
       <div className="flex flex-1 flex-col overflow-hidden">
         <header className="flex h-16 items-center justify-between border-b border-border bg-card px-6">
-          <div>
-            <h1 className="text-lg font-semibold text-card-foreground">{title}</h1>
-            {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setCollapsed(!collapsed)}
+              className="flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            >
+              {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+            </button>
+            <div>
+              <h1 className="text-lg font-semibold text-card-foreground">{title}</h1>
+              {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
+            </div>
           </div>
           {user && (
             <div className="flex items-center gap-3">
