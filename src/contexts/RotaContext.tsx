@@ -77,6 +77,7 @@ export function RotaProvider({ children }: { children: ReactNode }) {
     setCurrentRotaConfigIdState(null);
     setRestoredConfig(null);
     localStorage.removeItem(STORAGE_KEY);
+    sessionStorage.removeItem(STORAGE_KEY);
   }, []);
 
   return (
