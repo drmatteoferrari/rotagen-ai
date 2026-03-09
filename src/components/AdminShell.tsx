@@ -30,6 +30,12 @@ const navItems = [
 
 function AdminShellInner() {
   const { title, subtitle, accentColor } = useAdminShell();
+  const { contextReady } = useRotaContext();
+  const { restoredFromDb } = useAdminSetup();
+
+  // Gate: don't render pages until shared context data is ready
+  const isAppReady = contextReady && restoredFromDb;
+
   const bgColorMap: Record<string, string> = {
     blue:   '#eff6ff',
     red:    '#fff5f5',
