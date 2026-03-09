@@ -728,7 +728,7 @@ export default function PreRotaCalendarPage() {
                       background: getColumnHeaderBg(isBH, isWknd),
                       color: getColumnHeaderTextColor(isBH, isWknd),
                       borderBottom: '1px solid #e2e8f0', borderLeft: '1px solid #e2e8f0',
-                      minWidth: 64,
+                      minWidth: 36,
                     }}>
                       <div style={{ fontSize: 10 }}>{dd.toLocaleDateString('en-GB', { weekday: 'short' })}</div>
                       <div style={{ fontSize: 10, fontWeight: 400 }}>{dd.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</div>
