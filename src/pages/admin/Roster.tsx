@@ -559,6 +559,7 @@ export default function Roster() {
           .update({
             survey_status: 'submitted',
             survey_submitted_at: new Date().toISOString(),
+            grade: payload.grade,
           })
           .eq('id', doctor.id);
 
