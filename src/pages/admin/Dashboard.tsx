@@ -193,35 +193,35 @@ export default function Dashboard() {
       <div className="mx-auto max-w-3xl space-y-4">
 
         {/* 1. Setup */}
-        <div className="rounded-xl border border-border bg-card px-3 py-2 shadow-sm">
-          <h2 className="text-sm font-bold uppercase tracking-wider text-foreground mb-1">1. Setup</h2>
+        <div className="rounded-xl border border-border bg-card p-3 shadow-sm">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-foreground mb-2">1. Setup</h2>
 
-          <div className="space-y-0">
+          <div className="space-y-1">
             {steps.map((s) => {
               const status = getStepStatus(s.done);
               const IconComp = s.icon;
               return (
                 <div
                   key={s.label}
-                  className="flex items-center gap-2.5 rounded-lg px-2 py-1 cursor-pointer hover:bg-muted/50 transition-colors"
+                  className="flex items-center gap-3 rounded-lg px-3 py-1.5 cursor-pointer hover:bg-muted/50 transition-colors"
                   onClick={() => navigate(s.link)}
                 >
                   <div style={{
-                    width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+                    width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: status.color, color: '#fff', fontSize: 11, fontWeight: 700,
+                    background: status.color, color: '#fff', fontSize: 13, fontWeight: 700,
                   }}>
                     {s.num}
                   </div>
-                  <IconComp className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <span className="text-xs font-medium text-foreground">{s.label}</span>
+                  <IconComp className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <div className="flex-1">
+                    <span className="text-sm font-medium text-foreground">{s.label}</span>
                     {s.num === 3 && (() => {
                       const sd = rotaStartDate ?? (restoredConfig?.rotaPeriod?.startDate ? new Date(restoredConfig.rotaPeriod.startDate) : null);
                       const ed = rotaEndDate ?? (restoredConfig?.rotaPeriod?.endDate ? new Date(restoredConfig.rotaPeriod.endDate) : null);
                       if (!sd || !ed) return null;
                       return (
-                        <p className="text-[10px] text-muted-foreground leading-tight">
+                        <p className="text-[11px] text-muted-foreground mt-0.5">
                           {sd.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                           {' → '}
                           {ed.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
@@ -229,7 +229,7 @@ export default function Dashboard() {
                       );
                     })()}
                   </div>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: status.color }}>{status.text}</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: status.color }}>{status.text}</span>
                 </div>
               );
             })}
@@ -239,19 +239,19 @@ export default function Dashboard() {
               const surveyStatus = getSurveyStatus();
               return (
                 <div
-                  className="flex items-center gap-2.5 rounded-lg px-2 py-1 cursor-pointer hover:bg-muted/50 transition-colors"
+                  className="flex items-center gap-3 rounded-lg px-3 py-1.5 cursor-pointer hover:bg-muted/50 transition-colors"
                   onClick={() => navigate("/admin/roster")}
                 >
                   <div style={{
-                    width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+                    width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    background: surveyStatus.color, color: '#fff', fontSize: 11, fontWeight: 700,
+                    background: surveyStatus.color, color: '#fff', fontSize: 13, fontWeight: 700,
                   }}>
                     4
                   </div>
-                  <Users className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                  <span className="flex-1 text-xs font-medium text-foreground">Doctor Preferences</span>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: surveyStatus.color }}>{surveyStatus.text}</span>
+                  <Users className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <span className="flex-1 text-sm font-medium text-foreground">Doctor Preferences</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: surveyStatus.color }}>{surveyStatus.text}</span>
                 </div>
               );
             })()}
