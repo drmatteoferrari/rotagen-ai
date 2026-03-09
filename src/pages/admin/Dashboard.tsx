@@ -5,7 +5,7 @@ import { useRotaContext } from "@/contexts/RotaContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
-  CheckCircle, Zap, Target, Users, ShieldCheck, Lock,
+  CheckCircle, Target, Users, Lock,
   Building2, Loader2, ClipboardList, CalendarDays,
   RefreshCw, Play, AlertTriangle, XCircle, Info,
 } from "lucide-react";
