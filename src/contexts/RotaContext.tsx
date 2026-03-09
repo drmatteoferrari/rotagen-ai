@@ -22,7 +22,7 @@ export function RotaProvider({ children }: { children: ReactNode }) {
     () => localStorage.getItem(STORAGE_KEY)
   );
   const [restoredConfig, setRestoredConfig] = useState<RotaConfig | null>(null);
-  const [contextReady, setContextReady] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(true);
 
   const setCurrentRotaConfigId = useCallback((id: string | null) => {
     setCurrentRotaConfigIdState(id);
