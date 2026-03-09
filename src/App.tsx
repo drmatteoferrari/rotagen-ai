@@ -64,6 +64,7 @@ const App = () => (
           <Route path="/admin/wtr/step-3" element={<ProtectedRoute requiredRole="coordinator"><WtrStep3 /></ProtectedRoute>} />
           <Route path="/admin/wtr/step-4" element={<ProtectedRoute requiredRole="coordinator"><WtrStep4 /></ProtectedRoute>} />
           <Route path="/admin/roster" element={<ProtectedRoute requiredRole="coordinator"><Roster /></ProtectedRoute>} />
+          <Route path="/admin/pre-rota" element={<ProtectedRoute requiredRole="coordinator"><PreRotaPage /></ProtectedRoute>} />
           <Route path="/admin/pre-rota-calendar" element={<ProtectedRoute requiredRole="coordinator"><PreRotaCalendarPage /></ProtectedRoute>} />
           <Route path="/admin/pre-rota-targets" element={<ProtectedRoute requiredRole="coordinator"><PreRotaTargetsPage /></ProtectedRoute>} />
           <Route path="/admin/survey-override/:doctorId/:step" element={<ProtectedRoute requiredRole="coordinator"><SurveyOverride /></ProtectedRoute>} />
