@@ -369,10 +369,10 @@ export default function Roster() {
     const isLtft = wte < 100;
 
     // ── GRADE GROUPS ──
-    const isCT1   = (g: string) => g.includes('CT1');
-    const isCT2up = (g: string) => ['CT2','CT3','ST4','ST5','ST6','ST7','ST8','ST9','SAS','Fellow','Consultant'].some(x => g.includes(x));
-    const isCT3up = (g: string) => ['CT3','ST4','ST5','ST6','ST7','ST8','ST9','SAS','Fellow','Consultant'].some(x => g.includes(x));
-    const isSeniorGrade = (g: string) => ['ST6','ST7','ST8','ST9','SAS','Fellow','Consultant'].some(x => g.includes(x));
+    const isCT1    = (g: string) => g.includes('CT1') && !g.includes('CT2') && !g.includes('CT3');
+    const isCT2up  = (g: string) => ['CT2','CT3','ST4','ST5','ST6','ST7','ST8','ST9','SAS','Fellow','Consultant'].some(x => g.includes(x));
+    const isCT3up  = (g: string) => ['CT3','ST4','ST5','ST6','ST7','ST8','ST9','SAS','Fellow','Consultant'].some(x => g.includes(x));
+    const isSenior = (g: string) => ['ST6','ST7','ST8','ST9','SAS','Fellow','Consultant'].some(x => g.includes(x));
 
     // ── STEP 2: COMPETENCIES ──
     const iacAchieved      = isCT2up(grade);
@@ -403,7 +403,7 @@ export default function Roster() {
       },
     };
 
-    // ── LTFT ──
+    // ── STEP 3: LTFT ──
     const ltft_days_off: string[] = isLtft
       ? (wte === 80 ? ['Wednesday'] : ['Wednesday', 'Friday'])
       : [];
@@ -413,230 +413,105 @@ export default function Roster() {
       canEnd:   Math.random() < 0.8,
     }));
 
-    // ── STEP 4: LEAVE ──
-
-    const rotaMs = new Date(rotaEnd).getTime() - new Date(rotaStart).getTime();
-
-    const rotaWeeks = rotaMs / (7 * 86400000);
-
+    // ── STEP 4: LEAVE — all blocks share one bookedRanges list, no overlaps anywhere ──
+    const rotaStartMs  = new Date(rotaStart).getTime();
+    const rotaEndMs    = new Date(rotaEnd).getTime();
+    const rotaWeeks    = (rotaEndMs - rotaStartMs) / (7 * 86400000);
     const effectiveWte = isLtft ? wte : 100;
-
     const al_entitlement = Math.random() < 0.5 ? 27 : 32;
+    const proRataAL    = Math.max(1, Math.round((rotaWeeks / 52) * al_entitlement * (effectiveWte / 100)));
 
-    // Pro-rata AL for this rota — this is the hard cap
+    // Single shared registry — every placed block is registered here
+    const booked: { start: number; end: number }[] = [];
 
-    const proRataAL = Math.max(1, Math.round((rotaWeeks / 52) * al_entitlement * (effectiveWte / 100)));
+    const hasOverlap = (sMs: number, eMs: number): boolean =>
+      booked.some(r => sMs < r.end && eMs > r.start);
 
-    // Track all booked date ranges to prevent any overlap
+    const registerBlock = (sMs: number, eMs: number) =>
+      booked.push({ start: sMs, end: eMs });
 
-    const bookedRanges: { start: number; end: number }[] = [];
-
-    const overlaps = (s: Date, e: Date): boolean =>
-
-      bookedRanges.some(r => s.getTime() <= r.end && e.getTime() >= r.start);
-
-    const book = (s: Date, e: Date) =>
-
-      bookedRanges.push({ start: s.getTime(), end: e.getTime() });
-
-    // Try to place a leave block of exactly lengthDays without overlapping booked ranges
-
-    // Returns a LeaveEntry or null if no gap found after maxAttempts
-
-    const tryPlaceBlock = (
-
-      lengthDays: number,
-
-      maxAttempts = 40
-
-    ): { id: string; startDate: string; endDate: string; reason: string } | null => {
-
-      const rotaStartMs = new Date(rotaStart).getTime();
-
-      const rotaEndMs   = new Date(rotaEnd).getTime();
-
-      const blockMs     = lengthDays * 86400000;
-
-      const window      = rotaEndMs - rotaStartMs - blockMs;
-
-      if (window <= 0) return null;
-
-      for (let attempt = 0; attempt < maxAttempts; attempt++) {
-
-        const offset  = Math.floor(Math.random() * window);
-
-        const s       = new Date(rotaStartMs + offset);
-
-        const e       = new Date(rotaStartMs + offset + blockMs);
-
-        if (!overlaps(s, e)) {
-
-          book(s, e);
-
+    // Place a block of exactly lengthDays calendar days with no overlap.
+    // Returns { startDate, endDate, id, reason:'' } or null if no gap found.
+    const placeBlock = (lengthDays: number, maxAttempts = 60): { id: string; startDate: string; endDate: string; reason: string } | null => {
+      const blockMs  = lengthDays * 86400000;
+      const maxStart = rotaEndMs - blockMs;
+      if (maxStart <= rotaStartMs) return null;
+      const window   = maxStart - rotaStartMs;
+      for (let i = 0; i < maxAttempts; i++) {
+        const sMs = rotaStartMs + Math.floor(Math.random() * window);
+        const eMs = sMs + blockMs;
+        if (!hasOverlap(sMs, eMs)) {
+          registerBlock(sMs, eMs);
           return {
-
             id:        crypto.randomUUID(),
-
-            startDate: s.toISOString().split('T')[0],
-
-            endDate:   e.toISOString().split('T')[0],
-
+            startDate: new Date(sMs).toISOString().split('T')[0],
+            endDate:   new Date(eMs - 86400000).toISOString().split('T')[0], // inclusive end
             reason:    '',
-
           };
-
         }
-
       }
-
       return null;
-
     };
 
-    // Annual Leave: 2-5 blocks, total days <= proRataAL
-
-    const targetAL    = proRataAL; // never exceed pro-rata
-
-    const numALBlocks = rand(2, 5);
-
+    // Annual Leave: 2–5 blocks, total days = proRataAL (never exceeded)
+    const numALBlocks  = rand(2, 5);
     const annual_leave: { id: string; startDate: string; endDate: string; reason: string }[] = [];
-
-    let alRemaining = targetAL;
-
-    for (let i = 0; i < numALBlocks && alRemaining > 0; i++) {
-
-      const isLast   = i === numALBlocks - 1;
-
-      const maxBlock = Math.min(5, alRemaining - (isLast ? 0 : numALBlocks - i - 1));
-
-      const blockLen = isLast ? Math.max(1, Math.min(5, alRemaining)) : rand(1, Math.max(1, maxBlock));
-
-      const entry    = tryPlaceBlock(blockLen);
-
-      if (entry) {
-
-        annual_leave.push(entry);
-
-        alRemaining -= blockLen;
-
-      }
-
+    let alBudget = proRataAL;
+    for (let i = 0; i < numALBlocks && alBudget > 0; i++) {
+      const remaining  = numALBlocks - i - 1;
+      const maxLen     = Math.min(5, alBudget - remaining);
+      const blockLen   = maxLen <= 1 ? 1 : rand(1, maxLen);
+      const entry      = placeBlock(blockLen);
+      if (entry) { annual_leave.push(entry); alBudget -= blockLen; }
     }
 
-    // Study Leave: 2-4 blocks, total 3-10 days, no overlap with AL
-
+    // Study Leave: 2–4 blocks, total 3–10 days
     const numSLBlocks = rand(2, 4);
-
-    const targetSL    = rand(3, 10);
-
     const slReasons   = ['FRCA Primary', 'FRCA Final', 'ALS Course', 'ATLS Course', 'Conference', 'Exam', 'Teaching'];
-
     const study_leave: { id: string; startDate: string; endDate: string; reason: string }[] = [];
-
-    let slRemaining = targetSL;
-
-    for (let i = 0; i < numSLBlocks && slRemaining > 0; i++) {
-
-      const isLast   = i === numSLBlocks - 1;
-
-      const maxBlock = Math.min(3, slRemaining - (isLast ? 0 : numSLBlocks - i - 1));
-
-      const blockLen = isLast ? Math.max(1, Math.min(3, slRemaining)) : rand(1, Math.max(1, maxBlock));
-
-      const entry    = tryPlaceBlock(blockLen);
-
-      if (entry) {
-
-        study_leave.push({ ...entry, reason: pick(slReasons) });
-
-        slRemaining -= blockLen;
-
-      }
-
+    let slBudget = rand(3, 10);
+    for (let i = 0; i < numSLBlocks && slBudget > 0; i++) {
+      const remaining = numSLBlocks - i - 1;
+      const maxLen    = Math.min(3, slBudget - remaining);
+      const blockLen  = maxLen <= 1 ? 1 : rand(1, maxLen);
+      const entry     = placeBlock(blockLen);
+      if (entry) { study_leave.push({ ...entry, reason: pick(slReasons) }); slBudget -= blockLen; }
     }
 
-    // NOC: 2-5 blocks, total 5-15 days, no overlap with AL or SL
-
+    // NOC dates: 2–5 blocks, total 5–15 days
     const numNOCBlocks = rand(2, 5);
-
-    const targetNOC    = rand(5, 15);
-
     const noc_dates: { id: string; startDate: string; endDate: string; reason: string }[] = [];
-
-    let nocRemaining = targetNOC;
-
-    for (let i = 0; i < numNOCBlocks && nocRemaining > 0; i++) {
-
-      const isLast   = i === numNOCBlocks - 1;
-
-      const maxBlock = Math.min(5, nocRemaining - (isLast ? 0 : numNOCBlocks - i - 1));
-
-      const blockLen = isLast ? Math.max(1, Math.min(5, nocRemaining)) : rand(1, Math.max(1, maxBlock));
-
-      const entry    = tryPlaceBlock(blockLen);
-
-      if (entry) {
-
-        noc_dates.push(entry);
-
-        nocRemaining -= blockLen;
-
-      }
-
+    let nocBudget = rand(5, 15);
+    for (let i = 0; i < numNOCBlocks && nocBudget > 0; i++) {
+      const remaining = numNOCBlocks - i - 1;
+      const maxLen    = Math.min(5, nocBudget - remaining);
+      const blockLen  = maxLen <= 1 ? 1 : rand(1, maxLen);
+      const entry     = placeBlock(blockLen);
+      if (entry) { noc_dates.push(entry); nocBudget -= blockLen; }
     }
 
-    // Rotation: 1 in 5 doctors, exactly 14 days Mon→Sun, no overlap with AL/SL/NOC
-
-    const hasRotation = Math.random() < 0.2;
-
+    // Rotation: 1 in 5 doctors, Mon→Sun 14 days, no overlap
     const other_unavailability: { id: string; startDate: string; endDate: string; location: string }[] = [];
-
-    if (hasRotation) {
-
-      const rotaStartMs   = new Date(rotaStart).getTime();
-
-      const rotaEndMs     = new Date(rotaEnd).getTime();
-
+    if (Math.random() < 0.2) {
       const maxOffsetDays = Math.max(0, Math.floor((rotaEndMs - rotaStartMs) / 86400000) - 14);
-
-      let placed = false;
-
-      for (let attempt = 0; attempt < 40 && !placed; attempt++) {
-
-        const offsetDays    = Math.floor(Math.random() * maxOffsetDays);
-
-        const candidate     = new Date(rotaStartMs + offsetDays * 86400000);
-
-        const dow           = candidate.getDay();
-
-        const toMonday      = dow === 1 ? 0 : (8 - dow) % 7 || 7;
-
-        const mondayDate    = new Date(candidate.getTime() + toMonday * 86400000);
-
-        const sundayDate    = new Date(mondayDate.getTime() + 13 * 86400000);
-
-        if (sundayDate.getTime() <= rotaEndMs && !overlaps(mondayDate, sundayDate)) {
-
-          book(mondayDate, sundayDate);
-
+      for (let attempt = 0; attempt < 60; attempt++) {
+        const offsetDays = Math.floor(Math.random() * maxOffsetDays);
+        const candidate  = new Date(rotaStartMs + offsetDays * 86400000);
+        const dow        = candidate.getDay();
+        const toMonday   = dow === 1 ? 0 : (8 - dow) % 7 || 7;
+        const monMs      = candidate.getTime() + toMonday * 86400000;
+        const sunMs      = monMs + 13 * 86400000;
+        if (sunMs + 86400000 <= rotaEndMs && !hasOverlap(monMs, sunMs + 86400000)) {
+          registerBlock(monMs, sunMs + 86400000);
           other_unavailability.push({
-
             id:        crypto.randomUUID(),
-
-            startDate: mondayDate.toISOString().split('T')[0],
-
-            endDate:   sundayDate.toISOString().split('T')[0],
-
+            startDate: new Date(monMs).toISOString().split('T')[0],
+            endDate:   new Date(sunMs).toISOString().split('T')[0],
             location:  pick(['Royal Liverpool Hospital', 'Aintree University Hospital', 'Arrowe Park Hospital', 'Warrington Hospital', 'Countess of Chester Hospital']),
-
           });
-
-          placed = true;
-
+          break;
         }
-
       }
-
     }
 
     // ── STEP 5: EXEMPTIONS ──
@@ -655,9 +530,10 @@ export default function Roster() {
       'Plastics and reconstructive', 'Gynaecology', 'Urology', 'Hepatobiliary',
       'Breast surgery', 'Remote anaesthesia (MRI, radiology, cardioversions)',
     ];
-    const shuffled = [...ALL_SPECIALTIES].sort(() => Math.random() - 0.5);
-    const numSpecs = rand(3, 6);
-    const specialties_requested = shuffled.slice(0, numSpecs).map(name => ({ name, notes: '' }));
+    const specialties_requested = [...ALL_SPECIALTIES]
+      .sort(() => Math.random() - 0.5)
+      .slice(0, rand(3, 6))
+      .map(name => ({ name, notes: '' }));
 
     const signoff_needs = Math.random() < 0.5
       ? pick([
@@ -670,29 +546,29 @@ export default function Roster() {
         ])
       : '';
 
-    const special_sessions: string[] = isSeniorGrade(grade) && Math.random() < 0.3
+    const special_sessions: string[] = isSenior(grade) && Math.random() < 0.3
       ? [pick(['Pain medicine', 'Pre-op clinics'])]
       : [];
 
     return {
-      doctor_id:               doctor.id,
-      rota_config_id:          rotaConfigId,
-      full_name:               `${doctor.first_name} ${doctor.last_name}`,
-      nhs_email:               doctor.email ?? `${doctor.first_name.toLowerCase()}.${doctor.last_name.toLowerCase()}@nhs.net`,
-      personal_email:          null,
-      phone_number:            `07${Math.floor(700000000 + Math.random() * 299999999)}`,
+      doctor_id:                     doctor.id,
+      rota_config_id:                rotaConfigId,
+      full_name:                     `${doctor.first_name} ${doctor.last_name}`,
+      nhs_email:                     doctor.email ?? `${doctor.first_name.toLowerCase()}.${doctor.last_name.toLowerCase()}@nhs.net`,
+      personal_email:                null,
+      phone_number:                  `07${Math.floor(700000000 + Math.random() * 299999999)}`,
       grade,
-      dual_specialty:          false,
-      dual_specialty_types:    [] as string[],
+      dual_specialty:                false,
+      dual_specialty_types:          [] as string[],
       competencies_json,
-      comp_ip_anaesthesia:     false,
-      comp_ip_anaesthesia_here: false,
-      comp_obstetric:          false,
-      comp_obstetric_here:     false,
-      comp_icu:                false,
-      comp_icu_here:           false,
-      wte_percent:             wte,
-      wte_other_value:         null,
+      comp_ip_anaesthesia:           false,
+      comp_ip_anaesthesia_here:      false,
+      comp_obstetric:                false,
+      comp_obstetric_here:           false,
+      comp_icu:                      false,
+      comp_icu_here:                 false,
+      wte_percent:                   wte,
+      wte_other_value:               null,
       ltft_days_off,
       ltft_night_flexibility,
       al_entitlement,
@@ -702,36 +578,36 @@ export default function Roster() {
       other_unavailability,
       exempt_from_nights,
       exempt_from_weekends,
-      exempt_from_oncall:      false,
-      specific_days_off:       [] as string[],
+      exempt_from_oncall:            false,
+      specific_days_off:             [] as string[],
       exemption_details,
-      other_restrictions:      '',
-      additional_restrictions: '',
-      parental_leave_expected: false,
-      parental_leave_start:    null,
-      parental_leave_end:      null,
-      parental_leave_notes:    '',
-      preferred_shift_types:   [] as string[],
-      preferred_days_off:      [] as string[],
-      dates_to_avoid:          [] as string[],
-      other_requests:          null,
+      other_restrictions:            '',
+      additional_restrictions:       '',
+      parental_leave_expected:       false,
+      parental_leave_start:          null,
+      parental_leave_end:            null,
+      parental_leave_notes:          '',
+      preferred_shift_types:         [] as string[],
+      preferred_days_off:            [] as string[],
+      dates_to_avoid:                [] as string[],
+      other_requests:                null,
       specialties_requested,
       special_sessions,
-      want_pain_sessions:      special_sessions.includes('Pain medicine'),
-      pain_session_notes:      null,
-      want_preop:              special_sessions.includes('Pre-op clinics'),
+      want_pain_sessions:            special_sessions.includes('Pain medicine'),
+      pain_session_notes:            null,
+      want_preop:                    special_sessions.includes('Pre-op clinics'),
       signoff_needs,
-      signoff_requirements:    null,
-      additional_notes:        '',
-      confirmed_accurate:      true,
+      signoff_requirements:          null,
+      additional_notes:              '',
+      confirmed_accurate:            true,
       confirm_algorithm_understood:  true,
       confirm_exemptions_understood: true,
       confirm_fairness_understood:   true,
-      signature_name:          `${doctor.first_name} ${doctor.last_name}`,
-      signature_date:          new Date().toISOString().split('T')[0],
-      status:                  'submitted',
-      submitted_at:            new Date().toISOString(),
-      last_saved_at:           new Date().toISOString(),
+      signature_name:                `${doctor.first_name} ${doctor.last_name}`,
+      signature_date:                new Date().toISOString().split('T')[0],
+      status:                        'submitted',
+      submitted_at:                  new Date().toISOString(),
+      last_saved_at:                 new Date().toISOString(),
     };
   };
 
