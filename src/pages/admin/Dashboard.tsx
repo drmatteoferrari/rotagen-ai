@@ -190,7 +190,7 @@ export default function Dashboard() {
 
   return (
     <AdminLayout title="Dashboard" subtitle="Track setup progress and generate the rota" accentColor="blue">
-      <div className="mx-auto max-w-3xl space-y-4">
+      <div className="mx-auto max-w-3xl space-y-4 animate-fadeSlideUp">
 
         {/* 1. Setup */}
         <div className="rounded-xl border border-border bg-card p-3 shadow-sm">

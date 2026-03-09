@@ -635,7 +635,7 @@ export default function PreRotaCalendarPage() {
 
   return (
     <AdminLayout title="Availability Calendar" subtitle={`${deptName}${deptName && hospitalName ? ' · ' : ''}${hospitalName}`} accentColor="blue">
-      <div className="space-y-4">
+      <div className="space-y-4 animate-fadeSlideUp">
         {/* Header bar */}
         <div className="flex items-center justify-between">
           <button onClick={() => navigate('/admin/dashboard')} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">

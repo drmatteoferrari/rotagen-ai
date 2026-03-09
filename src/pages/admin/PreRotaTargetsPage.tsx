@@ -131,7 +131,7 @@ export default function PreRotaTargetsPage() {
 
   return (
     <AdminLayout title="Shift Hour Targets" subtitle={`${deptName}${deptName && hospitalName ? ' · ' : ''}${hospitalName}`} accentColor="blue">
-      <div className="space-y-4">
+      <div className="space-y-4 animate-fadeSlideUp">
         {/* Header bar */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
           <button onClick={() => navigate('/admin/dashboard')} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
