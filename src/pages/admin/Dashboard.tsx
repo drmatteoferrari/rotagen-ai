@@ -5,7 +5,7 @@ import { useRotaContext } from "@/contexts/RotaContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
-  CheckCircle, Zap, Target, Users, ShieldCheck, Lock,
+  CheckCircle, Target, Users, Lock,
   Building2, Loader2, ClipboardList, CalendarDays,
   RefreshCw, Play, AlertTriangle, XCircle, Info,
 } from "lucide-react";
@@ -36,6 +36,7 @@ export default function Dashboard() {
   const [isStale, setIsStale] = useState(false);
   const [issuesPanelOpen, setIssuesPanelOpen] = useState(false);
   const [finalLoading, setFinalLoading] = useState(false);
+  const [showFinalChecklist, setShowFinalChecklist] = useState(false);
 
   // Live survey counts
 
