@@ -649,6 +649,32 @@ export default function Roster() {
         }
       }
 
+      // Assign parental leave to 2 random doctors
+      const plCandidates = [...doctorsList].sort(() => Math.random() - 0.5).slice(0, 2);
+      for (const plDoctor of plCandidates) {
+        const rotaStartMs = new Date(rotaStart).getTime();
+        const rotaEndMs   = new Date(rotaEnd).getTime();
+        const maxOffset   = Math.max(0, Math.floor((rotaEndMs - rotaStartMs) / 86400000) - 14);
+        const offsetDays  = Math.floor(Math.random() * maxOffset);
+        const candidate   = new Date(rotaStartMs + offsetDays * 86400000);
+        const dow         = candidate.getDay();
+        const toMonday    = dow === 1 ? 0 : (8 - dow) % 7 || 7;
+        const plStart     = new Date(candidate.getTime() + toMonday * 86400000);
+        const plEnd       = new Date(plStart.getTime() + 13 * 86400000);
+        if (plEnd.getTime() <= rotaEndMs) {
+          await supabase
+            .from('doctor_survey_responses')
+            .update({
+              parental_leave_expected: true,
+              parental_leave_start:    plStart.toISOString().split('T')[0],
+              parental_leave_end:      plEnd.toISOString().split('T')[0],
+              parental_leave_notes:    'Parental leave — dates confirmed with HR.',
+            })
+            .eq('doctor_id', plDoctor.id)
+            .eq('rota_config_id', rotaConfigId);
+        }
+      }
+
       // 5. Refresh roster
       await loadDoctors();
 
