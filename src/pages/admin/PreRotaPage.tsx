@@ -105,7 +105,7 @@ export default function PreRotaPage() {
   };
 
   return (
-    <AdminLayout title="Pre-Rota" subtitle="Calendar, targets and data validation">
+    <AdminLayout title="Pre-Rota" subtitle="Calendar, targets and data validation" accentColor="blue">
       <div className="mx-auto max-w-3xl space-y-5">
         {/* Back link + re-generate */}
         <div className="flex items-center justify-between">

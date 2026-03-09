@@ -296,7 +296,7 @@ export default function DepartmentStep3() {
   const canSave = errors.length === 0;
 
   return (
-    <AdminLayout title="Department Setup" subtitle="Step 3 of 3 — Staffing">
+    <AdminLayout title="Department Setup" subtitle="Step 3 of 3 — Staffing" accentColor="purple">
       <div className="mx-auto max-w-3xl space-y-6">
         {/* Info banner */}
         <div className="flex items-center gap-2 rounded-lg border border-purple-200 bg-purple-50 px-4 py-2.5 text-sm font-medium text-purple-700">

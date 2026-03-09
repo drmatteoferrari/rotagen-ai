@@ -102,7 +102,7 @@ export default function PreRotaTargetsPage() {
 
   if (loading) {
     return (
-      <AdminLayout title="Shift Hour Targets">
+      <AdminLayout title="Shift Hour Targets" accentColor="blue">
         <div className="flex items-center justify-center min-h-[300px]">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           <span className="ml-2 text-sm text-muted-foreground">Loading targets…</span>
@@ -113,7 +113,7 @@ export default function PreRotaTargetsPage() {
 
   if (loadError || errorMsg || !targetsData) {
     return (
-      <AdminLayout title="Shift Hour Targets">
+      <AdminLayout title="Shift Hour Targets" accentColor="blue">
         <div className="mx-auto max-w-lg mt-12">
           <div className="rounded-xl border border-border bg-card p-6 text-center space-y-4">
             <AlertTriangle className="h-8 w-8 text-amber-500 mx-auto" />
@@ -130,7 +130,7 @@ export default function PreRotaTargetsPage() {
   const { doctors, shiftTypes, wtrMaxHoursPerWeek, hardWeeklyCap } = targetsData;
 
   return (
-    <AdminLayout title="Shift Hour Targets" subtitle={`${deptName}${deptName && hospitalName ? ' · ' : ''}${hospitalName}`}>
+    <AdminLayout title="Shift Hour Targets" subtitle={`${deptName}${deptName && hospitalName ? ' · ' : ''}${hospitalName}`} accentColor="blue">
       <div className="space-y-4">
         {/* Header bar */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">

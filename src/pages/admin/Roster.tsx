@@ -804,7 +804,7 @@ export default function Roster() {
   };
 
   return (
-    <AdminLayout title="Roster & Invites" subtitle="Build the team and send survey invitations">
+    <AdminLayout title="Roster & Invites" subtitle="Build the team and send survey invitations" accentColor="teal">
       <div className="mx-auto max-w-5xl space-y-4 sm:space-y-6">
 
         {/* DEV TOOLS Banner */}

@@ -177,7 +177,7 @@ export default function RotaPeriodStep2() {
   };
 
   return (
-    <AdminLayout title="Rota Period" subtitle="Step 2 of 2 — Bank Holidays">
+    <AdminLayout title="Rota Period" subtitle="Step 2 of 2 — Bank Holidays" accentColor="yellow">
       <div className="mx-auto max-w-3xl space-y-6">
         {/* Info banner */}
         <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-700">

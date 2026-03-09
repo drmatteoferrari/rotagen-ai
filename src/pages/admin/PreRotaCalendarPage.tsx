@@ -417,7 +417,7 @@ export default function PreRotaCalendarPage() {
 
   if (loading) {
     return (
-      <AdminLayout title="Availability Calendar">
+      <AdminLayout title="Availability Calendar" accentColor="blue">
         <div className="flex items-center justify-center min-h-[300px]">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           <span className="ml-2 text-sm text-muted-foreground">Loading calendar…</span>
@@ -428,7 +428,7 @@ export default function PreRotaCalendarPage() {
 
   if (loadError || errorMsg || !calendarData) {
     return (
-      <AdminLayout title="Availability Calendar">
+      <AdminLayout title="Availability Calendar" accentColor="blue">
         <div className="mx-auto max-w-lg mt-12">
           <div className="rounded-xl border border-border bg-card p-6 text-center space-y-4">
             <AlertTriangle className="h-8 w-8 text-amber-500 mx-auto" />
@@ -464,7 +464,7 @@ export default function PreRotaCalendarPage() {
     }).length;
 
     return (
-      <AdminLayout title="Availability Calendar">
+      <AdminLayout title="Availability Calendar" accentColor="blue">
         <div className="space-y-2">
           {/* Top bar */}
           <div className="flex items-center justify-between">
@@ -634,7 +634,7 @@ export default function PreRotaCalendarPage() {
   if (!week) return null;
 
   return (
-    <AdminLayout title="Availability Calendar" subtitle={`${deptName}${deptName && hospitalName ? ' · ' : ''}${hospitalName}`}>
+    <AdminLayout title="Availability Calendar" subtitle={`${deptName}${deptName && hospitalName ? ' · ' : ''}${hospitalName}`} accentColor="blue">
       <div className="space-y-4">
         {/* Header bar */}
         <div className="flex items-center justify-between">

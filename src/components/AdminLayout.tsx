@@ -30,9 +30,20 @@ interface AdminLayoutProps {
   children: ReactNode;
   title: string;
   subtitle?: string;
+  accentColor?: 'blue' | 'red' | 'yellow' | 'purple' | 'teal' | 'pink' | 'green';
 }
 
-export function AdminLayout({ children, title, subtitle }: AdminLayoutProps) {
+export function AdminLayout({ children, title, subtitle, accentColor = 'blue' }: AdminLayoutProps) {
+  const bgMap: Record<string, string> = {
+    blue:   'bg-blue-100',
+    red:    'bg-red-100',
+    yellow: 'bg-yellow-100',
+    purple: 'bg-purple-100',
+    teal:   'bg-teal-100',
+    pink:   'bg-pink-100',
+    green:  'bg-green-100',
+  };
+  const bgClass = bgMap[accentColor];
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -48,7 +59,7 @@ export function AdminLayout({ children, title, subtitle }: AdminLayoutProps) {
   // Mobile and tablet both use bottom nav bar layout
   if (isMobile || isTablet) {
     return (
-      <div className="flex min-h-screen w-full flex-col bg-background">
+      <div className={`flex min-h-screen w-full flex-col ${bgClass}`}>
         {/* Header */}
         <header className="flex h-14 items-center justify-between border-b border-border bg-card px-4">
           <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -102,7 +113,7 @@ export function AdminLayout({ children, title, subtitle }: AdminLayoutProps) {
   }
 
   return (
-    <div className="flex min-h-screen w-full bg-background">
+    <div className={`flex min-h-screen w-full ${bgClass}`}>
       {/* Sidebar */}
       <aside
         className={cn(
