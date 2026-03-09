@@ -108,25 +108,6 @@
 }
 
 body, #root {
-  background-color: #dbeafe;
+  background-color: #dbeafe; /* matches your default blue-100 */
   min-height: 100vh;
-}
-
-main {
-  animation: fadeSlideUp 0.35s ease-out forwards;
-}
-
-@keyframes fadeSlideUp {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-fadeSlideUp {
-  animation: fadeSlideUp 0.35s ease-out forwards;
 }

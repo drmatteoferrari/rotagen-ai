@@ -81,7 +81,6 @@ export function RotaProvider({ children }: { children: ReactNode }) {
       setRestoredConfig,
       restoreForUser,
       clearSession,
-      contextReady,
     }}>
       {children}
     </RotaContext.Provider>
