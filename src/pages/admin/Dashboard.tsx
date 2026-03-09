@@ -306,7 +306,7 @@ export default function Dashboard() {
             </div>
           )}
           {isStale && preRotaResult && (
-            <div className="mt-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 flex items-center gap-2">
+            <div className="mt-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 flex items-center justify-center gap-2">
               <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
               <p className="text-[11px] text-amber-800">Data changed — re-generate to update.</p>
             </div>
@@ -318,7 +318,7 @@ export default function Dashboard() {
               </span>
               <button
                 onClick={() => navigate('/admin/pre-rota')}
-                className="text-[11px] font-medium text-primary hover:underline"
+                className="text-[11px] font-semibold text-primary bg-primary/10 hover:bg-primary/20 px-2.5 py-1 rounded-md transition-colors"
               >
                 View details →
               </button>
