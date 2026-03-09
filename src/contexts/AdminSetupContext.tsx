@@ -54,13 +54,14 @@ interface AdminSetupContextType {
 const AdminSetupContext = createContext<AdminSetupContextType | undefined>(undefined);
 
 export function AdminSetupProvider({ children }: { children: ReactNode }) {
-  const [isDepartmentComplete, setDepartmentComplete] = useState(false);
-  const [isWtrComplete, setWtrComplete] = useState(false);
-  const [isPeriodComplete, setPeriodComplete] = useState(false);
+  const hasSavedConfig = !!sessionStorage.getItem("currentRotaConfigId") || !!localStorage.getItem("currentRotaConfigId");
+  const [isDepartmentComplete, setDepartmentComplete] = useState(hasSavedConfig);
+  const [isWtrComplete, setWtrComplete] = useState(hasSavedConfig);
+  const [isPeriodComplete, setPeriodComplete] = useState(hasSavedConfig);
   const [areSurveysDone, setSurveysDone] = useState(false);
   const [rotaStartDate, setRotaStartDate] = useState<Date | undefined>();
   const [rotaEndDate, setRotaEndDate] = useState<Date | undefined>();
-  const [restoredFromDb, setRestoredFromDb] = useState(false);
+  const [restoredFromDb, setRestoredFromDb] = useState(hasSavedConfig);
   // WTR Step 1
   const [maxAvgWeekly, setMaxAvgWeekly] = useState(48);
   const [maxIn7Days, setMaxIn7Days] = useState(72);
