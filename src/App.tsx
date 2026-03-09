@@ -30,6 +30,7 @@ import Audit from "./pages/Audit";
 import PreRotaCalendarPage from "./pages/admin/PreRotaCalendarPage";
 import PreRotaTargetsPage from "./pages/admin/PreRotaTargetsPage";
 import PreRotaPage from "./pages/admin/PreRotaPage";
+import { AdminShell } from "./components/AdminShell";
 
 const queryClient = new QueryClient();
 // ✅ Section 2 complete
@@ -57,21 +58,23 @@ const App = () => (
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-          <Route path="/admin/dashboard" element={<ProtectedRoute requiredRole="coordinator"><Dashboard /></ProtectedRoute>} />
-          <Route path="/admin/rota-period/step-1" element={<ProtectedRoute requiredRole="coordinator"><RotaPeriodStep1 /></ProtectedRoute>} />
-          <Route path="/admin/rota-period/step-2" element={<ProtectedRoute requiredRole="coordinator"><RotaPeriodStep2 /></ProtectedRoute>} />
-          <Route path="/admin/department/step-1" element={<ProtectedRoute requiredRole="coordinator"><DepartmentStep1 /></ProtectedRoute>} />
-          <Route path="/admin/department/step-2" element={<ProtectedRoute requiredRole="coordinator"><DepartmentStep2 /></ProtectedRoute>} />
-          <Route path="/admin/department/step-3" element={<ProtectedRoute requiredRole="coordinator"><DepartmentStep3 /></ProtectedRoute>} />
-          <Route path="/admin/wtr/step-1" element={<ProtectedRoute requiredRole="coordinator"><WtrStep1 /></ProtectedRoute>} />
-          <Route path="/admin/wtr/step-2" element={<ProtectedRoute requiredRole="coordinator"><WtrStep2 /></ProtectedRoute>} />
-          <Route path="/admin/wtr/step-3" element={<ProtectedRoute requiredRole="coordinator"><WtrStep3 /></ProtectedRoute>} />
-          <Route path="/admin/wtr/step-4" element={<ProtectedRoute requiredRole="coordinator"><WtrStep4 /></ProtectedRoute>} />
-          <Route path="/admin/roster" element={<ProtectedRoute requiredRole="coordinator"><Roster /></ProtectedRoute>} />
-          <Route path="/admin/pre-rota" element={<ProtectedRoute requiredRole="coordinator"><PreRotaPage /></ProtectedRoute>} />
-          <Route path="/admin/pre-rota-calendar" element={<ProtectedRoute requiredRole="coordinator"><PreRotaCalendarPage /></ProtectedRoute>} />
-          <Route path="/admin/pre-rota-targets" element={<ProtectedRoute requiredRole="coordinator"><PreRotaTargetsPage /></ProtectedRoute>} />
-          <Route path="/admin/survey-override/:doctorId/:step" element={<ProtectedRoute requiredRole="coordinator"><SurveyOverride /></ProtectedRoute>} />
+          <Route element={<ProtectedRoute requiredRole="coordinator"><AdminShell /></ProtectedRoute>}>
+            <Route path="/admin/dashboard" element={<Dashboard />} />
+            <Route path="/admin/rota-period/step-1" element={<RotaPeriodStep1 />} />
+            <Route path="/admin/rota-period/step-2" element={<RotaPeriodStep2 />} />
+            <Route path="/admin/department/step-1" element={<DepartmentStep1 />} />
+            <Route path="/admin/department/step-2" element={<DepartmentStep2 />} />
+            <Route path="/admin/department/step-3" element={<DepartmentStep3 />} />
+            <Route path="/admin/wtr/step-1" element={<WtrStep1 />} />
+            <Route path="/admin/wtr/step-2" element={<WtrStep2 />} />
+            <Route path="/admin/wtr/step-3" element={<WtrStep3 />} />
+            <Route path="/admin/wtr/step-4" element={<WtrStep4 />} />
+            <Route path="/admin/roster" element={<Roster />} />
+            <Route path="/admin/pre-rota" element={<PreRotaPage />} />
+            <Route path="/admin/pre-rota-calendar" element={<PreRotaCalendarPage />} />
+            <Route path="/admin/pre-rota-targets" element={<PreRotaTargetsPage />} />
+            <Route path="/admin/survey-override/:doctorId/:step" element={<SurveyOverride />} />
+          </Route>
           {/* Doctor survey — token-based, no auth required */}
           <Route path="/doctor/survey" element={<Survey />} />
           <Route path="/audit" element={<Audit />} />
