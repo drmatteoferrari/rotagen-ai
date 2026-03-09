@@ -11,6 +11,8 @@ import { ReactNode } from "react";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
+import ForgotPassword from "./pages/ForgotPassword";
+import Signup from "./pages/Signup";
 import Roster from "./pages/admin/Roster";
 import Dashboard from "./pages/admin/Dashboard";
 import RotaPeriodStep1 from "./pages/admin/RotaPeriodStep1";
