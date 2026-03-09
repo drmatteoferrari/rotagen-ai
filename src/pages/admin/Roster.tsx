@@ -421,7 +421,7 @@ export default function Roster() {
 
     // Specialties
     const specialties_requested = isSenior(grade)
-      ? [{ specialty: pick(['Cardiac', 'Neuro', 'Paediatric', 'Obstetric', 'Pain']), notes: '' }]
+      ? [{ name: pick(['Cardiac', 'Neuro', 'Paediatric', 'Obstetric', 'Pain']), notes: '' }]
       : [];
 
     const want_pain_sessions = isSenior(grade) && Math.random() < 0.3;
