@@ -21,6 +21,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useRotaContext } from "@/contexts/RotaContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { buildSurveyLink } from "@/lib/surveyLinks";
+import { useDoctorsQuery, useRotaConfigDetailsQuery, useInvalidateQuery } from "@/hooks/useAdminQueries";
 
 
 // SECTION 6 — Doctor interface from DB
