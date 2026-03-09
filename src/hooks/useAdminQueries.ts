@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useRotaContext } from "@/contexts/RotaContext";
 import { useAuth } from "@/contexts/AuthContext";
-import type { PreRotaResult } from "@/lib/preRotaTypes";
+import type { PreRotaResult, PreRotaStatus } from "@/lib/preRotaTypes";
 
 // ─── Account Settings ───
 export function useAccountSettingsQuery() {
