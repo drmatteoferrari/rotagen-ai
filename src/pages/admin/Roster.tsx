@@ -551,7 +551,7 @@ export default function Roster() {
   };
 
   const handleCancelAllSurveys = async () => {
-    const rotaConfigId = localStorage.getItem('currentRotaConfigId');
+    const rotaConfigId = currentRotaConfigId;
     if (!rotaConfigId) {
       toast.error('No active rota config');
       return;
