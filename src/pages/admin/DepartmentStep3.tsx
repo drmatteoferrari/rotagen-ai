@@ -297,7 +297,7 @@ export default function DepartmentStep3() {
 
   return (
     <AdminLayout title="Department Setup" subtitle="Step 3 of 3 — Staffing" accentColor="purple">
-      <div className="mx-auto max-w-3xl space-y-6">
+      <div className="mx-auto max-w-3xl space-y-6 animate-fadeSlideUp">
         {/* Info banner */}
         <div className="flex items-center gap-2 rounded-lg border border-purple-200 bg-purple-50 px-4 py-2.5 text-sm font-medium text-purple-700">
           <Info className="h-4 w-4 shrink-0 text-purple-600" />
