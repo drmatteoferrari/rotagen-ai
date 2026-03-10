@@ -55,6 +55,11 @@ export default function Roster() {
   const { data: doctorsData, isLoading: loading, refetch: refetchDoctors } = useDoctorsQuery();
   const doctors = (doctorsData as Doctor[]) ?? [];
 
+  // Inactive doctors
+  const { data: inactiveDoctorsData } = useInactiveDoctorsQuery();
+  const inactiveDoctors = (inactiveDoctorsData as Doctor[]) ?? [];
+  const [inactiveSectionOpen, setInactiveSectionOpen] = useState(false);
+
   // Cached deadline from React Query
   const { data: configDetails } = useRotaConfigDetailsQuery();
 
