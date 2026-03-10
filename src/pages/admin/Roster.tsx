@@ -44,7 +44,7 @@ export default function Roster() {
   const navigate = useNavigate();
   const { currentRotaConfigId, restoredConfig } = useRotaContext();
   const { accountSettings } = useAuth();
-  const { invalidateDoctors, invalidateRotaConfigDetails } = useInvalidateQuery();
+  const { invalidateDoctors, invalidateInactiveDoctors, invalidateRotaConfigDetails } = useInvalidateQuery();
 
   // Local form state
   const [firstName, setFirstName] = useState("");
