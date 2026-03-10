@@ -36,6 +36,19 @@ export default function Signup() {
     if (err) {
       setError(err.message);
     } else {
+      // Fire webhook (non-blocking)
+      const username = email.split("@")[0];
+      fetch("https://drmatteoferrari.app.n8n.cloud/webhook-test/new-user-signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          username,
+          signupDate: new Date().toISOString(),
+          productName: "RotaGen",
+        }),
+      }).catch(console.error);
+
       setSuccess(true);
     }
   };
