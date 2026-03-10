@@ -220,6 +220,7 @@ export async function getCurrentRotaConfig(username: string): Promise<RotaConfig
     .select("id")
     .eq("owned_by", username)
     .in("status", ["draft", "complete"])
+    .eq("is_archived", false)
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();

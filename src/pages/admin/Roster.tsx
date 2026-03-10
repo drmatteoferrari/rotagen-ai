@@ -12,7 +12,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  Copy, Trash2, UserPlus, Send, Users, Pencil, CalendarIcon, Loader2, Check, AlertTriangle, Link2, ExternalLink,
+  Copy, Trash2, UserPlus, Send, Users, Pencil, CalendarIcon, Loader2, Check, AlertTriangle, Link2, ExternalLink, ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -21,7 +21,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useRotaContext } from "@/contexts/RotaContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { buildSurveyLink } from "@/lib/surveyLinks";
-import { useDoctorsQuery, useRotaConfigDetailsQuery, useInvalidateQuery } from "@/hooks/useAdminQueries";
+import { useDoctorsQuery, useInactiveDoctorsQuery, useRotaConfigDetailsQuery, useInvalidateQuery } from "@/hooks/useAdminQueries";
 
 
 // SECTION 6 — Doctor interface from DB
@@ -44,7 +44,7 @@ export default function Roster() {
   const navigate = useNavigate();
   const { currentRotaConfigId, restoredConfig } = useRotaContext();
   const { accountSettings } = useAuth();
-  const { invalidateDoctors, invalidateRotaConfigDetails } = useInvalidateQuery();
+  const { invalidateDoctors, invalidateInactiveDoctors, invalidateRotaConfigDetails } = useInvalidateQuery();
 
   // Local form state
   const [firstName, setFirstName] = useState("");
@@ -54,6 +54,11 @@ export default function Roster() {
   // Cached doctors from React Query
   const { data: doctorsData, isLoading: loading, refetch: refetchDoctors } = useDoctorsQuery();
   const doctors = (doctorsData as Doctor[]) ?? [];
+
+  // Inactive doctors
+  const { data: inactiveDoctorsData } = useInactiveDoctorsQuery();
+  const inactiveDoctors = (inactiveDoctorsData as Doctor[]) ?? [];
+  const [inactiveSectionOpen, setInactiveSectionOpen] = useState(false);
 
   // Cached deadline from React Query
   const { data: configDetails } = useRotaConfigDetailsQuery();
@@ -109,6 +114,21 @@ export default function Roster() {
     setFirstName(""); setLastName(""); setEmail("");
     toast.success(`${firstName} ${lastName} added to the roster`);
     loadDoctors();
+  };
+
+  // ─── Reactivate inactive doctor ───
+  const handleReactivate = async (doctorId: string) => {
+    const { error } = await supabase
+      .from('doctors')
+      .update({ is_active: true })
+      .eq('id', doctorId);
+    if (error) {
+      toast.error('Failed to reactivate doctor');
+      return;
+    }
+    invalidateDoctors();
+    invalidateInactiveDoctors();
+    toast.success('Doctor reactivated');
   };
 
   // ─── Remove doctor from DB ───
@@ -1023,6 +1043,49 @@ export default function Roster() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Inactive doctors section */}
+        {inactiveDoctors.length > 0 && (
+          <div className="rounded-xl border border-border bg-card shadow-sm">
+            <button
+              className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              onClick={() => setInactiveSectionOpen(v => !v)}
+            >
+              Inactive / Previous Period Doctors ({inactiveDoctors.length})
+              <ChevronDown className={`h-4 w-4 transition-transform ${inactiveSectionOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {inactiveSectionOpen && (
+              <div className="px-4 pb-4">
+                <div className="rounded-lg border border-border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Grade</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead className="text-right"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {inactiveDoctors.map(doc => (
+                        <TableRow key={doc.id}>
+                          <TableCell className="font-medium">{doc.last_name}, {doc.first_name}</TableCell>
+                          <TableCell>{doc.grade}</TableCell>
+                          <TableCell className="text-muted-foreground">{doc.email ?? '—'}</TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="outline" size="sm" onClick={() => handleReactivate(doc.id)}>
+                              Reactivate
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
     </AdminLayout>
