@@ -293,6 +293,7 @@ export type Database = {
           first_name: string
           grade: string | null
           id: string
+          is_active: boolean
           last_name: string
           rota_config_id: string
           survey_invite_count: number | null
@@ -308,6 +309,7 @@ export type Database = {
           first_name: string
           grade?: string | null
           id?: string
+          is_active?: boolean
           last_name: string
           rota_config_id: string
           survey_invite_count?: number | null
@@ -323,6 +325,7 @@ export type Database = {
           first_name?: string
           grade?: string | null
           id?: string
+          is_active?: boolean
           last_name?: string
           rota_config_id?: string
           survey_invite_count?: number | null
@@ -417,6 +420,7 @@ export type Database = {
           global_non_oncall_pct: number | null
           global_oncall_pct: number | null
           id: string
+          is_archived: boolean
           owned_by: string
           rota_duration_days: number | null
           rota_duration_weeks: number | null
@@ -438,6 +442,7 @@ export type Database = {
           global_non_oncall_pct?: number | null
           global_oncall_pct?: number | null
           id?: string
+          is_archived?: boolean
           owned_by?: string
           rota_duration_days?: number | null
           rota_duration_weeks?: number | null
@@ -459,6 +464,7 @@ export type Database = {
           global_non_oncall_pct?: number | null
           global_oncall_pct?: number | null
           id?: string
+          is_archived?: boolean
           owned_by?: string
           rota_duration_days?: number | null
           rota_duration_weeks?: number | null
