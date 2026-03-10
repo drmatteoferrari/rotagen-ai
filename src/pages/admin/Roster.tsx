@@ -1043,6 +1043,49 @@ export default function Roster() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Inactive doctors section */}
+        {inactiveDoctors.length > 0 && (
+          <div className="rounded-xl border border-border bg-card shadow-sm">
+            <button
+              className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              onClick={() => setInactiveSectionOpen(v => !v)}
+            >
+              Inactive / Previous Period Doctors ({inactiveDoctors.length})
+              <ChevronDown className={`h-4 w-4 transition-transform ${inactiveSectionOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {inactiveSectionOpen && (
+              <div className="px-4 pb-4">
+                <div className="rounded-lg border border-border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Grade</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead className="text-right"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {inactiveDoctors.map(doc => (
+                        <TableRow key={doc.id}>
+                          <TableCell className="font-medium">{doc.last_name}, {doc.first_name}</TableCell>
+                          <TableCell>{doc.grade}</TableCell>
+                          <TableCell className="text-muted-foreground">{doc.email ?? '—'}</TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="outline" size="sm" onClick={() => handleReactivate(doc.id)}>
+                              Reactivate
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
     </AdminLayout>
