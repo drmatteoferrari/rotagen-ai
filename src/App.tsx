@@ -61,6 +61,7 @@ const App = () => (
           <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
           <Route element={<ProtectedRoute requiredRole="coordinator"><AdminShell /></ProtectedRoute>}>
             <Route path="/admin/dashboard" element={<Dashboard />} />
+            <Route path="/admin/setup" element={<SetupPage />} />
             <Route path="/admin/rota-period/step-1" element={<RotaPeriodStep1 />} />
             <Route path="/admin/rota-period/step-2" element={<RotaPeriodStep2 />} />
             <Route path="/admin/department/step-1" element={<DepartmentStep1 />} />
