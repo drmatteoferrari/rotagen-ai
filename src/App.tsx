@@ -30,6 +30,7 @@ import Audit from "./pages/Audit";
 import PreRotaCalendarPage from "./pages/admin/PreRotaCalendarPage";
 import PreRotaTargetsPage from "./pages/admin/PreRotaTargetsPage";
 import PreRotaPage from "./pages/admin/PreRotaPage";
+import SetupPage from "./pages/admin/SetupPage";
 import { AdminShell } from "./components/AdminShell";
 
 const queryClient = new QueryClient();

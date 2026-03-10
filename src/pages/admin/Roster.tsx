@@ -116,6 +116,21 @@ export default function Roster() {
     loadDoctors();
   };
 
+  // ─── Reactivate inactive doctor ───
+  const handleReactivate = async (doctorId: string) => {
+    const { error } = await supabase
+      .from('doctors')
+      .update({ is_active: true })
+      .eq('id', doctorId);
+    if (error) {
+      toast.error('Failed to reactivate doctor');
+      return;
+    }
+    invalidateDoctors();
+    invalidateInactiveDoctors();
+    toast.success('Doctor reactivated');
+  };
+
   // ─── Remove doctor from DB ───
   const removeDoctor = async (id: string) => {
     const { error } = await supabase.from("doctors").delete().eq("id", id);
