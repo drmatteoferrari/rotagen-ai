@@ -69,26 +69,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [accountSettings, setAccountSettings] = useState<AccountSettings>(DEFAULT_ACCOUNT_SETTINGS);
   const { restoreForUser, clearSession } = useRotaContext();
   const navigate = useNavigate();
-  const handledRef = useRef(false);
+  const handledTokenRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session?.user) {
-        // Prevent double-handling
-        if (handledRef.current) return;
-        handledRef.current = true;
+        // Deduplicate using access token
+        const token = session.access_token;
+        if (handledTokenRef.current === token) return;
+        handledTokenRef.current = token;
 
         const email = session.user.email ?? "";
         if (!ALLOWED_EMAILS.includes(email)) {
-          await supabase.auth.signOut();
+          // Fire-and-forget sign out
+          void supabase.auth.signOut();
           setUser(null);
           setAccountSettings(DEFAULT_ACCOUNT_SETTINGS);
           toast.error("Access denied. You are not authorised to use this application.");
           navigate("/login", { replace: true });
-          handledRef.current = false;
           return;
         }
 
+        // Set user synchronously
         const mapped: AuthUser = {
           username: "developer1",
           email,
@@ -97,14 +99,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         };
         setUser(mapped);
 
-        const settings = await loadAccountSettings("developer1");
-        setAccountSettings(settings);
-        await restoreForUser("developer1");
-        navigate("/admin/dashboard", { replace: true });
+        // Fire-and-forget hydration
+        void (async () => {
+          try {
+            const settings = await loadAccountSettings("developer1");
+            setAccountSettings(settings);
+            await restoreForUser("developer1");
+          } catch (err) {
+            console.error("Hydration error:", err);
+          }
+          navigate("/admin/dashboard", { replace: true });
+        })();
       }
 
       if (event === "SIGNED_OUT") {
-        handledRef.current = false;
+        handledTokenRef.current = null;
         setUser(null);
         setAccountSettings(DEFAULT_ACCOUNT_SETTINGS);
         clearSession();
@@ -155,10 +164,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [restoreForUser]);
 
   const logout = useCallback(() => {
+    handledTokenRef.current = null;
     setUser(null);
     setAccountSettings(DEFAULT_ACCOUNT_SETTINGS);
     clearSession();
-    supabase.auth.signOut();
+    void supabase.auth.signOut();
   }, [clearSession]);
 
   return (
