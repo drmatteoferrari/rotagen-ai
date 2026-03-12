@@ -1,61 +1,42 @@
 
 
-## Problem
+# UI/UX Improvements Plan
 
-Google OAuth works in the Lovable preview but fails on the published URL (`https://rotagen-ai.lovable.app`). This is because the Lovable auth-bridge that handles OAuth token exchange only works within the preview iframe environment. On the published site, the `lovable.auth.signInWithOAuth` call goes through the auth-bridge which redirects back to the preview URL instead of the published URL.
+## Section 1 — Remove "Welcome back" toast
+Remove lines 98-100 in `src/contexts/AuthContext.tsx` (the `if (config)` block with `toast.info`). Config restoration continues silently.
 
-## Root Cause
+## Section 2 — Collapsible Department & Hospital on Dashboard
+Replace the current full card (lines 121-187 in Dashboard.tsx) with two-state logic:
 
-The `lovable.auth.signInWithOAuth("google", ...)` function uses the Lovable auth-bridge, which intercepts the OAuth flow. On the published domain, this bridge redirects to an incorrect URL after Google authentication completes, breaking the flow.
+- **STATE A** (not saved): `accountSettings.departmentName` and `accountSettings.trustName` are both null/empty after loading. Show full form as-is with helper text.
+- **STATE B** (saved): Show a compact single-line bar: `Building2` icon, department · trust, `Pencil` edit icon. Add `editing` state — clicking pencil expands inline inputs with Save/Cancel. Save calls existing `handleSaveAccountSettings`, then collapses. Cancel resets local state and collapses.
 
-## Fix — One change in `src/contexts/AuthContext.tsx`
+Determine state from loaded values (after `loadingSettings` resolves). The compact line is the first element in the content area.
 
-Update `googleLogin()` to detect whether the app is running on the published domain vs the Lovable preview domain, and use a different OAuth strategy for each:
+## Section 3 — Setup Progress redesign
+- Add step numbers as circular badges (1-4)
+- Rename: "Department", "Contract Rules (WTR)", "Rota Period", "Doctor Preferences"
+- Add icons: `Building2`, `ClipboardList`, `CalendarDays`, `Users`
+- Add `Pencil` edit icon at right of each row (always clickable)
+- Doctor Preferences row: clickable, navigates to `/admin/roster`
+- Fetch live survey counts from `doctors` table where `rota_config_id = currentRotaConfigId`. Show `X / Y responses received`. Remove hardcoded 10/16 and "Active" label.
 
-- **On `*.lovableproject.com`** (preview): Keep using `lovable.auth.signInWithOAuth` — the auth-bridge works correctly here.
-- **On the published domain** (`rotagen-ai.lovable.app` or any non-preview host): Use `supabase.auth.signInWithOAuth` directly with `skipBrowserRedirect: true`, then manually redirect to the returned Google URL. This bypasses the auth-bridge entirely.
+## Section 4 — Pointer events on DepartmentStep2 drag bars
+The drag bars already use pointer events (`onPointerDown`, `onPointerMove`, `onPointerUp`) — lines 32-53 and 104-123. The fix needed is:
+- Add `style={{ touchAction: 'none' }}` to the draggable bar `div` elements (lines 70-76 and 132-138)
+- Ensure min height of 44px for touch targets (currently `h-5` = 20px on DragBar, `h-8` = 32px on GlobalSplitBar — increase both to `h-11` = 44px)
 
-```typescript
-const googleLogin = useCallback(async () => {
-  const isPreview = window.location.hostname.includes("lovableproject.com");
+## Section 5 — Reset button visual states
+- **"Reset all to auto" button**: Compare each shift's current value to `autoShare`. If any differ by >0.5pp, show red style; otherwise muted/ghost.
+- **Per-shift reset icon**: Compare individual value to `autoShare`. If differs >0.5pp, show red with tooltip "Reset to auto (X%)"; otherwise grey/muted with tooltip "Percentage is at auto value".
+- Add a one-time pulse animation class for the red "Reset all" button.
 
-  if (isPreview) {
-    // Auth-bridge works in preview
-    const { error } = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-      extraParams: { prompt: "select_account", access_type: "online" },
-    });
-    if (error) {
-      console.error("Google sign-in error:", error);
-      toast.error("Failed to start Google sign-in.");
-    }
-  } else {
-    // Published domain — bypass auth-bridge
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/login`,
-        skipBrowserRedirect: true,
-        queryParams: { prompt: "select_account", access_type: "online" },
-      },
-    });
-    if (error) {
-      console.error("Google sign-in error:", error);
-      toast.error("Failed to start Google sign-in.");
-      return;
-    }
-    if (data?.url) {
-      window.location.href = data.url;
-    }
-  }
-}, []);
-```
+## Files Changed
 
-No other files need changes. The existing `onAuthStateChange` listener already handles the session after redirect, so it will work on both domains.
-
-## Technical Details
-
-- `skipBrowserRedirect: true` prevents the Supabase client from automatically navigating, giving us the raw Google OAuth URL to redirect to manually.
-- `redirectTo` is set to `${window.location.origin}/login` so after Google auth, the user returns to the app where `onAuthStateChange` fires with `INITIAL_SESSION` and completes login.
-- The `queryParams` option passes `prompt: select_account` through to Google directly (equivalent to `extraParams` in the Lovable wrapper).
+| File | Changes |
+|---|---|
+| `src/contexts/AuthContext.tsx` | Remove toast.info on login |
+| `src/pages/admin/Dashboard.tsx` | Two-state dept/hospital, redesigned setup progress with numbered badges/icons/edit icons, live survey count fetch |
+| `src/pages/admin/DepartmentStep2.tsx` | Add `touchAction: 'none'`, increase drag target height to 44px, reset button visual states based on auto-value comparison |
+| `src/index.css` | Add pulse-once keyframe animation for red reset button |
 

@@ -124,13 +124,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const googleLogin = useCallback(async () => {
-    const { error } = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-      extraParams: { prompt: "select_account", access_type: "online" },
-    });
-    if (error) {
-      console.error("Google sign-in error:", error);
-      toast.error("Failed to start Google sign-in.");
+    const isPreview = window.location.hostname.includes("lovableproject.com");
+
+    if (isPreview) {
+      const { error } = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: window.location.origin,
+        extraParams: { prompt: "select_account", access_type: "online" },
+      });
+      if (error) {
+        console.error("Google sign-in error:", error);
+        toast.error("Failed to start Google sign-in.");
+      }
+    } else {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/login`,
+          skipBrowserRedirect: true,
+          queryParams: { prompt: "select_account", access_type: "online" },
+        },
+      });
+      if (error) {
+        console.error("Google sign-in error:", error);
+        toast.error("Failed to start Google sign-in.");
+        return;
+      }
+      if (data?.url) {
+        window.location.href = data.url;
+      }
     }
   }, []);
 
