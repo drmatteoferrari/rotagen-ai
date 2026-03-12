@@ -124,13 +124,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const googleLogin = useCallback(async () => {
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: 'https://rotagen-ai.lovable.app/~oauth/callback',
-        queryParams: { prompt: 'select_account', access_type: 'online' }
-      }
+    const { error } = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin,
+      extraParams: { prompt: "select_account", access_type: "online" },
     });
+
+    if (error) {
+      console.error("Google sign-in error:", error);
+      toast.error("Failed to start Google sign-in.");
+    }
   }, []);
 
   const login = useCallback(async (usernameOrEmail: string, password: string) => {
