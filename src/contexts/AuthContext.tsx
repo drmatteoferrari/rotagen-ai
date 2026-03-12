@@ -1,10 +1,9 @@
-import { createContext, useContext, useState, ReactNode, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import { useRotaContext } from "@/contexts/RotaContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-// SECTION 4 — Login restores config; logout clears session
-// SECTION 4 — Account settings in AuthContext
+const ALLOWED_EMAILS = ["matteferro31@gmail.com"];
 
 interface AuthUser {
   username: string;
@@ -38,7 +37,6 @@ const HARDCODED_PASSWORD = "developer1";
 
 const DEFAULT_ACCOUNT_SETTINGS: AccountSettings = { departmentName: null, trustName: null };
 
-// Standalone utility — can be called from login and dashboard
 export async function loadAccountSettings(
   username: string
 ): Promise<AccountSettings> {
@@ -61,12 +59,66 @@ export async function loadAccountSettings(
   };
 }
 
+function mapSessionToUser(session: { user: { email?: string; user_metadata?: Record<string, any> } }): AuthUser {
+  const email = session.user.email ?? "";
+  return {
+    username: email,
+    email,
+    role: "coordinator",
+    displayName: session.user.user_metadata?.full_name ?? email,
+  };
+}
+
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [accountSettings, setAccountSettings] = useState<AccountSettings>(DEFAULT_ACCOUNT_SETTINGS);
   const { restoreForUser, clearSession } = useRotaContext();
+
+  // Supabase session detection
+  useEffect(() => {
+    // Set up listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_IN" && session?.user) {
+        const email = session.user.email ?? "";
+        if (!ALLOWED_EMAILS.includes(email)) {
+          await supabase.auth.signOut();
+          setUser(null);
+          setAccountSettings(DEFAULT_ACCOUNT_SETTINGS);
+          toast.error("Access denied. You are not authorised to use this application.");
+          return;
+        }
+        const mapped = mapSessionToUser(session);
+        setUser(mapped);
+        const settings = await loadAccountSettings(mapped.username);
+        setAccountSettings(settings);
+        await restoreForUser(mapped.username);
+      } else if (event === "SIGNED_OUT") {
+        setUser(null);
+        setAccountSettings(DEFAULT_ACCOUNT_SETTINGS);
+        clearSession();
+      }
+    });
+
+    // Then check existing session
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user) {
+        const email = session.user.email ?? "";
+        if (!ALLOWED_EMAILS.includes(email)) {
+          await supabase.auth.signOut();
+          return;
+        }
+        const mapped = mapSessionToUser(session);
+        setUser(mapped);
+        const settings = await loadAccountSettings(mapped.username);
+        setAccountSettings(settings);
+        await restoreForUser(mapped.username);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const login = useCallback(async (usernameOrEmail: string, password: string) => {
     const trimmed = usernameOrEmail.trim();
@@ -89,13 +141,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     setUser(HARDCODED_USER);
 
-    // Load account settings before redirect
     const settings = await loadAccountSettings(HARDCODED_USER.username);
     setAccountSettings(settings);
 
-    // Restore config from DB before redirect (silently)
     await restoreForUser(HARDCODED_USER.username);
-    // SECTION 1 COMPLETE
 
     return { success: true };
   }, [restoreForUser]);
@@ -104,6 +153,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setAccountSettings(DEFAULT_ACCOUNT_SETTINGS);
     clearSession();
+    supabase.auth.signOut();
   }, [clearSession]);
 
   return (
@@ -119,4 +169,5 @@ export function useAuth() {
   return ctx;
 }
 
-// SECTION 4 COMPLETE
+// SECTION 1 COMPLETE
+// SECTION 2 COMPLETE — no changes needed in Login.tsx
