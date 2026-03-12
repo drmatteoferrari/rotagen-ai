@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
+import { createContext, useContext, useState, ReactNode, useCallback } from "react";
 import { useRotaContext } from "@/contexts/RotaContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -23,7 +23,6 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (usernameOrEmail: string, password: string) => Promise<{ success: boolean; error?: { field: "username" | "password"; message: string } }>;
   logout: () => void;
-  googleLogin: () => Promise<void>;
   accountSettings: AccountSettings;
   setAccountSettings: (settings: AccountSettings) => void;
 }
@@ -69,58 +68,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [accountSettings, setAccountSettings] = useState<AccountSettings>(DEFAULT_ACCOUNT_SETTINGS);
   const { restoreForUser, clearSession } = useRotaContext();
 
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_IN' && session?.user) {
-          const email = session.user.email ?? '';
-          const ALLOWED = ['matteferro31@gmail.com'];
-          if (!ALLOWED.includes(email)) {
-            await supabase.auth.signOut();
-            toast.error('Access denied. You are not authorised to use this application.');
-            return;
-          }
-          setUser({
-            username: email,
-            email,
-            role: 'coordinator',
-            displayName: session.user.user_metadata?.full_name ?? email,
-          });
-          const settings = await loadAccountSettings(email);
-          setAccountSettings(settings);
-          await restoreForUser(email);
-        }
-        if (event === 'SIGNED_OUT') {
-          setUser(prev => {
-            if (prev && prev.username !== 'developer1') {
-              clearSession();
-              return null;
-            }
-            return prev;
-          });
-        }
-      }
-    );
-    return () => subscription.unsubscribe();
-  }, [restoreForUser, clearSession]);
-
-  const googleLogin = useCallback(async () => {
-    const origin = window.location.origin;
-    const isLovable = origin.includes('.lovable.app') || origin.includes('.lovableproject.com');
-    const redirectTo = isLovable
-      ? `${origin}/~oauth/callback`
-      : origin;
-
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo,
-        queryParams: { prompt: 'select_account', access_type: 'online' },
-        skipBrowserRedirect: false,
-      },
-    });
-  }, []);
-
   const login = useCallback(async (usernameOrEmail: string, password: string) => {
     const trimmed = usernameOrEmail.trim();
 
@@ -160,7 +107,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [clearSession]);
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout, googleLogin, accountSettings, setAccountSettings }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout, accountSettings, setAccountSettings }}>
       {children}
     </AuthContext.Provider>
   );
@@ -173,4 +120,3 @@ export function useAuth() {
 }
 
 // SECTION 4 COMPLETE
-// SECTION 1 COMPLETE
