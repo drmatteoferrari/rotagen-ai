@@ -1,6 +1,8 @@
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from "react";
+import { useNavigate } from "react-router-dom";
 import { useRotaContext } from "@/contexts/RotaContext";
 import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable/index";
 import { toast } from "sonner";
 
 const ALLOWED_EMAILS = ["matteferro31@gmail.com"];
@@ -21,6 +23,7 @@ interface AuthContextType {
   user: AuthUser | null;
   isAuthenticated: boolean;
   login: (usernameOrEmail: string, password: string) => Promise<{ success: boolean; error?: { field: "username" | "password"; message: string } }>;
+  googleLogin: () => Promise<void>;
   logout: () => void;
   accountSettings: AccountSettings;
   setAccountSettings: (settings: AccountSettings) => void;
@@ -59,66 +62,81 @@ export async function loadAccountSettings(
   };
 }
 
-function mapSessionToUser(session: { user: { email?: string; user_metadata?: Record<string, any> } }): AuthUser {
-  const email = session.user.email ?? "";
-  return {
-    username: email,
-    email,
-    role: "coordinator",
-    displayName: session.user.user_metadata?.full_name ?? email,
-  };
-}
-
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [accountSettings, setAccountSettings] = useState<AccountSettings>(DEFAULT_ACCOUNT_SETTINGS);
   const { restoreForUser, clearSession } = useRotaContext();
+  const navigate = useNavigate();
+  const handledCallbackRef = useRef(false);
 
-  // Supabase session detection
   useEffect(() => {
-    // Set up listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === "SIGNED_IN" && session?.user) {
-        const email = session.user.email ?? "";
-        if (!ALLOWED_EMAILS.includes(email)) {
-          await supabase.auth.signOut();
-          setUser(null);
-          setAccountSettings(DEFAULT_ACCOUNT_SETTINGS);
-          toast.error("Access denied. You are not authorised to use this application.");
-          return;
-        }
-        const mapped = mapSessionToUser(session);
-        setUser(mapped);
-        const settings = await loadAccountSettings(mapped.username);
-        setAccountSettings(settings);
-        await restoreForUser(mapped.username);
-      } else if (event === "SIGNED_OUT") {
+    const isPendingOAuth = sessionStorage.getItem("pendingOAuth") === "true";
+    sessionStorage.removeItem("pendingOAuth");
+
+    // Listen for sign-out only
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
+      if (event === "SIGNED_OUT") {
         setUser(null);
         setAccountSettings(DEFAULT_ACCOUNT_SETTINGS);
         clearSession();
       }
     });
 
-    // Then check existing session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session?.user) {
+    if (isPendingOAuth) {
+      // OAuth callback — process the session
+      (async () => {
+        if (handledCallbackRef.current) return;
+        handledCallbackRef.current = true;
+
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) return;
+
         const email = session.user.email ?? "";
         if (!ALLOWED_EMAILS.includes(email)) {
           await supabase.auth.signOut();
+          setUser(null);
+          setAccountSettings(DEFAULT_ACCOUNT_SETTINGS);
+          toast.error("Access denied. You are not authorised to use this application.");
+          navigate("/login", { replace: true });
           return;
         }
-        const mapped = mapSessionToUser(session);
+
+        const mapped: AuthUser = {
+          username: "developer1",
+          email,
+          role: "coordinator",
+          displayName: session.user.user_metadata?.full_name ?? email,
+        };
         setUser(mapped);
-        const settings = await loadAccountSettings(mapped.username);
+        const settings = await loadAccountSettings("developer1");
         setAccountSettings(settings);
-        await restoreForUser(mapped.username);
-      }
-    });
+        await restoreForUser("developer1");
+        navigate("/admin/dashboard", { replace: true });
+      })();
+    } else {
+      // Not a callback — clear any persisted Supabase session silently
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session) supabase.auth.signOut();
+      });
+    }
 
     return () => subscription.unsubscribe();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const googleLogin = useCallback(async () => {
+    sessionStorage.setItem("pendingOAuth", "true");
+    const { error } = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin,
+      extraParams: { prompt: "select_account", access_type: "online" },
+    });
+    if (error) {
+      sessionStorage.removeItem("pendingOAuth");
+      console.error("Google sign-in error:", error);
+      toast.error("Failed to start Google sign-in.");
+    }
+  }, []);
 
   const login = useCallback(async (usernameOrEmail: string, password: string) => {
     const trimmed = usernameOrEmail.trim();
@@ -157,7 +175,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [clearSession]);
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout, accountSettings, setAccountSettings }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, googleLogin, logout, accountSettings, setAccountSettings }}>
       {children}
     </AuthContext.Provider>
   );
@@ -170,4 +188,3 @@ export function useAuth() {
 }
 
 // SECTION 1 COMPLETE
-// SECTION 2 COMPLETE — no changes needed in Login.tsx
