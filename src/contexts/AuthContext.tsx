@@ -92,7 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         // Set user synchronously
         const mapped: AuthUser = {
-          username: "developer1",
+          username: email,
           email,
           role: "coordinator",
           displayName: session.user.user_metadata?.full_name ?? email ?? "Coordinator",
@@ -102,9 +102,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Fire-and-forget hydration
         void (async () => {
           try {
-            const settings = await loadAccountSettings("developer1");
+            const settings = await loadAccountSettings(email);
             setAccountSettings(settings);
-            await restoreForUser("developer1");
+            await restoreForUser(email);
           } catch (err) {
             console.error("Hydration error:", err);
           }
