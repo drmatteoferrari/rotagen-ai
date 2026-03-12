@@ -69,6 +69,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [accountSettings, setAccountSettings] = useState<AccountSettings>(DEFAULT_ACCOUNT_SETTINGS);
   const { restoreForUser, clearSession } = useRotaContext();
 
+  // Google OAuth auth state listener
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_IN' && session?.user) {
+          const email = session.user.email ?? '';
+          const ALLOWED = ['matteferro31@gmail.com'];
+          if (!ALLOWED.includes(email)) {
+            await supabase.auth.signOut();
+            toast.error('Access denied. You are not authorised to use this application.');
+            return;
+          }
+          setUser({
+            username: email,
+            email,
+            role: 'coordinator',
+            displayName: session.user.user_metadata?.full_name ?? email,
+          });
+          const settings = await loadAccountSettings(email);
+          setAccountSettings(settings);
+          await restoreForUser(email);
+        }
+        if (event === 'SIGNED_OUT') {
+          setUser(prev => {
+            if (prev && prev.username !== 'developer1') {
+              clearSession();
+              return null;
+            }
+            return prev;
+          });
+        }
+      }
+    );
+    return () => subscription.unsubscribe();
+  }, [restoreForUser, clearSession]);
+
   const login = useCallback(async (usernameOrEmail: string, password: string) => {
     const trimmed = usernameOrEmail.trim();
 
