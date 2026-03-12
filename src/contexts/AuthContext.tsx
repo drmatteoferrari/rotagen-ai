@@ -137,11 +137,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { success: true };
   }, [restoreForUser]);
 
-  const logout = useCallback(() => {
+  const googleLogin = useCallback(async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin,
+        queryParams: { prompt: 'select_account', access_type: 'online' },
+      },
+    });
+  }, []);
+
+  const logout = useCallback(async () => {
+    const isSupabaseUser = user && user.username !== 'developer1';
     setUser(null);
     setAccountSettings(DEFAULT_ACCOUNT_SETTINGS);
     clearSession();
-  }, [clearSession]);
+    if (isSupabaseUser) {
+      await supabase.auth.signOut();
+    }
+  }, [clearSession, user]);
 
   return (
     <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout, accountSettings, setAccountSettings }}>
