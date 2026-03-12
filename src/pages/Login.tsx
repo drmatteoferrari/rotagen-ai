@@ -16,6 +16,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ username?: string; password?: string }>({});
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const usernameRef = useRef<HTMLInputElement>(null);
 
