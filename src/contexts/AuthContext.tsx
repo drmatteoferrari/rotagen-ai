@@ -153,7 +153,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [clearSession]);
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout, accountSettings, setAccountSettings }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout, googleLogin, accountSettings, setAccountSettings }}>
       {children}
     </AuthContext.Provider>
   );
