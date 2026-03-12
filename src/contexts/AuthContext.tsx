@@ -124,9 +124,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const googleLogin = useCallback(async () => {
-    const isPreview = window.location.hostname.includes("lovableproject.com");
+    const hostname = window.location.hostname;
+    const isLovableDomain =
+      hostname.endsWith(".lovable.app") ||
+      hostname.endsWith(".lovableproject.com");
 
-    if (isPreview) {
+    if (isLovableDomain) {
       const { error } = await lovable.auth.signInWithOAuth("google", {
         redirect_uri: window.location.origin,
         extraParams: { prompt: "select_account", access_type: "online" },
