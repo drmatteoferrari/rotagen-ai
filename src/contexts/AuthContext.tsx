@@ -69,29 +69,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [accountSettings, setAccountSettings] = useState<AccountSettings>(DEFAULT_ACCOUNT_SETTINGS);
   const { restoreForUser, clearSession } = useRotaContext();
   const navigate = useNavigate();
-  const handledCallbackRef = useRef(false);
+  const handledRef = useRef(false);
 
   useEffect(() => {
-    const isPendingOAuth = sessionStorage.getItem("pendingOAuth") === "true";
-    sessionStorage.removeItem("pendingOAuth");
-
-    // Listen for sign-out only
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event) => {
-      if (event === "SIGNED_OUT") {
-        setUser(null);
-        setAccountSettings(DEFAULT_ACCOUNT_SETTINGS);
-        clearSession();
-      }
-    });
-
-    if (isPendingOAuth) {
-      // OAuth callback — process the session
-      (async () => {
-        if (handledCallbackRef.current) return;
-        handledCallbackRef.current = true;
-
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) return;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session?.user) {
+        // Prevent double-handling
+        if (handledRef.current) return;
+        handledRef.current = true;
 
         const email = session.user.email ?? "";
         if (!ALLOWED_EMAILS.includes(email)) {
@@ -100,6 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setAccountSettings(DEFAULT_ACCOUNT_SETTINGS);
           toast.error("Access denied. You are not authorised to use this application.");
           navigate("/login", { replace: true });
+          handledRef.current = false;
           return;
         }
 
@@ -107,32 +93,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           username: "developer1",
           email,
           role: "coordinator",
-          displayName: session.user.user_metadata?.full_name ?? email,
+          displayName: session.user.user_metadata?.full_name ?? email ?? "Coordinator",
         };
         setUser(mapped);
+
         const settings = await loadAccountSettings("developer1");
         setAccountSettings(settings);
         await restoreForUser("developer1");
         navigate("/admin/dashboard", { replace: true });
-      })();
-    } else {
-      // Not a callback — clear any persisted Supabase session silently
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session) supabase.auth.signOut();
-      });
-    }
+      }
+
+      if (event === "SIGNED_OUT") {
+        handledRef.current = false;
+        setUser(null);
+        setAccountSettings(DEFAULT_ACCOUNT_SETTINGS);
+        clearSession();
+      }
+    });
 
     return () => subscription.unsubscribe();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const googleLogin = useCallback(async () => {
-    sessionStorage.setItem("pendingOAuth", "true");
     const { error } = await lovable.auth.signInWithOAuth("google", {
       redirect_uri: window.location.origin,
       extraParams: { prompt: "select_account", access_type: "online" },
     });
     if (error) {
-      sessionStorage.removeItem("pendingOAuth");
       console.error("Google sign-in error:", error);
       toast.error("Failed to start Google sign-in.");
     }
