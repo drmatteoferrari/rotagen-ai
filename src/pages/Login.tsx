@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 
 export default function Login() {
-  const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated, googleLogin } = useAuth();
   const navigate = useNavigate();
 
   const [username, setUsername] = useState("");
@@ -16,6 +16,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ username?: string; password?: string }>({});
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const usernameRef = useRef<HTMLInputElement>(null);
 
@@ -139,6 +140,27 @@ export default function Login() {
               <div className="h-px flex-1 bg-border" />
             </div>
 
+            {/* Google sign-in */}
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              disabled={googleLoading || loading}
+              onClick={async () => {
+                setGoogleLoading(true);
+                await googleLogin();
+              }}
+            >
+              {googleLoading ? 'Redirecting to Google…' : 'Sign in with Google'}
+            </Button>
+
+            {/* Divider */}
+            <div className="my-5 flex items-center gap-3">
+              <div className="h-px flex-1 bg-border" />
+              <span className="text-xs text-muted-foreground">or</span>
+              <div className="h-px flex-1 bg-border" />
+            </div>
+
             {/* Create account */}
             <Button
               type="button"
@@ -175,4 +197,5 @@ export default function Login() {
       </div>
     </div>
   );
+// SECTION 2 COMPLETE
 }
