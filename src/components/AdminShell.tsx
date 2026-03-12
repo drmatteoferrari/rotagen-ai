@@ -1,10 +1,9 @@
 import { NavLink } from "@/components/NavLink";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
-  Settings,
-  CalendarDays,
-  Users,
   LayoutDashboard,
+  Wand2,
+  Users,
   Stethoscope,
   ChevronLeft,
   ChevronRight,
@@ -20,10 +19,8 @@ import { useAdminShell, AdminShellProvider } from "@/contexts/AdminShellContext"
 
 const navItems = [
   { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
-  { title: "Rota Period", url: "/admin/rota-period/step-1", icon: CalendarDays },
-  { title: "Department", url: "/admin/department/step-1", icon: Settings },
-  { title: "WTR", url: "/admin/wtr/step-1", icon: Stethoscope },
-  { title: "Roster", url: "/admin/roster", icon: Users },
+  { title: "Setup",     url: "/admin/setup",     icon: Wand2 },
+  { title: "Roster",    url: "/admin/roster",    icon: Users },
 ];
 
 function AdminShellInner() {

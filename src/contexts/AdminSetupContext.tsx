@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import { useRotaContext } from "@/contexts/RotaContext";
 import type { RotaConfig } from "@/lib/rotaConfig";
 
@@ -36,7 +36,7 @@ interface AdminSetupContextType {
   setRestPostBlock: (v: number) => void;
   setRestAfter7: (v: number) => void;
   setWeekendFreq: (v: number) => void;
-  // WTR Step 4 — Advanced on-call fields
+  // WTR Step 4
   oncallContinuousRestStart: string;
   oncallContinuousRestEnd: string;
   oncallIfRestNotMetMaxHours: number;
@@ -49,6 +49,8 @@ interface AdminSetupContextType {
   setOncallBreakFineThresholdPct: (v: number) => void;
   // Source tracking
   restoredFromDb: boolean;
+  // Reset
+  resetWtr: () => void;
 }
 
 const AdminSetupContext = createContext<AdminSetupContextType | undefined>(undefined);
@@ -73,7 +75,7 @@ export function AdminSetupProvider({ children }: { children: ReactNode }) {
   const [restPostBlock, setRestPostBlock] = useState(48);
   const [restAfter7, setRestAfter7] = useState(48);
   const [weekendFreq, setWeekendFreq] = useState(3);
-  // WTR Step 4 — Advanced on-call fields
+  // WTR Step 4
   const [oncallContinuousRestStart, setOncallContinuousRestStart] = useState("22:00");
   const [oncallContinuousRestEnd, setOncallContinuousRestEnd] = useState("07:00");
   const [oncallIfRestNotMetMaxHours, setOncallIfRestNotMetMaxHours] = useState(5);
@@ -109,7 +111,6 @@ export function AdminSetupProvider({ children }: { children: ReactNode }) {
       setRestPostBlock(w.restAfterLongH);
       setRestAfter7(w.restAfterStandardH);
       setWeekendFreq(w.weekendFrequency);
-      // Advanced on-call fields
       setOncallContinuousRestStart(w.oncall.continuousRestStart ?? "22:00");
       setOncallContinuousRestEnd(w.oncall.continuousRestEnd ?? "07:00");
       setOncallIfRestNotMetMaxHours(w.oncall.ifRestNotMetMaxHours ?? 5);
@@ -120,6 +121,24 @@ export function AdminSetupProvider({ children }: { children: ReactNode }) {
 
     setRestoredFromDb(true);
   }, [restoredConfig]);
+
+  const resetWtr = useCallback(() => {
+    setMaxAvgWeekly(48);
+    setMaxIn7Days(72);
+    setMaxConsecDays(7);
+    setMaxConsecLong(7);
+    setMaxConsecNights(4);
+    setRestPostNights(46);
+    setRestPostBlock(48);
+    setRestAfter7(48);
+    setWeekendFreq(3);
+    setOncallContinuousRestStart("22:00");
+    setOncallContinuousRestEnd("07:00");
+    setOncallIfRestNotMetMaxHours(5);
+    setOncallBreakReferenceWeeks(4);
+    setOncallBreakFineThresholdPct(25);
+    setWtrComplete(false);
+  }, []);
 
   return (
     <AdminSetupContext.Provider
@@ -133,6 +152,7 @@ export function AdminSetupProvider({ children }: { children: ReactNode }) {
         oncallContinuousRestStart, oncallContinuousRestEnd, oncallIfRestNotMetMaxHours, oncallBreakReferenceWeeks, oncallBreakFineThresholdPct,
         setOncallContinuousRestStart, setOncallContinuousRestEnd, setOncallIfRestNotMetMaxHours, setOncallBreakReferenceWeeks, setOncallBreakFineThresholdPct,
         restoredFromDb,
+        resetWtr,
       }}
     >
       {children}
