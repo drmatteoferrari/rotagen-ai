@@ -166,3 +166,4 @@ export function useAuth() {
 }
 
 // SECTION 4 COMPLETE
+// SECTION 1 COMPLETE

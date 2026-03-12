@@ -197,4 +197,5 @@ export default function Login() {
       </div>
     </div>
   );
+// SECTION 2 COMPLETE
 }
