@@ -140,6 +140,27 @@ export default function Login() {
               <div className="h-px flex-1 bg-border" />
             </div>
 
+            {/* Google sign-in */}
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              disabled={googleLoading || loading}
+              onClick={async () => {
+                setGoogleLoading(true);
+                await googleLogin();
+              }}
+            >
+              {googleLoading ? 'Redirecting to Google…' : 'Sign in with Google'}
+            </Button>
+
+            {/* Divider */}
+            <div className="my-5 flex items-center gap-3">
+              <div className="h-px flex-1 bg-border" />
+              <span className="text-xs text-muted-foreground">or</span>
+              <div className="h-px flex-1 bg-border" />
+            </div>
+
             {/* Create account */}
             <Button
               type="button"
