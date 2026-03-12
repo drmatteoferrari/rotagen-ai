@@ -105,11 +105,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [restoreForUser, clearSession]);
 
   const googleLogin = useCallback(async () => {
+    const origin = window.location.origin;
+    const isLovable = origin.includes('.lovable.app') || origin.includes('.lovableproject.com');
+    const redirectTo = isLovable
+      ? `${origin}/~oauth/callback`
+      : origin;
+
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: window.location.origin,
+        redirectTo,
         queryParams: { prompt: 'select_account', access_type: 'online' },
+        skipBrowserRedirect: false,
       },
     });
   }, []);
