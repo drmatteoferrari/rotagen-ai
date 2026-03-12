@@ -30,7 +30,6 @@ import Audit from "./pages/Audit";
 import PreRotaCalendarPage from "./pages/admin/PreRotaCalendarPage";
 import PreRotaTargetsPage from "./pages/admin/PreRotaTargetsPage";
 import PreRotaPage from "./pages/admin/PreRotaPage";
-import SetupPage from "./pages/admin/SetupPage";
 import { AdminShell } from "./components/AdminShell";
 
 const queryClient = new QueryClient();
@@ -61,7 +60,6 @@ const App = () => (
           <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
           <Route element={<ProtectedRoute requiredRole="coordinator"><AdminShell /></ProtectedRoute>}>
             <Route path="/admin/dashboard" element={<Dashboard />} />
-            <Route path="/admin/setup" element={<SetupPage />} />
             <Route path="/admin/rota-period/step-1" element={<RotaPeriodStep1 />} />
             <Route path="/admin/rota-period/step-2" element={<RotaPeriodStep2 />} />
             <Route path="/admin/department/step-1" element={<DepartmentStep1 />} />

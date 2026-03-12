@@ -19,11 +19,11 @@ export function useAccountSettingsQuery() {
       return data ?? null;
     },
     enabled: !!user?.username,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 5 * 60 * 1000, // 5 min
   });
 }
 
-// ─── Doctors List (active only) ───
+// ─── Doctors List ───
 export function useDoctorsQuery() {
   const { currentRotaConfigId } = useRotaContext();
   return useQuery({
@@ -34,29 +34,7 @@ export function useDoctorsQuery() {
         .from("doctors")
         .select("*")
         .eq("rota_config_id", currentRotaConfigId)
-        .eq("is_active", true)
-        .order("last_name", { ascending: true });
-      if (error) throw error;
-      return data ?? [];
-    },
-    enabled: !!currentRotaConfigId,
-    staleTime: 2 * 60 * 1000,
-  });
-}
-
-// ─── Inactive Doctors List ───
-export function useInactiveDoctorsQuery() {
-  const { currentRotaConfigId } = useRotaContext();
-  return useQuery({
-    queryKey: ["doctors_inactive", currentRotaConfigId],
-    queryFn: async () => {
-      if (!currentRotaConfigId) return [];
-      const { data, error } = await supabase
-        .from("doctors")
-        .select("*")
-        .eq("rota_config_id", currentRotaConfigId)
-        .eq("is_active", false)
-        .order("last_name", { ascending: true });
+        .order("created_at", { ascending: true });
       if (error) throw error;
       return data ?? [];
     },
@@ -91,6 +69,7 @@ export function usePreRotaResultQuery() {
         isStale: false,
       };
 
+      // Check staleness
       const [{ data: latestDoctors }, { data: latestSurveys }] = await Promise.all([
         supabase
           .from("doctors")
@@ -145,7 +124,6 @@ export function useInvalidateQuery() {
   const qc = useQueryClient();
   return {
     invalidateDoctors: () => qc.invalidateQueries({ queryKey: ["doctors"] }),
-    invalidateInactiveDoctors: () => qc.invalidateQueries({ queryKey: ["doctors_inactive"] }),
     invalidatePreRota: () => qc.invalidateQueries({ queryKey: ["pre_rota_result"] }),
     invalidateAccountSettings: () => qc.invalidateQueries({ queryKey: ["account_settings"] }),
     invalidateRotaConfigDetails: () => qc.invalidateQueries({ queryKey: ["rota_config_details"] }),

@@ -37,6 +37,7 @@ export interface ShiftType {
   badges: ShiftBadges;
   badgeOverrides: Partial<Record<BadgeKey, boolean>>;
   oncallManuallySet: boolean;
+  // ✅ Section 2 — competency & grade requirements
   reqIac: number;
   reqIaoc: number;
   reqIcu: number;
@@ -145,8 +146,8 @@ interface DepartmentSetupContextType {
   setGlobalOncallPct: (v: number) => void;
   shiftTargetOverrides: Record<string, number | undefined>;
   setShiftTargetOverrides: React.Dispatch<React.SetStateAction<Record<string, number | undefined>>>;
+  // ✅ Section 6 complete — expose isLoadingShifts
   isLoadingShifts: boolean;
-  resetDepartment: () => void;
 }
 
 const DepartmentSetupContext = createContext<DepartmentSetupContextType | undefined>(undefined);
@@ -157,8 +158,10 @@ export function DepartmentSetupProvider({ children }: { children: ReactNode }) {
   const [globalOncallPct, setGlobalOncallPct] = useState(50);
   const [shiftTargetOverrides, setShiftTargetOverrides] = useState<Record<string, number | undefined>>({});
 
+  // SECTION 5 — Restore shifts from config
   const { restoredConfig, currentRotaConfigId } = useRotaContext();
   const [isLoadingShifts, setIsLoadingShifts] = useState(false);
+  // ✅ Section 5 complete — ref guard to prevent dual restore race
   const hasLoadedShiftsFromDB = useRef(false);
 
   // Reset ref when config changes
@@ -166,10 +169,10 @@ export function DepartmentSetupProvider({ children }: { children: ReactNode }) {
     hasLoadedShiftsFromDB.current = false;
   }, [currentRotaConfigId]);
 
-  // Re-hydrate shift types from DB
+  // ✅ Section 4 complete — Re-hydrate shift types from DB when context is empty
   useEffect(() => {
     if (!currentRotaConfigId) return;
-    if (hasLoadedShiftsFromDB.current) return;
+    if (hasLoadedShiftsFromDB.current) return; // already hydrated
 
     const loadFromDb = async () => {
       setIsLoadingShifts(true);
@@ -227,23 +230,21 @@ export function DepartmentSetupProvider({ children }: { children: ReactNode }) {
     loadFromDb();
   }, [currentRotaConfigId]);
 
+  // ✅ Section 5 complete — restoredConfig effect no longer sets shifts (DB load is single source of truth)
   useEffect(() => {
     if (!restoredConfig || restoredConfig.shifts.length === 0) return;
+
+    // Only restore non-shift-type values from restoredConfig
     setGlobalOncallPct(restoredConfig.distribution.globalOncallPct);
+
+    // Restore per-shift target overrides
     const overrides: Record<string, number | undefined> = {};
     restoredConfig.distribution.byShift.forEach((bs) => {
       overrides[bs.shiftKey] = bs.targetPct;
     });
     setShiftTargetOverrides(overrides);
   }, [restoredConfig]);
-
-  const resetDepartment = useCallback(() => {
-    setShifts(defaultShifts);
-    setExpandedShiftId(null);
-    setGlobalOncallPct(50);
-    setShiftTargetOverrides({});
-    hasLoadedShiftsFromDB.current = false;
-  }, []);
+  // SECTION 5 COMPLETE
 
   const addShift = useCallback(() => {
     const id = String(Date.now());
@@ -280,7 +281,6 @@ export function DepartmentSetupProvider({ children }: { children: ReactNode }) {
         globalOncallPct, setGlobalOncallPct,
         shiftTargetOverrides, setShiftTargetOverrides,
         isLoadingShifts,
-        resetDepartment,
       }}
     >
       {children}
