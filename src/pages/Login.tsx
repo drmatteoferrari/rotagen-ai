@@ -164,7 +164,7 @@ export default function Login() {
               className="w-full flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
             >
               <Code className="h-3 w-3" />
-              Dev login (developer1)
+              Dev login
             </button>
           </CardContent>
         </Card>
