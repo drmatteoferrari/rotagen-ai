@@ -13,6 +13,7 @@ import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
 import Signup from "./pages/Signup";
+import Register from "./pages/Register";
 import Roster from "./pages/admin/Roster";
 import Dashboard from "./pages/admin/Dashboard";
 import RotaPeriodStep1 from "./pages/admin/RotaPeriodStep1";
@@ -57,7 +58,8 @@ const App = () => (
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/signup" element={<Signup />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/signup" element={<Navigate to="/register" replace />} />
           <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
           <Route element={<ProtectedRoute requiredRole="coordinator"><AdminShell /></ProtectedRoute>}>
             <Route path="/admin/dashboard" element={<Dashboard />} />

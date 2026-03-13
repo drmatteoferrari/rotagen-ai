@@ -79,6 +79,51 @@ export type Database = {
           },
         ]
       }
+      coordinator_accounts: {
+        Row: {
+          created_at: string | null
+          department: string | null
+          display_name: string
+          email: string
+          hospital: string | null
+          id: string
+          job_title: string | null
+          password: string
+          phone: string | null
+          status: string
+          updated_at: string | null
+          username: string
+        }
+        Insert: {
+          created_at?: string | null
+          department?: string | null
+          display_name: string
+          email: string
+          hospital?: string | null
+          id?: string
+          job_title?: string | null
+          password: string
+          phone?: string | null
+          status?: string
+          updated_at?: string | null
+          username: string
+        }
+        Update: {
+          created_at?: string | null
+          department?: string | null
+          display_name?: string
+          email?: string
+          hospital?: string | null
+          id?: string
+          job_title?: string | null
+          password?: string
+          phone?: string | null
+          status?: string
+          updated_at?: string | null
+          username?: string
+        }
+        Relationships: []
+      }
       doctor_survey_responses: {
         Row: {
           additional_notes: string | null

@@ -27,36 +27,28 @@ export default function Login() {
     usernameRef.current?.focus();
   }, []);
 
+  const doLogin = async (user: string, pass: string) => {
+    setLoading(true);
+    const result = await login(user, pass);
+    if (result.success) {
+      navigate("/", { replace: true });
+    } else if (result.error) {
+      setErrors({ [result.error.field]: result.error.message });
+    }
+    setLoading(false);
+  };
+
   const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
     if (loading) return;
-
-    setLoading(true);
-    setTimeout(async () => {
-      const result = await login(username, password);
-      if (result.success) {
-        navigate("/", { replace: true });
-      } else if (result.error) {
-        setErrors({ [result.error.field]: result.error.message });
-      }
-      setLoading(false);
-    }, 600);
+    doLogin(username, password);
   };
 
   const handleDevLogin = () => {
     setUsername("developer1");
     setPassword("developer1");
     setErrors({});
-    setTimeout(() => {
-      setLoading(true);
-      setTimeout(async () => {
-        const result = await login("developer1", "developer1");
-        if (result.success) {
-          navigate("/", { replace: true });
-        }
-        setLoading(false);
-      }, 600);
-    }, 400);
+    doLogin("developer1", "developer1");
   };
 
   return (
@@ -77,14 +69,14 @@ export default function Login() {
             <h2 className="mb-5 text-center text-lg font-semibold text-card-foreground">Sign in to your account</h2>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Username / email */}
+              {/* Username */}
               <div className="space-y-1.5">
-                <Label htmlFor="username">Username or email</Label>
+                <Label htmlFor="username">Username</Label>
                 <Input
                   ref={usernameRef}
                   id="username"
                   type="text"
-                  placeholder="e.g. developer1"
+                  placeholder="Your username"
                   value={username}
                   onChange={(e) => { setUsername(e.target.value); setErrors((p) => ({ ...p, username: undefined })); }}
                 />
@@ -139,15 +131,15 @@ export default function Login() {
               <div className="h-px flex-1 bg-border" />
             </div>
 
-            {/* Create account */}
+            {/* Request access */}
             <Button
               type="button"
               variant="outline"
               className="w-full"
-              onClick={() => navigate('/signup')}
+              onClick={() => navigate('/register')}
               disabled={loading}
             >
-              Create an account
+              Request access
             </Button>
 
             {/* Dev divider */}
