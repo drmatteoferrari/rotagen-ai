@@ -88,6 +88,7 @@ export type Database = {
           hospital: string | null
           id: string
           job_title: string | null
+          must_change_password: boolean
           password: string
           phone: string | null
           status: string
@@ -102,6 +103,7 @@ export type Database = {
           hospital?: string | null
           id?: string
           job_title?: string | null
+          must_change_password?: boolean
           password: string
           phone?: string | null
           status?: string
@@ -116,6 +118,7 @@ export type Database = {
           hospital?: string | null
           id?: string
           job_title?: string | null
+          must_change_password?: boolean
           password?: string
           phone?: string | null
           status?: string
@@ -452,6 +455,51 @@ export type Database = {
           email?: string
           full_name?: string | null
           id?: string
+        }
+        Relationships: []
+      }
+      registration_requests: {
+        Row: {
+          approval_token: string
+          approved_at: string | null
+          created_at: string | null
+          department: string | null
+          email: string
+          full_name: string
+          heard_from: string | null
+          hospital: string | null
+          id: string
+          job_title: string | null
+          phone: string | null
+          status: string
+        }
+        Insert: {
+          approval_token?: string
+          approved_at?: string | null
+          created_at?: string | null
+          department?: string | null
+          email: string
+          full_name: string
+          heard_from?: string | null
+          hospital?: string | null
+          id?: string
+          job_title?: string | null
+          phone?: string | null
+          status?: string
+        }
+        Update: {
+          approval_token?: string
+          approved_at?: string | null
+          created_at?: string | null
+          department?: string | null
+          email?: string
+          full_name?: string
+          heard_from?: string | null
+          hospital?: string | null
+          id?: string
+          job_title?: string | null
+          phone?: string | null
+          status?: string
         }
         Relationships: []
       }
