@@ -1,104 +1,42 @@
 
 
-## Plan: Coordinator Registration Approval & Onboarding Flow
+# UI/UX Improvements Plan
 
-This implements a 9-section change: a new `registration_requests` table, an approval page triggered by email links, a forced password-change flow for new accounts, and updates to the auth context and routing.
+## Section 1 — Remove "Welcome back" toast
+Remove lines 98-100 in `src/contexts/AuthContext.tsx` (the `if (config)` block with `toast.info`). Config restoration continues silently.
 
----
+## Section 2 — Collapsible Department & Hospital on Dashboard
+Replace the current full card (lines 121-187 in Dashboard.tsx) with two-state logic:
 
-### Critical Issue: RLS Policies
+- **STATE A** (not saved): `accountSettings.departmentName` and `accountSettings.trustName` are both null/empty after loading. Show full form as-is with helper text.
+- **STATE B** (saved): Show a compact single-line bar: `Building2` icon, department · trust, `Pencil` edit icon. Add `editing` state — clicking pencil expands inline inputs with Save/Cancel. Save calls existing `handleSaveAccountSettings`, then collapses. Cancel resets local state and collapses.
 
-The `coordinator_accounts` table currently only allows `SELECT`. The `/approve` page needs to `INSERT` new accounts from the browser using the anon client. The migration must add an INSERT policy on `coordinator_accounts` and UPDATE policies on `registration_requests`. The provided migration SQL already covers `registration_requests` policies. We need to add:
+Determine state from loaded values (after `loadingSettings` resolves). The compact line is the first element in the content area.
 
-```sql
-CREATE POLICY "Allow public insert for approval"
-  ON public.coordinator_accounts FOR INSERT WITH CHECK (true);
+## Section 3 — Setup Progress redesign
+- Add step numbers as circular badges (1-4)
+- Rename: "Department", "Contract Rules (WTR)", "Rota Period", "Doctor Preferences"
+- Add icons: `Building2`, `ClipboardList`, `CalendarDays`, `Users`
+- Add `Pencil` edit icon at right of each row (always clickable)
+- Doctor Preferences row: clickable, navigates to `/admin/roster`
+- Fetch live survey counts from `doctors` table where `rota_config_id = currentRotaConfigId`. Show `X / Y responses received`. Remove hardcoded 10/16 and "Active" label.
 
-CREATE POLICY "Allow public update for password change"
-  ON public.coordinator_accounts FOR UPDATE USING (true);
-```
+## Section 4 — Pointer events on DepartmentStep2 drag bars
+The drag bars already use pointer events (`onPointerDown`, `onPointerMove`, `onPointerUp`) — lines 32-53 and 104-123. The fix needed is:
+- Add `style={{ touchAction: 'none' }}` to the draggable bar `div` elements (lines 70-76 and 132-138)
+- Ensure min height of 44px for touch targets (currently `h-5` = 20px on DragBar, `h-8` = 32px on GlobalSplitBar — increase both to `h-11` = 44px)
 
-Without these, the approval page and password change page will silently fail.
+## Section 5 — Reset button visual states
+- **"Reset all to auto" button**: Compare each shift's current value to `autoShare`. If any differ by >0.5pp, show red style; otherwise muted/ghost.
+- **Per-shift reset icon**: Compare individual value to `autoShare`. If differs >0.5pp, show red with tooltip "Reset to auto (X%)"; otherwise grey/muted with tooltip "Percentage is at auto value".
+- Add a one-time pulse animation class for the red "Reset all" button.
 
----
+## Files Changed
 
-### Section 1 — Database Migration
-
-Create migration with:
-- `registration_requests` table (id, approval_token, full_name, email, phone, job_title, hospital, department, heard_from, status, created_at, approved_at)
-- RLS: public INSERT, SELECT, and UPDATE
-- Add `must_change_password boolean NOT NULL DEFAULT false` to `coordinator_accounts`
-- Set `must_change_password = false` for `developer1`
-- Add INSERT and UPDATE RLS policies on `coordinator_accounts`
-
-### Section 2 — Update `Register.tsx`
-
-Change `handleSubmit` to:
-1. Insert into `registration_requests` via anon client, retrieve `approval_token`
-2. Then invoke `send-registration-request` edge function with form data + `approvalToken`
-3. If DB insert fails → show error, skip edge function
-4. If edge function fails → still show success (request is saved)
-
-### Section 3 — Replace `send-registration-request` Edge Function
-
-Update to accept `approvalToken` in body. Construct approval URL: `https://rotagen-ai.lovable.app/approve?token=[approvalToken]`. Add a styled "Approve Access" button in the HTML email. Email-only, no DB ops.
-
-### Section 4 — Create `send-welcome-email` Edge Function
-
-New edge function at `supabase/functions/send-welcome-email/index.ts`. Receives `to`, `fullName`, `username`. Sends welcome email with credentials and first-login instructions. Email-only.
-
-### Section 5 — Create `/approve` page (`src/pages/Approve.tsx`)
-
-Public page reading `?token=` query param. States: loading → invalid/already-approved → confirm → processing → success/error.
-
-On confirm:
-1. Generate username from email (`email.split('@')[0].toLowerCase().replace(...)`)
-2. Insert into `coordinator_accounts` (status: active, must_change_password: true)
-3. Update `registration_requests` (status: approved, approved_at: now)
-4. Invoke `send-welcome-email` edge function
-5. Show success message
-
-Styled consistently with Login page (centred card, RotaGen branding).
-
-### Section 6 — Create `/change-password` page (`src/pages/ChangePassword.tsx`)
-
-Protected route, no AdminShell wrapper. Two fields: new password (min 8 chars), confirm password. On submit:
-1. Validate match + length
-2. Update `coordinator_accounts` set password + `must_change_password = false`
-3. Call `refreshUser()` from AuthContext
-4. Navigate to `/admin/dashboard`
-
-### Section 7 — Update `AuthContext.tsx`
-
-Three targeted changes:
-- Add `mustChangePassword: boolean` to `AuthUser`
-- In `login()`, populate `mustChangePassword: row.must_change_password ?? false`
-- Add `refreshUser` callback that re-queries `coordinator_accounts` and updates user state
-- Expose `refreshUser` in context type and provider value
-
-### Section 8 — Update `App.tsx`
-
-- Import `Approve` and `ChangePassword`
-- Add public route `/approve`
-- Add protected route `/change-password`
-- Create `MustChangePasswordRoute` wrapper that redirects to `/change-password` when `user.mustChangePassword` is true
-- Wrap the coordinator `AdminShell` route group with `MustChangePasswordRoute`
-
-### Section 9 — Types Update
-
-Since `types.ts` is auto-generated and we can't edit it directly, we'll use `as any` casting for `registration_requests` queries (same pattern already used for `coordinator_accounts`). The `must_change_password` field on `coordinator_accounts` will also be accessed via the existing `as any` pattern.
-
----
-
-### Files Created
-- `supabase/migrations/[timestamp]_registration_approval_flow.sql`
-- `supabase/functions/send-welcome-email/index.ts`
-- `src/pages/Approve.tsx`
-- `src/pages/ChangePassword.tsx`
-
-### Files Modified
-- `src/pages/Register.tsx` — DB insert before edge function call
-- `supabase/functions/send-registration-request/index.ts` — approval URL in email
-- `src/contexts/AuthContext.tsx` — mustChangePassword + refreshUser
-- `src/App.tsx` — new routes + MustChangePasswordRoute wrapper
+| File | Changes |
+|---|---|
+| `src/contexts/AuthContext.tsx` | Remove toast.info on login |
+| `src/pages/admin/Dashboard.tsx` | Two-state dept/hospital, redesigned setup progress with numbered badges/icons/edit icons, live survey count fetch |
+| `src/pages/admin/DepartmentStep2.tsx` | Add `touchAction: 'none'`, increase drag target height to 44px, reset button visual states based on auto-value comparison |
+| `src/index.css` | Add pulse-once keyframe animation for red reset button |
 

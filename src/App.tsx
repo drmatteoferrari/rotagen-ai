@@ -28,6 +28,8 @@ import WtrStep4 from "./pages/admin/WtrStep4";
 import Survey from "./pages/doctor/Survey";
 import SurveyOverride from "./pages/admin/SurveyOverride";
 import Audit from "./pages/Audit";
+import Approve from "./pages/Approve";
+import ChangePassword from "./pages/ChangePassword";
 import PreRotaCalendarPage from "./pages/admin/PreRotaCalendarPage";
 import PreRotaTargetsPage from "./pages/admin/PreRotaTargetsPage";
 import PreRotaPage from "./pages/admin/PreRotaPage";
@@ -42,6 +44,12 @@ function ProtectedRoute({ children, requiredRole }: { children: ReactNode; requi
   const { isAuthenticated, user } = useAuth();
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (requiredRole && user?.role !== requiredRole) return <Navigate to="/login" replace />;
+  return <>{children}</>;
+}
+
+function MustChangePasswordRoute({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  if (user?.mustChangePassword) return <Navigate to="/change-password" replace />;
   return <>{children}</>;
 }
 
@@ -60,8 +68,10 @@ const App = () => (
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/register" element={<Register />} />
           <Route path="/signup" element={<Navigate to="/register" replace />} />
+          <Route path="/approve" element={<Approve />} />
+          <Route path="/change-password" element={<ProtectedRoute><ChangePassword /></ProtectedRoute>} />
           <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-          <Route element={<ProtectedRoute requiredRole="coordinator"><AdminShell /></ProtectedRoute>}>
+          <Route element={<ProtectedRoute requiredRole="coordinator"><MustChangePasswordRoute><AdminShell /></MustChangePasswordRoute></ProtectedRoute>}>
             <Route path="/admin/dashboard" element={<Dashboard />} />
             <Route path="/admin/setup" element={<SetupPage />} />
             <Route path="/admin/rota-period/step-1" element={<RotaPeriodStep1 />} />

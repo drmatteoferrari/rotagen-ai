@@ -8,6 +8,7 @@ interface AuthUser {
   email: string;
   role: string;
   displayName: string;
+  mustChangePassword: boolean;
 }
 
 interface AccountSettings {
@@ -20,6 +21,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (usernameOrEmail: string, password: string) => Promise<{ success: boolean; error?: { field: "username" | "password"; message: string } }>;
   logout: () => void;
+  refreshUser: () => Promise<void>;
   accountSettings: AccountSettings;
   setAccountSettings: (settings: AccountSettings) => void;
 }
@@ -87,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email: row.email,
       role: "coordinator",
       displayName: row.display_name,
+      mustChangePassword: row.must_change_password ?? false,
     };
 
     setUser(authUser);
@@ -105,8 +108,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearSession();
   }, [clearSession]);
 
+  const refreshUser = useCallback(async () => {
+    if (!user) return;
+    const { data } = await (supabase
+      .from('coordinator_accounts' as any)
+      .select('*')
+      .ilike('username', user.username)
+      .eq('status', 'active')
+      .maybeSingle() as any);
+    if (data) {
+      setUser({
+        username: data.username,
+        email: data.email,
+        role: 'coordinator',
+        displayName: data.display_name,
+        mustChangePassword: data.must_change_password ?? false,
+      });
+    }
+  }, [user]);
+
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout, accountSettings, setAccountSettings }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout, refreshUser, accountSettings, setAccountSettings }}>
       {children}
     </AuthContext.Provider>
   );

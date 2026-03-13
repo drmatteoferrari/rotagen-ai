@@ -41,11 +41,32 @@ export default function Register() {
 
     setLoading(true);
     try {
-      const { data, error: fnError } = await supabase.functions.invoke("send-registration-request", {
-        body: { fullName: fullName.trim(), email: email.trim(), phone: phone.trim(), jobTitle: jobTitle.trim(), hospital: hospital.trim(), department: department.trim(), heardFrom: heardFrom.trim() },
-      });
-      if (fnError) throw fnError;
-      if (data && !data.success) throw new Error(data.error || "Unknown error");
+      // Step 1: Insert into registration_requests and get approval_token
+      const { data: reqData, error: dbError } = await (supabase
+        .from('registration_requests' as any)
+        .insert({
+          full_name: fullName.trim(),
+          email: email.trim(),
+          phone: phone.trim(),
+          job_title: jobTitle.trim(),
+          hospital: hospital.trim(),
+          department: department.trim(),
+          heard_from: heardFrom.trim() || null,
+          status: 'pending',
+        })
+        .select('approval_token')
+        .single() as any);
+      if (dbError) throw dbError;
+
+      // Step 2: Call edge function (best-effort — request is already saved)
+      try {
+        await supabase.functions.invoke("send-registration-request", {
+          body: { fullName: fullName.trim(), email: email.trim(), phone: phone.trim(), jobTitle: jobTitle.trim(), hospital: hospital.trim(), department: department.trim(), heardFrom: heardFrom.trim(), approvalToken: reqData.approval_token },
+        });
+      } catch (emailErr) {
+        console.warn("Email notification failed (request still saved):", emailErr);
+      }
+
       setSuccess(true);
     } catch (err: any) {
       console.error("Registration request failed:", err);
