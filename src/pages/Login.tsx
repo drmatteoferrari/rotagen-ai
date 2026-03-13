@@ -45,10 +45,19 @@ export default function Login() {
   };
 
   const handleDevLogin = () => {
-    setUsername("developer1");
-    setPassword("developer1");
+    setUsername("matteferro31");
+    setPassword("matteferro31");
     setErrors({});
-    doLogin("developer1", "developer1");
+    setTimeout(() => {
+      setLoading(true);
+      setTimeout(async () => {
+        const result = await login("matteferro31", "matteferro31");
+        if (result.success) {
+          navigate("/", { replace: true });
+        }
+        setLoading(false);
+      }, 600);
+    }, 400);
   };
 
   return (
@@ -155,7 +164,7 @@ export default function Login() {
               className="w-full flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
             >
               <Code className="h-3 w-3" />
-              Dev login (developer1)
+              Dev login
             </button>
           </CardContent>
         </Card>
