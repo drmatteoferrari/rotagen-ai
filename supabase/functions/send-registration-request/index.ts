@@ -23,14 +23,16 @@ Deno.serve(async (req) => {
     }
 
     const resend = new Resend(apiKey);
-    const { fullName, email, phone, jobTitle, hospital, department, heardFrom } = await req.json();
+    const { fullName, email, phone, jobTitle, hospital, department, heardFrom, approvalToken } = await req.json();
 
-    if (!fullName || !email || !phone || !jobTitle || !hospital || !department) {
+    if (!fullName || !email || !approvalToken) {
       return new Response(
         JSON.stringify({ success: false, error: "Missing required fields" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    const approvalUrl = `https://rotagen-ai.lovable.app/approve?token=${approvalToken}`;
 
     const subject = `RotaGen — New Access Request: ${fullName}, ${department}, ${hospital}`;
 
@@ -41,13 +43,16 @@ Deno.serve(async (req) => {
 <table style="width:100%;border-collapse:collapse;margin-bottom:24px">
 <tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;font-weight:600;width:140px">Full name:</td><td style="padding:8px;border-bottom:1px solid #e5e7eb">${fullName}</td></tr>
 <tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;font-weight:600">Email:</td><td style="padding:8px;border-bottom:1px solid #e5e7eb">${email}</td></tr>
-<tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;font-weight:600">Phone:</td><td style="padding:8px;border-bottom:1px solid #e5e7eb">${phone}</td></tr>
-<tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;font-weight:600">Job title:</td><td style="padding:8px;border-bottom:1px solid #e5e7eb">${jobTitle}</td></tr>
-<tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;font-weight:600">Hospital / Trust:</td><td style="padding:8px;border-bottom:1px solid #e5e7eb">${hospital}</td></tr>
-<tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;font-weight:600">Department:</td><td style="padding:8px;border-bottom:1px solid #e5e7eb">${department}</td></tr>
-<tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;font-weight:600">Heard from:</td><td style="padding:8px;border-bottom:1px solid #e5e7eb">${heardFrom || '—'}</td></tr>
+<tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;font-weight:600">Phone:</td><td style="padding:8px;border-bottom:1px solid #e5e7eb">${phone || "—"}</td></tr>
+<tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;font-weight:600">Job title:</td><td style="padding:8px;border-bottom:1px solid #e5e7eb">${jobTitle || "—"}</td></tr>
+<tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;font-weight:600">Hospital / Trust:</td><td style="padding:8px;border-bottom:1px solid #e5e7eb">${hospital || "—"}</td></tr>
+<tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;font-weight:600">Department:</td><td style="padding:8px;border-bottom:1px solid #e5e7eb">${department || "—"}</td></tr>
+<tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;font-weight:600">Heard from:</td><td style="padding:8px;border-bottom:1px solid #e5e7eb">${heardFrom || "—"}</td></tr>
 </table>
-<p style="font-size:13px;color:#6b7280">To activate this account: go to the RotaGen Supabase dashboard → Table Editor → coordinator_accounts → insert a new row with their username, a temporary password, status = active.</p>
+<div style="text-align:center;margin:32px 0">
+  <a href="${approvalUrl}" style="display:inline-block;padding:14px 32px;background-color:#16a34a;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px">✓ Approve Access</a>
+</div>
+<p style="font-size:13px;color:#6b7280">Clicking this button will open the RotaGen approval page. You will be asked to confirm before the account is created.</p>
 <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0" />
 <p style="font-size:11px;color:#9ca3af;text-align:center">RotaGen · NHS Rota Management · Automated notification</p>
 </div>`;

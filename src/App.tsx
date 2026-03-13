@@ -71,7 +71,7 @@ const App = () => (
           <Route path="/approve" element={<Approve />} />
           <Route path="/change-password" element={<ProtectedRoute><ChangePassword /></ProtectedRoute>} />
           <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-          <Route element={<ProtectedRoute requiredRole="coordinator"><AdminShell /></ProtectedRoute>}>
+          <Route element={<ProtectedRoute requiredRole="coordinator"><MustChangePasswordRoute><AdminShell /></MustChangePasswordRoute></ProtectedRoute>}>
             <Route path="/admin/dashboard" element={<Dashboard />} />
             <Route path="/admin/setup" element={<SetupPage />} />
             <Route path="/admin/rota-period/step-1" element={<RotaPeriodStep1 />} />

@@ -108,8 +108,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearSession();
   }, [clearSession]);
 
+  const refreshUser = useCallback(async () => {
+    if (!user) return;
+    const { data } = await (supabase
+      .from('coordinator_accounts' as any)
+      .select('*')
+      .ilike('username', user.username)
+      .eq('status', 'active')
+      .maybeSingle() as any);
+    if (data) {
+      setUser({
+        username: data.username,
+        email: data.email,
+        role: 'coordinator',
+        displayName: data.display_name,
+        mustChangePassword: data.must_change_password ?? false,
+      });
+    }
+  }, [user]);
+
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout, accountSettings, setAccountSettings }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout, refreshUser, accountSettings, setAccountSettings }}>
       {children}
     </AuthContext.Provider>
   );
