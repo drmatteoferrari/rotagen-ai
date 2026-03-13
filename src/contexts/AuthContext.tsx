@@ -8,6 +8,7 @@ interface AuthUser {
   email: string;
   role: string;
   displayName: string;
+  mustChangePassword: boolean;
 }
 
 interface AccountSettings {
