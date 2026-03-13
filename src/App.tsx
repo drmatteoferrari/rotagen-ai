@@ -47,6 +47,12 @@ function ProtectedRoute({ children, requiredRole }: { children: ReactNode; requi
   return <>{children}</>;
 }
 
+function MustChangePasswordRoute({ children }: { children: ReactNode }) {
+  const { user } = useAuth();
+  if (user?.mustChangePassword) return <Navigate to="/change-password" replace />;
+  return <>{children}</>;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
