@@ -89,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email: row.email,
       role: "coordinator",
       displayName: row.display_name,
+      mustChangePassword: row.must_change_password ?? false,
     };
 
     setUser(authUser);
