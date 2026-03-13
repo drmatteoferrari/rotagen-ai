@@ -21,6 +21,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (usernameOrEmail: string, password: string) => Promise<{ success: boolean; error?: { field: "username" | "password"; message: string } }>;
   logout: () => void;
+  refreshUser: () => Promise<void>;
   accountSettings: AccountSettings;
   setAccountSettings: (settings: AccountSettings) => void;
 }
