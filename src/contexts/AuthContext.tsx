@@ -3,9 +3,6 @@ import { useRotaContext } from "@/contexts/RotaContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-// SECTION 4 — Login restores config; logout clears session
-// SECTION 4 — Account settings in AuthContext
-
 interface AuthUser {
   username: string;
   email: string;
@@ -27,18 +24,8 @@ interface AuthContextType {
   setAccountSettings: (settings: AccountSettings) => void;
 }
 
-const HARDCODED_USER: AuthUser = {
-  username: "developer1",
-  email: "developer1@rotagen.com",
-  role: "coordinator",
-  displayName: "Developer 1",
-};
-
-const HARDCODED_PASSWORD = "developer1";
-
 const DEFAULT_ACCOUNT_SETTINGS: AccountSettings = { departmentName: null, trustName: null };
 
-// Standalone utility — can be called from login and dashboard
 export async function loadAccountSettings(
   username: string
 ): Promise<AccountSettings> {
@@ -72,30 +59,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const trimmed = usernameOrEmail.trim();
 
     if (!trimmed) {
-      return { success: false, error: { field: "username" as const, message: "Please enter your username or email" } };
+      return { success: false, error: { field: "username" as const, message: "Please enter your username" } };
     }
 
-    const matchesIdentity =
-      trimmed.toLowerCase() === HARDCODED_USER.username.toLowerCase() ||
-      trimmed.toLowerCase() === HARDCODED_USER.email.toLowerCase();
+    const { data: row, error } = await (supabase
+      .from("coordinator_accounts" as any)
+      .select("*")
+      .ilike("username", trimmed)
+      .eq("status", "active")
+      .maybeSingle() as any);
 
-    if (!matchesIdentity) {
-      return { success: false, error: { field: "username" as const, message: "No account found with that username or email" } };
+    if (error) {
+      console.error("Login query error:", error);
+      return { success: false, error: { field: "username" as const, message: "Login failed — please try again" } };
     }
 
-    if (password !== HARDCODED_PASSWORD) {
+    if (!row) {
+      return { success: false, error: { field: "username" as const, message: "No account found with that username" } };
+    }
+
+    if (row.password !== password) {
       return { success: false, error: { field: "password" as const, message: "Incorrect password" } };
     }
 
-    setUser(HARDCODED_USER);
+    const authUser: AuthUser = {
+      username: row.username,
+      email: row.email,
+      role: "coordinator",
+      displayName: row.display_name,
+    };
 
-    // Load account settings before redirect
-    const settings = await loadAccountSettings(HARDCODED_USER.username);
+    setUser(authUser);
+
+    const settings = await loadAccountSettings(row.username);
     setAccountSettings(settings);
 
-    // Restore config from DB before redirect (silently)
-    await restoreForUser(HARDCODED_USER.username);
-    // SECTION 1 COMPLETE
+    await restoreForUser(row.username);
 
     return { success: true };
   }, [restoreForUser]);
@@ -118,5 +117,3 @@ export function useAuth() {
   if (!ctx) throw new Error("useAuth must be used within AuthProvider");
   return ctx;
 }
-
-// SECTION 4 COMPLETE
