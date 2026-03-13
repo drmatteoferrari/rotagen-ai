@@ -28,6 +28,8 @@ import WtrStep4 from "./pages/admin/WtrStep4";
 import Survey from "./pages/doctor/Survey";
 import SurveyOverride from "./pages/admin/SurveyOverride";
 import Audit from "./pages/Audit";
+import Approve from "./pages/Approve";
+import ChangePassword from "./pages/ChangePassword";
 import PreRotaCalendarPage from "./pages/admin/PreRotaCalendarPage";
 import PreRotaTargetsPage from "./pages/admin/PreRotaTargetsPage";
 import PreRotaPage from "./pages/admin/PreRotaPage";
