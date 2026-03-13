@@ -37,7 +37,7 @@ import SetupPage from "./pages/admin/SetupPage";
 import { AdminShell } from "./components/AdminShell";
 
 const queryClient = new QueryClient();
-// ✅ Section 2 complete
+
 
 // SECTION 7 COMPLETE
 function ProtectedRoute({ children, requiredRole }: { children: ReactNode; requiredRole?: "coordinator" | "doctor" }) {
