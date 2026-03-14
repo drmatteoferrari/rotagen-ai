@@ -905,7 +905,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
 
         <CalendarLegend />
       </div>
-    </AdminLayout>
+    </Wrapper>
   );
 }
 // ✅ Section 2 complete
