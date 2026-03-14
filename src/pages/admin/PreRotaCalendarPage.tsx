@@ -240,7 +240,7 @@ function CalendarLegend() {
 }
 // ✅ Section 2.7 complete (legend)
 
-export default function PreRotaCalendarPage() {
+export default function PreRotaCalendarPage({ embedded = false }: { embedded?: boolean }) {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   // ✅ Section 5 complete — use RotaContext as single source of truth
