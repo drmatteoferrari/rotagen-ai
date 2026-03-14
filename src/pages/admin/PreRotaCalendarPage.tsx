@@ -629,7 +629,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}><span style={{ width: 8, height: 8, borderRadius: 2, background: '#f3f4f6', border: '1px solid #e5e7eb', display: 'inline-block' }} /> Weekend</span>
           </div>
         </div>
-      </AdminLayout>
+      </Wrapper>
     );
   }
 
