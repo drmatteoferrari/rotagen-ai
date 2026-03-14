@@ -468,7 +468,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
     }).length;
 
     return (
-      <AdminLayout title="Availability Calendar" accentColor="blue">
+      <Wrapper>
         <div className="space-y-2 animate-fadeSlideUp">
           {/* Top bar */}
           <div className="flex items-center justify-between">
