@@ -1066,9 +1066,24 @@ export default function Roster() {
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => doctor.survey_token && navigate(`/doctor/survey?token=${doctor.survey_token}&admin=true`)} disabled={!doctor.survey_token}>
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => removeDoctor(doctor.id)}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        <Popover open={removeDialogId === `mobile:${doctor.id}`} onOpenChange={(open) => setRemoveDialogId(open ? `mobile:${doctor.id}` : null)}>
+                          <PopoverTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive">
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-56 pointer-events-auto" align="end" side="bottom" sideOffset={4} onOpenAutoFocus={(e) => e.preventDefault()}>
+                            <div className="space-y-2">
+                              <p className="text-sm font-medium">Remove {doctor.first_name}?</p>
+                              <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => deactivateDoctor(doctor.id)}>
+                                Move to inactive
+                              </Button>
+                              <Button variant="destructive" size="sm" className="w-full justify-start" onClick={() => removeDoctor(doctor.id)}>
+                                Delete permanently
+                              </Button>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
                       </div>
                     </div>
                   </div>
