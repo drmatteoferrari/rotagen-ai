@@ -1004,7 +1004,22 @@ export default function Roster() {
                               <TooltipContent>Open survey in new tab</TooltipContent>
                             </Tooltip>
                             <Button variant="ghost" size="icon" onClick={() => doctor.survey_token && navigate(`/doctor/survey?token=${doctor.survey_token}&admin=true`)} disabled={!doctor.survey_token} className={doctor.survey_status === "submitted" ? "text-amber-600 hover:text-amber-700" : ""}><Pencil className="h-4 w-4" /></Button>
-                            <Button variant="ghost" size="icon" onClick={() => removeDoctor(doctor.id)} className="text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                            <Popover open={removeDialogId === `desktop:${doctor.id}`} onOpenChange={(open) => setRemoveDialogId(open ? `desktop:${doctor.id}` : null)}>
+                              <PopoverTrigger asChild>
+                                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-56 pointer-events-auto" align="end" side="bottom" sideOffset={4} onOpenAutoFocus={(e) => e.preventDefault()}>
+                                <div className="space-y-2">
+                                  <p className="text-sm font-medium">Remove {doctor.first_name}?</p>
+                                  <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => deactivateDoctor(doctor.id)}>
+                                    Move to inactive
+                                  </Button>
+                                  <Button variant="destructive" size="sm" className="w-full justify-start" onClick={() => removeDoctor(doctor.id)}>
+                                    Delete permanently
+                                  </Button>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
                           </div>
                         </TableCell>
                       </TableRow>
