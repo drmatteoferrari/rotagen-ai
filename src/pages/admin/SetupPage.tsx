@@ -97,9 +97,22 @@ export default function SetupPage() {
   const surveyStatus = getSurveyStatus();
   const surveysDone = surveySubmitted === surveyTotal && surveyTotal > 0;
 
+  const stepsComplete = [isDepartmentComplete, isWtrComplete, isPeriodComplete, surveysDone].filter(Boolean).length;
+
   return (
     <AdminLayout title="Rota Setup" subtitle="Complete each step, then generate your rota." accentColor="blue">
       <div className="mx-auto max-w-3xl space-y-4 animate-fadeSlideUp">
+
+        {/* Minimal progress bar */}
+        <div className="flex items-center gap-3">
+          <div className="flex-1 h-1.5 rounded-full bg-secondary overflow-hidden">
+            <div
+              className="h-full bg-primary rounded-full transition-all duration-500"
+              style={{ width: `${(stepsComplete / 4) * 100}%` }}
+            />
+          </div>
+          <span className="text-xs text-muted-foreground font-medium whitespace-nowrap">{stepsComplete}/4</span>
+        </div>
 
         {/* Setup card */}
         <div className="rounded-xl border border-border bg-card p-4 shadow-sm">

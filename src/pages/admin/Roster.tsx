@@ -131,12 +131,31 @@ export default function Roster() {
     toast.success('Doctor reactivated');
   };
 
-  // ─── Remove doctor from DB ───
+  // ─── Delete vs Deactivate state ───
+  const [removeDialogId, setRemoveDialogId] = useState<string | null>(null);
+
+  // ─── Remove doctor from DB (permanent delete) ───
   const removeDoctor = async (id: string) => {
+    // Also delete survey responses first
+    await supabase.from("doctor_survey_responses").delete().eq("doctor_id", id);
     const { error } = await supabase.from("doctors").delete().eq("id", id);
     if (error) { toast.error("Failed to remove doctor"); return; }
     invalidateDoctors();
-    toast("Doctor removed from roster");
+    toast("Doctor permanently deleted");
+    setRemoveDialogId(null);
+  };
+
+  // ─── Deactivate doctor (move to inactive) ───
+  const deactivateDoctor = async (id: string) => {
+    const { error } = await supabase
+      .from("doctors")
+      .update({ is_active: false })
+      .eq("id", id);
+    if (error) { toast.error("Failed to deactivate doctor"); return; }
+    invalidateDoctors();
+    invalidateInactiveDoctors();
+    toast("Doctor moved to inactive");
+    setRemoveDialogId(null);
   };
 
   // SECTION 8 — Save deadline to DB on change
