@@ -240,7 +240,7 @@ function CalendarLegend() {
 }
 // ✅ Section 2.7 complete (legend)
 
-export default function PreRotaCalendarPage() {
+export default function PreRotaCalendarPage({ embedded = false }: { embedded?: boolean }) {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   // ✅ Section 5 complete — use RotaContext as single source of truth
@@ -415,20 +415,24 @@ export default function PreRotaCalendarPage() {
   const allDates = useMemo(() => calendarData?.weeks.flatMap(w => w.dates) ?? [], [calendarData]);
   const maxMinDoctors = useMemo(() => Math.max(...shiftTypes.map(s => s.min_doctors), 1), [shiftTypes]);
 
+  const Wrapper = embedded
+    ? ({ children }: { children: React.ReactNode }) => <>{children}</>
+    : ({ children }: { children: React.ReactNode }) => <AdminLayout title="Availability Calendar" accentColor="blue">{children}</AdminLayout>;
+
   if (loading) {
     return (
-      <AdminLayout title="Availability Calendar" accentColor="blue">
+      <Wrapper>
         <div className="flex items-center justify-center min-h-[300px]">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           <span className="ml-2 text-sm text-muted-foreground">Loading calendar…</span>
         </div>
-      </AdminLayout>
+      </Wrapper>
     );
   }
 
   if (loadError || errorMsg || !calendarData) {
     return (
-      <AdminLayout title="Availability Calendar" accentColor="blue">
+      <Wrapper>
         <div className="mx-auto max-w-lg mt-12">
           <div className="rounded-xl border border-border bg-card p-6 text-center space-y-4">
             <AlertTriangle className="h-8 w-8 text-amber-500 mx-auto" />
@@ -438,7 +442,7 @@ export default function PreRotaCalendarPage() {
             </Button>
           </div>
         </div>
-      </AdminLayout>
+      </Wrapper>
     );
   }
 
@@ -464,7 +468,7 @@ export default function PreRotaCalendarPage() {
     }).length;
 
     return (
-      <AdminLayout title="Availability Calendar" accentColor="blue">
+      <Wrapper>
         <div className="space-y-2 animate-fadeSlideUp">
           {/* Top bar */}
           <div className="flex items-center justify-between">
@@ -625,7 +629,7 @@ export default function PreRotaCalendarPage() {
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}><span style={{ width: 8, height: 8, borderRadius: 2, background: '#f3f4f6', border: '1px solid #e5e7eb', display: 'inline-block' }} /> Weekend</span>
           </div>
         </div>
-      </AdminLayout>
+      </Wrapper>
     );
   }
 
@@ -634,7 +638,7 @@ export default function PreRotaCalendarPage() {
   if (!week) return null;
 
   return (
-    <AdminLayout title="Availability Calendar" subtitle={`${deptName}${deptName && hospitalName ? ' · ' : ''}${hospitalName}`} accentColor="blue">
+    <Wrapper>
       <div className="space-y-4 animate-fadeSlideUp">
         {/* Header bar */}
         <div className="flex items-center justify-between">
@@ -901,7 +905,7 @@ export default function PreRotaCalendarPage() {
 
         <CalendarLegend />
       </div>
-    </AdminLayout>
+    </Wrapper>
   );
 }
 // ✅ Section 2 complete

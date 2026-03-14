@@ -131,12 +131,31 @@ export default function Roster() {
     toast.success('Doctor reactivated');
   };
 
-  // ─── Remove doctor from DB ───
+  // ─── Delete vs Deactivate state ───
+  const [removeDialogId, setRemoveDialogId] = useState<string | null>(null);
+
+  // ─── Remove doctor from DB (permanent delete) ───
   const removeDoctor = async (id: string) => {
+    // Also delete survey responses first
+    await supabase.from("doctor_survey_responses").delete().eq("doctor_id", id);
     const { error } = await supabase.from("doctors").delete().eq("id", id);
     if (error) { toast.error("Failed to remove doctor"); return; }
     invalidateDoctors();
-    toast("Doctor removed from roster");
+    toast("Doctor permanently deleted");
+    setRemoveDialogId(null);
+  };
+
+  // ─── Deactivate doctor (move to inactive) ───
+  const deactivateDoctor = async (id: string) => {
+    const { error } = await supabase
+      .from("doctors")
+      .update({ is_active: false })
+      .eq("id", id);
+    if (error) { toast.error("Failed to deactivate doctor"); return; }
+    invalidateDoctors();
+    invalidateInactiveDoctors();
+    toast("Doctor moved to inactive");
+    setRemoveDialogId(null);
   };
 
   // SECTION 8 — Save deadline to DB on change
@@ -985,7 +1004,22 @@ export default function Roster() {
                               <TooltipContent>Open survey in new tab</TooltipContent>
                             </Tooltip>
                             <Button variant="ghost" size="icon" onClick={() => doctor.survey_token && navigate(`/doctor/survey?token=${doctor.survey_token}&admin=true`)} disabled={!doctor.survey_token} className={doctor.survey_status === "submitted" ? "text-amber-600 hover:text-amber-700" : ""}><Pencil className="h-4 w-4" /></Button>
-                            <Button variant="ghost" size="icon" onClick={() => removeDoctor(doctor.id)} className="text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                            <Popover open={removeDialogId === `desktop:${doctor.id}`} onOpenChange={(open) => setRemoveDialogId(open ? `desktop:${doctor.id}` : null)}>
+                              <PopoverTrigger asChild>
+                                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-56 pointer-events-auto" align="end" side="bottom" sideOffset={4} onOpenAutoFocus={(e) => e.preventDefault()}>
+                                <div className="space-y-2">
+                                  <p className="text-sm font-medium">Remove {doctor.first_name}?</p>
+                                  <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => deactivateDoctor(doctor.id)}>
+                                    Move to inactive
+                                  </Button>
+                                  <Button variant="destructive" size="sm" className="w-full justify-start" onClick={() => removeDoctor(doctor.id)}>
+                                    Delete permanently
+                                  </Button>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -1032,9 +1066,24 @@ export default function Roster() {
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => doctor.survey_token && navigate(`/doctor/survey?token=${doctor.survey_token}&admin=true`)} disabled={!doctor.survey_token}>
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => removeDoctor(doctor.id)}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        <Popover open={removeDialogId === `mobile:${doctor.id}`} onOpenChange={(open) => setRemoveDialogId(open ? `mobile:${doctor.id}` : null)}>
+                          <PopoverTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive">
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-56 pointer-events-auto" align="end" side="bottom" sideOffset={4} onOpenAutoFocus={(e) => e.preventDefault()}>
+                            <div className="space-y-2">
+                              <p className="text-sm font-medium">Remove {doctor.first_name}?</p>
+                              <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => deactivateDoctor(doctor.id)}>
+                                Move to inactive
+                              </Button>
+                              <Button variant="destructive" size="sm" className="w-full justify-start" onClick={() => removeDoctor(doctor.id)}>
+                                Delete permanently
+                              </Button>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
                       </div>
                     </div>
                   </div>
