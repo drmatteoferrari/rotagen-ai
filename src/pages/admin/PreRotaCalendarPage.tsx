@@ -415,20 +415,24 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
   const allDates = useMemo(() => calendarData?.weeks.flatMap(w => w.dates) ?? [], [calendarData]);
   const maxMinDoctors = useMemo(() => Math.max(...shiftTypes.map(s => s.min_doctors), 1), [shiftTypes]);
 
+  const Wrapper = embedded
+    ? ({ children }: { children: React.ReactNode }) => <>{children}</>
+    : ({ children }: { children: React.ReactNode }) => <AdminLayout title="Availability Calendar" accentColor="blue">{children}</AdminLayout>;
+
   if (loading) {
     return (
-      <AdminLayout title="Availability Calendar" accentColor="blue">
+      <Wrapper>
         <div className="flex items-center justify-center min-h-[300px]">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           <span className="ml-2 text-sm text-muted-foreground">Loading calendar…</span>
         </div>
-      </AdminLayout>
+      </Wrapper>
     );
   }
 
   if (loadError || errorMsg || !calendarData) {
     return (
-      <AdminLayout title="Availability Calendar" accentColor="blue">
+      <Wrapper>
         <div className="mx-auto max-w-lg mt-12">
           <div className="rounded-xl border border-border bg-card p-6 text-center space-y-4">
             <AlertTriangle className="h-8 w-8 text-amber-500 mx-auto" />
@@ -438,7 +442,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
             </Button>
           </div>
         </div>
-      </AdminLayout>
+      </Wrapper>
     );
   }
 
