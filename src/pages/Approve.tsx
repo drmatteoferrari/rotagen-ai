@@ -52,21 +52,18 @@ export default function Approve() {
       // Generate a temporary password
       const tempPassword = Math.random().toString(36).slice(-10) + "A1!";
 
-      // Create real Supabase Auth user via Edge Function
-      const { data: createData, error: createErr } = await supabase.functions.invoke(
-        "create-coordinator-account",
-        {
-          body: {
-            email: request.email,
-            password: tempPassword,
-            fullName: request.full_name,
+      const { error: signUpError } = await supabase.auth.signUp({
+        email: request.email,
+        password: tempPassword,
+        options: {
+          data: {
+            full_name: request.full_name,
+            must_change_password: true,
           },
-        }
-      );
+        },
+      });
 
-      if (createErr || !createData?.success) {
-        throw new Error(createData?.error ?? createErr?.message ?? "Failed to create account");
-      }
+      if (signUpError) throw new Error(signUpError.message);
 
       // Mark request as approved
       await (supabase
