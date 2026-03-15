@@ -52,6 +52,11 @@ export function RotaProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const restoreForUser = useCallback(async (userId: string): Promise<RotaConfig | null> => {
+    // Clear stale config from previous session immediately
+    localStorage.removeItem(STORAGE_KEY);
+    setCurrentRotaConfigIdState(null);
+    setRestoredConfig(null);
+
     try {
       const config = await getCurrentRotaConfig(userId);
       if (config) {
