@@ -63,60 +63,65 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session?.user) {
-          const email = session.user.email ?? "";
-          const meta = session.user.user_metadata ?? {};
+        try {
+          if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session?.user) {
+            const email = session.user.email ?? "";
+            const meta = session.user.user_metadata ?? {};
 
-          // Check if user is the master admin or has an approved registration
-          const isMaster = email === MASTER_EMAIL;
-          if (!isMaster) {
-            // Check registration_requests first
-            const { data: regApproved } = await (supabase
-              .from("registration_requests" as any)
-              .select("status")
-              .eq("email", email)
-              .maybeSingle() as any);
+            const isMaster = email === MASTER_EMAIL;
+            if (!isMaster) {
+              // Run both checks in parallel for speed
+              const [regResult, coordResult] = await Promise.all([
+                (supabase
+                  .from("registration_requests" as any)
+                  .select("status")
+                  .eq("email", email)
+                  .maybeSingle() as any),
+                (supabase
+                  .from("coordinator_accounts" as any)
+                  .select("status")
+                  .eq("email", email)
+                  .maybeSingle() as any),
+              ]);
 
-            // Also check coordinator_accounts as fallback
-            const { data: coordAccount } = await (supabase
-              .from("coordinator_accounts" as any)
-              .select("status")
-              .eq("email", email)
-              .maybeSingle() as any);
+              const isApproved =
+                regResult?.data?.status === "approved" ||
+                coordResult?.data?.status === "active";
 
-            const isApproved =
-              regApproved?.status === "approved" ||
-              coordAccount?.status === "active";
-
-            if (!isApproved) {
-              await supabase.auth.signOut();
-              toast.error("Access denied. You are not authorised.");
-              setAuthLoading(false);
-              return;
+              if (!isApproved) {
+                await supabase.auth.signOut();
+                toast.error("Access denied. You are not authorised.");
+                return;
+              }
             }
+
+            const displayName = meta.full_name ?? email;
+            const username = meta.username ?? email.split("@")[0];
+
+            setUser({
+              username,
+              email,
+              role: "coordinator",
+              displayName,
+              mustChangePassword: meta.must_change_password ?? false,
+            });
+
+            // Fire and forget — do not await
+            loadAccountSettings(session.user.id).then(setAccountSettings);
+            restoreForUser(session.user.id);
           }
 
-          const displayName = meta.full_name ?? email;
-          const username = meta.username ?? email.split("@")[0];
-
-          setUser({
-            username,
-            email,
-            role: "coordinator",
-            displayName,
-            mustChangePassword: meta.must_change_password ?? false,
-          });
-          // Load settings and restore rota context in background
-          loadAccountSettings(session.user.id).then(setAccountSettings);
-          restoreForUser(session.user.id);
-        }
-        if (event === "SIGNED_OUT") {
-          setUser(null);
-          setAccountSettings(DEFAULT_ACCOUNT_SETTINGS);
-          clearSession();
-        }
-        if (event === "INITIAL_SESSION") {
-          setAuthLoading(false);
+          if (event === "SIGNED_OUT") {
+            setUser(null);
+            setAccountSettings(DEFAULT_ACCOUNT_SETTINGS);
+            clearSession();
+          }
+        } catch (err) {
+          console.error("Auth state change error:", err);
+        } finally {
+          if (event === "INITIAL_SESSION") {
+            setAuthLoading(false);
+          }
         }
       }
     );
