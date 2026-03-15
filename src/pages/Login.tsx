@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Code } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,8 +35,8 @@ export default function Login() {
     const result = await login(email, password);
     if (result.success) {
       navigate("/", { replace: true });
-    } else if (result.error) {
-      setError(result.error);
+    } else {
+      setError(result.error ?? "Sign in failed. Please try again.");
     }
     setLoading(false);
   };
@@ -108,12 +108,52 @@ export default function Login() {
             <div className="mt-2 text-right">
               <button
                 type="button"
-                onClick={() => navigate('/forgot-password')}
+                onClick={() => navigate("/forgot-password")}
                 className="text-xs text-primary hover:underline"
               >
                 Forgot password?
               </button>
             </div>
+
+            {/* Divider */}
+            <div className="my-5 flex items-center gap-3">
+              <div className="h-px flex-1 bg-border" />
+              <span className="text-xs text-muted-foreground">or</span>
+              <div className="h-px flex-1 bg-border" />
+            </div>
+
+            {/* Request access */}
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={() => navigate("/signup")}
+              disabled={loading}
+            >
+              Request access
+            </Button>
+
+            {/* Dev divider */}
+            <div className="my-4 flex items-center gap-3">
+              <div className="h-px flex-1 bg-border" />
+              <div className="h-px flex-1 bg-border" />
+            </div>
+
+            {/* Dev quick login */}
+            <button
+              type="button"
+              onClick={async () => {
+                setLoading(true);
+                const result = await login("matteferro31@gmail.com", "matteferro31");
+                if (result.success) navigate("/", { replace: true });
+                else setError(result.error ?? "Dev login failed");
+                setLoading(false);
+              }}
+              className="w-full flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Code className="h-3 w-3" />
+              Dev login (matteferro31@gmail.com)
+            </button>
           </CardContent>
         </Card>
 
@@ -125,4 +165,4 @@ export default function Login() {
     </div>
   );
 }
-// SECTION 2 COMPLETE
+// SECTION 1 COMPLETE
