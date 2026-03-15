@@ -27,7 +27,7 @@ export type Database = {
           created_at?: string | null
           department_name?: string | null
           id?: string
-          owned_by: string
+          owned_by?: string
           trust_name?: string | null
           updated_at?: string | null
         }
