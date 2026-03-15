@@ -49,55 +49,49 @@ export default function Approve() {
     setPageState("processing");
 
     try {
-      const username = request.email.split("@")[0].toLowerCase().replace(/[^a-z0-9._-]/g, "");
+      // Generate a temporary password
+      const tempPassword = Math.random().toString(36).slice(-10) + "A1!";
 
-      // Check for duplicate username
-      const { data: existing } = await (supabase
-        .from("coordinator_accounts" as any)
-        .select("id")
-        .ilike("username", username)
-        .maybeSingle() as any);
+      // Create real Supabase Auth user via Edge Function
+      const { data: createData, error: createErr } = await supabase.functions.invoke(
+        "create-coordinator-account",
+        {
+          body: {
+            email: request.email,
+            password: tempPassword,
+            fullName: request.full_name,
+          },
+        }
+      );
 
-      if (existing) {
-        setErrorMsg(`Username "${username}" already exists. Please create the account manually.`);
-        setPageState("error");
-        return;
+      if (createErr || !createData?.success) {
+        throw new Error(createData?.error ?? createErr?.message ?? "Failed to create account");
       }
 
-      // Insert coordinator account
-      const { error: insertErr } = await (supabase
-        .from("coordinator_accounts" as any)
-        .insert({
-          username,
-          password: username,
-          display_name: request.full_name,
-          email: request.email,
-          phone: request.phone,
-          job_title: request.job_title,
-          hospital: request.hospital,
-          department: request.department,
-          status: "active",
-          must_change_password: true,
-        }) as any);
-
-      if (insertErr) throw insertErr;
-
-      // Update registration request
+      // Mark request as approved
       await (supabase
         .from("registration_requests" as any)
         .update({ status: "approved", approved_at: new Date().toISOString() })
         .eq("approval_token", token) as any);
 
-      // Send welcome email (best-effort)
+      // Send admin an email with the new user's credentials
       try {
         await supabase.functions.invoke("send-welcome-email", {
-          body: { to: request.email, fullName: request.full_name, username },
+          body: {
+            to: "matteferro31@gmail.com",
+            fullName: request.full_name,
+            email: request.email,
+            tempPassword,
+            hospital: request.hospital,
+            department: request.department,
+            jobTitle: request.job_title,
+          },
         });
       } catch (emailErr) {
-        console.warn("Welcome email failed:", emailErr);
+        console.warn("Welcome email failed (account still created):", emailErr);
       }
 
-      setCreatedUsername(username);
+      setCreatedUsername(request.email);
       setPageState("success");
     } catch (err: any) {
       console.error("Approval failed:", err);
@@ -158,8 +152,8 @@ export default function Approve() {
             <CheckCircle2 className="h-10 w-10 text-green-600" />
             <h2 className="text-lg font-semibold text-card-foreground">Account Activated</h2>
             <p className="text-sm text-muted-foreground">
-              <strong className="text-foreground">{request?.full_name}</strong> has been emailed their login credentials
-              (username: <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{createdUsername}</code>).
+              Account created for <strong className="text-foreground">{request?.full_name}</strong>.
+              You have been emailed their login credentials.
             </p>
             <Button variant="outline" className="mt-2" onClick={() => navigate("/login")}>Back to sign in</Button>
           </div>
@@ -194,3 +188,4 @@ export default function Approve() {
     </div>
   );
 }
+// SECTION 1 COMPLETE
