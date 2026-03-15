@@ -9,7 +9,8 @@ import { Textarea } from "@/components/ui/textarea";
 
 export default function Register() {
   const navigate = useNavigate();
-  const [fullName, setFullName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [jobTitle, setJobTitle] = useState("");
@@ -23,7 +24,8 @@ export default function Register() {
 
   const validate = () => {
     const errs: Record<string, string> = {};
-    if (!fullName.trim()) errs.fullName = "Full name is required";
+    if (!firstName.trim()) errs.firstName = "First name is required";
+    if (!lastName.trim()) errs.lastName = "Last name is required";
     if (!email.trim()) errs.email = "Email is required";
     if (!phone.trim()) errs.phone = "Phone number is required";
     if (!jobTitle.trim()) errs.jobTitle = "Job title is required";
@@ -39,13 +41,14 @@ export default function Register() {
     setFieldErrors(errs);
     if (Object.keys(errs).length > 0) return;
 
+    const fullName = `${firstName.trim()} ${lastName.trim()}`;
+
     setLoading(true);
     try {
-      // Step 1: Insert into registration_requests and get approval_token
       const { data: reqData, error: dbError } = await (supabase
         .from('registration_requests' as any)
         .insert({
-          full_name: fullName.trim(),
+          full_name: fullName,
           email: email.trim(),
           phone: phone.trim(),
           job_title: jobTitle.trim(),
@@ -58,10 +61,9 @@ export default function Register() {
         .single() as any);
       if (dbError) throw dbError;
 
-      // Step 2: Call edge function (best-effort — request is already saved)
       try {
         await supabase.functions.invoke("send-registration-request", {
-          body: { fullName: fullName.trim(), email: email.trim(), phone: phone.trim(), jobTitle: jobTitle.trim(), hospital: hospital.trim(), department: department.trim(), heardFrom: heardFrom.trim(), approvalToken: reqData.approval_token },
+          body: { fullName, email: email.trim(), phone: phone.trim(), jobTitle: jobTitle.trim(), hospital: hospital.trim(), department: department.trim(), heardFrom: heardFrom.trim(), approvalToken: reqData.approval_token },
         });
       } catch (emailErr) {
         console.warn("Email notification failed (request still saved):", emailErr);
@@ -119,7 +121,12 @@ export default function Register() {
                 <h2 className="mb-5 text-center text-lg font-semibold text-card-foreground">Request access</h2>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
-                  {renderField("fullName", "Full name", fullName, setFullName, { placeholder: "Dr Jane Smith" })}
+                  {/* First name / Last name side by side */}
+                  <div className="grid grid-cols-2 gap-3">
+                    {renderField("firstName", "First name", firstName, setFirstName, { placeholder: "e.g. Jane" })}
+                    {renderField("lastName", "Last name", lastName, setLastName, { placeholder: "e.g. Smith" })}
+                  </div>
+
                   {renderField("email", "Email address", email, setEmail, { placeholder: "you@nhs.net", type: "email" })}
                   {renderField("phone", "Contact phone number", phone, setPhone, { placeholder: "07700 900000", type: "tel" })}
                   {renderField("jobTitle", "Job title", jobTitle, setJobTitle, { placeholder: "e.g. Rota Coordinator, Clinical Lead, Consultant Anaesthetist" })}

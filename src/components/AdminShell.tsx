@@ -23,6 +23,15 @@ const navItems = [
   { title: "Roster",    url: "/admin/roster",    icon: Users },
 ];
 
+function getInitials(displayName: string): string {
+  return displayName
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((n: string) => n[0].toUpperCase())
+    .join("");
+}
+
 function AdminShellInner() {
   const { title, subtitle, accentColor } = useAdminShell();
   const bgColorMap: Record<string, string> = {
@@ -48,6 +57,8 @@ function AdminShellInner() {
     navigate("/login", { replace: true });
   };
 
+  const initials = user ? getInitials(user.displayName) : "?";
+
   // Mobile and tablet both use bottom nav bar layout
   if (isMobile || isTablet) {
     return (
@@ -66,7 +77,7 @@ function AdminShellInner() {
           {user && (
             <div className="flex items-center gap-2 shrink-0 ml-2">
               <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold uppercase">
-                {user.username?.charAt(0) || "?"}
+                {initials}
               </div>
               <button
                 onClick={handleLogout}
@@ -176,9 +187,12 @@ function AdminShellInner() {
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary text-sm font-bold uppercase">
-                  {user.username?.charAt(0) || "?"}
+                  {initials}
                 </div>
-                <span className="text-sm text-card-foreground font-medium">{user.username}</span>
+                <div className="flex flex-col">
+                  <span className="text-sm text-card-foreground font-medium leading-tight">{user.displayName}</span>
+                  <span className="text-[11px] text-muted-foreground leading-tight">{user.username}</span>
+                </div>
               </div>
               <button
                 onClick={handleLogout}

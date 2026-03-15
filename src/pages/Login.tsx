@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { Eye, EyeOff, Code } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,13 +12,13 @@ export default function Login() {
   const { login, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
 
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const emailRef = useRef<HTMLInputElement>(null);
+  const identifierRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -29,7 +30,7 @@ export default function Login() {
   }, [isAuthenticated, user?.mustChangePassword, navigate]);
 
   useEffect(() => {
-    emailRef.current?.focus();
+    identifierRef.current?.focus();
   }, []);
 
   const handleSubmit = async (e?: React.FormEvent) => {
@@ -37,7 +38,26 @@ export default function Login() {
     if (loading) return;
     setError(null);
     setLoading(true);
-    const result = await login(email, password);
+
+    let emailToUse = identifier.trim();
+
+    // If no "@", treat as username and resolve email
+    if (!emailToUse.includes("@")) {
+      const { data: coordRow } = await (supabase
+        .from("coordinator_accounts" as any)
+        .select("email")
+        .eq("username", emailToUse.toLowerCase())
+        .maybeSingle() as any);
+
+      if (!coordRow?.email) {
+        setError("Username not found. Try signing in with your email address.");
+        setLoading(false);
+        return;
+      }
+      emailToUse = coordRow.email;
+    }
+
+    const result = await login(emailToUse, password);
     if (!result.success) {
       setError(result.error ?? "Sign in failed. Please try again.");
     }
@@ -62,16 +82,16 @@ export default function Login() {
             <h2 className="mb-5 text-center text-lg font-semibold text-card-foreground">Sign in to your account</h2>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Email */}
+              {/* Email or username */}
               <div className="space-y-1.5">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="identifier">Email or username</Label>
                 <Input
-                  ref={emailRef}
-                  id="email"
-                  type="email"
-                  placeholder="your@email.com"
-                  value={email}
-                  onChange={(e) => { setEmail(e.target.value); setError(null); }}
+                  ref={identifierRef}
+                  id="identifier"
+                  type="text"
+                  placeholder="Email address or username"
+                  value={identifier}
+                  onChange={(e) => { setIdentifier(e.target.value); setError(null); }}
                 />
               </div>
 
@@ -168,4 +188,3 @@ export default function Login() {
     </div>
   );
 }
-// SECTION 1 COMPLETE
