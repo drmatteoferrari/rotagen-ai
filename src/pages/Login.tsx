@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 
 export default function Login() {
-  const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState("");
@@ -20,8 +20,13 @@ export default function Login() {
   const emailRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (isAuthenticated) navigate("/", { replace: true });
-  }, [isAuthenticated, navigate]);
+    if (!isAuthenticated) return;
+    if (user?.mustChangePassword) {
+      navigate("/change-password", { replace: true });
+    } else {
+      navigate("/", { replace: true });
+    }
+  }, [isAuthenticated, user?.mustChangePassword, navigate]);
 
   useEffect(() => {
     emailRef.current?.focus();
@@ -33,9 +38,7 @@ export default function Login() {
     setError(null);
     setLoading(true);
     const result = await login(email, password);
-    if (result.success) {
-      navigate("/", { replace: true });
-    } else {
+    if (!result.success) {
       setError(result.error ?? "Sign in failed. Please try again.");
     }
     setLoading(false);

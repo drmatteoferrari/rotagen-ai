@@ -38,8 +38,9 @@ export default function ChangePassword() {
       });
       if (error) throw error;
 
-      toast.success("Password updated successfully");
-      navigate("/admin/dashboard", { replace: true });
+      toast.success("Password updated — please sign in with your new password");
+      await supabase.auth.signOut();
+      navigate("/login", { replace: true });
     } catch (err: any) {
       console.error("Password change failed:", err);
       toast.error("Failed to update password — please try again");
