@@ -38,9 +38,7 @@ export default function Login() {
     setError(null);
     setLoading(true);
     const result = await login(email, password);
-    if (result.success) {
-      navigate("/", { replace: true });
-    } else {
+    if (!result.success) {
       setError(result.error ?? "Sign in failed. Please try again.");
     }
     setLoading(false);
