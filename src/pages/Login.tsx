@@ -20,8 +20,13 @@ export default function Login() {
   const emailRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (isAuthenticated) navigate("/", { replace: true });
-  }, [isAuthenticated, navigate]);
+    if (!isAuthenticated) return;
+    if (user?.mustChangePassword) {
+      navigate("/change-password", { replace: true });
+    } else {
+      navigate("/", { replace: true });
+    }
+  }, [isAuthenticated, user?.mustChangePassword, navigate]);
 
   useEffect(() => {
     emailRef.current?.focus();
