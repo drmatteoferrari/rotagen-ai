@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { Eye, EyeOff } from "lucide-react";
 
 export default function ChangePassword() {
-  const { user, refreshUser } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   const [newPassword, setNewPassword] = useState("");
@@ -31,14 +31,9 @@ export default function ChangePassword() {
     setLoading(true);
 
     try {
-      const { error } = await (supabase
-        .from("coordinator_accounts" as any)
-        .update({ password: newPassword, must_change_password: false })
-        .ilike("username", user.username) as any);
-
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
 
-      await refreshUser();
       toast.success("Password updated successfully");
       navigate("/admin/dashboard", { replace: true });
     } catch (err: any) {

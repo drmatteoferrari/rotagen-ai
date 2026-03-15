@@ -12,8 +12,9 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
-import Signup from "./pages/Signup";
 import Register from "./pages/Register";
+import Approve from "./pages/Approve";
+import ChangePassword from "./pages/ChangePassword";
 import Roster from "./pages/admin/Roster";
 import Dashboard from "./pages/admin/Dashboard";
 import RotaPeriodStep1 from "./pages/admin/RotaPeriodStep1";
@@ -28,8 +29,7 @@ import WtrStep4 from "./pages/admin/WtrStep4";
 import Survey from "./pages/doctor/Survey";
 import SurveyOverride from "./pages/admin/SurveyOverride";
 import Audit from "./pages/Audit";
-import Approve from "./pages/Approve";
-import ChangePassword from "./pages/ChangePassword";
+import Signup from "./pages/Signup";
 import PreRotaCalendarPage from "./pages/admin/PreRotaCalendarPage";
 import PreRotaTargetsPage from "./pages/admin/PreRotaTargetsPage";
 import PreRotaPage from "./pages/admin/PreRotaPage";
@@ -38,18 +38,12 @@ import { AdminShell } from "./components/AdminShell";
 
 const queryClient = new QueryClient();
 
-
-// SECTION 7 COMPLETE
-function ProtectedRoute({ children, requiredRole }: { children: ReactNode; requiredRole?: "coordinator" | "doctor" }) {
-  const { isAuthenticated, user } = useAuth();
+function ProtectedRoute({ children }: { children: ReactNode }) {
+  const { isAuthenticated, authLoading } = useAuth();
+  if (authLoading) {
+    return <div className="flex min-h-screen items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>;
+  }
   if (!isAuthenticated) return <Navigate to="/login" replace />;
-  if (requiredRole && user?.role !== requiredRole) return <Navigate to="/login" replace />;
-  return <>{children}</>;
-}
-
-function MustChangePasswordRoute({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
-  if (user?.mustChangePassword) return <Navigate to="/change-password" replace />;
   return <>{children}</>;
 }
 
@@ -71,7 +65,7 @@ const App = () => (
           <Route path="/approve" element={<Approve />} />
           <Route path="/change-password" element={<ProtectedRoute><ChangePassword /></ProtectedRoute>} />
           <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-          <Route element={<ProtectedRoute requiredRole="coordinator"><MustChangePasswordRoute><AdminShell /></MustChangePasswordRoute></ProtectedRoute>}>
+          <Route element={<ProtectedRoute><AdminShell /></ProtectedRoute>}>
             <Route path="/admin/dashboard" element={<Dashboard />} />
             <Route path="/admin/setup" element={<SetupPage />} />
             <Route path="/admin/rota-period/step-1" element={<RotaPeriodStep1 />} />
@@ -104,3 +98,4 @@ const App = () => (
 );
 
 export default App;
+// SECTION 3 COMPLETE

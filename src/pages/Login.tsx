@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { Eye, EyeOff, Code } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,53 +11,34 @@ export default function Login() {
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<{ username?: string; password?: string }>({});
+  const [error, setError] = useState<string | null>(null);
 
-  const usernameRef = useRef<HTMLInputElement>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (isAuthenticated) navigate("/", { replace: true });
   }, [isAuthenticated, navigate]);
 
   useEffect(() => {
-    usernameRef.current?.focus();
+    emailRef.current?.focus();
   }, []);
 
-  const doLogin = async (user: string, pass: string) => {
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (loading) return;
+    setError(null);
     setLoading(true);
-    const result = await login(user, pass);
+    const result = await login(email, password);
     if (result.success) {
       navigate("/", { replace: true });
     } else if (result.error) {
-      setErrors({ [result.error.field]: result.error.message });
+      setError(result.error);
     }
     setLoading(false);
-  };
-
-  const handleSubmit = (e?: React.FormEvent) => {
-    e?.preventDefault();
-    if (loading) return;
-    doLogin(username, password);
-  };
-
-  const handleDevLogin = () => {
-    setUsername("matteferro31");
-    setPassword("matteferro31");
-    setErrors({});
-    setTimeout(() => {
-      setLoading(true);
-      setTimeout(async () => {
-        const result = await login("matteferro31", "matteferro31");
-        if (result.success) {
-          navigate("/", { replace: true });
-        }
-        setLoading(false);
-      }, 600);
-    }, 400);
   };
 
   return (
@@ -78,18 +59,17 @@ export default function Login() {
             <h2 className="mb-5 text-center text-lg font-semibold text-card-foreground">Sign in to your account</h2>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Username */}
+              {/* Email */}
               <div className="space-y-1.5">
-                <Label htmlFor="username">Username</Label>
+                <Label htmlFor="email">Email</Label>
                 <Input
-                  ref={usernameRef}
-                  id="username"
-                  type="text"
-                  placeholder="Your username"
-                  value={username}
-                  onChange={(e) => { setUsername(e.target.value); setErrors((p) => ({ ...p, username: undefined })); }}
+                  ref={emailRef}
+                  id="email"
+                  type="email"
+                  placeholder="your@email.com"
+                  value={email}
+                  onChange={(e) => { setEmail(e.target.value); setError(null); }}
                 />
-                {errors.username && <p className="text-xs text-destructive">{errors.username}</p>}
               </div>
 
               {/* Password */}
@@ -101,7 +81,7 @@ export default function Login() {
                     type={showPassword ? "text" : "password"}
                     placeholder="Enter your password"
                     value={password}
-                    onChange={(e) => { setPassword(e.target.value); setErrors((p) => ({ ...p, password: undefined })); }}
+                    onChange={(e) => { setPassword(e.target.value); setError(null); }}
                     className="pr-10"
                   />
                   <button
@@ -113,8 +93,10 @@ export default function Login() {
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
-                {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
               </div>
+
+              {/* Error */}
+              {error && <p className="text-sm text-destructive text-center">{error}</p>}
 
               {/* Sign in button */}
               <Button type="submit" className="w-full" disabled={loading}>
@@ -132,40 +114,6 @@ export default function Login() {
                 Forgot password?
               </button>
             </div>
-
-            {/* Divider */}
-            <div className="my-5 flex items-center gap-3">
-              <div className="h-px flex-1 bg-border" />
-              <span className="text-xs text-muted-foreground">or</span>
-              <div className="h-px flex-1 bg-border" />
-            </div>
-
-            {/* Request access */}
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
-              onClick={() => navigate('/register')}
-              disabled={loading}
-            >
-              Request access
-            </Button>
-
-            {/* Dev divider */}
-            <div className="my-4 flex items-center gap-3">
-              <div className="h-px flex-1 bg-border" />
-              <div className="h-px flex-1 bg-border" />
-            </div>
-
-            {/* Dev quick login */}
-            <button
-              type="button"
-              onClick={handleDevLogin}
-              className="w-full flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <Code className="h-3 w-3" />
-              Dev login
-            </button>
           </CardContent>
         </Card>
 
@@ -177,3 +125,4 @@ export default function Login() {
     </div>
   );
 }
+// SECTION 2 COMPLETE

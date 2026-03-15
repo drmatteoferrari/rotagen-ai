@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { useRotaContext } from "@/contexts/RotaContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -8,7 +8,6 @@ interface AuthUser {
   email: string;
   role: string;
   displayName: string;
-  mustChangePassword: boolean;
 }
 
 interface AccountSettings {
@@ -19,9 +18,9 @@ interface AccountSettings {
 interface AuthContextType {
   user: AuthUser | null;
   isAuthenticated: boolean;
-  login: (usernameOrEmail: string, password: string) => Promise<{ success: boolean; error?: { field: "username" | "password"; message: string } }>;
-  logout: () => void;
-  refreshUser: () => Promise<void>;
+  authLoading: boolean;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  logout: () => Promise<void>;
   accountSettings: AccountSettings;
   setAccountSettings: (settings: AccountSettings) => void;
 }
@@ -29,12 +28,12 @@ interface AuthContextType {
 const DEFAULT_ACCOUNT_SETTINGS: AccountSettings = { departmentName: null, trustName: null };
 
 export async function loadAccountSettings(
-  username: string
+  ownedBy: string
 ): Promise<AccountSettings> {
   const { data, error } = await supabase
     .from("account_settings")
     .select("department_name, trust_name")
-    .eq("owned_by", username)
+    .eq("owned_by", ownedBy)
     .maybeSingle();
 
   if (error) {
@@ -52,83 +51,60 @@ export async function loadAccountSettings(
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+const ALLOWED_EMAILS = ["matteferro31@gmail.com"];
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [accountSettings, setAccountSettings] = useState<AccountSettings>(DEFAULT_ACCOUNT_SETTINGS);
   const { restoreForUser, clearSession } = useRotaContext();
 
-  const login = useCallback(async (usernameOrEmail: string, password: string) => {
-    const trimmed = usernameOrEmail.trim();
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session?.user) {
+          const email = session.user.email ?? "";
+          if (!ALLOWED_EMAILS.includes(email)) {
+            await supabase.auth.signOut();
+            toast.error("Access denied. You are not authorised.");
+            setAuthLoading(false);
+            return;
+          }
+          setUser({
+            username: session.user.id,
+            email,
+            role: "coordinator",
+            displayName: session.user.user_metadata?.full_name ?? email,
+          });
+          // Load settings and restore rota context in background
+          loadAccountSettings(session.user.id).then(setAccountSettings);
+          restoreForUser(session.user.id);
+        }
+        if (event === "SIGNED_OUT") {
+          setUser(null);
+          setAccountSettings(DEFAULT_ACCOUNT_SETTINGS);
+          clearSession();
+        }
+        if (event === "INITIAL_SESSION") {
+          setAuthLoading(false);
+        }
+      }
+    );
+    return () => subscription.unsubscribe();
+  }, [restoreForUser, clearSession]);
 
-    if (!trimmed) {
-      return { success: false, error: { field: "username" as const, message: "Please enter your username" } };
-    }
-
-    const { data: row, error } = await (supabase
-      .from("coordinator_accounts" as any)
-      .select("*")
-      .ilike("username", trimmed)
-      .eq("status", "active")
-      .maybeSingle() as any);
-
-    if (error) {
-      console.error("Login query error:", error);
-      return { success: false, error: { field: "username" as const, message: "Login failed — please try again" } };
-    }
-
-    if (!row) {
-      return { success: false, error: { field: "username" as const, message: "No account found with that username" } };
-    }
-
-    if (row.password !== password) {
-      return { success: false, error: { field: "password" as const, message: "Incorrect password" } };
-    }
-
-    const authUser: AuthUser = {
-      username: row.username,
-      email: row.email,
-      role: "coordinator",
-      displayName: row.display_name,
-      mustChangePassword: row.must_change_password ?? false,
-    };
-
-    setUser(authUser);
-
-    const settings = await loadAccountSettings(row.username);
-    setAccountSettings(settings);
-
-    await restoreForUser(row.username);
-
+  const login = useCallback(async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) return { success: false, error: error.message };
     return { success: true };
-  }, [restoreForUser]);
+  }, []);
 
-  const logout = useCallback(() => {
-    setUser(null);
-    setAccountSettings(DEFAULT_ACCOUNT_SETTINGS);
-    clearSession();
-  }, [clearSession]);
-
-  const refreshUser = useCallback(async () => {
-    if (!user) return;
-    const { data } = await (supabase
-      .from('coordinator_accounts' as any)
-      .select('*')
-      .ilike('username', user.username)
-      .eq('status', 'active')
-      .maybeSingle() as any);
-    if (data) {
-      setUser({
-        username: data.username,
-        email: data.email,
-        role: 'coordinator',
-        displayName: data.display_name,
-        mustChangePassword: data.must_change_password ?? false,
-      });
-    }
-  }, [user]);
+  const logout = useCallback(async () => {
+    await supabase.auth.signOut();
+  }, []);
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout, refreshUser, accountSettings, setAccountSettings }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, authLoading, login, logout, accountSettings, setAccountSettings }}>
       {children}
     </AuthContext.Provider>
   );
@@ -139,3 +115,4 @@ export function useAuth() {
   if (!ctx) throw new Error("useAuth must be used within AuthProvider");
   return ctx;
 }
+// SECTION 1 COMPLETE
