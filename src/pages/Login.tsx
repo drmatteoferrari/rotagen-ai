@@ -68,35 +68,32 @@ export default function Login() {
       return; // navigation handled by useEffect on isAuthenticated
     }
 
-    // If credentials not found, check if first-time coordinator
-    if (
-      signInError.message.includes("Invalid login credentials") ||
-      signInError.message.includes("invalid_credentials")
-    ) {
-      const { data: coordRow } = await (supabase
-        .from("coordinator_accounts" as any)
-        .select("email, display_name, status")
-        .eq("email", emailToUse)
-        .eq("status", "active")
-        .maybeSingle() as any);
+    // signInWithPassword failed — check if first-time coordinator
+    const { data: coordRow } = await (supabase
+      .from("coordinator_accounts" as any)
+      .select("email, display_name, status")
+      .eq("email", emailToUse)
+      .eq("status", "active")
+      .maybeSingle() as any);
 
-      if (coordRow) {
-        // First login — create Supabase auth account now
-        const { error: signUpError } = await supabase.auth.signUp({
-          email: emailToUse,
-          password,
-          options: {
-            data: {
-              full_name: coordRow.display_name,
-              must_change_password: true,
-            },
+    if (coordRow) {
+      // First login — create Supabase auth account now
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: emailToUse,
+        password,
+        options: {
+          data: {
+            full_name: coordRow.display_name,
+            must_change_password: true,
           },
-        });
-        if (signUpError) {
-          setError("Login failed: " + signUpError.message);
-          setLoading(false);
-          return;
-        }
+        },
+      });
+      if (signUpError) {
+        setError("Login failed: " + signUpError.message);
+        setLoading(false);
+        return;
+      }
+      if (!signUpData.session) {
         const { error: retryError } = await supabase.auth.signInWithPassword({
           email: emailToUse,
           password,
@@ -106,9 +103,9 @@ export default function Login() {
           setLoading(false);
           return;
         }
-        setLoading(false);
-        return;
       }
+      setLoading(false);
+      return;
     }
 
     setError("Invalid email or password.");
