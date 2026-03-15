@@ -27,11 +27,11 @@ export default function Dashboard() {
   const hasPreRota = !!preRotaResult && preRotaResult.status !== 'blocked';
 
   useEffect(() => {
-    if (!user?.username) return;
+    if (!user?.id) return;
     supabase
       .from("rota_configs")
       .select("id, rota_start_date, rota_end_date, created_at")
-      .eq("owned_by", user.username)
+      .eq("owned_by", user.id)
       .eq("is_archived", true)
       .order("created_at", { ascending: false })
       .then(({ data }) => setArchivedConfigs(data ?? []));
