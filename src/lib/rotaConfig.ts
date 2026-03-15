@@ -214,7 +214,7 @@ export async function getRotaConfig(id: string): Promise<RotaConfig> {
 }
 
 // SECTION 3 — getCurrentRotaConfig now filters by username
-export async function getCurrentRotaConfig(username: string): Promise<RotaConfig | null> {
+export async function getCurrentRotaConfig(userId: string): Promise<RotaConfig | null> {
   const { data } = await supabase
     .from("rota_configs")
     .select("id")
