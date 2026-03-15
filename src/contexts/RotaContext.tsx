@@ -51,7 +51,7 @@ export function RotaProvider({ children }: { children: ReactNode }) {
     })();
   }, []);
 
-  const restoreForUser = useCallback(async (username: string): Promise<RotaConfig | null> => {
+  const restoreForUser = useCallback(async (userId: string): Promise<RotaConfig | null> => {
     try {
       const config = await getCurrentRotaConfig(username);
       if (config) {
