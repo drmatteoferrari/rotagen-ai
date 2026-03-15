@@ -35,7 +35,7 @@ export default function Dashboard() {
       .eq("is_archived", true)
       .order("created_at", { ascending: false })
       .then(({ data }) => setArchivedConfigs(data ?? []));
-  }, [user?.username]);
+  }, [user?.id]);
 
   if (!restoredFromDb) {
     return (

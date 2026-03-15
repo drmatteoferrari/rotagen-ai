@@ -8,17 +8,17 @@ import type { PreRotaResult, PreRotaStatus } from "@/lib/preRotaTypes";
 export function useAccountSettingsQuery() {
   const { user } = useAuth();
   return useQuery({
-    queryKey: ["account_settings", user?.username],
+    queryKey: ["account_settings", user?.id],
     queryFn: async () => {
-      if (!user?.username) return null;
+      if (!user?.id) return null;
       const { data } = await supabase
         .from("account_settings")
         .select("department_name, trust_name")
-        .eq("owned_by", user.username)
+        .eq("owned_by", user.id)
         .maybeSingle();
       return data ?? null;
     },
-    enabled: !!user?.username,
+    enabled: !!user?.id,
     staleTime: 5 * 60 * 1000,
   });
 }

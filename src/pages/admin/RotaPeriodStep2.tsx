@@ -131,7 +131,7 @@ export default function RotaPeriodStep2() {
       if (!configId) {
         const { data, error } = await supabase
           .from("rota_configs")
-          .insert({ ...configFields, owned_by: user?.username ?? "developer1" } as any)
+          .insert({ ...configFields, owned_by: user?.id ?? "developer1" } as any)
           .select("id")
           .single();
         if (error) throw error;

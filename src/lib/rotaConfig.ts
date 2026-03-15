@@ -244,7 +244,7 @@ export function useRotaConfig() {
     setLoading(true);
     setError(null);
     try {
-      const result = await getCurrentRotaConfig(user.username);
+      const result = await getCurrentRotaConfig(user.id);
       setConfig(result);
     } catch (e: any) {
       setError(e.message ?? "Failed to load config");

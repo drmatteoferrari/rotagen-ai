@@ -45,7 +45,7 @@ export default function DepartmentStep1New() {
       const { error } = await supabase
         .from("account_settings")
         .upsert(
-          { owned_by: user.username, department_name: deptName.trim(), trust_name: trustName.trim(), updated_at: new Date().toISOString() },
+          { owned_by: user.id, department_name: deptName.trim(), trust_name: trustName.trim(), updated_at: new Date().toISOString() },
           { onConflict: "owned_by" }
         );
       if (error) throw error;
