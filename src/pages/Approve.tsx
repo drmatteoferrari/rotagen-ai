@@ -79,16 +79,16 @@ export default function Approve() {
 
       // Insert coordinator_accounts row (non-blocking)
       try {
-        await (supabase
+      await (supabase
           .from("coordinator_accounts" as any)
-          .insert({
+          .upsert({
             username: username,
             email: request.email,
             display_name: request.full_name,
             password: tempPassword,
             status: "active",
             must_change_password: true,
-          }) as any);
+          }, { onConflict: "email" }) as any);
       } catch (insertErr) {
         console.warn("coordinator_accounts insert failed (non-blocking):", insertErr);
       }
