@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface AuthUser {
+  id: string; // Supabase auth UUID — use this for all DB queries
   username: string;
   email: string;
   role: string;
