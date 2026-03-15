@@ -8,6 +8,7 @@ interface AuthUser {
   email: string;
   role: string;
   displayName: string;
+  mustChangePassword: boolean;
 }
 
 interface AccountSettings {
@@ -51,7 +52,7 @@ export async function loadAccountSettings(
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-const ALLOWED_EMAILS = ["matteferro31@gmail.com"];
+const MASTER_EMAIL = "matteferro31@gmail.com";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -64,17 +65,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       async (event, session) => {
         if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session?.user) {
           const email = session.user.email ?? "";
-          if (!ALLOWED_EMAILS.includes(email)) {
-            await supabase.auth.signOut();
-            toast.error("Access denied. You are not authorised.");
-            setAuthLoading(false);
-            return;
+
+          // Check if user is the master admin or has an approved registration
+          const isMaster = email === MASTER_EMAIL;
+          if (!isMaster) {
+            const { data: approved } = await (supabase
+              .from("registration_requests" as any)
+              .select("status")
+              .eq("email", email)
+              .eq("status", "approved")
+              .maybeSingle() as any);
+
+            if (!approved) {
+              await supabase.auth.signOut();
+              toast.error("Access denied. You are not authorised.");
+              setAuthLoading(false);
+              return;
+            }
           }
+
           setUser({
             username: session.user.id,
             email,
             role: "coordinator",
             displayName: session.user.user_metadata?.full_name ?? email,
+            mustChangePassword: session.user.user_metadata?.must_change_password ?? false,
           });
           // Load settings and restore rota context in background
           loadAccountSettings(session.user.id).then(setAccountSettings);
@@ -115,4 +130,4 @@ export function useAuth() {
   if (!ctx) throw new Error("useAuth must be used within AuthProvider");
   return ctx;
 }
-// SECTION 1 COMPLETE
+// SECTION 4 COMPLETE

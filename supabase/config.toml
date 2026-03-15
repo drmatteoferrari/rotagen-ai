@@ -1,1 +1,4 @@
 project_id = "tlawfdsvtbcmagkieaui"
+
+[functions.create-coordinator-account]
+verify_jwt = false

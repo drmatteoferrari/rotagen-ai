@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AdminSetupProvider } from "./contexts/AdminSetupContext";
 import { DepartmentSetupProvider } from "./contexts/DepartmentSetupContext";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
@@ -39,11 +39,19 @@ import { AdminShell } from "./components/AdminShell";
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
-  const { isAuthenticated, authLoading } = useAuth();
+  const { user, isAuthenticated, authLoading } = useAuth();
+  const location = useLocation();
+
   if (authLoading) {
     return <div className="flex min-h-screen items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>;
   }
   if (!isAuthenticated) return <Navigate to="/login" replace />;
+
+  // Redirect to change-password if must_change_password is set (except if already there)
+  if (user?.mustChangePassword && location.pathname !== "/change-password") {
+    return <Navigate to="/change-password" replace />;
+  }
+
   return <>{children}</>;
 }
 
@@ -98,4 +106,4 @@ const App = () => (
 );
 
 export default App;
-// SECTION 3 COMPLETE
+// SECTION 5 COMPLETE

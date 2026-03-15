@@ -31,7 +31,11 @@ export default function ChangePassword() {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      // Update password and clear must_change_password flag
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+        data: { must_change_password: false },
+      });
       if (error) throw error;
 
       toast.success("Password updated successfully");
