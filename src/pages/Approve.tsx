@@ -52,12 +52,33 @@ export default function Approve() {
       // Generate a temporary password
       const tempPassword = Math.random().toString(36).slice(-10) + "A1!";
 
+      // Generate username from full_name
+      const nameParts = request.full_name.trim().split(" ");
+      const first = nameParts[0] ?? "user";
+      const last = nameParts.slice(1).join("") || "user";
+      const baseUsername = `${first[0].toLowerCase()}.${last.toLowerCase()}`;
+
+      // Check for existing usernames to avoid collisions
+      const { data: existingUsers } = await (supabase
+        .from("coordinator_accounts" as any)
+        .select("username") as any);
+      const taken = new Set((existingUsers ?? []).map((u: any) => u.username));
+
+      let username = baseUsername;
+      let counter = 2;
+      while (taken.has(username)) {
+        username = `${baseUsername}${counter}`;
+        counter++;
+      }
+
+      // Create Supabase Auth user
       const { error: signUpError } = await supabase.auth.signUp({
         email: request.email,
         password: tempPassword,
         options: {
           data: {
             full_name: request.full_name,
+            username: username,
             must_change_password: true,
           },
         },
@@ -71,12 +92,29 @@ export default function Approve() {
         .update({ status: "approved", approved_at: new Date().toISOString() })
         .eq("approval_token", token) as any);
 
+      // Insert coordinator_accounts row (non-blocking)
+      try {
+        await (supabase
+          .from("coordinator_accounts" as any)
+          .insert({
+            username: username,
+            email: request.email,
+            display_name: request.full_name,
+            password: tempPassword,
+            status: "active",
+            must_change_password: true,
+          }) as any);
+      } catch (insertErr) {
+        console.warn("coordinator_accounts insert failed (non-blocking):", insertErr);
+      }
+
       // Send admin an email with the new user's credentials
       try {
         await supabase.functions.invoke("send-welcome-email", {
           body: {
             to: "matteferro31@gmail.com",
             fullName: request.full_name,
+            username: username,
             email: request.email,
             tempPassword,
             hospital: request.hospital,
@@ -88,7 +126,7 @@ export default function Approve() {
         console.warn("Welcome email failed (account still created):", emailErr);
       }
 
-      setCreatedUsername(request.email);
+      setCreatedUsername(username);
       setPageState("success");
     } catch (err: any) {
       console.error("Approval failed:", err);
@@ -149,7 +187,7 @@ export default function Approve() {
             <CheckCircle2 className="h-10 w-10 text-green-600" />
             <h2 className="text-lg font-semibold text-card-foreground">Account Activated</h2>
             <p className="text-sm text-muted-foreground">
-              Account created for <strong className="text-foreground">{request?.full_name}</strong>.
+              Account created for <strong className="text-foreground">{request?.full_name}</strong> (username: <strong className="text-foreground">{createdUsername}</strong>).
               You have been emailed their login credentials.
             </p>
             <Button variant="outline" className="mt-2" onClick={() => navigate("/login")}>Back to sign in</Button>
@@ -185,4 +223,3 @@ export default function Approve() {
     </div>
   );
 }
-// SECTION 1 COMPLETE

@@ -65,6 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       async (event, session) => {
         if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session?.user) {
           const email = session.user.email ?? "";
+          const meta = session.user.user_metadata ?? {};
 
           // Check if user is the master admin or has an approved registration
           const isMaster = email === MASTER_EMAIL;
@@ -95,12 +96,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
           }
 
+          const displayName = meta.full_name ?? email;
+          const username = meta.username ?? email.split("@")[0];
+
           setUser({
-            username: session.user.id,
+            username,
             email,
             role: "coordinator",
-            displayName: session.user.user_metadata?.full_name ?? email,
-            mustChangePassword: session.user.user_metadata?.must_change_password ?? false,
+            displayName,
+            mustChangePassword: meta.must_change_password ?? false,
           });
           // Load settings and restore rota context in background
           loadAccountSettings(session.user.id).then(setAccountSettings);
@@ -141,4 +145,3 @@ export function useAuth() {
   if (!ctx) throw new Error("useAuth must be used within AuthProvider");
   return ctx;
 }
-// SECTION 4 COMPLETE
