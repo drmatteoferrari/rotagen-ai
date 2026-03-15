@@ -57,10 +57,61 @@ export default function Login() {
       emailToUse = coordRow.email;
     }
 
-    const result = await login(emailToUse, password);
-    if (!result.success) {
-      setError(result.error ?? "Sign in failed. Please try again.");
+    // Attempt normal sign-in first
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: emailToUse,
+      password,
+    });
+
+    if (!signInError) {
+      setLoading(false);
+      return; // navigation handled by useEffect on isAuthenticated
     }
+
+    // If credentials not found, check if first-time coordinator
+    if (
+      signInError.message.includes("Invalid login credentials") ||
+      signInError.message.includes("invalid_credentials")
+    ) {
+      const { data: coordRow } = await (supabase
+        .from("coordinator_accounts" as any)
+        .select("email, display_name, status")
+        .eq("email", emailToUse)
+        .eq("status", "active")
+        .maybeSingle() as any);
+
+      if (coordRow) {
+        // First login — create Supabase auth account now
+        const { error: signUpError } = await supabase.auth.signUp({
+          email: emailToUse,
+          password,
+          options: {
+            data: {
+              full_name: coordRow.display_name,
+              must_change_password: true,
+            },
+          },
+        });
+        if (signUpError) {
+          setError("Login failed: " + signUpError.message);
+          setLoading(false);
+          return;
+        }
+        const { error: retryError } = await supabase.auth.signInWithPassword({
+          email: emailToUse,
+          password,
+        });
+        if (retryError) {
+          setError("Login failed — please try again.");
+          setLoading(false);
+          return;
+        }
+        setLoading(false);
+        return;
+      }
+    }
+
+    setError("Invalid email or password.");
     setLoading(false);
   };
 

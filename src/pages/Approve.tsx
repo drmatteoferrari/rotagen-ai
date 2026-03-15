@@ -71,22 +71,7 @@ export default function Approve() {
         counter++;
       }
 
-      // Create Supabase Auth user
-      const { error: signUpError } = await supabase.auth.signUp({
-        email: request.email,
-        password: tempPassword,
-        options: {
-          data: {
-            full_name: request.full_name,
-            username: username,
-            must_change_password: true,
-          },
-        },
-      });
-
-      if (signUpError) throw new Error(signUpError.message);
-
-      // Mark request as approved
+      // Mark request as approved FIRST (before any auth calls)
       await (supabase
         .from("registration_requests" as any)
         .update({ status: "approved", approved_at: new Date().toISOString() })
