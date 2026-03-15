@@ -214,11 +214,11 @@ export async function getRotaConfig(id: string): Promise<RotaConfig> {
 }
 
 // SECTION 3 — getCurrentRotaConfig now filters by username
-export async function getCurrentRotaConfig(username: string): Promise<RotaConfig | null> {
+export async function getCurrentRotaConfig(userId: string): Promise<RotaConfig | null> {
   const { data } = await supabase
     .from("rota_configs")
     .select("id")
-    .eq("owned_by", username)
+    .eq("owned_by", userId)
     .in("status", ["draft", "complete"])
     .eq("is_archived", false)
     .order("updated_at", { ascending: false })
@@ -244,7 +244,7 @@ export function useRotaConfig() {
     setLoading(true);
     setError(null);
     try {
-      const result = await getCurrentRotaConfig(user.username);
+      const result = await getCurrentRotaConfig(user.id);
       setConfig(result);
     } catch (e: any) {
       setError(e.message ?? "Failed to load config");

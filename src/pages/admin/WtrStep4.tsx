@@ -235,7 +235,7 @@ export default function WtrStep4() {
               if (!configId) {
                 const { data, error } = await supabase
                   .from("rota_configs")
-                  .insert({ owned_by: user?.username ?? "developer1" } as any)
+                  .insert({ owned_by: user?.id ?? "developer1" } as any)
                   .select("id")
                   .single();
                 if (error) throw error;

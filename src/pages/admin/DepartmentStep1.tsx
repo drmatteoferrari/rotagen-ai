@@ -38,14 +38,14 @@ export default function DepartmentStep1New() {
     setTrustError("");
     if (!deptName.trim()) { setDeptError("Please enter a department name"); return; }
     if (!trustName.trim()) { setTrustError("Please enter a hospital or trust name"); return; }
-    if (!user?.username) return;
+    if (!user?.id) return;
 
     setSaving(true);
     try {
       const { error } = await supabase
         .from("account_settings")
         .upsert(
-          { owned_by: user.username, department_name: deptName.trim(), trust_name: trustName.trim(), updated_at: new Date().toISOString() },
+          { owned_by: user.id, department_name: deptName.trim(), trust_name: trustName.trim(), updated_at: new Date().toISOString() },
           { onConflict: "owned_by" }
         );
       if (error) throw error;

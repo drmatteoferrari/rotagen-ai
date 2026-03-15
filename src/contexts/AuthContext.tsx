@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface AuthUser {
+  id: string; // Supabase auth UUID — use this for all DB queries
   username: string;
   email: string;
   role: string;
@@ -100,6 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const username = meta.username ?? email.split("@")[0];
 
           setUser({
+            id: session.user.id,
             username,
             email,
             role: "coordinator",

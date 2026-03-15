@@ -372,7 +372,7 @@ export default function DepartmentStep3() {
                 if (!configId) {
                   const { data, error } = await supabase
                     .from("rota_configs")
-                    .insert({ global_oncall_pct: globalOncallPct, global_non_oncall_pct: nonOncallPct, owned_by: user?.username ?? "developer1" } as any)
+                    .insert({ global_oncall_pct: globalOncallPct, global_non_oncall_pct: nonOncallPct, owned_by: user?.id ?? "developer1" } as any)
                     .select("id")
                     .single();
                   if (error) throw error;
