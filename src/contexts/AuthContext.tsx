@@ -69,14 +69,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Check if user is the master admin or has an approved registration
           const isMaster = email === MASTER_EMAIL;
           if (!isMaster) {
-            const { data: approved } = await (supabase
+            // Check registration_requests first
+            const { data: regApproved } = await (supabase
               .from("registration_requests" as any)
               .select("status")
               .eq("email", email)
-              .eq("status", "approved")
               .maybeSingle() as any);
 
-            if (!approved) {
+            // Also check coordinator_accounts as fallback
+            const { data: coordAccount } = await (supabase
+              .from("coordinator_accounts" as any)
+              .select("status")
+              .eq("email", email)
+              .maybeSingle() as any);
+
+            const isApproved =
+              regApproved?.status === "approved" ||
+              coordAccount?.status === "active";
+
+            if (!isApproved) {
               await supabase.auth.signOut();
               toast.error("Access denied. You are not authorised.");
               setAuthLoading(false);
