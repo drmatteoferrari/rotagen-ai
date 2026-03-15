@@ -113,6 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           restoreForUser(session.user.id);
         }
         if (event === "SIGNED_OUT") {
+          localStorage.removeItem("currentRotaConfigId");
           setUser(null);
           setAccountSettings(DEFAULT_ACCOUNT_SETTINGS);
           clearSession();
