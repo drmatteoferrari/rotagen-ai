@@ -218,7 +218,7 @@ export async function getCurrentRotaConfig(username: string): Promise<RotaConfig
   const { data } = await supabase
     .from("rota_configs")
     .select("id")
-    .eq("owned_by", username)
+    .eq("owned_by", userId)
     .in("status", ["draft", "complete"])
     .eq("is_archived", false)
     .order("updated_at", { ascending: false })
