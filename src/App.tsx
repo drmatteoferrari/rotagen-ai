@@ -68,6 +68,7 @@ const App = () => (
         <DepartmentSetupProvider>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/privacy" element={<Privacy />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/register" element={<Register />} />
           <Route path="/signup" element={<Navigate to="/register" replace />} />

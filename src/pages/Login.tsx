@@ -230,7 +230,8 @@ export default function Login() {
 
         {/* Footer */}
         <p className="text-center text-xs text-muted-foreground">
-          RotaGen · NHS Rota Management · For authorised users only
+          RotaGen · NHS Rota Management · For authorised users only ·{" "}
+          <a href="/privacy" className="underline hover:text-foreground">Privacy Policy</a>
         </p>
       </div>
     </div>
