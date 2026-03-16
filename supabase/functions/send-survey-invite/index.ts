@@ -6,10 +6,19 @@
 import { Resend } from "npm:resend";
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": "https://rotagen-ai.lovable.app",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+function escHtml(s: string | null | undefined): string {
+  if (!s) return "";
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
 
 // SECTION 1 COMPLETE
 
@@ -47,7 +56,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const subject = `Action required: Submit your rota preferences — ${departmentName}, ${hospitalName}, ${rotaPeriod.startDate} to ${rotaPeriod.endDate}`;
+    const subject = `Action required: Submit your rota preferences — ${escHtml(departmentName)}, ${escHtml(hospitalName)}, ${rotaPeriod.startDate} to ${rotaPeriod.endDate}`;
 
     const html = `<!DOCTYPE html>
 <html lang="en">
@@ -62,8 +71,8 @@ Deno.serve(async (req) => {
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
 
 <tr><td style="padding-bottom:24px;">
-<p style="font-size:16px;line-height:1.6;margin:0 0 16px;">Dear ${doctorName},</p>
-<p style="font-size:16px;line-height:1.6;margin:0 0 16px;">Your rota coordinator has opened the preference survey for the upcoming rota period at <strong>${departmentName}</strong>, <strong>${hospitalName}</strong>. Please complete your submission by the deadline below — the rota cannot be generated until all doctors have submitted.</p>
+<p style="font-size:16px;line-height:1.6;margin:0 0 16px;">Dear ${escHtml(doctorName)},</p>
+<p style="font-size:16px;line-height:1.6;margin:0 0 16px;">Your rota coordinator has opened the preference survey for the upcoming rota period at <strong>${escHtml(departmentName)}</strong>, <strong>${escHtml(hospitalName)}</strong>. Please complete your submission by the deadline below — the rota cannot be generated until all doctors have submitted.</p>
 </td></tr>
 
 <tr><td style="padding-bottom:24px;">
@@ -71,11 +80,11 @@ Deno.serve(async (req) => {
 <tr><td style="padding:20px 24px;">
 <p style="font-size:12px;font-weight:bold;text-transform:uppercase;letter-spacing:1px;color:#666;margin:0 0 12px;">Rota Period Details</p>
 <table role="presentation" cellpadding="0" cellspacing="0" style="font-size:14px;line-height:1.8;">
-<tr><td style="color:#666;padding-right:16px;">Department:</td><td style="font-weight:600;">${departmentName}</td></tr>
-<tr><td style="color:#666;padding-right:16px;">Hospital:</td><td style="font-weight:600;">${hospitalName}</td></tr>
+<tr><td style="color:#666;padding-right:16px;">Department:</td><td style="font-weight:600;">${escHtml(departmentName)}</td></tr>
+<tr><td style="color:#666;padding-right:16px;">Hospital:</td><td style="font-weight:600;">${escHtml(hospitalName)}</td></tr>
 <tr><td style="color:#666;padding-right:16px;">Period:</td><td style="font-weight:600;">${rotaPeriod.startDate} – ${rotaPeriod.endDate}</td></tr>
 <tr><td style="color:#666;padding-right:16px;">Duration:</td><td style="font-weight:600;">${rotaPeriod.durationWeeks} weeks</td></tr>
-<tr><td style="color:#666;padding-right:16px;">Deadline:</td><td style="font-weight:600;color:#cc0000;">${surveyDeadline}</td></tr>
+<tr><td style="color:#666;padding-right:16px;">Deadline:</td><td style="font-weight:600;color:#cc0000;">${escHtml(surveyDeadline)}</td></tr>
 </table>
 </td></tr>
 </table>
@@ -105,15 +114,15 @@ Deno.serve(async (req) => {
 <tr><td style="border-top:1px solid #e0e0e0;padding-top:20px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f9f9f9;border-radius:8px;">
 <tr><td style="padding:16px 20px;">
-<p style="font-size:13px;color:#666;line-height:1.5;margin:0 0 8px;"><strong>Important:</strong> Please submit your preferences before <strong>${surveyDeadline}</strong>. Late submissions may not be accommodated.</p>
+<p style="font-size:13px;color:#666;line-height:1.5;margin:0 0 8px;"><strong>Important:</strong> Please submit your preferences before <strong>${escHtml(surveyDeadline)}</strong>. Late submissions may not be accommodated.</p>
 <p style="font-size:13px;color:#666;line-height:1.5;margin:0 0 8px;">If you have already submitted your preferences, you can safely ignore this email.</p>
-<p style="font-size:13px;color:#666;line-height:1.5;margin:0;">If you believe you have received this in error, please contact your rota coordinator at ${departmentName}, ${hospitalName}.</p>
+<p style="font-size:13px;color:#666;line-height:1.5;margin:0;">If you believe you have received this in error, please contact your rota coordinator at ${escHtml(departmentName)}, ${escHtml(hospitalName)}.</p>
 </td></tr>
 </table>
 </td></tr>
 
 <tr><td style="padding-top:24px;text-align:center;">
-<p style="font-size:12px;color:#999;line-height:1.5;margin:0;"><strong>RotaGen</strong> · NHS Rota Management<br/>${departmentName} · ${hospitalName}<br/>This is an automated message — please do not reply directly to this email.</p>
+<p style="font-size:12px;color:#999;line-height:1.5;margin:0;"><strong>RotaGen</strong> · NHS Rota Management<br/>${escHtml(departmentName)} · ${escHtml(hospitalName)}<br/>This is an automated message — please do not reply directly to this email.</p>
 </td></tr>
 
 </table>
