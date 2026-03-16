@@ -1,10 +1,19 @@
 import { Resend } from "npm:resend";
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": "https://rotagen-ai.lovable.app",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+function escHtml(s: string | null | undefined): string {
+  if (!s) return "";
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -34,20 +43,20 @@ Deno.serve(async (req) => {
 
     const approvalUrl = `https://rotagen-ai.lovable.app/approve?token=${approvalToken}`;
 
-    const subject = `RotaGen — New Access Request: ${fullName}, ${department}, ${hospital}`;
+    const subject = `RotaGen — New Access Request: ${escHtml(fullName)}, ${escHtml(department)}, ${escHtml(hospital)}`;
 
     const html = `
 <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#1a1a1a">
 <h2 style="color:#2563eb;margin-bottom:16px">RotaGen — New Access Request</h2>
 <p style="margin-bottom:16px">Someone has requested access to RotaGen. Review their details below.</p>
 <table style="width:100%;border-collapse:collapse;margin-bottom:24px">
-<tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;font-weight:600;width:140px">Full name:</td><td style="padding:8px;border-bottom:1px solid #e5e7eb">${fullName}</td></tr>
-<tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;font-weight:600">Email:</td><td style="padding:8px;border-bottom:1px solid #e5e7eb">${email}</td></tr>
-<tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;font-weight:600">Phone:</td><td style="padding:8px;border-bottom:1px solid #e5e7eb">${phone || "—"}</td></tr>
-<tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;font-weight:600">Job title:</td><td style="padding:8px;border-bottom:1px solid #e5e7eb">${jobTitle || "—"}</td></tr>
-<tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;font-weight:600">Hospital / Trust:</td><td style="padding:8px;border-bottom:1px solid #e5e7eb">${hospital || "—"}</td></tr>
-<tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;font-weight:600">Department:</td><td style="padding:8px;border-bottom:1px solid #e5e7eb">${department || "—"}</td></tr>
-<tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;font-weight:600">Heard from:</td><td style="padding:8px;border-bottom:1px solid #e5e7eb">${heardFrom || "—"}</td></tr>
+<tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;font-weight:600;width:140px">Full name:</td><td style="padding:8px;border-bottom:1px solid #e5e7eb">${escHtml(fullName)}</td></tr>
+<tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;font-weight:600">Email:</td><td style="padding:8px;border-bottom:1px solid #e5e7eb">${escHtml(email)}</td></tr>
+<tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;font-weight:600">Phone:</td><td style="padding:8px;border-bottom:1px solid #e5e7eb">${escHtml(phone) || "—"}</td></tr>
+<tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;font-weight:600">Job title:</td><td style="padding:8px;border-bottom:1px solid #e5e7eb">${escHtml(jobTitle) || "—"}</td></tr>
+<tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;font-weight:600">Hospital / Trust:</td><td style="padding:8px;border-bottom:1px solid #e5e7eb">${escHtml(hospital) || "—"}</td></tr>
+<tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;font-weight:600">Department:</td><td style="padding:8px;border-bottom:1px solid #e5e7eb">${escHtml(department) || "—"}</td></tr>
+<tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;font-weight:600">Heard from:</td><td style="padding:8px;border-bottom:1px solid #e5e7eb">${escHtml(heardFrom) || "—"}</td></tr>
 </table>
 <div style="text-align:center;margin:32px 0">
   <a href="${approvalUrl}" style="display:inline-block;padding:14px 32px;background-color:#16a34a;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px">✓ Approve Access</a>
