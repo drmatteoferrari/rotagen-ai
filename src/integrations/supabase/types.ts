@@ -89,7 +89,6 @@ export type Database = {
           id: string
           job_title: string | null
           must_change_password: boolean
-          password: string
           phone: string | null
           status: string
           updated_at: string | null
@@ -104,7 +103,6 @@ export type Database = {
           id?: string
           job_title?: string | null
           must_change_password?: boolean
-          password: string
           phone?: string | null
           status?: string
           updated_at?: string | null
@@ -119,7 +117,6 @@ export type Database = {
           id?: string
           job_title?: string | null
           must_change_password?: boolean
-          password?: string
           phone?: string | null
           status?: string
           updated_at?: string | null
