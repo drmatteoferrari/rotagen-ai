@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 
-export default function Privacy() {
+export default function Terms() {
   const navigate = useNavigate();
   const [navShadow, setNavShadow] = useState(false);
 
@@ -67,54 +67,58 @@ export default function Privacy() {
       </header>
 
       <main className="px-4 pb-12 pt-10 sm:px-6">
-        <div className="mx-auto max-w-2xl rounded-xl border border-border bg-card p-8 shadow-xl animate-in slide-in-from-bottom-4 fade-in duration-500">
+        <div className="mx-auto mt-6 max-w-2xl rounded-xl border border-border bg-card p-8 shadow-xl animate-in slide-in-from-bottom-4 fade-in duration-500">
           <button type="button" onClick={() => navigate("/login")} className="flex items-center gap-1 text-sm text-primary hover:underline">
             <ArrowLeft className="h-4 w-4" />
             Back to sign in
           </button>
 
-          <h1 className="mt-6 text-2xl font-bold">RotaGen — Privacy Policy</h1>
+          <h1 className="mt-6 text-2xl font-bold">RotaGen — Terms of Use</h1>
           <p className="mt-1 text-sm text-muted-foreground">Last updated: March 2026</p>
+
+          <h2 className="mt-8 text-lg font-semibold">Acceptance of terms</h2>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            By accessing or using RotaGen, you agree to these terms. If you do not agree, do not use the service.
+          </p>
+
+          <h2 className="mt-8 text-lg font-semibold">Who can use RotaGen</h2>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            RotaGen is intended for use by authorised NHS staff only. Access is granted by invitation during the early access period. Coordinators must not share their credentials.
+          </p>
 
           <h2 className="mt-8 text-lg font-semibold">What RotaGen does</h2>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            RotaGen is an NHS rota scheduling tool that helps anaesthetic department coordinators generate fair, WTR-compliant rotas for junior doctors.
+            RotaGen generates rota schedules for NHS anaesthetic departments based on inputs provided by coordinators and doctors. The output is provided as a planning aid. Clinical and managerial responsibility for the published rota remains with the coordinator and department.
           </p>
 
-          <h2 className="mt-8 text-lg font-semibold">What data we collect</h2>
+          <h2 className="mt-8 text-lg font-semibold">Data you provide</h2>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            <strong>For coordinators:</strong> name, email address, phone number, job title, hospital and department name.
-          </p>
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            <strong>For doctors:</strong> name, NHS email address, grade, working time percentage, annual leave dates, study leave dates, parental leave status, medical exemptions, clinical competencies, and scheduling preferences.
+            By submitting data through RotaGen (including doctor preferences, leave dates, and department configuration), you confirm you have appropriate authority to do so and that the data is accurate to the best of your knowledge.
           </p>
 
-          <h2 className="mt-8 text-lg font-semibold">Why we collect it</h2>
+          <h2 className="mt-8 text-lg font-semibold">Acceptable use</h2>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            Coordinator data is collected to verify identity and manage access to the platform. Doctor data is collected solely for the purpose of generating a fair rota that meets NHS Working Time Regulations.
+            You must not attempt to circumvent access controls, submit false data, or use RotaGen for any purpose other than NHS rota scheduling. Misuse may result in immediate access removal.
           </p>
 
-          <h2 className="mt-8 text-lg font-semibold">Who can see your data</h2>
+          <h2 className="mt-8 text-lg font-semibold">Availability</h2>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            Your data is visible only to your rota coordinator and the RotaGen platform owner. No other organisations, coordinators, or users can access your data.
+            During the early access period, RotaGen is provided without uptime guarantees. We will aim to notify users of planned downtime in advance.
           </p>
 
-          <h2 className="mt-8 text-lg font-semibold">How long we keep it</h2>
+          <h2 className="mt-8 text-lg font-semibold">Limitation of liability</h2>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            Data is retained for the duration of the rota period plus 12 months, after which it is deleted.
+            RotaGen is provided in good faith as a scheduling aid. The platform owner accepts no liability for rota decisions made on the basis of its output. Coordinators remain responsible for validating the final rota before publication.
           </p>
 
-          <h2 className="mt-8 text-lg font-semibold">Your rights</h2>
+          <h2 className="mt-8 text-lg font-semibold">Changes to these terms</h2>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            Under UK GDPR you have the right to access, correct, or request deletion of your data. To exercise these rights, email{" "}
-            <a href="mailto:matteferro31@gmail.com" className="text-primary hover:underline">matteferro31@gmail.com</a>{" "}
-            with the subject line "Data request".
+            We may update these terms. Continued use after notification of changes constitutes acceptance.
           </p>
 
           <h2 className="mt-8 text-lg font-semibold">Contact</h2>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            For any privacy questions contact{" "}
-            <a href="mailto:matteferro31@gmail.com" className="text-primary hover:underline">matteferro31@gmail.com</a>.
+            For any questions about these terms, email <a href="mailto:matteferro31@gmail.com" className="text-primary hover:underline">matteferro31@gmail.com</a>.
           </p>
         </div>
       </main>

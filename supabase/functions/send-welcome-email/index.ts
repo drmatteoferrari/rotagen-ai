@@ -1,4 +1,4 @@
-import { Resend } from "npm:resend";
+import { Resend } from "https://esm.sh/resend@4.6.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "https://rotagen-ai.lovable.app",
@@ -12,7 +12,7 @@ function escHtml(s: string | null | undefined): string {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+    .replace(/\"/g, "&quot;");
 }
 
 Deno.serve(async (req) => {
@@ -75,10 +75,6 @@ They can log in at <a href="https://rotagen-ai.lovable.app/login" style="color:#
   } catch (err: any) {
     return new Response(
       JSON.stringify({ success: false, error: err.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
-});
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

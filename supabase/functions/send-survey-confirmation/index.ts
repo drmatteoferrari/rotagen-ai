@@ -1,6 +1,6 @@
 // ✅ Section 11 complete — send-survey-confirmation Edge Function
 
-import { Resend } from "npm:resend";
+import { Resend } from "https://esm.sh/resend@4.6.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "https://rotagen-ai.lovable.app",
