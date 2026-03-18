@@ -25,7 +25,7 @@ export default function Login() {
     if (user?.mustChangePassword) {
       navigate("/change-password", { replace: true });
     } else {
-      navigate("/", { replace: true });
+      navigate("/admin/dashboard", { replace: true });
     }
   }, [isAuthenticated, user?.mustChangePassword, navigate]);
 
