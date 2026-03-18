@@ -67,7 +67,7 @@ export default function Terms() {
       </header>
 
       <main className="px-4 pb-12 pt-10 sm:px-6">
-        <div className="mx-auto max-w-2xl rounded-xl border border-border bg-card p-8 shadow-xl animate-in slide-in-from-bottom-4 fade-in duration-500">
+        <div className="mx-auto mt-6 max-w-2xl rounded-xl border border-border bg-card p-8 shadow-xl animate-in slide-in-from-bottom-4 fade-in duration-500">
           <button type="button" onClick={() => navigate("/login")} className="flex items-center gap-1 text-sm text-primary hover:underline">
             <ArrowLeft className="h-4 w-4" />
             Back to sign in
