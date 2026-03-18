@@ -25,7 +25,7 @@ export default function Login() {
     if (user?.mustChangePassword) {
       navigate("/change-password", { replace: true });
     } else {
-      navigate("/", { replace: true });
+      navigate("/admin/dashboard", { replace: true });
     }
   }, [isAuthenticated, user?.mustChangePassword, navigate]);
 
@@ -216,7 +216,7 @@ export default function Login() {
               onClick={async () => {
                 setLoading(true);
                 const result = await login("matteferro31@gmail.com", "matteferro31");
-                if (result.success) navigate("/", { replace: true });
+                if (result.success) navigate("/admin/dashboard", { replace: true });
                 else setError(result.error ?? "Dev login failed");
                 setLoading(false);
               }}

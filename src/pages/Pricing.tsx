@@ -114,6 +114,13 @@ export default function Pricing() {
             </div>
             <button
               type="button"
+              onClick={() => navigate("/login")}
+              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Sign in
+            </button>
+            <button
+              type="button"
               onClick={() => navigate("/register")}
               className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-all hover:scale-[1.02] hover:bg-primary/90 active:scale-[0.98]"
             >
