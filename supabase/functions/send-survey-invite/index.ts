@@ -3,7 +3,7 @@
 //   Project Settings → Edge Functions → Secrets
 // Or via Lovable Cloud → Backend → Secrets
 
-import { Resend } from "npm:resend";
+import { Resend } from "https://esm.sh/resend@4.6.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "https://rotagen-ai.lovable.app",
