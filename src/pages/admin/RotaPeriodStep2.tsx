@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Switch } from "@/components/ui/switch";
 import { CalendarCheck, CalendarIcon, Plus, Trash2, ArrowLeft, Save, Info } from "lucide-react";
 import { format, isWithinInterval, differenceInDays } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -21,6 +22,15 @@ interface BankHoliday {
   id: string;
   date: Date;
   name: string;
+}
+
+interface BhShiftRule {
+  shift_key: string;
+  name: string;
+  start_time: string;
+  end_time: string;
+  target_doctors: number;
+  included: boolean;
 }
 
 const UK_BANK_HOLIDAYS: { date: [number, number, number]; name: string }[] = [
@@ -57,7 +67,7 @@ import { getRotaConfig } from "@/lib/rotaConfig";
 
 export default function RotaPeriodStep2() {
   const navigate = useNavigate();
-  const { setPeriodComplete, rotaStartDate, rotaEndDate } = useAdminSetup();
+  const { setPeriodComplete, rotaStartDate, rotaEndDate, rotaStartTime, rotaEndTime } = useAdminSetup();
   const { currentRotaConfigId, setCurrentRotaConfigId, setRestoredConfig } = useRotaContext();
   const { user } = useAuth();
   const [saving, setSaving] = useState(false);
@@ -65,14 +75,17 @@ export default function RotaPeriodStep2() {
   const [newHolidayName, setNewHolidayName] = useState("");
   const [newHolidayDate, setNewHolidayDate] = useState<Date>();
   const [initialized, setInitialized] = useState(false);
-  // ✅ Section 5b — BH rules state
   const [bhSameAsWeekend, setBhSameAsWeekend] = useState<boolean | null>(null);
-  const [bhCustomRules, setBhCustomRules] = useState<string>("");
   const [bhInitialized, setBhInitialized] = useState(false);
 
-  // Use cached config details
+  // Shift types for BH rules
+  const [shiftTypes, setShiftTypes] = useState<any[]>([]);
+  const [bhShiftRules, setBhShiftRules] = useState<BhShiftRule[]>([]);
+  const [bhShiftRulesInitialized, setBhShiftRulesInitialized] = useState(false);
+
   const { data: configDetails } = useRotaConfigDetailsQuery();
 
+  // Auto-populate bank holidays
   useEffect(() => {
     if (initialized || !rotaStartDate || !rotaEndDate) return;
     const filtered = UK_BANK_HOLIDAYS
@@ -83,18 +96,78 @@ export default function RotaPeriodStep2() {
     setInitialized(true);
   }, [rotaStartDate, rotaEndDate, initialized]);
 
-  // Sync BH rules from cached query
+  // Restore BH same-as-weekend from DB
   useEffect(() => {
     if (configDetails && !bhInitialized) {
-      if ((configDetails as any).bh_same_as_weekend !== undefined && (configDetails as any).bh_same_as_weekend !== null) {
-        setBhSameAsWeekend((configDetails as any).bh_same_as_weekend);
-      }
-      if ((configDetails as any).bh_custom_rules) {
-        setBhCustomRules((configDetails as any).bh_custom_rules);
+      const cd = configDetails as any;
+      if (cd.bh_same_as_weekend !== undefined && cd.bh_same_as_weekend !== null) {
+        setBhSameAsWeekend(cd.bh_same_as_weekend);
       }
       setBhInitialized(true);
     }
   }, [configDetails, bhInitialized]);
+
+  // Fetch shift types
+  useEffect(() => {
+    if (!currentRotaConfigId) return;
+    const fetch = async () => {
+      const { data } = await supabase
+        .from("shift_types")
+        .select("id, shift_key, name, start_time, end_time, target_doctors, applicable_sun, sort_order")
+        .eq("rota_config_id", currentRotaConfigId)
+        .order("sort_order", { ascending: true });
+      setShiftTypes(data ?? []);
+    };
+    fetch();
+  }, [currentRotaConfigId]);
+
+  // Initialize BH shift rules from saved data or shift types
+  useEffect(() => {
+    if (bhShiftRulesInitialized) return;
+    if (shiftTypes.length === 0) return;
+
+    const cd = configDetails as any;
+    if (cd?.bh_shift_rules && Array.isArray(cd.bh_shift_rules)) {
+      const saved = cd.bh_shift_rules as { shift_key: string; name: string; target_doctors: number }[];
+      const savedKeys = new Set(saved.map(s => s.shift_key));
+      const merged: BhShiftRule[] = [
+        ...saved.map(s => {
+          const st = shiftTypes.find(t => t.shift_key === s.shift_key);
+          return {
+            shift_key: s.shift_key,
+            name: s.name,
+            start_time: st ? String(st.start_time).slice(0, 5) : "",
+            end_time: st ? String(st.end_time).slice(0, 5) : "",
+            target_doctors: s.target_doctors,
+            included: true,
+          };
+        }),
+        ...shiftTypes
+          .filter(t => !savedKeys.has(t.shift_key))
+          .map(t => ({
+            shift_key: t.shift_key,
+            name: t.name,
+            start_time: String(t.start_time).slice(0, 5),
+            end_time: String(t.end_time).slice(0, 5),
+            target_doctors: t.target_doctors ?? 1,
+            included: false,
+          })),
+      ];
+      setBhShiftRules(merged);
+    } else {
+      setBhShiftRules(
+        shiftTypes.map(t => ({
+          shift_key: t.shift_key,
+          name: t.name,
+          start_time: String(t.start_time).slice(0, 5),
+          end_time: String(t.end_time).slice(0, 5),
+          target_doctors: t.target_doctors ?? 1,
+          included: true,
+        }))
+      );
+    }
+    setBhShiftRulesInitialized(true);
+  }, [shiftTypes, configDetails, bhShiftRulesInitialized]);
 
   const addBankHoliday = () => {
     if (newHolidayDate && newHolidayName) {
@@ -106,6 +179,12 @@ export default function RotaPeriodStep2() {
 
   const removeBankHoliday = (id: string) => {
     setBankHolidays(bankHolidays.filter((h) => h.id !== id));
+  };
+
+  const updateBhRule = (shiftKey: string, field: Partial<BhShiftRule>) => {
+    setBhShiftRules(prev =>
+      prev.map(r => r.shift_key === shiftKey ? { ...r, ...field } : r)
+    );
   };
 
   const handleSave = async () => {
@@ -122,10 +201,13 @@ export default function RotaPeriodStep2() {
         rota_end_date: endDateStr,
         rota_duration_days: durationDays,
         rota_duration_weeks: durationWeeks,
-        rota_start_time: "08:00",
-        rota_end_time: "08:00",
+        rota_start_time: rotaStartTime,
+        rota_end_time: rotaEndTime,
         bh_same_as_weekend: bhSameAsWeekend,
-        bh_custom_rules: bhSameAsWeekend === false ? bhCustomRules : null,
+        bh_custom_rules: null,
+        bh_shift_rules: bhSameAsWeekend === false
+          ? bhShiftRules.filter(r => r.included).map(r => ({ shift_key: r.shift_key, name: r.name, target_doctors: r.target_doctors }))
+          : null,
       };
 
       if (!configId) {
@@ -158,7 +240,6 @@ export default function RotaPeriodStep2() {
         if (insertError) throw insertError;
       }
 
-      // Refresh RotaContext so Roster and other pages see updated dates
       const refreshedConfig = await getRotaConfig(configId!);
       setRestoredConfig(refreshedConfig);
 
@@ -172,6 +253,8 @@ export default function RotaPeriodStep2() {
       setSaving(false);
     }
   };
+
+  const sundayShifts = shiftTypes.filter(s => s.applicable_sun === true);
 
   return (
     <AdminLayout title="Rota Period" subtitle="Step 2 of 2 — Bank Holidays" accentColor="yellow">
@@ -191,7 +274,7 @@ export default function RotaPeriodStep2() {
             <CardDescription>Bank holidays within the rota period are auto-populated. You can modify or add custom dates.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Add holiday — dashed amber card */}
+            {/* Add holiday */}
             <div className="rounded-lg border border-dashed border-amber-300 p-3 flex flex-col gap-3 sm:flex-row sm:items-end">
               <div className="flex-1 space-y-2">
                 <Label>Holiday Name</Label>
@@ -224,7 +307,7 @@ export default function RotaPeriodStep2() {
               </div>
             )}
 
-            {/* Holiday list — WTR card row style */}
+            {/* Holiday list */}
             {bankHolidays.length > 0 ? (
               <div className="space-y-2">
                 {bankHolidays.map((holiday) => (
@@ -256,28 +339,85 @@ export default function RotaPeriodStep2() {
               <button
                 type="button"
                 onClick={() => setBhSameAsWeekend(true)}
-                className={`px-6 py-2 rounded-lg text-sm font-semibold border-2 transition-colors ${
+                className={`px-6 py-2 rounded-lg text-sm font-semibold border-2 transition-colors min-h-[44px] ${
                   bhSameAsWeekend === true ? 'border-amber-600 bg-amber-50 text-amber-700' : 'border-border bg-background text-muted-foreground'
                 }`}
               >Yes</button>
               <button
                 type="button"
                 onClick={() => setBhSameAsWeekend(false)}
-                className={`px-6 py-2 rounded-lg text-sm font-semibold border-2 transition-colors ${
+                className={`px-6 py-2 rounded-lg text-sm font-semibold border-2 transition-colors min-h-[44px] ${
                   bhSameAsWeekend === false ? 'border-amber-600 bg-amber-50 text-amber-700' : 'border-border bg-background text-muted-foreground'
                 }`}
               >No — different rules apply</button>
             </div>
+
+            {/* YES — read-only Sunday summary */}
+            {bhSameAsWeekend === true && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-4 space-y-3">
+                <p className="text-sm font-medium text-amber-800">Bank holidays will follow Sunday staffing rules:</p>
+                {sundayShifts.length > 0 ? (
+                  <div className="space-y-2">
+                    {sundayShifts.map((s: any) => (
+                      <div key={s.id} className="flex items-center justify-between rounded-md border border-amber-200 bg-white px-3 py-2">
+                        <div>
+                          <span className="text-sm font-medium text-card-foreground">{s.name}</span>
+                          <span className="ml-2 text-xs text-muted-foreground">
+                            {String(s.start_time).slice(0, 5)} – {String(s.end_time).slice(0, 5)}
+                          </span>
+                        </div>
+                        <span className="text-xs font-semibold text-amber-700">
+                          Target: {s.target_doctors ?? 1}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">No shifts are assigned to Sundays. Configure day assignments in Department Setup.</p>
+                )}
+              </div>
+            )}
+
+            {/* NO — per-shift toggle list */}
             {bhSameAsWeekend === false && (
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-foreground">Describe the bank holiday rules for your department:</label>
-                <textarea
-                  value={bhCustomRules}
-                  onChange={e => setBhCustomRules(e.target.value)}
-                  placeholder="e.g. BH are treated as standard weekdays with reduced staffing. Night shifts still run as normal."
-                  rows={4}
-                  className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                />
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">Toggle shifts on/off and set target doctors for bank holidays:</p>
+                {bhShiftRules.length > 0 ? (
+                  bhShiftRules.map((rule) => (
+                    <div
+                      key={rule.shift_key}
+                      className={cn(
+                        "rounded-lg border p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 transition-opacity",
+                        rule.included ? "border-border bg-background" : "border-border bg-muted/30 opacity-60"
+                      )}
+                    >
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <Switch
+                          checked={rule.included}
+                          onCheckedChange={(checked) => updateBhRule(rule.shift_key, { included: checked })}
+                        />
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-card-foreground truncate">{rule.name}</p>
+                          <p className="text-xs text-muted-foreground">{rule.start_time} – {rule.end_time}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Label className="text-xs text-muted-foreground whitespace-nowrap">Target doctors</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          step={1}
+                          value={rule.target_doctors}
+                          onChange={(e) => updateBhRule(rule.shift_key, { target_doctors: Math.max(0, parseInt(e.target.value) || 0) })}
+                          disabled={!rule.included}
+                          className="w-20"
+                        />
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">No shift types defined. Configure them in Department Setup.</p>
+                )}
               </div>
             )}
           </CardContent>

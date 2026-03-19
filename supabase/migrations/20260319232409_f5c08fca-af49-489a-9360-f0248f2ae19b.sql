@@ -1,0 +1,1 @@
+ALTER TABLE public.rota_configs ADD COLUMN IF NOT EXISTS bh_shift_rules jsonb DEFAULT NULL;

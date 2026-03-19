@@ -1,37 +1,151 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "@/components/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarDays, CalendarIcon, Clock, ArrowRight, Info, AlertTriangle, CheckCircle } from "lucide-react";
-import { format, differenceInDays } from "date-fns";
+import { CalendarDays, Clock, ArrowRight, Info, AlertTriangle, CheckCircle } from "lucide-react";
+import { format, differenceInDays, getDay } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useAdminSetup } from "@/contexts/AdminSetupContext";
+import { useRotaContext } from "@/contexts/RotaContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useRotaConfigDetailsQuery } from "@/hooks/useAdminQueries";
+import { toast } from "sonner";
+import type { DateRange } from "react-day-picker";
+
+const DAY_COL_MAP: Record<number, string> = {
+  0: "applicable_sun",
+  1: "applicable_mon",
+  2: "applicable_tue",
+  3: "applicable_wed",
+  4: "applicable_thu",
+  5: "applicable_fri",
+  6: "applicable_sat",
+};
 
 export default function RotaPeriodStep1() {
   const navigate = useNavigate();
-  const { rotaStartDate, rotaEndDate, setRotaStartDate, setRotaEndDate } = useAdminSetup();
-  const [startDate, setStartDate] = useState<Date | undefined>(rotaStartDate);
-  const [endDate, setEndDate] = useState<Date | undefined>(rotaEndDate);
-  const [startTime, setStartTime] = useState("08:00");
-  const [endTime, setEndTime] = useState("08:00");
+  const {
+    rotaStartDate, rotaEndDate, setRotaStartDate, setRotaEndDate,
+    rotaStartTime, rotaEndTime, setRotaStartTime, setRotaEndTime,
+  } = useAdminSetup();
+  const { currentRotaConfigId } = useRotaContext();
+  const { data: configDetails } = useRotaConfigDetailsQuery();
 
-  const handleContinue = () => {
-    setRotaStartDate(startDate);
-    setRotaEndDate(endDate);
-    navigate("/admin/rota-period/step-2");
+  const [range, setRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
+    from: rotaStartDate,
+    to: rotaEndDate,
+  });
+  const [startTime, setStartTime] = useState(rotaStartTime || "08:00");
+  const [endTime, setEndTime] = useState(rotaEndTime || "08:00");
+  const [timesAutoSet, setTimesAutoSet] = useState(false);
+  const [startTimeManual, setStartTimeManual] = useState(false);
+  const [endTimeManual, setEndTimeManual] = useState(false);
+
+  // Restore saved times from DB
+  const restoredRef = useRef(false);
+  useEffect(() => {
+    if (restoredRef.current || !configDetails) return;
+    const cd = configDetails as any;
+    if (cd.rota_start_time) {
+      const t = String(cd.rota_start_time).slice(0, 5);
+      setStartTime(t);
+      setRotaStartTime(t);
+    }
+    if (cd.rota_end_time) {
+      const t = String(cd.rota_end_time).slice(0, 5);
+      setEndTime(t);
+      setRotaEndTime(t);
+    }
+    restoredRef.current = true;
+  }, [configDetails]);
+
+  // Auto-derive times from shift types when dates change
+  useEffect(() => {
+    if (!range.from || !range.to || !currentRotaConfigId) return;
+    const derive = async () => {
+      const { data: shifts } = await supabase
+        .from("shift_types")
+        .select("id, shift_key, name, start_time, end_time, applicable_mon, applicable_tue, applicable_wed, applicable_thu, applicable_fri, applicable_sat, applicable_sun")
+        .eq("rota_config_id", currentRotaConfigId);
+      if (!shifts || shifts.length === 0) return;
+
+      // Derive start time from first day
+      const startDow = getDay(range.from!);
+      const startCol = DAY_COL_MAP[startDow];
+      const startDayShifts = shifts.filter((s: any) => s[startCol] === true);
+      if (startDayShifts.length > 0 && !startTimeManual) {
+        const minStart = startDayShifts
+          .map((s: any) => String(s.start_time).slice(0, 5))
+          .sort()[0];
+        setStartTime(minStart);
+        setTimesAutoSet(true);
+      }
+
+      // Derive end time from last day
+      const endDow = getDay(range.to!);
+      const endCol = DAY_COL_MAP[endDow];
+      const endDayShifts = shifts.filter((s: any) => s[endCol] === true);
+      if (endDayShifts.length > 0 && !endTimeManual) {
+        const maxEnd = endDayShifts
+          .map((s: any) => {
+            const et = String(s.end_time).slice(0, 5);
+            const st = String(s.start_time).slice(0, 5);
+            // If crosses midnight, end_time is technically next day
+            return et < st ? et : et;
+          })
+          .sort()
+          .reverse()[0];
+        setEndTime(maxEnd);
+        setTimesAutoSet(true);
+      }
+    };
+    derive();
+  }, [range.from, range.to, currentRotaConfigId, startTimeManual, endTimeManual]);
+
+  const handleDayClick = (day: Date) => {
+    if (!range.from || (range.from && range.to)) {
+      setRange({ from: day, to: undefined });
+    } else {
+      if (day > range.from) {
+        setRange({ from: range.from, to: day });
+      } else {
+        setRange({ from: day, to: undefined });
+      }
+    }
   };
 
   const durationInfo = (() => {
-    if (!startDate || !endDate) return null;
-    const days = differenceInDays(endDate, startDate);
+    if (!range.from || !range.to) return null;
+    const days = differenceInDays(range.to, range.from);
     if (days <= 0) return { error: true, text: "End date must be after start date." };
     const weeks = (days / 7).toFixed(1);
-    return { error: false, text: `Rota duration: ${days} days (${weeks} weeks)` };
+    return { error: false, text: `${days} days · ${weeks} weeks` };
   })();
+
+  const handleContinue = () => {
+    if (!range.from || !range.to) {
+      toast.error("Please select both a start and end date.");
+      return;
+    }
+    if (differenceInDays(range.to, range.from) <= 0) {
+      toast.error("End date must be after start date.");
+      return;
+    }
+    setRotaStartDate(range.from);
+    setRotaEndDate(range.to);
+    setRotaStartTime(startTime);
+    setRotaEndTime(endTime);
+    navigate("/admin/rota-period/step-2");
+  };
+
+  const calendarHint = !range.from
+    ? "Select a start date"
+    : !range.to
+    ? "Now select an end date"
+    : null;
 
   return (
     <AdminLayout title="Rota Period" subtitle="Step 1 of 2 — Define the timeline" accentColor="yellow">
@@ -48,61 +162,37 @@ export default function RotaPeriodStep1() {
               <CalendarDays className="h-5 w-5 text-amber-600" />
               Rota Dates
             </CardTitle>
-            <CardDescription>Set the start and end dates, and the daily shift boundaries.</CardDescription>
+            <CardDescription>Click to select a start date, then click again for the end date.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Start Date */}
-            <div className="rounded-lg border border-border p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div className="flex flex-col">
-                <span className="text-sm font-medium text-card-foreground">Start Date</span>
-                <span className="text-xs text-muted-foreground">First day of the rota period</span>
-                <span className="text-[11px] font-semibold text-amber-600 mt-0.5">Required</span>
-              </div>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className={cn("w-full sm:w-[220px] justify-start text-left font-normal", !startDate && "text-muted-foreground")}>
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {startDate ? format(startDate, "PPP") : "Select start date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar mode="single" selected={startDate} onSelect={setStartDate} initialFocus className="p-3 pointer-events-auto" />
-                </PopoverContent>
-              </Popover>
-            </div>
+            {/* Hint text */}
+            {calendarHint && (
+              <p className="text-sm font-medium text-amber-600 text-center">{calendarHint}</p>
+            )}
 
-            {/* End Date */}
-            <div className="rounded-lg border border-border p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div className="flex flex-col">
-                <span className="text-sm font-medium text-card-foreground">End Date</span>
-                <span className="text-xs text-muted-foreground">Last day a night shift can start</span>
-                <span className="text-[11px] font-semibold text-amber-600 mt-0.5">Required</span>
-              </div>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className={cn("w-full sm:w-[220px] justify-start text-left font-normal", !endDate && "text-muted-foreground")}>
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {endDate ? format(endDate, "PPP") : "Select end date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar mode="single" selected={endDate} onSelect={setEndDate} initialFocus className="p-3 pointer-events-auto" />
-                </PopoverContent>
-              </Popover>
-            </div>
+            {/* Inline range calendar */}
+            <Calendar
+              mode="range"
+              selected={{ from: range.from, to: range.to } as DateRange}
+              onDayClick={handleDayClick}
+              numberOfMonths={1}
+              className="w-full p-3 pointer-events-auto"
+            />
 
-            {/* Duration info */}
+            {/* Duration pill */}
             {durationInfo && (
-              <div className={cn(
-                "flex items-start gap-2 rounded-lg border px-3 py-2 text-xs mt-2",
-                durationInfo.error
-                  ? "border-amber-200 bg-amber-50 text-amber-700"
-                  : "border-green-200 bg-green-50 text-green-700"
-              )}>
-                {durationInfo.error
-                  ? <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-                  : <CheckCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />}
-                {durationInfo.text}
+              <div className="flex justify-center">
+                <span className={cn(
+                  "inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold",
+                  durationInfo.error
+                    ? "bg-amber-50 text-amber-700 border border-amber-200"
+                    : "bg-green-50 text-green-700 border border-green-200"
+                )}>
+                  {durationInfo.error
+                    ? <AlertTriangle className="h-3.5 w-3.5" />
+                    : <CheckCircle className="h-3.5 w-3.5" />}
+                  {durationInfo.text}
+                </span>
               </div>
             )}
 
@@ -113,10 +203,23 @@ export default function RotaPeriodStep1() {
                   <Clock className="h-3.5 w-3.5 text-muted-foreground" />Start Time
                 </span>
                 <span className="text-xs text-muted-foreground">Daily rota boundary — default 08:00</span>
-                <span className="text-[11px] font-semibold text-amber-600 mt-0.5">Auto-set from shift types</span>
+                {timesAutoSet && !startTimeManual && (
+                  <span className="text-[11px] font-semibold text-amber-600 mt-0.5">Auto-set from shift types</span>
+                )}
               </div>
-              <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className="w-full sm:w-[220px]" />
+              <Input
+                type="time"
+                value={startTime}
+                onChange={(e) => { setStartTime(e.target.value); setStartTimeManual(true); }}
+                className="w-full sm:w-[220px]"
+              />
             </div>
+            {startTimeManual && (
+              <div className="flex items-center gap-2 rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-2 text-xs font-medium text-yellow-700">
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                Custom start time — shifts on the first day of the rota starting before this time will not be included
+              </div>
+            )}
 
             {/* End Time */}
             <div className="rounded-lg border border-border p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -125,10 +228,23 @@ export default function RotaPeriodStep1() {
                   <Clock className="h-3.5 w-3.5 text-muted-foreground" />End Time
                 </span>
                 <span className="text-xs text-muted-foreground">Morning handover time on day after end date</span>
-                <span className="text-[11px] font-semibold text-amber-600 mt-0.5">Auto-set from shift types</span>
+                {timesAutoSet && !endTimeManual && (
+                  <span className="text-[11px] font-semibold text-amber-600 mt-0.5">Auto-set from shift types</span>
+                )}
               </div>
-              <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="w-full sm:w-[220px]" />
+              <Input
+                type="time"
+                value={endTime}
+                onChange={(e) => { setEndTime(e.target.value); setEndTimeManual(true); }}
+                className="w-full sm:w-[220px]"
+              />
             </div>
+            {endTimeManual && (
+              <div className="flex items-center gap-2 rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-2 text-xs font-medium text-yellow-700">
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                Custom end time — shifts on the last day of the rota ending after this time may not be included
+              </div>
+            )}
           </CardContent>
         </Card>
 

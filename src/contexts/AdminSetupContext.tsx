@@ -15,6 +15,10 @@ interface AdminSetupContextType {
   rotaEndDate: Date | undefined;
   setRotaStartDate: (d: Date | undefined) => void;
   setRotaEndDate: (d: Date | undefined) => void;
+  rotaStartTime: string;
+  rotaEndTime: string;
+  setRotaStartTime: (t: string) => void;
+  setRotaEndTime: (t: string) => void;
   // WTR Step 1
   maxAvgWeekly: number;
   maxIn7Days: number;
@@ -62,6 +66,8 @@ export function AdminSetupProvider({ children }: { children: ReactNode }) {
   const [areSurveysDone, setSurveysDone] = useState(false);
   const [rotaStartDate, setRotaStartDate] = useState<Date | undefined>();
   const [rotaEndDate, setRotaEndDate] = useState<Date | undefined>();
+  const [rotaStartTime, setRotaStartTime] = useState("08:00");
+  const [rotaEndTime, setRotaEndTime] = useState("08:00");
   const [restoredFromDb, setRestoredFromDb] = useState(false);
   // WTR Step 1
   const [maxAvgWeekly, setMaxAvgWeekly] = useState(48);
@@ -146,6 +152,7 @@ export function AdminSetupProvider({ children }: { children: ReactNode }) {
         isDepartmentComplete, isWtrComplete, isPeriodComplete, areSurveysDone,
         setDepartmentComplete, setWtrComplete, setPeriodComplete, setSurveysDone,
         rotaStartDate, rotaEndDate, setRotaStartDate, setRotaEndDate,
+        rotaStartTime, rotaEndTime, setRotaStartTime, setRotaEndTime,
         maxAvgWeekly, maxIn7Days, setMaxAvgWeekly, setMaxIn7Days,
         maxConsecDays, maxConsecLong, maxConsecNights, setMaxConsecDays, setMaxConsecLong, setMaxConsecNights,
         restPostNights, restPostBlock, restAfter7, weekendFreq, setRestPostNights, setRestPostBlock, setRestAfter7, setWeekendFreq,
