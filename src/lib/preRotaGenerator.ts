@@ -81,6 +81,7 @@ export async function generatePreRota(
             iacAchieved: compJson?.iac?.achieved ?? null,
             iaocAchieved: compJson?.iaoc?.achieved ?? null,
             icuAchieved: compJson?.icu?.achieved ?? null,
+            transferAchieved: compJson?.transfer?.achieved ?? null,
           },
         } : null,
       }

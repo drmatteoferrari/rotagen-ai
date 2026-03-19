@@ -17,6 +17,7 @@ interface ValidationInputs {
     reqIac: number
     reqIaoc: number
     reqIcu: number
+    reqTransfer: number
     reqMinGrade: string | null
     minDoctors: number
   }[]

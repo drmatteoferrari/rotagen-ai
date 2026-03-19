@@ -28,6 +28,11 @@ export interface PreRotaInput {
     minDoctors: number;
     maxDoctors: number | null;
     targetPct: number;
+    reqIac: number;
+    reqIaoc: number;
+    reqIcu: number;
+    reqTransfer: number;
+    reqMinGrade: string | null;
   }>;
   wtrConstraints: {
     maxAvgHoursPerWeek: number;
