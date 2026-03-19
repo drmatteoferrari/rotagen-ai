@@ -38,6 +38,7 @@ import Privacy from "./pages/Privacy";
 import LandingPage from "./pages/LandingPage";
 import Pricing from "./pages/Pricing";
 import Terms from "./pages/Terms";
+import Checkout from "./pages/Checkout";
 import { AdminShell } from "./components/AdminShell";
 
 const queryClient = new QueryClient();
