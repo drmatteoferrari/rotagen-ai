@@ -76,6 +76,8 @@ export default function Dashboard() {
   // If pre-rota is ready, show the embedded calendar
   if (hasPreRota) {
     return (
+      <>
+      {showOnboarding && <OnboardingModal onClose={() => setShowOnboarding(false)} />}
       <AdminLayout title="Dashboard" subtitle="Overview of your rota" accentColor="blue">
         <div className="mx-auto max-w-7xl space-y-4 animate-fadeSlideUp">
           {/* Pre-allocation note */}
