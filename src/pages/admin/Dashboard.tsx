@@ -56,13 +56,16 @@ export default function Dashboard() {
 
   if (!restoredFromDb) {
     return (
-      <AdminLayout title="Dashboard" subtitle="Overview of your rota" accentColor="blue">
-        <div className="mx-auto max-w-3xl space-y-4">
-          <Skeleton className="h-24 w-full rounded-xl" />
-          <Skeleton className="h-48 w-full rounded-xl" />
-          <Skeleton className="h-24 w-full rounded-xl" />
-        </div>
-      </AdminLayout>
+      <>
+        {showOnboarding && <OnboardingModal onClose={() => setShowOnboarding(false)} />}
+        <AdminLayout title="Dashboard" subtitle="Overview of your rota" accentColor="blue">
+          <div className="mx-auto max-w-3xl space-y-4">
+            <Skeleton className="h-24 w-full rounded-xl" />
+            <Skeleton className="h-48 w-full rounded-xl" />
+            <Skeleton className="h-24 w-full rounded-xl" />
+          </div>
+        </AdminLayout>
+      </>
     );
   }
 
