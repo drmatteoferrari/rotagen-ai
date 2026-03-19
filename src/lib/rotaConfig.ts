@@ -131,7 +131,7 @@ export async function getRotaConfig(id: string): Promise<RotaConfig> {
     },
     badges: {
       night: s.badge_night, long: s.badge_long, ooh: s.badge_ooh,
-      weekend: s.badge_weekend, oncall: s.badge_oncall, nonres: s.badge_nonres,
+      oncall: s.badge_oncall, nonres: s.badge_nonres,
     },
     badgeOverrides: {
       ...(s.badge_night_manual_override !== null ? { night: s.badge_night_manual_override } : {}),
