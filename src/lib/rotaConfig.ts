@@ -25,7 +25,7 @@ export interface RotaConfigShift {
   };
   badges: {
     night: boolean; long: boolean; ooh: boolean;
-    weekend: boolean; oncall: boolean; nonres: boolean;
+    oncall: boolean; nonres: boolean;
   };
   badgeOverrides: {
     night?: boolean; long?: boolean; ooh?: boolean;
