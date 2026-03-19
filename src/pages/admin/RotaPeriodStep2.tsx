@@ -129,18 +129,27 @@ export default function RotaPeriodStep2() {
     fetch();
   }, [currentRotaConfigId]);
 
-  // Initialize BH shift rules from saved data or shift types
+  // Initialize BH shift rules and bhSameAsWeekend — wait for BOTH shiftTypes and configDetails
   useEffect(() => {
     if (bhShiftRulesInitialized) return;
     if (shiftTypes.length === 0) return;
+    if (!configDetails) return;
 
     const cd = configDetails as any;
-    if (cd?.bh_shift_rules && Array.isArray(cd.bh_shift_rules)) {
+
+    // Restore bhSameAsWeekend
+    if (cd.bh_same_as_weekend !== undefined && cd.bh_same_as_weekend !== null) {
+      setBhSameAsWeekend(cd.bh_same_as_weekend);
+    }
+    setBhInitialized(true);
+
+    // Restore bh_shift_rules
+    if (cd.bh_shift_rules && Array.isArray(cd.bh_shift_rules) && cd.bh_shift_rules.length > 0) {
       const saved = cd.bh_shift_rules as { shift_key: string; name: string; target_doctors: number }[];
-      const savedKeys = new Set(saved.map(s => s.shift_key));
+      const savedKeys = new Set(saved.map((s: any) => s.shift_key));
       const merged: BhShiftRule[] = [
-        ...saved.map(s => {
-          const st = shiftTypes.find(t => t.shift_key === s.shift_key);
+        ...saved.map((s: any) => {
+          const st = shiftTypes.find((t: any) => t.shift_key === s.shift_key);
           return {
             shift_key: s.shift_key,
             name: s.name,
@@ -151,8 +160,8 @@ export default function RotaPeriodStep2() {
           };
         }),
         ...shiftTypes
-          .filter(t => !savedKeys.has(t.shift_key))
-          .map(t => ({
+          .filter((t: any) => !savedKeys.has(t.shift_key))
+          .map((t: any) => ({
             shift_key: t.shift_key,
             name: t.name,
             start_time: String(t.start_time).slice(0, 5),
@@ -164,7 +173,7 @@ export default function RotaPeriodStep2() {
       setBhShiftRules(merged);
     } else {
       setBhShiftRules(
-        shiftTypes.map(t => ({
+        shiftTypes.map((t: any) => ({
           shift_key: t.shift_key,
           name: t.name,
           start_time: String(t.start_time).slice(0, 5),
