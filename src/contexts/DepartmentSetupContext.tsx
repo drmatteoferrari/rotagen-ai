@@ -81,7 +81,7 @@ export function detectBadges(
     }
   }
 
-  return { night, long, ooh, weekend: hasSatSun, oncall: isOncall, nonres: isNonRes };
+  return { night, long, ooh, oncall: isOncall, nonres: isNonRes };
 }
 
 /** Merge auto-detected badges with manual overrides */
