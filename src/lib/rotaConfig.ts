@@ -29,7 +29,7 @@ export interface RotaConfigShift {
   };
   badgeOverrides: {
     night?: boolean; long?: boolean; ooh?: boolean;
-    weekend?: boolean; oncall?: boolean; nonres?: boolean;
+    oncall?: boolean; nonres?: boolean;
   };
   oncallManuallySet: boolean;
   minDoctors: number;
