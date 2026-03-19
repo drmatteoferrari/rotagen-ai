@@ -28,6 +28,11 @@ export interface PreRotaInput {
     minDoctors: number;
     maxDoctors: number | null;
     targetPct: number;
+    reqIac: number;
+    reqIaoc: number;
+    reqIcu: number;
+    reqTransfer: number;
+    reqMinGrade: string | null;
   }>;
   wtrConstraints: {
     maxAvgHoursPerWeek: number;
@@ -98,6 +103,7 @@ export async function buildPreRotaInput(configId: string): Promise<PreRotaInput>
       reqIac: s.reqIac,
       reqIaoc: s.reqIaoc,
       reqIcu: s.reqIcu,
+      reqTransfer: s.reqTransfer ?? 0,
       reqMinGrade: s.reqMinGrade,
     })),
     wtrConstraints: {

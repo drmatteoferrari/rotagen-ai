@@ -571,6 +571,7 @@ export type Database = {
       }
       shift_types: {
         Row: {
+          abbreviation: string | null
           applicable_fri: boolean | null
           applicable_mon: boolean | null
           applicable_sat: boolean | null
@@ -604,14 +605,17 @@ export type Database = {
           req_iaoc: number
           req_icu: number
           req_min_grade: string | null
+          req_transfer: number
           rota_config_id: string
           shift_key: string
           sort_order: number | null
           start_time: string
+          target_doctors: number | null
           target_percentage: number | null
           updated_at: string | null
         }
         Insert: {
+          abbreviation?: string | null
           applicable_fri?: boolean | null
           applicable_mon?: boolean | null
           applicable_sat?: boolean | null
@@ -645,14 +649,17 @@ export type Database = {
           req_iaoc?: number
           req_icu?: number
           req_min_grade?: string | null
+          req_transfer?: number
           rota_config_id: string
           shift_key: string
           sort_order?: number | null
           start_time: string
+          target_doctors?: number | null
           target_percentage?: number | null
           updated_at?: string | null
         }
         Update: {
+          abbreviation?: string | null
           applicable_fri?: boolean | null
           applicable_mon?: boolean | null
           applicable_sat?: boolean | null
@@ -686,10 +693,12 @@ export type Database = {
           req_iaoc?: number
           req_icu?: number
           req_min_grade?: string | null
+          req_transfer?: number
           rota_config_id?: string
           shift_key?: string
           sort_order?: number | null
           start_time?: string
+          target_doctors?: number | null
           target_percentage?: number | null
           updated_at?: string | null
         }

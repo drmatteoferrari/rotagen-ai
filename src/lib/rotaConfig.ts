@@ -4,6 +4,12 @@ import { useAuth } from "@/contexts/AuthContext";
 
 // SECTION 7 — getRotaConfig() retrieval function
 
+function generateAbbreviationForConfig(name: string): string {
+  const base = name.split(/\s[—\-]\s/)[0].trim();
+  const initials = base.split(/\s+/).map((w: string) => w[0]?.toUpperCase() ?? "").join("").slice(0, 4);
+  return initials || name.slice(0, 2).toUpperCase();
+}
+
 export interface RotaConfigShift {
   id: string;
   shiftKey: string;
@@ -35,6 +41,9 @@ export interface RotaConfigShift {
   reqIaoc: number;
   reqIcu: number;
   reqMinGrade: string | null;
+  reqTransfer: number;
+  abbreviation: string;
+  targetDoctors: number;
 }
 
 export interface RotaConfig {
@@ -141,6 +150,9 @@ export async function getRotaConfig(id: string): Promise<RotaConfig> {
     reqIaoc: s.req_iaoc ?? 0,
     reqIcu: s.req_icu ?? 0,
     reqMinGrade: s.req_min_grade ?? null,
+    reqTransfer: s.req_transfer ?? 0,
+    abbreviation: s.abbreviation ?? generateAbbreviationForConfig(s.name),
+    targetDoctors: s.target_doctors ?? s.min_doctors ?? 1,
   }));
   // ✅ Section 2 complete (rotaConfig mapping)
 

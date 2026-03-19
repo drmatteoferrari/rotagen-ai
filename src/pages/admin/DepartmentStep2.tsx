@@ -1,35 +1,110 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "@/components/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Pencil, Clock, Save, X, ChevronDown, Info, AlertTriangle, ArrowLeft, ArrowRight, CalendarDays } from "lucide-react";
+import { Plus, Trash2, Pencil, Clock, Save, X, Info, AlertTriangle, ArrowLeft, ArrowRight, CalendarDays, ChevronRight, Loader2 } from "lucide-react";
 import {
-  useDepartmentSetup,
-  detectBadges,
-  mergedBadges,
-  type ShiftType,
-  type BadgeKey,
-  type ShiftBadges,
+  useDepartmentSetup, detectBadges, mergedBadges,
+  generateAbbreviation, getShiftColor,
+  type ShiftType, type BadgeKey, type ShiftBadges,
 } from "@/contexts/DepartmentSetupContext";
+import { useAdminSetup } from "@/contexts/AdminSetupContext";
+import { useRotaContext } from "@/contexts/RotaContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { calcDurationHours } from "@/lib/shiftUtils";
 import type { ApplicableDays } from "@/lib/shiftUtils";
 
-const DAY_KEYS: (keyof ApplicableDays)[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
-const DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
+const DAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
+type DayKey = typeof DAY_KEYS[number];
+const DAY_SHORT_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const DAY_FULL_LABELS  = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
-const BADGE_DEFS: { key: BadgeKey; label: string; emoji: string; color: string; activeClasses: string }[] = [
-  { key: "night", label: "NIGHT", emoji: "🌙", color: "bg-slate-700 text-white", activeClasses: "bg-slate-700 text-white" },
-  { key: "long", label: "LONG", emoji: "⏱", color: "bg-amber-500 text-white", activeClasses: "bg-amber-500 text-white" },
-  { key: "ooh", label: "OOH", emoji: "🌆", color: "bg-indigo-500 text-white", activeClasses: "bg-indigo-500 text-white" },
-  { key: "weekend", label: "WEEKEND", emoji: "📅", color: "bg-purple-500 text-white", activeClasses: "bg-purple-500 text-white" },
-  { key: "oncall", label: "ON-CALL", emoji: "📟", color: "bg-emerald-600 text-white", activeClasses: "bg-emerald-600 text-white" },
-  { key: "nonres", label: "NON-RES OC", emoji: "🏠", color: "bg-teal-500 text-white", activeClasses: "bg-teal-500 text-white" },
+const BADGE_DEFS = [
+  { key: "night" as BadgeKey,   label: "NIGHT",      emoji: "🌙", activeClasses: "bg-slate-700 text-white" },
+  { key: "long" as BadgeKey,    label: "LONG",       emoji: "⏱",  activeClasses: "bg-amber-500 text-white" },
+  { key: "ooh" as BadgeKey,     label: "OOH",        emoji: "🌆", activeClasses: "bg-indigo-500 text-white" },
+  { key: "weekend" as BadgeKey, label: "WEEKEND",    emoji: "📅", activeClasses: "bg-purple-500 text-white" },
+  { key: "oncall" as BadgeKey,  label: "ON-CALL",    emoji: "📟", activeClasses: "bg-emerald-600 text-white" },
+  { key: "nonres" as BadgeKey,  label: "NON-RES OC", emoji: "🏠", activeClasses: "bg-teal-500 text-white" },
 ];
+
+function getChipLabel(shift: ShiftType): string {
+  const { min, max } = shift.staffing;
+  if (max === null) return `${shift.abbreviation} ×${min}`;
+  return `${shift.abbreviation} ×${min}–${max}`;
+}
+
+interface DayColumnProps {
+  dayKey: DayKey;
+  dayLabel: string;
+  shifts: ShiftType[];
+  isWeekend: boolean;
+  hoveredChipId: string | null;
+  setHoveredChipId: (id: string | null) => void;
+  activeChipId: string | null;
+  setActiveChipId: (id: string | null) => void;
+  longPressRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>;
+  removeShiftFromDay: (shiftId: string, dayKey: DayKey) => void;
+}
+
+function DayColumn({ dayKey, dayLabel, shifts, isWeekend, hoveredChipId, setHoveredChipId, activeChipId, setActiveChipId, longPressRef, removeShiftFromDay }: DayColumnProps) {
+  const dayShifts = shifts.map((s, index) => ({ shift: s, index })).filter(({ shift }) => shift.applicableDays[dayKey]);
+
+  return (
+    <div className={`rounded-xl border p-3 min-h-[180px] ${isWeekend ? "border-purple-200 bg-purple-50/60" : "border-border bg-card"}`}>
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className={`text-sm font-semibold ${isWeekend ? "text-purple-700" : "text-card-foreground"}`}>{dayLabel}</h3>
+        <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{dayShifts.length} shift{dayShifts.length !== 1 ? "s" : ""}</span>
+      </div>
+
+      <div className="space-y-2">
+        {dayShifts.length === 0 && (
+          <div className="rounded-lg border border-dashed border-border bg-muted/30 px-3 py-6 text-center text-xs text-muted-foreground">
+            Add via cards below
+          </div>
+        )}
+
+        {dayShifts.map(({ shift, index }) => {
+          const chipKey = `${shift.id}-${dayKey}`;
+          const color = getShiftColor(index);
+          const isActive = activeChipId === chipKey;
+          const isHovered = hoveredChipId === chipKey;
+          const showRemove = isActive || isHovered;
+
+          return (
+            <div
+              key={chipKey}
+              className={`flex min-h-[36px] items-center justify-between gap-2 rounded-full border px-3 py-2 text-xs font-semibold transition-all ${color.bg} ${color.text} ${color.border} ${isActive ? "opacity-80 ring-2 ring-purple-300 ring-offset-1" : ""}`}
+              onMouseEnter={() => setHoveredChipId(chipKey)}
+              onMouseLeave={() => setHoveredChipId(null)}
+              onTouchStart={() => { longPressRef.current = setTimeout(() => setActiveChipId(chipKey), 500); }}
+              onTouchEnd={() => { if (longPressRef.current) clearTimeout(longPressRef.current); }}
+              onTouchMove={() => { if (longPressRef.current) clearTimeout(longPressRef.current); }}
+            >
+              <span className="truncate">{getChipLabel(shift)}</span>
+              {showRemove && (
+                <button
+                  type="button"
+                  className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-background/70 text-foreground hover:bg-background"
+                  onClick={(e) => { e.stopPropagation(); removeShiftFromDay(shift.id, dayKey); setActiveChipId(null); setHoveredChipId(null); }}
+                  aria-label={`Remove ${shift.abbreviation} from ${dayLabel}`}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 function BadgeRow({
   shift,
@@ -67,7 +142,7 @@ function BadgeRow({
                 : "bg-muted text-muted-foreground/40 line-through"
             } ${editable ? "cursor-pointer hover:opacity-80" : "cursor-default"}`}
           >
-            {emoji}{!compact && <>{" "}{label}{suffix}</>}
+            {emoji}{!compact && <> {label}{suffix}</>}
           </button>
         );
       })}
@@ -75,60 +150,16 @@ function BadgeRow({
   );
 }
 
-function CollapsedCard({
-  shift,
-  onExpand,
-  onRemove,
-  canRemove,
-}: {
-  shift: ShiftType;
-  onExpand: () => void;
-  onRemove: () => void;
-  canRemove: boolean;
-}) {
-  return (
-    <div
-      onClick={onExpand}
-      className="rounded-lg border border-border bg-card p-4 space-y-3 transition-all hover:shadow-md cursor-pointer"
-    >
-      <div className="flex justify-between items-start">
-        <div className="flex flex-col gap-2 min-w-0 flex-1">
-          <h3 className="text-sm font-medium text-card-foreground truncate">{shift.name}</h3>
-          <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-            <Clock className="h-3.5 w-3.5 shrink-0" />
-            {shift.startTime} – {shift.endTime} ({shift.durationHours}h)
-            <span className="text-muted-foreground/60">·</span>
-            <span className="font-semibold tracking-wide">
-              {DAY_KEYS.filter(k => shift.applicableDays[k]).map((k, i) => DAY_LABELS[DAY_KEYS.indexOf(k)]).join("")}
-            </span>
-          </p>
-          {/* Show icon-only badges on mobile, full badges on sm+ */}
-          <div className="sm:hidden">
-            <BadgeRow shift={shift} editable={false} compact />
-          </div>
-          <div className="hidden sm:block">
-            <BadgeRow shift={shift} editable={false} />
-          </div>
-        </div>
-        <div className="flex gap-2 shrink-0 ml-2">
-          {canRemove && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onRemove(); }}
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-muted-foreground hover:text-destructive transition-colors"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
-          )}
-          <button
-            onClick={(e) => { e.stopPropagation(); onExpand(); }}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-muted-foreground hover:text-purple-600 transition-colors"
-          >
-            <Pencil className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+function getShiftErrors(shift: ShiftType): string[] {
+  const errors: string[] = [];
+  if (!shift.name.trim()) errors.push("Shift name is required.");
+  if (!shift.abbreviation.trim()) errors.push("Abbreviation is required.");
+  if (shift.abbreviation.trim().length > 4) errors.push("Abbreviation must be 4 characters or fewer.");
+  if (shift.startTime === shift.endTime) errors.push("Start and end time cannot be the same.");
+  if (!Object.values(shift.applicableDays).some(Boolean)) errors.push("At least one day must be selected.");
+  if (shift.staffing.target < shift.staffing.min) errors.push("Target cannot be less than minimum.");
+  if (shift.staffing.max !== null && shift.staffing.max < shift.staffing.target) errors.push("Maximum cannot be less than target.");
+  return errors;
 }
 
 function ExpandedCard({
@@ -136,36 +167,55 @@ function ExpandedCard({
   onSave,
   onCancel,
   onRemove,
+  onDraftChange,
   canRemove,
 }: {
   shift: ShiftType;
   onSave: (updated: ShiftType) => void;
-  onCancel: () => void;
+  onCancel: (original: ShiftType) => void;
   onRemove: () => void;
+  onDraftChange: (updated: ShiftType) => void;
   canRemove: boolean;
 }) {
-  const [draft, setDraft] = useState<ShiftType>({ ...originalShift, applicableDays: { ...originalShift.applicableDays }, badges: { ...originalShift.badges }, badgeOverrides: { ...originalShift.badgeOverrides }, staffing: { ...originalShift.staffing }, reqIac: originalShift.reqIac, reqIaoc: originalShift.reqIaoc, reqIcu: originalShift.reqIcu, reqMinGrade: originalShift.reqMinGrade });
-  const [showMax, setShowMax] = useState(draft.staffing.max !== null);
+  const initialShiftRef = useRef(originalShift);
+  const [draft, setDraft] = useState({
+    ...originalShift,
+    applicableDays: { ...originalShift.applicableDays },
+    badges: { ...originalShift.badges },
+    badgeOverrides: { ...originalShift.badgeOverrides },
+    staffing: { ...originalShift.staffing },
+    reqIac: originalShift.reqIac,
+    reqIaoc: originalShift.reqIaoc,
+    reqIcu: originalShift.reqIcu,
+    reqTransfer: originalShift.reqTransfer,
+    reqMinGrade: originalShift.reqMinGrade,
+    abbreviation: originalShift.abbreviation,
+  });
+  const [abbrevManuallyEdited, setAbbrevManuallyEdited] = useState(false);
 
   const recalc = useCallback((d: ShiftType): ShiftType => {
     const dur = calcDurationHours(d.startTime, d.endTime);
     const auto = detectBadges(d.startTime, d.endTime, d.applicableDays, d.isOncall, d.isNonRes);
-    
+
     let isOncall = d.isOncall;
     let isNonRes = d.isNonRes;
     if (!d.oncallManuallySet) {
       isOncall = auto.night || auto.long || auto.weekend || auto.ooh;
     }
-    
+
     const finalAuto = detectBadges(d.startTime, d.endTime, d.applicableDays, isOncall, isNonRes);
     const merged = mergedBadges(finalAuto, d.badgeOverrides);
-    
+
     return { ...d, durationHours: dur, isOncall, isNonRes, badges: merged };
   }, []);
 
   const update = useCallback((updates: Partial<ShiftType>) => {
-    setDraft((prev) => recalc({ ...prev, ...updates }));
-  }, [recalc]);
+    setDraft((prev) => {
+      const next = recalc({ ...prev, ...updates });
+      onDraftChange(next);
+      return next;
+    });
+  }, [onDraftChange, recalc]);
 
   const toggleDay = (key: keyof ApplicableDays) => {
     const newDays = { ...draft.applicableDays, [key]: !draft.applicableDays[key] };
@@ -175,8 +225,8 @@ function ExpandedCard({
 
   const toggleBadge = (key: BadgeKey) => {
     const isCurrentlyOverridden = draft.badgeOverrides[key] !== undefined;
-    let newOverrides = { ...draft.badgeOverrides };
-    
+    const newOverrides = { ...draft.badgeOverrides };
+
     if (isCurrentlyOverridden) {
       delete newOverrides[key];
     } else {
@@ -197,82 +247,101 @@ function ExpandedCard({
     update({ badgeOverrides: newOverrides, ...extraUpdates });
   };
 
+  const staffingError = draft.staffing.target < draft.staffing.min || (draft.staffing.max !== null && draft.staffing.max < draft.staffing.target);
+
   return (
-    <div className="rounded-lg border-2 border-purple-200 bg-card p-6 shadow-lg space-y-5">
-      {/* Header with remove */}
-      <div className="flex justify-between items-center">
-        <ChevronDown className="h-5 w-5 text-purple-600" />
-        {canRemove && (
-          <button onClick={onRemove} className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-muted-foreground hover:text-destructive transition-colors">
-            <Trash2 className="h-4 w-4" />
+    <div className="space-y-5 rounded-xl border-2 border-purple-200 bg-card p-5 shadow-lg md:p-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-purple-600">Editing shift</p>
+          <h3 className="text-lg font-semibold text-card-foreground">{draft.name || "Untitled shift"}</h3>
+        </div>
+        <div className="flex items-center gap-2">
+          {canRemove && (
+            <button type="button" onClick={onRemove} className="flex h-11 w-11 items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:text-destructive">
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
+          <button type="button" onClick={() => onCancel(initialShiftRef.current)} className="flex h-11 w-11 items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:text-foreground">
+            <X className="h-4 w-4" />
           </button>
-        )}
+        </div>
       </div>
 
-      {/* Name */}
-      <div className="space-y-1">
-        <Label className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">Shift Name</Label>
+      <div className="space-y-1.5">
+        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Name</Label>
         <Input
           value={draft.name}
-          onChange={(e) => update({ name: e.target.value })}
-          className="text-lg font-bold border-none bg-transparent px-0 h-auto focus-visible:ring-0 focus-visible:ring-offset-0"
+          onChange={(e) => {
+            const newName = e.target.value;
+            update({ name: newName });
+            if (!abbrevManuallyEdited) update({ abbreviation: generateAbbreviation(newName) });
+          }}
+          className="min-h-[44px]"
           placeholder="Enter shift name"
         />
       </div>
 
-      {/* Times + Duration */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="space-y-1">
-          <Label className="font-semibold text-xs">Start Time</Label>
-          <Input type="time" value={draft.startTime} onChange={(e) => update({ startTime: e.target.value })} className="bg-muted border-border" />
+      <div className="space-y-1.5">
+        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Abbreviation</Label>
+        <div className="flex items-center gap-3">
+          <Input
+            value={draft.abbreviation}
+            maxLength={4}
+            onChange={(e) => { setAbbrevManuallyEdited(true); update({ abbreviation: e.target.value.toUpperCase() }); }}
+            className="w-20 min-h-[44px] font-mono text-center tracking-widest"
+            placeholder="SD"
+          />
+          <p className="text-xs text-muted-foreground">Auto-generated from name · max 4 characters · shown in calendar chips</p>
         </div>
-        <div className="space-y-1">
-          <Label className="font-semibold text-xs">End Time</Label>
-          <Input type="time" value={draft.endTime} onChange={(e) => update({ endTime: e.target.value })} className="bg-muted border-border" />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="space-y-1.5">
+          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Start time</Label>
+          <Input type="time" value={draft.startTime} onChange={(e) => update({ startTime: e.target.value })} className="min-h-[44px]" />
         </div>
-        <div className="space-y-1">
-          <Label className="font-semibold text-xs">Duration</Label>
-          <div className="flex items-center gap-2 h-10 px-3 rounded-md border border-border bg-muted text-muted-foreground text-sm font-medium">
-            <Clock className="h-3.5 w-3.5" /> {draft.durationHours}h
+        <div className="space-y-1.5">
+          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">End time</Label>
+          <Input type="time" value={draft.endTime} onChange={(e) => update({ endTime: e.target.value })} className="min-h-[44px]" />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Duration</Label>
+          <div className="flex min-h-[44px] items-center gap-2 rounded-md border border-border bg-muted px-3 text-sm font-medium text-muted-foreground">
+            <Clock className="h-4 w-4" /> {draft.durationHours}h
           </div>
         </div>
       </div>
 
-      {/* Days */}
       <div className="space-y-2">
-        <Label className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">Applicable Days</Label>
-        <div className="flex gap-1.5 sm:gap-2 flex-wrap">
+        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Applicable days</Label>
+        <div className="flex flex-wrap gap-2">
           {DAY_KEYS.map((key, i) => (
             <button
               key={key}
               type="button"
               onClick={() => toggleDay(key)}
-              className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-bold transition-colors ${
-                draft.applicableDays[key]
-                  ? "bg-purple-600 text-white shadow-lg shadow-purple-600/20"
-                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              className={`flex h-11 min-w-[44px] items-center justify-center rounded-full px-3 text-sm font-semibold transition-colors ${
+                draft.applicableDays[key] ? "bg-purple-600 text-white shadow-lg shadow-purple-600/20" : "bg-muted text-muted-foreground hover:bg-muted/80"
               }`}
             >
-              {DAY_LABELS[i]}
+              {DAY_SHORT_LABELS[i]}
             </button>
           ))}
         </div>
       </div>
 
-      {/* On-call radios */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">Resident On-Call?</Label>
+          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Resident on-call?</Label>
           <div className="flex gap-3">
             {[true, false].map((val) => (
               <button
                 key={String(val)}
                 type="button"
                 onClick={() => update({ isOncall: val, oncallManuallySet: true })}
-                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                  draft.isOncall === val
-                    ? "bg-purple-600 text-white"
-                    : "bg-muted text-muted-foreground"
+                className={`min-h-[44px] rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
+                  draft.isOncall === val ? "bg-purple-600 text-white" : "bg-muted text-muted-foreground"
                 }`}
               >
                 {val ? "Yes" : "No"}
@@ -281,17 +350,15 @@ function ExpandedCard({
           </div>
         </div>
         <div className="space-y-2">
-          <Label className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">Non-Resident On-Call?</Label>
+          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Non-resident on-call?</Label>
           <div className="flex gap-3">
             {[true, false].map((val) => (
               <button
                 key={String(val)}
                 type="button"
                 onClick={() => update({ isNonRes: val })}
-                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                  draft.isNonRes === val
-                    ? "bg-purple-600 text-white"
-                    : "bg-muted text-muted-foreground"
+                className={`min-h-[44px] rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
+                  draft.isNonRes === val ? "bg-purple-600 text-white" : "bg-muted text-muted-foreground"
                 }`}
               >
                 {val ? "Yes" : "No"}
@@ -301,125 +368,135 @@ function ExpandedCard({
         </div>
       </div>
 
-      {/* Staffing */}
-      <div className="space-y-3">
-        <Label className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">Staffing</Label>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-1">
-            <Label className="text-xs">Min Doctors</Label>
+      <div className="space-y-3 rounded-xl border border-border p-4">
+        <div>
+          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Staffing</Label>
+          <p className="mt-1 text-xs text-muted-foreground">Set the hard minimum, preferred target, and optional maximum for this shift.</p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium">Minimum</Label>
             <Input
               type="number"
-              min={0}
-              max={50}
+              min={1}
               value={draft.staffing.min}
-              onChange={(e) => update({ staffing: { ...draft.staffing, min: Math.max(0, Math.min(50, Number(e.target.value) || 0)) } })}
-              className="bg-muted border-border"
+              className="min-h-[44px]"
+              onChange={(e) => {
+                const val = Math.max(1, parseInt(e.target.value) || 1);
+                const newTarget = Math.max(val, draft.staffing.target);
+                const newMax = draft.staffing.max !== null ? Math.max(newTarget, draft.staffing.max) : null;
+                update({ staffing: { min: val, target: newTarget, max: newMax } });
+              }}
             />
+            <p className="text-xs text-muted-foreground">Rota invalid below this</p>
           </div>
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <Checkbox
-                checked={showMax}
-                onCheckedChange={(checked) => {
-                  setShowMax(!!checked);
-                  if (!checked) update({ staffing: { ...draft.staffing, max: null } });
-                  else update({ staffing: { ...draft.staffing, max: draft.staffing.min } });
-                }}
-              />
-              <Label className="text-xs">Set maximum doctors</Label>
-            </div>
-            {showMax && (
-              <Input
-                type="number"
-                min={0}
-                max={50}
-                value={draft.staffing.max ?? ""}
-                onChange={(e) => update({ staffing: { ...draft.staffing, max: Math.max(0, Math.min(50, Number(e.target.value) || 0)) } })}
-                className="bg-muted border-border"
-              />
-            )}
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium">Target</Label>
+            <Input
+              type="number"
+              min={draft.staffing.min}
+              value={draft.staffing.target}
+              className="min-h-[44px]"
+              onChange={(e) => {
+                const val = Math.max(draft.staffing.min, parseInt(e.target.value) || draft.staffing.min);
+                const newMax = draft.staffing.max !== null ? Math.max(val, draft.staffing.max) : null;
+                update({ staffing: { ...draft.staffing, target: val, max: newMax } });
+              }}
+            />
+            <p className="text-xs text-muted-foreground">Algorithm aims for exactly this</p>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium">Maximum (optional)</Label>
+            <Input
+              type="number"
+              min={draft.staffing.target}
+              value={draft.staffing.max ?? ""}
+              className="min-h-[44px]"
+              onChange={(e) => {
+                const raw = e.target.value;
+                update({ staffing: { ...draft.staffing, max: raw === "" ? null : Math.max(draft.staffing.target, parseInt(raw) || draft.staffing.target) } });
+              }}
+            />
+            <p className="text-xs text-muted-foreground">Leave blank = the algorithm allocates exactly {draft.staffing.min} doctor{draft.staffing.min !== 1 ? "s" : ""} — no more, no less. Set a number to allow a flexible range.</p>
           </div>
         </div>
+
+        {staffingError && (
+          <div className="flex items-center gap-2 rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            {draft.staffing.target < draft.staffing.min ? "Target cannot be less than minimum." : "Maximum cannot be less than target."}
+          </div>
+        )}
       </div>
 
-      {/* Badges (editable) */}
       <div className="space-y-2">
-        <Label className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">Badges</Label>
+        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Badges</Label>
         <BadgeRow shift={draft} editable onToggle={toggleBadge} />
         <p className="text-[10px] text-muted-foreground">⚡ = auto-detected, ✏️ = manually set. Click to toggle.</p>
       </div>
 
-      {/* Staffing Requirements */}
-      <div className="space-y-4 border-t border-border pt-4">
-        <Label className="font-semibold text-xs text-muted-foreground uppercase tracking-wider">Staffing Requirements</Label>
-
-        <div className="space-y-2">
-          <Label className="text-xs font-medium">Minimum competency cover required on this shift</Label>
-          <p className="text-[10px] text-muted-foreground">The algorithm will ensure at least this many doctors with each competency are assigned. Set to 0 if no requirement.</p>
-          <div className="grid grid-cols-3 sm:grid-cols-3 gap-3">
-            {([
-              { key: "reqIac" as const, label: "IAC" },
-              { key: "reqIaoc" as const, label: "IAOC" },
-              { key: "reqIcu" as const, label: "ICU" },
-            ]).map(({ key, label }) => {
-              const maxVal = draft.staffing.max ?? 10;
-              const val = draft[key];
-              return (
-                <div key={key} className="space-y-1">
-                  <Label className="text-xs">{label}</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={maxVal}
-                    step={1}
-                    value={val}
-                    onChange={(e) => {
-                      const v = Math.max(0, Math.min(maxVal, Math.floor(Number(e.target.value) || 0)));
-                      update({ [key]: v } as any);
-                    }}
-                    className="bg-muted border-border"
-                  />
-                  {val > draft.staffing.min && (
-                    <p className="text-[10px] text-amber-600 flex items-center gap-1">
-                      <AlertTriangle className="h-3 w-3" /> This exceeds the minimum staffing level for this shift — check this is correct
-                    </p>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+      <div className="space-y-3 rounded-xl border border-border p-4">
+        <div>
+          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Competency Requirements</Label>
+          <p className="mt-1 text-xs text-muted-foreground">Minimum number of doctors with each competency required on this shift.</p>
         </div>
 
-        <div className="space-y-2">
-          <Label className="text-xs font-medium">Minimum grade required (at least one doctor on this shift)</Label>
-          <p className="text-[10px] text-muted-foreground">At least one doctor assigned to this shift must hold this grade or above. Leave blank if no requirement.</p>
-          <Select
-            value={draft.reqMinGrade ?? "__none__"}
-            onValueChange={(v) => update({ reqMinGrade: v === "__none__" ? null : v })}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="No requirement" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__none__">— No requirement —</SelectItem>
-              <SelectItem value="CT1">CT1+</SelectItem>
-              <SelectItem value="CT2">CT2+</SelectItem>
-              <SelectItem value="CT3">CT3+</SelectItem>
-              <SelectItem value="ST4">ST4+</SelectItem>
-              <SelectItem value="ST5">ST5+</SelectItem>
-              <SelectItem value="ST7">ST7+</SelectItem>
-              <SelectItem value="Consultant">Consultant</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {([
+            { key: "reqIac" as const,      label: "Min IAC",      desc: "Independent anaesthesia" },
+            { key: "reqIaoc" as const,     label: "Min IAOC",     desc: "Obstetric anaesthesia" },
+            { key: "reqIcu" as const,      label: "Min ICU",      desc: "Intensive care" },
+            { key: "reqTransfer" as const, label: "Min Transfer", desc: "Transfer-trained" },
+          ]).map(({ key, label, desc }) => (
+            <div key={key} className="space-y-1.5 rounded-lg border border-border p-3">
+              <Label className="text-xs font-medium">{label}</Label>
+              <Input type="number" min={0} value={draft[key]} className="min-h-[44px]" onChange={(e) => update({ [key]: Math.max(0, parseInt(e.target.value) || 0) } as any)} />
+              <p className="text-[11px] text-muted-foreground">{desc}</p>
+              {draft[key] > draft.staffing.min && (
+                <p className="flex items-center gap-1 text-[11px] text-amber-600">
+                  <AlertTriangle className="h-3 w-3" /> Exceeds minimum staffing
+                </p>
+              )}
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Actions */}
-      <div className="flex gap-3 pt-2">
-        <Button onClick={() => onSave(draft)} className="bg-purple-600 hover:bg-purple-700 text-white">
+      <div className="space-y-2">
+        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Minimum grade required</Label>
+        <Select value={draft.reqMinGrade ?? "__none__"} onValueChange={(v) => update({ reqMinGrade: v === "__none__" ? null : v })}>
+          <SelectTrigger className="min-h-[44px] w-full">
+            <SelectValue placeholder="No requirement" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none__">— No requirement —</SelectItem>
+            <SelectItem value="CT1">CT1+</SelectItem>
+            <SelectItem value="CT2">CT2+</SelectItem>
+            <SelectItem value="CT3">CT3+</SelectItem>
+            <SelectItem value="ST4">ST4+</SelectItem>
+            <SelectItem value="ST5">ST5+</SelectItem>
+            <SelectItem value="ST7">ST7+</SelectItem>
+            <SelectItem value="Consultant">Consultant</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {getShiftErrors(draft).length > 0 && (
+        <div className="space-y-1 rounded-lg border border-destructive/20 bg-destructive/10 p-3">
+          {getShiftErrors(draft).map((error) => (
+            <p key={error} className="text-sm text-destructive">• {error}</p>
+          ))}
+        </div>
+      )}
+
+      <div className="flex flex-col gap-3 pt-2 sm:flex-row">
+        <Button onClick={() => onSave(draft)} disabled={staffingError || getShiftErrors(draft).length > 0} className="min-h-[44px] bg-purple-600 text-white hover:bg-purple-700">
           <Save className="mr-2 h-4 w-4" /> Save
         </Button>
-        <Button variant="outline" onClick={onCancel}>
+        <Button variant="outline" onClick={() => onCancel(initialShiftRef.current)} className="min-h-[44px]">
           <X className="mr-2 h-4 w-4" /> Cancel
         </Button>
       </div>
@@ -427,23 +504,311 @@ function ExpandedCard({
   );
 }
 
+function CollapsedCard({
+  shift,
+  index,
+  onExpand,
+  onRemove,
+  canRemove,
+}: {
+  shift: ShiftType;
+  index: number;
+  onExpand: () => void;
+  onRemove: () => void;
+  canRemove: boolean;
+}) {
+  const { min, target, max } = shift.staffing;
+  const staffingSummary = max !== null ? `Min ${min} · Target ${target} · Max ${max}` : `Exactly ${min} doctor${min !== 1 ? "s" : ""} per day`;
+
+  return (
+    <div
+      onClick={onExpand}
+      className="cursor-pointer space-y-3 rounded-xl border border-border bg-card p-4 transition-all hover:shadow-md"
+      style={{ borderLeft: '4px solid ' + getShiftColor(index).solid }}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1 space-y-1.5">
+          <div className="flex items-center gap-2">
+            <span className="rounded-full bg-muted px-2 py-0.5 font-mono text-xs font-bold tracking-widest text-muted-foreground">{shift.abbreviation}</span>
+            <h3 className="truncate text-sm font-semibold text-card-foreground">{shift.name}</h3>
+          </div>
+          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Clock className="h-3.5 w-3.5 shrink-0" />
+            {shift.startTime} – {shift.endTime} ({shift.durationHours}h)
+          </p>
+          <p className="text-xs text-muted-foreground">{staffingSummary}</p>
+          <p className="text-xs font-medium tracking-wide text-muted-foreground">
+            {DAY_KEYS.filter((k) => shift.applicableDays[k]).map((k) => DAY_SHORT_LABELS[DAY_KEYS.indexOf(k)]).join(" · ")}
+          </p>
+          <div className="sm:hidden">
+            <BadgeRow shift={shift} editable={false} compact />
+          </div>
+          <div className="hidden sm:block">
+            <BadgeRow shift={shift} editable={false} />
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          {canRemove && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onRemove(); }}
+              className="flex h-11 w-11 items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:text-destructive"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onExpand(); }}
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:text-purple-600"
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function DepartmentStep2() {
+  const [activeDayIndex, setActiveDayIndex] = useState(0);
+  const [hoveredChipId, setHoveredChipId] = useState<string | null>(null);
+  const [activeChipId, setActiveChipId] = useState<string | null>(null);
+  const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const { shifts, setShifts, addShift, removeShift, expandedShiftId, setExpandedShiftId, isLoadingShifts, globalOncallPct, shiftTargetOverrides } = useDepartmentSetup();
+  const { setDepartmentComplete } = useAdminSetup();
+  const { currentRotaConfigId, setCurrentRotaConfigId } = useRotaContext();
+  const { user } = useAuth();
   const navigate = useNavigate();
-  const { shifts, updateShift, addShift, removeShift, expandedShiftId, setExpandedShiftId, setShifts, isLoadingShifts } = useDepartmentSetup();
+
+  const removeShiftFromDay = useCallback((shiftId: string, dayKey: DayKey) => {
+    setShifts(prev => prev.map(s => {
+      if (s.id !== shiftId) return s;
+      const newDays = { ...s.applicableDays, [dayKey]: false };
+      if (!Object.values(newDays).some(Boolean)) return s;
+      return { ...s, applicableDays: newDays };
+    }));
+  }, [setShifts]);
 
   const handleSaveCard = (updated: ShiftType) => {
-    setShifts((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+    setShifts(prev => prev.map(s => s.id === updated.id ? updated : s));
     setExpandedShiftId(null);
   };
 
+  const pageErrors = shifts.flatMap((shift) => getShiftErrors(shift).map((error) => `${shift.name || shift.abbreviation || shift.id}: ${error}`));
+  const canSavePage = shifts.length > 0 && pageErrors.length === 0 && !saving;
+
+  const handleSaveAndContinue = async () => {
+    setSaving(true);
+    try {
+      if (!user?.id) throw new Error("You must be signed in to save.");
+
+      const nonOncallPct = 100 - globalOncallPct;
+      let configId = currentRotaConfigId;
+
+      if (!configId) {
+        const { data, error } = await supabase
+          .from("rota_configs")
+          .insert({ global_oncall_pct: globalOncallPct, global_non_oncall_pct: nonOncallPct, owned_by: user?.id })
+          .select("id").single();
+        if (error) throw error;
+        configId = data.id;
+        setCurrentRotaConfigId(configId);
+      } else {
+        const { error } = await supabase
+          .from("rota_configs")
+          .update({ global_oncall_pct: globalOncallPct, global_non_oncall_pct: nonOncallPct, updated_at: new Date().toISOString() })
+          .eq("id", configId);
+        if (error) throw error;
+      }
+
+      await supabase.from("shift_types").delete().eq("rota_config_id", configId);
+
+      const oncallShiftIds = shifts.filter(s => s.isOncall).map(s => s.id);
+      const nonOncallShiftIds = shifts.filter(s => !s.isOncall).map(s => s.id);
+      const oncallOverrides: Record<string, number | undefined> = {};
+      const nonOncallOverrides: Record<string, number | undefined> = {};
+      Object.entries(shiftTargetOverrides).forEach(([id, pct]) => {
+        if (oncallShiftIds.includes(id)) oncallOverrides[id] = pct;
+        else nonOncallOverrides[id] = pct;
+      });
+
+      const getTargetPct = (shiftId: string, groupIds: string[], overrides: Record<string, number | undefined>) => {
+        const overriddenTotal = groupIds.filter(id => overrides[id] !== undefined).reduce((sum, id) => sum + (overrides[id] ?? 0), 0);
+        const nonOverriddenCount = groupIds.filter(id => overrides[id] === undefined).length;
+        const remaining = Math.max(0, 100 - overriddenTotal);
+        const autoShare = nonOverriddenCount > 0 ? remaining / nonOverriddenCount : 0;
+        return overrides[shiftId] ?? autoShare;
+      };
+
+      const shiftRows = shifts.map((s, idx) => {
+        const groupIds = s.isOncall ? oncallShiftIds : nonOncallShiftIds;
+        const overrides = s.isOncall ? oncallOverrides : nonOncallOverrides;
+        const merged = { ...s.badges };
+        for (const key of Object.keys(s.badgeOverrides) as BadgeKey[]) {
+          if (s.badgeOverrides[key] !== undefined) merged[key] = s.badgeOverrides[key]!;
+        }
+        return {
+          rota_config_id: configId!,
+          shift_key: s.id,
+          name: s.name,
+          start_time: s.startTime,
+          end_time: s.endTime,
+          duration_hours: s.durationHours,
+          is_oncall: s.isOncall,
+          is_non_res_oncall: s.isNonRes,
+          applicable_mon: s.applicableDays.mon,
+          applicable_tue: s.applicableDays.tue,
+          applicable_wed: s.applicableDays.wed,
+          applicable_thu: s.applicableDays.thu,
+          applicable_fri: s.applicableDays.fri,
+          applicable_sat: s.applicableDays.sat,
+          applicable_sun: s.applicableDays.sun,
+          badge_night: merged.night,
+          badge_long: merged.long,
+          badge_ooh: merged.ooh,
+          badge_weekend: merged.weekend,
+          badge_oncall: merged.oncall,
+          badge_nonres: merged.nonres,
+          badge_night_manual_override: s.badgeOverrides.night ?? null,
+          badge_long_manual_override: s.badgeOverrides.long ?? null,
+          badge_ooh_manual_override: s.badgeOverrides.ooh ?? null,
+          badge_weekend_manual_override: s.badgeOverrides.weekend ?? null,
+          badge_oncall_manual_override: s.badgeOverrides.oncall ?? null,
+          badge_nonres_manual_override: s.badgeOverrides.nonres ?? null,
+          oncall_manually_set: s.oncallManuallySet,
+          min_doctors: s.staffing.min,
+          target_doctors: s.staffing.target,
+          max_doctors: s.staffing.max,
+          target_percentage: getTargetPct(s.id, groupIds, overrides),
+          sort_order: idx,
+          req_iac: s.reqIac,
+          req_iaoc: s.reqIaoc,
+          req_icu: s.reqIcu,
+          req_transfer: s.reqTransfer,
+          req_min_grade: s.reqMinGrade,
+          abbreviation: s.abbreviation,
+        };
+      });
+
+      const { error: insertError } = await supabase.from("shift_types").insert(shiftRows as any);
+      if (insertError) throw insertError;
+
+      toast.success("✓ Shift configuration saved");
+      setDepartmentComplete(true);
+      navigate("/admin/dashboard");
+    } catch (err: any) {
+      console.error("Department save failed:", err);
+      toast.error("Save failed — please try again");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
-    <AdminLayout title="Department Setup" subtitle="Step 2 of 3 — Shift types" accentColor="purple">
-      <div className="mx-auto max-w-3xl space-y-6 animate-fadeSlideUp">
-        {/* Info banner */}
-        <div className="flex items-center gap-2 rounded-lg border border-purple-200 bg-purple-50 px-4 py-2.5 text-sm font-medium text-purple-700">
-          <Info className="h-4 w-4 shrink-0 text-purple-600" />
-          Define the shift types your department uses. Name, times, and on-call status are all required.
-        </div>
+    <AdminLayout title="Department Setup" subtitle="Step 2 of 2 — Design your week" accentColor="purple">
+      <div className="mx-auto max-w-3xl space-y-6 animate-fadeSlideUp" onClick={() => { if (activeChipId) setActiveChipId(null); }}>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CalendarDays className="h-5 w-5 text-purple-600" />
+              Your Week at a Glance
+            </CardTitle>
+            <CardDescription>Each column shows shifts for that day. Toggle days in the shift cards below — the calendar updates instantly.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-start gap-3 rounded-lg border border-purple-200 bg-purple-50 px-4 py-3 text-sm text-purple-700">
+              <Info className="mt-0.5 h-4 w-4 shrink-0 text-purple-600" />
+              <p>Desktop: hover a chip to reveal remove button. Mobile: tap and hold a chip for 500ms.</p>
+            </div>
+
+            {isLoadingShifts ? (
+              <div className="flex min-h-[180px] items-center justify-center gap-3 rounded-xl border border-border bg-muted/20">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                <span className="text-sm text-muted-foreground">Loading your saved shift types…</span>
+              </div>
+            ) : (
+              <>
+                <div
+                  ref={scrollContainerRef}
+                  className="md:hidden flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2"
+                  onScroll={(e) => {
+                    const el = e.currentTarget;
+                    const cardWidth = 140;
+                    setActiveDayIndex(Math.min(6, Math.max(0, Math.round(el.scrollLeft / cardWidth))));
+                  }}
+                  style={{ scrollbarWidth: 'none', overscrollBehavior: 'contain' } as React.CSSProperties}
+                >
+                  {DAY_KEYS.map((dayKey, i) => (
+                    <div key={dayKey} className="min-w-[132px] snap-start">
+                      <DayColumn
+                        dayKey={dayKey}
+                        dayLabel={DAY_FULL_LABELS[i]}
+                        shifts={shifts}
+                        isWeekend={i >= 5}
+                        hoveredChipId={hoveredChipId} setHoveredChipId={setHoveredChipId}
+                        activeChipId={activeChipId} setActiveChipId={setActiveChipId}
+                        longPressRef={longPressRef} removeShiftFromDay={removeShiftFromDay}
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex justify-center gap-1 md:hidden">
+                  {DAY_KEYS.map((_, i) => (
+                    <span key={i} className={`h-2 w-2 rounded-full transition-colors ${activeDayIndex === i ? "bg-purple-600" : "bg-purple-200"}`} />
+                  ))}
+                </div>
+
+                <div className="hidden grid-cols-7 gap-3 md:grid">
+                  {DAY_KEYS.map((dayKey, i) => (
+                    <DayColumn
+                      key={dayKey}
+                      dayKey={dayKey}
+                      dayLabel={DAY_SHORT_LABELS[i]}
+                      shifts={shifts}
+                      isWeekend={i >= 5}
+                      hoveredChipId={hoveredChipId} setHoveredChipId={setHoveredChipId}
+                      activeChipId={activeChipId} setActiveChipId={setActiveChipId}
+                      longPressRef={longPressRef} removeShiftFromDay={removeShiftFromDay}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="space-y-3 pt-6">
+            <div className="flex items-start gap-3 rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+              <Info className="mt-0.5 h-4 w-4 shrink-0" />
+              <p>Scroll to see all shift types. Use day toggles in the cards below to assign shifts to days.</p>
+            </div>
+
+            <div className="flex gap-2 overflow-x-auto pb-2" style={{ scrollbarWidth: "thin" }}>
+              {shifts.map((shift, index) => {
+                const color = getShiftColor(index);
+                return (
+                  <div key={shift.id} className={`flex flex-shrink-0 items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium ${color.bg} ${color.text} ${color.border}`}>
+                    <span className="font-mono font-bold tracking-widest">{shift.abbreviation}</span>
+                    <span>{shift.name}</span>
+                  </div>
+                );
+              })}
+              <button
+                type="button"
+                onClick={() => { const newId = addShift(); setExpandedShiftId(newId); setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 150); }}
+                className="inline-flex min-h-[32px] flex-shrink-0 items-center gap-1 rounded-full border border-dashed border-purple-300 px-3 py-1.5 text-xs font-medium text-purple-600 transition-colors hover:bg-purple-50"
+              >
+                <Plus className="h-3.5 w-3.5" /> Add shift type
+              </button>
+            </div>
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>
@@ -451,71 +816,68 @@ export default function DepartmentStep2() {
               <CalendarDays className="h-5 w-5 text-purple-600" />
               Shift Types
             </CardTitle>
-            <CardDescription>Define shift names, times, and on-call status. Night shifts are auto-detected.</CardDescription>
+            <CardDescription>Define each shift's details. Toggling days updates the calendar above instantly.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Badge legend */}
-            <div className="flex items-start gap-3 rounded-lg bg-muted/50 border border-border p-4 text-xs text-muted-foreground">
-              <Info className="h-4 w-4 shrink-0 mt-0.5" />
-              <p>
-                <span className="font-semibold">🏷️ Badge meanings:</span> NIGHT = ≥3h between 23:00–06:00 | LONG = duration &gt;10h | OOH = any hours 19:00–07:00 or weekend | WEEKEND = shift falls on Sat/Sun | ON-CALL = resident doctor on-site | NON-RES OC = on-call from home
-              </p>
+            <div className="flex items-start gap-3 rounded-lg border border-border bg-muted/30 p-4 text-xs text-muted-foreground">
+              <Info className="mt-0.5 h-4 w-4 shrink-0" />
+              <p><span className="font-semibold">Badge meanings:</span> NIGHT = ≥3h between 23:00–06:00 · LONG = duration &gt;10h · OOH = any hours 19:00–07:00 or weekend · WEEKEND = shift falls on Sat/Sun · ON-CALL = resident doctor on-site · NON-RES OC = on-call from home</p>
             </div>
 
-            {isLoadingShifts && (
-              <div className="text-sm text-muted-foreground py-2 italic">
-                Loading your saved shift types…
+            {pageErrors.length > 0 && (
+              <div className="space-y-1 rounded-lg border border-destructive/20 bg-destructive/10 p-4">
+                {pageErrors.map((error) => (
+                  <p key={error} className="flex items-start gap-2 text-sm text-destructive">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" /> {error}
+                  </p>
+                ))}
               </div>
             )}
 
-            {/* Shift cards */}
-            <div className="flex flex-col gap-4">
-              {shifts.map((shift) =>
+            <div className="space-y-4">
+              {shifts.map((shift, index) =>
                 expandedShiftId === shift.id ? (
                   <ExpandedCard
-                    key={shift.id}
+                    key={`${shift.id}-${Object.values(shift.applicableDays).join("")}-${shift.staffing.min}-${shift.staffing.target}-${shift.staffing.max ?? "x"}`}
                     shift={shift}
                     onSave={handleSaveCard}
-                    onCancel={() => setExpandedShiftId(null)}
-                    onRemove={() => removeShift(shift.id)}
+                    onCancel={(original) => {
+                      setShifts(prev => prev.map(s => s.id === original.id ? original : s));
+                      setExpandedShiftId(null);
+                    }}
+                    onDraftChange={(updated) => setShifts(prev => prev.map(s => s.id === updated.id ? updated : s))}
+                    onRemove={() => { removeShift(shift.id); setExpandedShiftId(null); }}
                     canRemove={shifts.length > 1}
                   />
                 ) : (
                   <CollapsedCard
                     key={shift.id}
                     shift={shift}
+                    index={index}
                     onExpand={() => setExpandedShiftId(shift.id)}
                     onRemove={() => removeShift(shift.id)}
                     canRemove={shifts.length > 1}
                   />
-                ),
+                )
               )}
             </div>
 
-            {/* Add shift button — dashed purple */}
             <button
-              onClick={() => addShift()}
-              disabled={isLoadingShifts}
-              className="w-full rounded-lg border border-dashed border-purple-300 p-3 flex items-center justify-center gap-2 text-sm font-medium text-purple-600 cursor-pointer hover:bg-purple-50 transition-colors disabled:opacity-50"
+              type="button"
+              onClick={() => { const newId = addShift(); setExpandedShiftId(newId); setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 150); }}
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-purple-300 p-3 text-sm font-medium text-purple-600 transition-colors hover:bg-purple-50"
             >
-              <Plus className="h-4 w-4" />
-              {isLoadingShifts ? 'Loading saved shifts…' : 'Add Shift Type'}
+              <Plus className="h-4 w-4" /> Add shift type
             </button>
           </CardContent>
         </Card>
 
-        {/* Navigation */}
-        <div className="flex justify-between">
-          <Button variant="outline" size="lg" onClick={() => navigate("/admin/department/step-1")}>
-            <ArrowLeft className="mr-2 h-4 w-4" />Back
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
+          <Button variant="outline" size="lg" className="min-h-[44px]" onClick={() => navigate("/admin/department/step-1")}>
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back
           </Button>
-          <Button
-            size="lg"
-            onClick={() => navigate("/admin/department/step-3")}
-            className="bg-purple-600 hover:bg-purple-700 text-white"
-          >
-            Continue
-            <ArrowRight className="ml-2 h-4 w-4" />
+          <Button size="lg" className="min-h-[44px] bg-purple-600 text-white hover:bg-purple-700" disabled={!canSavePage} onClick={handleSaveAndContinue}>
+            {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving…</> : <><Save className="mr-2 h-4 w-4" />Save & Continue <ChevronRight className="ml-2 h-4 w-4" /></>}
           </Button>
         </div>
       </div>

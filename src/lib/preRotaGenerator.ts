@@ -81,6 +81,7 @@ export async function generatePreRota(
             iacAchieved: compJson?.iac?.achieved ?? null,
             iaocAchieved: compJson?.iaoc?.achieved ?? null,
             icuAchieved: compJson?.icu?.achieved ?? null,
+            transferAchieved: compJson?.transfer?.achieved ?? null,
           },
         } : null,
       }
@@ -99,7 +100,7 @@ export async function generatePreRota(
       shiftTypes: shiftTypes.map(s => ({
         id: s.id, name: s.name,
         reqIac: s.req_iac ?? 0, reqIaoc: s.req_iaoc ?? 0, reqIcu: s.req_icu ?? 0,
-        reqMinGrade: s.req_min_grade ?? null, minDoctors: s.min_doctors ?? 1,
+        reqTransfer: s.req_transfer ?? 0, reqMinGrade: s.req_min_grade ?? null, minDoctors: s.min_doctors ?? 1,
       })),
       doctors: doctorsWithSurveys,
       bankHolidays,
