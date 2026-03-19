@@ -763,8 +763,7 @@ export default function DepartmentStep2() {
       if (insertError) throw insertError;
 
       toast.success("✓ Shift configuration saved");
-      setDepartmentComplete(true);
-      navigate("/admin/dashboard");
+      navigate("/admin/department/step-3");
     } catch (err: any) {
       console.error("Department save failed:", err);
       toast.error("Save failed — please try again");
