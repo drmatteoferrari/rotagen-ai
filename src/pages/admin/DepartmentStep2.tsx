@@ -748,7 +748,7 @@ export default function DepartmentStep2() {
           min_doctors: s.staffing.min,
           target_doctors: s.staffing.target,
           max_doctors: s.staffing.max,
-          target_percentage: getTargetPct(s.id, groupIds, overrides),
+          target_percentage: null,
           sort_order: idx,
           req_iac: s.reqIac,
           req_iaoc: s.reqIaoc,
