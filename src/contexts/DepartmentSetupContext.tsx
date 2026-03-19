@@ -2,7 +2,6 @@ import { createContext, useContext, useState, useCallback, useEffect, useRef, ty
 import { calcDurationHours, timeToMinutes, type ApplicableDays } from "@/lib/shiftUtils";
 import { useRotaContext } from "@/contexts/RotaContext";
 import { supabase } from "@/integrations/supabase/client";
-import type { RotaConfig } from "@/lib/rotaConfig";
 
 // SECTION 5 — DepartmentSetupContext with restore from config
 
@@ -20,6 +19,7 @@ export type BadgeKey = keyof ShiftBadges;
 
 export interface ShiftStaffing {
   min: number;
+  target: number;
   max: number | null;
 }
 
@@ -41,6 +41,8 @@ export interface ShiftType {
   reqIaoc: number;
   reqIcu: number;
   reqMinGrade: string | null;
+  reqTransfer: number;
+  abbreviation: string;
 }
 
 /* ─── Badge auto-detection (pure) ─── */
@@ -94,6 +96,25 @@ export function mergedBadges(auto: ShiftBadges, overrides: Partial<Record<BadgeK
   return result;
 }
 
+export function generateAbbreviation(name: string): string {
+  const base = name.split(/\s[—\-]\s/)[0].trim();
+  const initials = base.split(/\s+/).map((w) => w[0]?.toUpperCase() ?? "").join("").slice(0, 4);
+  return initials || name.slice(0, 2).toUpperCase();
+}
+
+export const SHIFT_COLORS = [
+  { bg: "bg-purple-100", text: "text-purple-700", border: "border-purple-300", solid: "#9333ea" },
+  { bg: "bg-teal-100",   text: "text-teal-700",   border: "border-teal-300",   solid: "#0d9488" },
+  { bg: "bg-amber-100",  text: "text-amber-700",  border: "border-amber-300",  solid: "#d97706" },
+  { bg: "bg-rose-100",   text: "text-rose-700",   border: "border-rose-300",   solid: "#e11d48" },
+  { bg: "bg-blue-100",   text: "text-blue-700",   border: "border-blue-300",   solid: "#2563eb" },
+  { bg: "bg-green-100",  text: "text-green-700",  border: "border-green-300",  solid: "#16a34a" },
+] as const;
+
+export function getShiftColor(index: number) {
+  return SHIFT_COLORS[index % SHIFT_COLORS.length];
+}
+
 /* ─── Factory ─── */
 function makeShift(
   id: string,
@@ -108,28 +129,25 @@ function makeShift(
   return {
     id, name, startTime, endTime, durationHours: dur,
     applicableDays: days, isOncall, isNonRes: false,
-    staffing: { min: 3, max: null }, targetOverridePct: null,
+    staffing: { min: 3, target: 3, max: null },
+    abbreviation: generateAbbreviation(name),
+    targetOverridePct: null,
     badges: autoBadges, badgeOverrides: {}, oncallManuallySet: false,
-    reqIac: 0, reqIaoc: 0, reqIcu: 0, reqMinGrade: null,
+    reqIac: 0, reqIaoc: 0, reqIcu: 0, reqTransfer: 0, reqMinGrade: null,
   };
 }
 
+const allDays: ApplicableDays = { mon: true, tue: true, wed: true, thu: true, fri: true, sat: true, sun: true };
 const weekday: ApplicableDays = { mon: true, tue: true, wed: true, thu: true, fri: true, sat: false, sun: false };
-const weekend: ApplicableDays = { mon: false, tue: false, wed: false, thu: false, fri: false, sat: true, sun: true };
 
 const defaultShifts: ShiftType[] = [
-  makeShift("1", "Standard Day — Weekday", "08:00", "17:30", weekday, false),
-  makeShift("2", "Long Day — Weekday", "08:00", "20:30", weekday, false),
-  makeShift("3", "Long Day — Weekend", "08:00", "20:30", weekend, false),
-  makeShift("4", "Night Shift — Weekday", "20:00", "08:30", weekday, false),
-  makeShift("5", "Night Shift — Weekend", "20:00", "08:30", weekend, false),
+  { ...makeShift("1", "Standard Day", "08:00", "17:30", allDays, false), abbreviation: "SD", staffing: { min: 3, target: 3, max: null } },
+  { ...makeShift("2", "Long Day",     "08:00", "20:30", allDays, true),  abbreviation: "LD", staffing: { min: 2, target: 2, max: null } },
+  { ...makeShift("3", "Night",        "20:00", "08:30", allDays, true),  abbreviation: "N",  staffing: { min: 1, target: 1, max: null } },
+  { ...makeShift("4", "Twilight",     "16:00", "00:00", weekday, true),  abbreviation: "Tw", staffing: { min: 1, target: 1, max: null } },
 ];
-
 defaultShifts.forEach((s) => {
-  const auto = detectBadges(s.startTime, s.endTime, s.applicableDays, false, false);
-  const shouldBeOncall = auto.night || auto.long || auto.ooh || auto.weekend;
-  s.isOncall = shouldBeOncall;
-  s.badges = detectBadges(s.startTime, s.endTime, s.applicableDays, shouldBeOncall, false);
+  s.badges = detectBadges(s.startTime, s.endTime, s.applicableDays, s.isOncall, s.isNonRes);
 });
 
 /* ─── Context ─── */
@@ -206,13 +224,21 @@ export function DepartmentSetupProvider({ children }: { children: ReactNode }) {
               durationHours: row.duration_hours,
               applicableDays: days,
               isOncall, isNonRes,
-              staffing: { min: row.min_doctors ?? 1, max: row.max_doctors ?? null },
+              staffing: {
+                min: row.min_doctors ?? 1,
+                target: row.target_doctors ?? row.min_doctors ?? 1,
+                max: row.max_doctors ?? null,
+              },
+              abbreviation: row.abbreviation ?? generateAbbreviation(row.name),
               targetOverridePct: row.target_percentage ?? null,
               badges: mergedBadges(autoBadges, badgeOverrides),
               badgeOverrides,
               oncallManuallySet: row.oncall_manually_set ?? false,
-              reqIac: row.req_iac ?? 0, reqIaoc: row.req_iaoc ?? 0,
-              reqIcu: row.req_icu ?? 0, reqMinGrade: row.req_min_grade ?? null,
+              reqIac: row.req_iac ?? 0,
+              reqIaoc: row.req_iaoc ?? 0,
+              reqIcu: row.req_icu ?? 0,
+              reqTransfer: row.req_transfer ?? 0,
+              reqMinGrade: row.req_min_grade ?? null,
             };
           });
           setShifts(restored);
