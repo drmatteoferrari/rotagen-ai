@@ -10,7 +10,6 @@ export interface ShiftBadges {
   night: boolean;
   long: boolean;
   ooh: boolean;
-  weekend: boolean;
   oncall: boolean;
   nonres: boolean;
 }
