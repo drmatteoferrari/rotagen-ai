@@ -85,27 +85,35 @@ export default function RotaPeriodStep2() {
 
   const { data: configDetails } = useRotaConfigDetailsQuery();
 
-  // Auto-populate bank holidays
+  // Load bank holidays from DB first, fall back to static list
   useEffect(() => {
-    if (initialized || !rotaStartDate || !rotaEndDate) return;
-    const filtered = UK_BANK_HOLIDAYS
-      .map((h) => ({ ...h, dateObj: new Date(h.date[0], h.date[1], h.date[2]) }))
-      .filter((h) => isWithinInterval(h.dateObj, { start: rotaStartDate, end: rotaEndDate }))
-      .map((h, i) => ({ id: `bh-${i}`, date: h.dateObj, name: h.name }));
-    setBankHolidays(filtered);
-    setInitialized(true);
-  }, [rotaStartDate, rotaEndDate, initialized]);
+    if (initialized || !currentRotaConfigId || !rotaStartDate || !rotaEndDate) return;
+    const load = async () => {
+      const { data: saved } = await supabase
+        .from("bank_holidays")
+        .select("id, date, name, is_auto_added")
+        .eq("rota_config_id", currentRotaConfigId)
+        .order("date", { ascending: true });
 
-  // Restore BH same-as-weekend from DB
-  useEffect(() => {
-    if (configDetails && !bhInitialized) {
-      const cd = configDetails as any;
-      if (cd.bh_same_as_weekend !== undefined && cd.bh_same_as_weekend !== null) {
-        setBhSameAsWeekend(cd.bh_same_as_weekend);
+      if (saved && saved.length > 0) {
+        setBankHolidays(
+          saved.map((h: any) => ({
+            id: h.id,
+            date: new Date(h.date + "T00:00:00"),
+            name: h.name,
+          }))
+        );
+      } else {
+        const filtered = UK_BANK_HOLIDAYS
+          .map((h) => ({ ...h, dateObj: new Date(h.date[0], h.date[1], h.date[2]) }))
+          .filter((h) => isWithinInterval(h.dateObj, { start: rotaStartDate, end: rotaEndDate }))
+          .map((h, i) => ({ id: `bh-${i}`, date: h.dateObj, name: h.name }));
+        setBankHolidays(filtered);
       }
-      setBhInitialized(true);
-    }
-  }, [configDetails, bhInitialized]);
+      setInitialized(true);
+    };
+    load();
+  }, [currentRotaConfigId, rotaStartDate, rotaEndDate, initialized]);
 
   // Fetch shift types
   useEffect(() => {
