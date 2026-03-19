@@ -440,6 +440,8 @@ export type Database = {
           email: string
           full_name: string | null
           id: string
+          onboarding_completed: boolean | null
+          onboarding_completed_at: string | null
           rota_credits: number | null
           stripe_customer_id: string | null
           subscription_id: string | null
@@ -451,6 +453,8 @@ export type Database = {
           email: string
           full_name?: string | null
           id: string
+          onboarding_completed?: boolean | null
+          onboarding_completed_at?: string | null
           rota_credits?: number | null
           stripe_customer_id?: string | null
           subscription_id?: string | null
@@ -462,6 +466,8 @@ export type Database = {
           email?: string
           full_name?: string | null
           id?: string
+          onboarding_completed?: boolean | null
+          onboarding_completed_at?: string | null
           rota_credits?: number | null
           stripe_customer_id?: string | null
           subscription_id?: string | null
