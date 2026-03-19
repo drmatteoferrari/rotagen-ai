@@ -51,15 +51,25 @@ export default function OnboardingModal({ onClose }: OnboardingModalProps) {
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="flex h-full w-full flex-col bg-background sm:h-auto sm:mx-4 sm:max-w-[560px] sm:rounded-2xl sm:shadow-xl">
-        <div className="flex-1 overflow-y-auto p-6 sm:p-8">
-          {currentScreen === 1 && <Screen1 />}
-          {currentScreen === 2 && <Screen2 />}
-          {currentScreen === 3 && <Screen3 />}
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50">
+      <div
+        className="bg-white rounded-2xl shadow-xl w-full max-w-[520px] flex flex-col"
+        style={{ maxHeight: 'calc(100dvh - 140px)' }}
+      >
+        {/* Header — fixed, never scrolls */}
+        <div className="p-6 pb-0 shrink-0">
+          {currentScreen === 1 && <Screen1Header />}
+          {currentScreen === 2 && <Screen2Header />}
+          {currentScreen === 3 && <Screen3Header />}
         </div>
 
-        <div className="border-t border-border px-6 py-4 sm:px-8">
+        {/* Scrollable content */}
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          {currentScreen === 2 && <Screen2Steps />}
+        </div>
+
+        {/* Footer — fixed, never scrolls */}
+        <div className="p-6 pt-4 border-t border-border shrink-0">
           <div className="flex flex-wrap items-center justify-between gap-3">
             {currentScreen === 1 && (
               <>
@@ -112,9 +122,9 @@ export default function OnboardingModal({ onClose }: OnboardingModalProps) {
   );
 }
 
-/* ── Screen components ── */
+/* ── Screen header components ── */
 
-function Screen1() {
+function Screen1Header() {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2.5">
@@ -135,7 +145,18 @@ function Screen1() {
   );
 }
 
-function Screen2() {
+function Screen2Header() {
+  return (
+    <div className="space-y-5">
+      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+        <CalendarDays className="h-5 w-5 text-primary" />
+      </div>
+      <h2 className="text-lg font-medium text-foreground">Four steps to a finished rota</h2>
+    </div>
+  );
+}
+
+function Screen2Steps() {
   const steps = [
     { title: "Set up your department", body: "Define your shift types, staffing minimums, and WTR settings." },
     { title: "Set up your rota period", body: "Choose your start and end dates." },
@@ -144,31 +165,23 @@ function Screen2() {
   ];
 
   return (
-    <div className="space-y-5">
-      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-        <CalendarDays className="h-5 w-5 text-primary" />
-      </div>
-
-      <h2 className="text-lg font-medium text-foreground">Four steps to a finished rota</h2>
-
-      <div className="space-y-4">
-        {steps.map((s, i) => (
-          <div key={i} className="flex gap-3">
-            <div className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
-              {i + 1}
-            </div>
-            <div>
-              <p className="text-sm font-medium text-foreground">{s.title}</p>
-              <p className="text-sm text-muted-foreground">{s.body}</p>
-            </div>
+    <div className="space-y-4">
+      {steps.map((s, i) => (
+        <div key={i} className="flex gap-3">
+          <div className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
+            {i + 1}
           </div>
-        ))}
-      </div>
+          <div>
+            <p className="text-sm font-medium text-foreground">{s.title}</p>
+            <p className="text-sm text-muted-foreground">{s.body}</p>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
 
-function Screen3() {
+function Screen3Header() {
   return (
     <div className="space-y-4">
       <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100">
