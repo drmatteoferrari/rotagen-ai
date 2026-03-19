@@ -167,12 +167,14 @@ export function runPreRotaValidation(inputs: ValidationInputs): ValidationIssue[
   const teamTransfer = doctors.filter(d => d.survey?.competencies.transferAchieved === true).length
 
   for (const shift of shiftTypes) {
-    if (shift.reqIac  > 0 && teamIac  < shift.reqIac)
-      issues.push({ severity: 'warning', code: 'SHIFT_UNREACHABLE_IAC',  doctorId: null, doctorName: null, message: `Shift "${shift.name}" requires ${shift.reqIac} IAC-competent doctor(s) but only ${teamIac} in the team have IAC.` })
+    if (shift.reqIac > 0 && teamIac < shift.reqIac)
+      issues.push({ severity: 'warning', code: 'SHIFT_UNREACHABLE_IAC', doctorId: null, doctorName: null, message: `Shift "${shift.name}" requires ${shift.reqIac} IAC-competent doctor(s) but only ${teamIac} in the team have IAC.` })
     if (shift.reqIaoc > 0 && teamIaoc < shift.reqIaoc)
       issues.push({ severity: 'warning', code: 'SHIFT_UNREACHABLE_IAOC', doctorId: null, doctorName: null, message: `Shift "${shift.name}" requires ${shift.reqIaoc} IAOC-competent doctor(s) but only ${teamIaoc} in the team have IAOC.` })
-    if (shift.reqIcu  > 0 && teamIcu  < shift.reqIcu)
-      issues.push({ severity: 'warning', code: 'SHIFT_UNREACHABLE_ICU',  doctorId: null, doctorName: null, message: `Shift "${shift.name}" requires ${shift.reqIcu} ICU-competent doctor(s) but only ${teamIcu} in the team have ICU.` })
+    if (shift.reqIcu > 0 && teamIcu < shift.reqIcu)
+      issues.push({ severity: 'warning', code: 'SHIFT_UNREACHABLE_ICU', doctorId: null, doctorName: null, message: `Shift "${shift.name}" requires ${shift.reqIcu} ICU-competent doctor(s) but only ${teamIcu} in the team have ICU.` })
+    if (shift.reqTransfer > 0 && teamTransfer < shift.reqTransfer)
+      issues.push({ severity: 'warning', code: 'SHIFT_UNREACHABLE_TRANSFER', doctorId: null, doctorName: null, message: `Shift "${shift.name}" requires ${shift.reqTransfer} transfer-trained doctor(s) but only ${teamTransfer} in the team have transfer competency.` })
     if (shift.reqMinGrade) {
       const required = GRADE_ORDER[shift.reqMinGrade] ?? 0
       if (!doctors.some(d => d.grade && (GRADE_ORDER[d.grade] ?? 0) >= required))

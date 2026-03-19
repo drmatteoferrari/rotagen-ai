@@ -103,6 +103,7 @@ export async function buildPreRotaInput(configId: string): Promise<PreRotaInput>
       reqIac: s.reqIac,
       reqIaoc: s.reqIaoc,
       reqIcu: s.reqIcu,
+      reqTransfer: s.reqTransfer ?? 0,
       reqMinGrade: s.reqMinGrade,
     })),
     wtrConstraints: {
