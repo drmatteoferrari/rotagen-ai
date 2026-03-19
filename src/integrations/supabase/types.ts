@@ -525,6 +525,7 @@ export type Database = {
         Row: {
           bh_custom_rules: string | null
           bh_same_as_weekend: boolean | null
+          bh_shift_rules: Json | null
           contact_email: string | null
           created_at: string | null
           department_name: string | null
@@ -547,6 +548,7 @@ export type Database = {
         Insert: {
           bh_custom_rules?: string | null
           bh_same_as_weekend?: boolean | null
+          bh_shift_rules?: Json | null
           contact_email?: string | null
           created_at?: string | null
           department_name?: string | null
@@ -569,6 +571,7 @@ export type Database = {
         Update: {
           bh_custom_rules?: string | null
           bh_same_as_weekend?: boolean | null
+          bh_shift_rules?: Json | null
           contact_email?: string | null
           created_at?: string | null
           department_name?: string | null
