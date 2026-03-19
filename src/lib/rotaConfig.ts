@@ -25,11 +25,11 @@ export interface RotaConfigShift {
   };
   badges: {
     night: boolean; long: boolean; ooh: boolean;
-    weekend: boolean; oncall: boolean; nonres: boolean;
+    oncall: boolean; nonres: boolean;
   };
   badgeOverrides: {
     night?: boolean; long?: boolean; ooh?: boolean;
-    weekend?: boolean; oncall?: boolean; nonres?: boolean;
+    oncall?: boolean; nonres?: boolean;
   };
   oncallManuallySet: boolean;
   minDoctors: number;
@@ -131,13 +131,13 @@ export async function getRotaConfig(id: string): Promise<RotaConfig> {
     },
     badges: {
       night: s.badge_night, long: s.badge_long, ooh: s.badge_ooh,
-      weekend: s.badge_weekend, oncall: s.badge_oncall, nonres: s.badge_nonres,
+      oncall: s.badge_oncall, nonres: s.badge_nonres,
     },
     badgeOverrides: {
       ...(s.badge_night_manual_override !== null ? { night: s.badge_night_manual_override } : {}),
       ...(s.badge_long_manual_override !== null ? { long: s.badge_long_manual_override } : {}),
       ...(s.badge_ooh_manual_override !== null ? { ooh: s.badge_ooh_manual_override } : {}),
-      ...(s.badge_weekend_manual_override !== null ? { weekend: s.badge_weekend_manual_override } : {}),
+      
       ...(s.badge_oncall_manual_override !== null ? { oncall: s.badge_oncall_manual_override } : {}),
       ...(s.badge_nonres_manual_override !== null ? { nonres: s.badge_nonres_manual_override } : {}),
     },

@@ -610,8 +610,6 @@ export type Database = {
           badge_oncall_manual_override: boolean | null
           badge_ooh: boolean | null
           badge_ooh_manual_override: boolean | null
-          badge_weekend: boolean | null
-          badge_weekend_manual_override: boolean | null
           created_at: string | null
           duration_hours: number
           end_time: string
@@ -654,8 +652,6 @@ export type Database = {
           badge_oncall_manual_override?: boolean | null
           badge_ooh?: boolean | null
           badge_ooh_manual_override?: boolean | null
-          badge_weekend?: boolean | null
-          badge_weekend_manual_override?: boolean | null
           created_at?: string | null
           duration_hours: number
           end_time: string
@@ -698,8 +694,6 @@ export type Database = {
           badge_oncall_manual_override?: boolean | null
           badge_ooh?: boolean | null
           badge_ooh_manual_override?: boolean | null
-          badge_weekend?: boolean | null
-          badge_weekend_manual_override?: boolean | null
           created_at?: string | null
           duration_hours?: number
           end_time?: string

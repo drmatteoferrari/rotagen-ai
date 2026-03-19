@@ -10,7 +10,6 @@ export interface ShiftBadges {
   night: boolean;
   long: boolean;
   ooh: boolean;
-  weekend: boolean;
   oncall: boolean;
   nonres: boolean;
 }
@@ -82,7 +81,7 @@ export function detectBadges(
     }
   }
 
-  return { night, long, ooh, weekend: hasSatSun, oncall: isOncall, nonres: isNonRes };
+  return { night, long, ooh, oncall: isOncall, nonres: isNonRes };
 }
 
 /** Merge auto-detected badges with manual overrides */
@@ -213,7 +212,7 @@ export function DepartmentSetupProvider({ children }: { children: ReactNode }) {
             if (row.badge_night_manual_override != null) badgeOverrides.night = row.badge_night;
             if (row.badge_long_manual_override != null) badgeOverrides.long = row.badge_long;
             if (row.badge_ooh_manual_override != null) badgeOverrides.ooh = row.badge_ooh;
-            if (row.badge_weekend_manual_override != null) badgeOverrides.weekend = row.badge_weekend;
+            
             if (row.badge_oncall_manual_override != null) badgeOverrides.oncall = row.badge_oncall;
             if (row.badge_nonres_manual_override != null) badgeOverrides.nonres = row.badge_nonres;
             return {
