@@ -440,18 +440,33 @@ export type Database = {
           email: string
           full_name: string | null
           id: string
+          rota_credits: number | null
+          stripe_customer_id: string | null
+          subscription_id: string | null
+          subscription_plan: string | null
+          subscription_status: string | null
         }
         Insert: {
           created_at?: string | null
           email: string
           full_name?: string | null
           id: string
+          rota_credits?: number | null
+          stripe_customer_id?: string | null
+          subscription_id?: string | null
+          subscription_plan?: string | null
+          subscription_status?: string | null
         }
         Update: {
           created_at?: string | null
           email?: string
           full_name?: string | null
           id?: string
+          rota_credits?: number | null
+          stripe_customer_id?: string | null
+          subscription_id?: string | null
+          subscription_plan?: string | null
+          subscription_status?: string | null
         }
         Relationships: []
       }

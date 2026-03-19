@@ -38,6 +38,7 @@ import Privacy from "./pages/Privacy";
 import LandingPage from "./pages/LandingPage";
 import Pricing from "./pages/Pricing";
 import Terms from "./pages/Terms";
+import Checkout from "./pages/Checkout";
 import { AdminShell } from "./components/AdminShell";
 
 const queryClient = new QueryClient();
@@ -80,6 +81,7 @@ const App = () => (
           <Route path="/approve" element={<Approve />} />
           <Route path="/change-password" element={<ProtectedRoute><ChangePassword /></ProtectedRoute>} />
           <Route path="/" element={<LandingPage />} />
+          <Route path="/checkout" element={<Checkout />} />
           <Route element={<ProtectedRoute><AdminShell /></ProtectedRoute>}>
             <Route path="/admin/dashboard" element={<Dashboard />} />
             <Route path="/admin/setup" element={<SetupPage />} />
