@@ -152,6 +152,7 @@ export function AdminSetupProvider({ children }: { children: ReactNode }) {
         isDepartmentComplete, isWtrComplete, isPeriodComplete, areSurveysDone,
         setDepartmentComplete, setWtrComplete, setPeriodComplete, setSurveysDone,
         rotaStartDate, rotaEndDate, setRotaStartDate, setRotaEndDate,
+        rotaStartTime, rotaEndTime, setRotaStartTime, setRotaEndTime,
         maxAvgWeekly, maxIn7Days, setMaxAvgWeekly, setMaxIn7Days,
         maxConsecDays, maxConsecLong, maxConsecNights, setMaxConsecDays, setMaxConsecLong, setMaxConsecNights,
         restPostNights, restPostBlock, restAfter7, weekendFreq, setRestPostNights, setRestPostBlock, setRestAfter7, setWeekendFreq,
