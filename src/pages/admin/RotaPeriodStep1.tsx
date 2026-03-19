@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarDays, Clock, ArrowRight, Info, AlertTriangle, CheckCircle } from "lucide-react";
+import { CalendarDays, Clock, ArrowRight, Info, AlertTriangle, CheckCircle, RotateCcw } from "lucide-react";
 import { format, differenceInDays, getDay } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useAdminSetup } from "@/contexts/AdminSetupContext";
@@ -23,6 +23,11 @@ const DAY_COL_MAP: Record<number, string> = {
   4: "applicable_thu",
   5: "applicable_fri",
   6: "applicable_sat",
+};
+
+const toMinutes = (t: string) => {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
 };
 
 export default function RotaPeriodStep1() {
@@ -43,21 +48,37 @@ export default function RotaPeriodStep1() {
   const [timesAutoSet, setTimesAutoSet] = useState(false);
   const [startTimeManual, setStartTimeManual] = useState(false);
   const [endTimeManual, setEndTimeManual] = useState(false);
+  const [autoStartTime, setAutoStartTime] = useState("");
+  const [autoEndTime, setAutoEndTime] = useState("");
+
+  // Responsive calendar months
+  const [calendarMonths, setCalendarMonths] = useState(1);
+  useEffect(() => {
+    const update = () => {
+      if (window.innerWidth >= 1280) setCalendarMonths(3);
+      else if (window.innerWidth >= 768) setCalendarMonths(2);
+      else setCalendarMonths(1);
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
 
   // Restore saved times from DB
   const restoredRef = useRef(false);
   useEffect(() => {
-    if (restoredRef.current || !configDetails) return;
+    if (restoredRef.current) return;
+    if (!configDetails) return;
     const cd = configDetails as any;
-    if (cd.rota_start_time) {
-      const t = String(cd.rota_start_time).slice(0, 5);
-      setStartTime(t);
-      setRotaStartTime(t);
+    const savedStart = cd.rota_start_time ? String(cd.rota_start_time).slice(0, 5) : null;
+    const savedEnd = cd.rota_end_time ? String(cd.rota_end_time).slice(0, 5) : null;
+    if (savedStart) {
+      setStartTime(savedStart);
+      setRotaStartTime(savedStart);
     }
-    if (cd.rota_end_time) {
-      const t = String(cd.rota_end_time).slice(0, 5);
-      setEndTime(t);
-      setRotaEndTime(t);
+    if (savedEnd) {
+      setEndTime(savedEnd);
+      setRotaEndTime(savedEnd);
     }
     restoredRef.current = true;
   }, [configDetails]);
@@ -76,30 +97,37 @@ export default function RotaPeriodStep1() {
       const startDow = getDay(range.from!);
       const startCol = DAY_COL_MAP[startDow];
       const startDayShifts = shifts.filter((s: any) => s[startCol] === true);
-      if (startDayShifts.length > 0 && !startTimeManual) {
+      if (startDayShifts.length > 0) {
         const minStart = startDayShifts
           .map((s: any) => String(s.start_time).slice(0, 5))
           .sort()[0];
-        setStartTime(minStart);
-        setTimesAutoSet(true);
+        setAutoStartTime(minStart);
+        if (!startTimeManual) {
+          setStartTime(minStart);
+          setTimesAutoSet(true);
+        }
       }
 
-      // Derive end time from last day
+      // Derive end time from last day — handle midnight-crossing shifts
       const endDow = getDay(range.to!);
       const endCol = DAY_COL_MAP[endDow];
       const endDayShifts = shifts.filter((s: any) => s[endCol] === true);
-      if (endDayShifts.length > 0 && !endTimeManual) {
-        const maxEnd = endDayShifts
-          .map((s: any) => {
-            const et = String(s.end_time).slice(0, 5);
-            const st = String(s.start_time).slice(0, 5);
-            // If crosses midnight, end_time is technically next day
-            return et < st ? et : et;
-          })
-          .sort()
-          .reverse()[0];
-        setEndTime(maxEnd);
-        setTimesAutoSet(true);
+      if (endDayShifts.length > 0) {
+        const effectiveEndMinutes = endDayShifts.map((s: any) => {
+          const et = String(s.end_time).slice(0, 5);
+          const st = String(s.start_time).slice(0, 5);
+          const etMin = toMinutes(et);
+          const stMin = toMinutes(st);
+          return etMin < stMin ? etMin + 1440 : etMin;
+        });
+        const maxEffectiveMinutes = Math.max(...effectiveEndMinutes);
+        const finalMinutes = maxEffectiveMinutes % 1440;
+        const derivedEndTime = `${String(Math.floor(finalMinutes / 60)).padStart(2, "0")}:${String(finalMinutes % 60).padStart(2, "0")}`;
+        setAutoEndTime(derivedEndTime);
+        if (!endTimeManual) {
+          setEndTime(derivedEndTime);
+          setTimesAutoSet(true);
+        }
       }
     };
     derive();
@@ -171,13 +199,16 @@ export default function RotaPeriodStep1() {
             )}
 
             {/* Inline range calendar */}
-            <Calendar
-              mode="range"
-              selected={{ from: range.from, to: range.to } as DateRange}
-              onDayClick={handleDayClick}
-              numberOfMonths={1}
-              className="w-full p-3 pointer-events-auto"
-            />
+            <div className="w-full overflow-x-hidden">
+              <Calendar
+                mode="range"
+                selected={{ from: range.from, to: range.to } as DateRange}
+                onDayClick={handleDayClick}
+                numberOfMonths={calendarMonths}
+                className="w-full p-3 pointer-events-auto"
+                classNames={{ months: "flex flex-wrap gap-4 justify-center" }}
+              />
+            </div>
 
             {/* Duration pill */}
             {durationInfo && (
@@ -207,12 +238,24 @@ export default function RotaPeriodStep1() {
                   <span className="text-[11px] font-semibold text-amber-600 mt-0.5">Auto-set from shift types</span>
                 )}
               </div>
-              <Input
-                type="time"
-                value={startTime}
-                onChange={(e) => { setStartTime(e.target.value); setStartTimeManual(true); }}
-                className="w-full sm:w-[220px]"
-              />
+              <div className="flex items-center gap-2">
+                <Input
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => { setStartTime(e.target.value); setStartTimeManual(true); }}
+                  className="w-full sm:w-[180px]"
+                />
+                {startTimeManual && autoStartTime && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs text-amber-700 border-amber-300 hover:bg-amber-50 whitespace-nowrap min-h-[44px]"
+                    onClick={() => { setStartTime(autoStartTime); setStartTimeManual(false); }}
+                  >
+                    <RotateCcw className="h-3 w-3 mr-1" />Reset to auto
+                  </Button>
+                )}
+              </div>
             </div>
             {startTimeManual && (
               <div className="flex items-center gap-2 rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-2 text-xs font-medium text-yellow-700">
@@ -232,12 +275,24 @@ export default function RotaPeriodStep1() {
                   <span className="text-[11px] font-semibold text-amber-600 mt-0.5">Auto-set from shift types</span>
                 )}
               </div>
-              <Input
-                type="time"
-                value={endTime}
-                onChange={(e) => { setEndTime(e.target.value); setEndTimeManual(true); }}
-                className="w-full sm:w-[220px]"
-              />
+              <div className="flex items-center gap-2">
+                <Input
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => { setEndTime(e.target.value); setEndTimeManual(true); }}
+                  className="w-full sm:w-[180px]"
+                />
+                {endTimeManual && autoEndTime && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs text-amber-700 border-amber-300 hover:bg-amber-50 whitespace-nowrap min-h-[44px]"
+                    onClick={() => { setEndTime(autoEndTime); setEndTimeManual(false); }}
+                  >
+                    <RotateCcw className="h-3 w-3 mr-1" />Reset to auto
+                  </Button>
+                )}
+              </div>
             </div>
             {endTimeManual && (
               <div className="flex items-center gap-2 rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-2 text-xs font-medium text-yellow-700">
