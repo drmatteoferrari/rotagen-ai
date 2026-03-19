@@ -42,6 +42,7 @@ interface ValidationInputs {
         iacAchieved: boolean | null
         iaocAchieved: boolean | null
         icuAchieved: boolean | null
+        transferAchieved: boolean | null
       }
     } | null
   }[]
