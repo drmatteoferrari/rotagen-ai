@@ -15,6 +15,10 @@ interface AdminSetupContextType {
   rotaEndDate: Date | undefined;
   setRotaStartDate: (d: Date | undefined) => void;
   setRotaEndDate: (d: Date | undefined) => void;
+  rotaStartTime: string;
+  rotaEndTime: string;
+  setRotaStartTime: (t: string) => void;
+  setRotaEndTime: (t: string) => void;
   // WTR Step 1
   maxAvgWeekly: number;
   maxIn7Days: number;
