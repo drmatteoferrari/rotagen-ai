@@ -161,9 +161,10 @@ export function runPreRotaValidation(inputs: ValidationInputs): ValidationIssue[
   }
 
   // W4–W6: team-level shift requirement checks
-  const teamIac  = doctors.filter(d => d.survey?.competencies.iacAchieved  === true).length
+  const teamIac = doctors.filter(d => d.survey?.competencies.iacAchieved === true).length
   const teamIaoc = doctors.filter(d => d.survey?.competencies.iaocAchieved === true).length
-  const teamIcu  = doctors.filter(d => d.survey?.competencies.icuAchieved  === true).length
+  const teamIcu = doctors.filter(d => d.survey?.competencies.icuAchieved === true).length
+  const teamTransfer = doctors.filter(d => d.survey?.competencies.transferAchieved === true).length
 
   for (const shift of shiftTypes) {
     if (shift.reqIac  > 0 && teamIac  < shift.reqIac)
