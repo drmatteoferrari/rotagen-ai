@@ -774,7 +774,7 @@ export default function DepartmentStep2() {
   };
 
   return (
-    <AdminLayout title="Department Setup" subtitle="Step 2 of 2 — Design your week" accentColor="purple">
+    <AdminLayout title="Department Setup" subtitle="Step 2 of 3 — Design your week" accentColor="purple">
       <DndContext
         sensors={sensors}
         onDragStart={handleDragStart}
