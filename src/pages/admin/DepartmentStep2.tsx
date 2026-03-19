@@ -748,7 +748,7 @@ export default function DepartmentStep2() {
           min_doctors: s.staffing.min,
           target_doctors: s.staffing.target,
           max_doctors: s.staffing.max,
-          target_percentage: getTargetPct(s.id, groupIds, overrides),
+          target_percentage: null,
           sort_order: idx,
           req_iac: s.reqIac,
           req_iaoc: s.reqIaoc,
@@ -763,8 +763,7 @@ export default function DepartmentStep2() {
       if (insertError) throw insertError;
 
       toast.success("✓ Shift configuration saved");
-      setDepartmentComplete(true);
-      navigate("/admin/dashboard");
+      navigate("/admin/department/step-3");
     } catch (err: any) {
       console.error("Department save failed:", err);
       toast.error("Save failed — please try again");
@@ -774,7 +773,7 @@ export default function DepartmentStep2() {
   };
 
   return (
-    <AdminLayout title="Department Setup" subtitle="Step 2 of 2 — Design your week" accentColor="purple">
+    <AdminLayout title="Department Setup" subtitle="Step 2 of 3 — Design your week" accentColor="purple">
       <DndContext
         sensors={sensors}
         onDragStart={handleDragStart}
