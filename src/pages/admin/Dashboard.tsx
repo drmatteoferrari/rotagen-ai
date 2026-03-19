@@ -174,5 +174,6 @@ export default function Dashboard() {
         )}
       </div>
     </AdminLayout>
+    </>
   );
 }
