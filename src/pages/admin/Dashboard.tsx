@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { usePreRotaResultQuery } from "@/hooks/useAdminQueries";
 import PreRotaCalendarPage from "./PreRotaCalendarPage";
+import OnboardingModal from "@/components/OnboardingModal";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -22,9 +23,25 @@ export default function Dashboard() {
   const { user } = useAuth();
 
   const [archivedConfigs, setArchivedConfigs] = useState<{id: string; rota_start_date: string | null; rota_end_date: string | null; created_at: string}[]>([]);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   const { data: preRotaResult } = usePreRotaResultQuery();
   const hasPreRota = !!preRotaResult && preRotaResult.status !== 'blocked';
+
+  // Check onboarding status once
+  useEffect(() => {
+    if (!user?.id || !restoredFromDb) return;
+    supabase
+      .from("profiles")
+      .select("onboarding_completed")
+      .eq("id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data && data.onboarding_completed === false) {
+          setShowOnboarding(true);
+        }
+      });
+  }, [user?.id, restoredFromDb]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -39,13 +56,16 @@ export default function Dashboard() {
 
   if (!restoredFromDb) {
     return (
-      <AdminLayout title="Dashboard" subtitle="Overview of your rota" accentColor="blue">
-        <div className="mx-auto max-w-3xl space-y-4">
-          <Skeleton className="h-24 w-full rounded-xl" />
-          <Skeleton className="h-48 w-full rounded-xl" />
-          <Skeleton className="h-24 w-full rounded-xl" />
-        </div>
-      </AdminLayout>
+      <>
+        {showOnboarding && <OnboardingModal onClose={() => setShowOnboarding(false)} />}
+        <AdminLayout title="Dashboard" subtitle="Overview of your rota" accentColor="blue">
+          <div className="mx-auto max-w-3xl space-y-4">
+            <Skeleton className="h-24 w-full rounded-xl" />
+            <Skeleton className="h-48 w-full rounded-xl" />
+            <Skeleton className="h-24 w-full rounded-xl" />
+          </div>
+        </AdminLayout>
+      </>
     );
   }
 
@@ -56,6 +76,8 @@ export default function Dashboard() {
   // If pre-rota is ready, show the embedded calendar
   if (hasPreRota) {
     return (
+      <>
+      {showOnboarding && <OnboardingModal onClose={() => setShowOnboarding(false)} />}
       <AdminLayout title="Dashboard" subtitle="Overview of your rota" accentColor="blue">
         <div className="mx-auto max-w-7xl space-y-4 animate-fadeSlideUp">
           {/* Pre-allocation note */}
@@ -99,11 +121,14 @@ export default function Dashboard() {
           )}
         </div>
       </AdminLayout>
+      </>
     );
   }
 
   // No pre-rota yet — show simple status overview (no progress bar)
   return (
+    <>
+    {showOnboarding && <OnboardingModal onClose={() => setShowOnboarding(false)} />}
     <AdminLayout title="Dashboard" subtitle="Overview of your rota" accentColor="blue">
       <div className="mx-auto max-w-3xl space-y-4 animate-fadeSlideUp">
 
@@ -149,5 +174,6 @@ export default function Dashboard() {
         )}
       </div>
     </AdminLayout>
+    </>
   );
 }
