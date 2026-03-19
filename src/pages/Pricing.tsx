@@ -220,10 +220,10 @@ export default function Pricing() {
               </p>
               <button
                 type="button"
-                onClick={() => navigate("/register")}
+                onClick={() => navigate("/checkout")}
                 className="mt-6 w-full rounded-md bg-primary px-6 py-3 text-sm font-semibold text-white transition-all hover:scale-[1.02] hover:bg-primary/90 active:scale-[0.98]"
               >
-                Request early access →
+                View pricing plans →
               </button>
               <p className="mt-3 text-xs text-blue-400">No payment details · No procurement · Cancel anytime</p>
             </div>

@@ -1,44 +1,15 @@
-import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, Loader2, AlertCircle } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { Check, AlertCircle } from "lucide-react";
 
 export default function Checkout() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [loadingType, setLoadingType] = useState<string | null>(null);
 
   const success = searchParams.get("success") === "true";
   const cancelled = searchParams.get("cancelled") === "true";
-
-  const handleCheckout = async (priceType: "pay_per_rota" | "monthly") => {
-    setLoadingType(priceType);
-    try {
-      const { data, error } = await supabase.functions.invoke("create-checkout-session", {
-        body: {
-          priceType,
-          successUrl: `${window.location.origin}/checkout?success=true`,
-          cancelUrl: `${window.location.origin}/checkout?cancelled=true`,
-        },
-      });
-
-      if (error) throw new Error(error.message);
-      if (data?.url) {
-        window.location.href = data.url;
-      } else {
-        throw new Error("No checkout URL returned");
-      }
-    } catch (err: any) {
-      console.error("Checkout error:", err);
-      toast.error("Could not start checkout — please try again.");
-    } finally {
-      setLoadingType(null);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-blue-100 py-12 px-4">
@@ -52,7 +23,7 @@ export default function Checkout() {
             <span className="text-base font-bold text-foreground">RotaGen</span>
           </div>
           <h1 className="text-3xl md:text-4xl font-extrabold text-foreground tracking-tight mb-2">Choose your plan</h1>
-          <p className="text-muted-foreground text-sm">Dev-only pricing page — not linked from public site.</p>
+          <p className="text-muted-foreground text-sm">Simple, transparent pricing for NHS anaesthetic departments.</p>
         </div>
 
         {/* Banners */}
@@ -91,14 +62,8 @@ export default function Checkout() {
               <CardDescription className="text-sm">One rota generation plus one regeneration. No subscription.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-3xl font-extrabold text-foreground">£250</p>
-              <Button
-                className="w-full"
-                disabled={loadingType !== null}
-                onClick={() => handleCheckout("pay_per_rota")}
-              >
-                {loadingType === "pay_per_rota" ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing…</> : "Buy Now"}
-              </Button>
+              <Badge variant="outline" className="text-muted-foreground border-muted-foreground/30 text-sm font-normal">Pricing coming soon</Badge>
+              <Button className="w-full" disabled>Coming Soon</Button>
             </CardContent>
           </Card>
 
@@ -109,14 +74,8 @@ export default function Checkout() {
               <CardDescription className="text-sm">Unlimited rota generations. Cancel anytime.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-3xl font-extrabold text-foreground">£50<span className="text-sm font-normal text-muted-foreground"> / month</span></p>
-              <Button
-                className="w-full"
-                disabled={loadingType !== null}
-                onClick={() => handleCheckout("monthly")}
-              >
-                {loadingType === "monthly" ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing…</> : "Subscribe"}
-              </Button>
+              <Badge variant="outline" className="text-muted-foreground border-muted-foreground/30 text-sm font-normal">Pricing coming soon</Badge>
+              <Button className="w-full" disabled>Coming Soon</Button>
             </CardContent>
           </Card>
         </div>
