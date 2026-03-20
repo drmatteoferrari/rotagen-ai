@@ -631,6 +631,14 @@ export default function DepartmentStep2() {
   const [activeDayIndex, setActiveDayIndex] = useState(0);
   const [activeChipId, setActiveChipId] = useState<string | null>(null);
   const [badgeMeaningsOpen, setBadgeMeaningsOpen] = useState(false);
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false);
+
+  const SHIFT_TEMPLATES = [
+    { label: "Standard Day", abbrev: "SD", start: "08:00", end: "17:30", isOncall: false },
+    { label: "Long Day",     abbrev: "LD", start: "08:00", end: "20:30", isOncall: true  },
+    { label: "Night",        abbrev: "N",  start: "20:00", end: "08:30", isOncall: true  },
+    { label: "Twilight",     abbrev: "Tw", start: "16:00", end: "00:00", isOncall: true  },
+  ] as const;
   const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const [saving, setSaving] = useState(false);
