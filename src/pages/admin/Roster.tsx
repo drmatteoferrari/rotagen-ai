@@ -12,9 +12,10 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  Copy, Trash2, UserPlus, Send, Users, Pencil, CalendarIcon, Loader2, Check, AlertTriangle, Link2, ExternalLink, ChevronDown,
+  Copy, Trash2, UserPlus, Send, Users, Pencil, CalendarIcon, Loader2, Check, AlertTriangle, Link2, ExternalLink, ChevronDown, Clock,
 } from "lucide-react";
 import { toast } from "sonner";
+import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { format, subDays, parseISO } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
