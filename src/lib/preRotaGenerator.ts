@@ -29,8 +29,12 @@ export async function generatePreRota(
 
     // 4. Fetch bank holidays
     const { data: bhRows } = await supabase
-      .from('bank_holidays').select('date').eq('rota_config_id', rotaConfigId)
-    const bankHolidays = (bhRows ?? []).map(r => r.date as string)
+      .from('bank_holidays')
+      .select('date, is_active')
+      .eq('rota_config_id', rotaConfigId)
+    const bankHolidays = (bhRows ?? [])
+      .filter(r => r.is_active !== false)
+      .map(r => r.date as string)
 
     // 5. Fetch doctors
     const { data: doctors } = await supabase

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "@/components/AdminLayout";
 import { Button } from "@/components/ui/button";
@@ -52,7 +52,7 @@ const UK_BANK_HOLIDAYS: { date: [number, number, number]; name: string }[] = [
 export default function RotaPeriodStep2() {
   const navigate = useNavigate();
   const {
-    setPeriodComplete, rotaStartDate, rotaEndDate, rotaStartTime, rotaEndTime,
+    setPeriodComplete, rotaStartDate, rotaEndDate,
     rotaBankHolidays, setRotaBankHolidays,
     bhSameAsWeekend, setBhSameAsWeekend,
     bhShiftRules, setBhShiftRules,
@@ -100,20 +100,31 @@ export default function RotaPeriodStep2() {
     fetchShifts();
   }, [currentRotaConfigId]);
 
-  // BH shift rules initialisation from shift types (if not already loaded from context/DB)
+  // BH shift rules initialisation — merge with shift types using ref to avoid stale closure
+  const bhShiftRulesRef = useRef(bhShiftRules);
+  useEffect(() => {
+    bhShiftRulesRef.current = bhShiftRules;
+  }, [bhShiftRules]);
+
   useEffect(() => {
     if (shiftTypes.length === 0) return;
-    if (bhShiftRules.length > 0) return;
-    setBhShiftRules(
-      shiftTypes.map((t: any): BhShiftRule => ({
+    const currentRules = bhShiftRulesRef.current;
+    const merged: BhShiftRule[] = shiftTypes.map((t: any) => {
+      const saved = currentRules.find(r => r.shift_key === t.shift_key);
+      return {
         shift_key: t.shift_key,
         name: t.name,
         start_time: String(t.start_time).slice(0, 5),
         end_time: String(t.end_time).slice(0, 5),
-        target_doctors: t.target_doctors ?? 1,
-        included: true,
-      }))
-    );
+        target_doctors: saved ? saved.target_doctors : (t.target_doctors ?? 1),
+        included: saved ? saved.included : true,
+      };
+    });
+    const existingKeys = currentRules.map(r => r.shift_key).sort().join(",");
+    const mergedKeys = merged.map(r => r.shift_key).sort().join(",");
+    if (existingKeys !== mergedKeys) {
+      setBhShiftRules(merged);
+    }
   }, [shiftTypes]);
 
   const addBankHoliday = () => {
@@ -165,12 +176,16 @@ export default function RotaPeriodStep2() {
         rota_end_date: endDateStr,
         rota_duration_days: durationDays,
         rota_duration_weeks: durationWeeks,
-        rota_start_time: rotaStartTime,
-        rota_end_time: rotaEndTime,
         bh_same_as_weekend: bhSameAsWeekend,
-        bh_custom_rules: null,
         bh_shift_rules: bhSameAsWeekend === false
-          ? bhShiftRules.filter(r => r.included).map(r => ({ shift_key: r.shift_key, name: r.name, target_doctors: r.target_doctors }))
+          ? bhShiftRules.map(r => ({
+              shift_key: r.shift_key,
+              name: r.name,
+              start_time: r.start_time,
+              end_time: r.end_time,
+              target_doctors: r.target_doctors,
+              included: r.included,
+            }))
           : null,
       };
 

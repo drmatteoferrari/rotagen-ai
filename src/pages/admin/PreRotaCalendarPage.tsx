@@ -300,9 +300,13 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
       // Bank holidays
       const { data: bhRows } = await supabase
         .from('bank_holidays')
-        .select('date')
+        .select('date, is_active')
         .eq('rota_config_id', rotaConfigId);
-      const bhSet = new Set((bhRows ?? []).map((r: any) => r.date as string));
+      const bhSet = new Set(
+        (bhRows ?? [])
+          .filter((r: any) => r.is_active !== false)
+          .map((r: any) => r.date as string)
+      );
       setBankHolidays(bhSet);
 
       // Surveys

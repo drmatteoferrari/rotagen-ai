@@ -57,8 +57,6 @@ export interface RotaConfig {
     endDate: string | null;
     durationDays: number | null;
     durationWeeks: number | null;
-    startTime: string;
-    endTime: string;
     bankHolidays: Array<{
       id: string;
       date: string;
@@ -74,7 +72,14 @@ export interface RotaConfig {
     byShift: Array<{ shiftKey: string; targetPct: number }>;
   };
   bhSameAsWeekend: boolean | null;
-  bhShiftRules: any[] | null;
+  bhShiftRules: Array<{
+    shift_key: string;
+    name: string;
+    start_time: string;
+    end_time: string;
+    target_doctors: number;
+    included: boolean;
+  }> | null;
   wtr: {
     maxHoursPerWeek: number;
     maxHoursPer168h: number;
@@ -207,8 +212,6 @@ export async function getRotaConfig(id: string): Promise<RotaConfig> {
       endDate: c.rota_end_date,
       durationDays: c.rota_duration_days,
       durationWeeks: c.rota_duration_weeks != null ? Number(c.rota_duration_weeks) : null,
-      startTime: c.rota_start_time ?? "08:00",
-      endTime: c.rota_end_time ?? "08:00",
       bankHolidays,
     },
     shifts,

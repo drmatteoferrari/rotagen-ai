@@ -32,10 +32,6 @@ interface AdminSetupContextType {
   rotaEndDate: Date | undefined;
   setRotaStartDate: (d: Date | undefined) => void;
   setRotaEndDate: (d: Date | undefined) => void;
-  rotaStartTime: string;
-  rotaEndTime: string;
-  setRotaStartTime: (t: string) => void;
-  setRotaEndTime: (t: string) => void;
   // Bank holidays working state (Step 2 temp memory)
   rotaBankHolidays: BankHolidayEntry[];
   setRotaBankHolidays: Dispatch<SetStateAction<BankHolidayEntry[]>>;
@@ -92,8 +88,6 @@ export function AdminSetupProvider({ children }: { children: ReactNode }) {
   const [areSurveysDone, setSurveysDone] = useState(false);
   const [rotaStartDate, setRotaStartDate] = useState<Date | undefined>();
   const [rotaEndDate, setRotaEndDate] = useState<Date | undefined>();
-  const [rotaStartTime, setRotaStartTime] = useState("08:00");
-  const [rotaEndTime, setRotaEndTime] = useState("08:00");
   const [restoredFromDb, setRestoredFromDb] = useState(false);
 
   // Bank holidays / Step 2 working state
@@ -135,14 +129,6 @@ export function AdminSetupProvider({ children }: { children: ReactNode }) {
       setRotaEndDate(new Date(config.rotaPeriod.endDate));
     }
 
-    // Restore times
-    if (config.rotaPeriod.startTime && config.rotaPeriod.startTime !== "08:00") {
-      setRotaStartTime(config.rotaPeriod.startTime);
-    }
-    if (config.rotaPeriod.endTime && config.rotaPeriod.endTime !== "08:00") {
-      setRotaEndTime(config.rotaPeriod.endTime);
-    }
-
     // Restore bank holidays
     if (config.rotaPeriod.bankHolidays && config.rotaPeriod.bankHolidays.length > 0) {
       setRotaBankHolidays(
@@ -157,11 +143,11 @@ export function AdminSetupProvider({ children }: { children: ReactNode }) {
     }
 
     // Restore BH settings
-    if ((config as any).bhSameAsWeekend !== undefined) {
-      setBhSameAsWeekend((config as any).bhSameAsWeekend ?? null);
+    if (config.bhSameAsWeekend !== undefined) {
+      setBhSameAsWeekend(config.bhSameAsWeekend ?? null);
     }
-    if ((config as any).bhShiftRules && Array.isArray((config as any).bhShiftRules)) {
-      setBhShiftRules((config as any).bhShiftRules);
+    if (config.bhShiftRules && Array.isArray(config.bhShiftRules)) {
+      setBhShiftRules(config.bhShiftRules);
     }
     setPeriodWorkingStateLoaded(true);
 
@@ -215,7 +201,6 @@ export function AdminSetupProvider({ children }: { children: ReactNode }) {
         isDepartmentComplete, isWtrComplete, isPeriodComplete, areSurveysDone,
         setDepartmentComplete, setWtrComplete, setPeriodComplete, setSurveysDone,
         rotaStartDate, rotaEndDate, setRotaStartDate, setRotaEndDate,
-        rotaStartTime, rotaEndTime, setRotaStartTime, setRotaEndTime,
         rotaBankHolidays, setRotaBankHolidays,
         bhSameAsWeekend, setBhSameAsWeekend,
         bhShiftRules, setBhShiftRules,

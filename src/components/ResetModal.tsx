@@ -21,7 +21,13 @@ export function ResetModal({ open, onClose }: ResetModalProps) {
   const navigate = useNavigate();
   const { currentRotaConfigId } = useRotaContext();
   const { resetDepartment: resetDepartmentContext } = useDepartmentSetup();
-  const { resetWtr: resetWtrContext, setDepartmentComplete, setPeriodComplete, setRotaStartDate, setRotaEndDate } = useAdminSetup();
+  const {
+    resetWtr: resetWtrContext,
+    setDepartmentComplete, setPeriodComplete,
+    setRotaStartDate, setRotaEndDate,
+    setRotaBankHolidays, setBhSameAsWeekend,
+    setBhShiftRules, setPeriodWorkingStateLoaded,
+  } = useAdminSetup();
   const { invalidateDoctors, invalidateInactiveDoctors } = useInvalidateQuery();
 
   const [step, setStep] = useState<1 | 2>(1);
@@ -86,12 +92,17 @@ export function ResetModal({ open, onClose }: ResetModalProps) {
           rota_duration_days: null,
           rota_duration_weeks: null,
           survey_deadline: null,
-          bh_custom_rules: null,
+          bh_same_as_weekend: null,
+          bh_shift_rules: null,
         }).eq('id', currentRotaConfigId);
         await supabase.from('bank_holidays').delete().eq('rota_config_id', currentRotaConfigId);
         setPeriodComplete(false);
         setRotaStartDate(undefined);
         setRotaEndDate(undefined);
+        setRotaBankHolidays([]);
+        setBhSameAsWeekend(null);
+        setBhShiftRules([]);
+        setPeriodWorkingStateLoaded(false);
       }
       if (resetRoster) {
         await supabase.from('doctors')
