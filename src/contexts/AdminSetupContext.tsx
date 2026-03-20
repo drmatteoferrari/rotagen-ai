@@ -38,11 +38,11 @@ interface AdminSetupContextType {
   setRotaEndTime: (t: string) => void;
   // Bank holidays working state (Step 2 temp memory)
   rotaBankHolidays: BankHolidayEntry[];
-  setRotaBankHolidays: (v: BankHolidayEntry[]) => void;
+  setRotaBankHolidays: Dispatch<SetStateAction<BankHolidayEntry[]>>;
   bhSameAsWeekend: boolean | null;
   setBhSameAsWeekend: (v: boolean | null) => void;
   bhShiftRules: BhShiftRule[];
-  setBhShiftRules: (v: BhShiftRule[]) => void;
+  setBhShiftRules: Dispatch<SetStateAction<BhShiftRule[]>>;
   periodWorkingStateLoaded: boolean;
   setPeriodWorkingStateLoaded: (v: boolean) => void;
   // WTR Step 1
