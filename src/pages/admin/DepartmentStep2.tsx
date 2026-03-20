@@ -585,8 +585,10 @@ function CollapsedCard({
             {shift.startTime.slice(0, 5)} – {shift.endTime.slice(0, 5)} <span className={shift.durationHours <= 13 ? "text-green-600 font-semibold" : "text-destructive font-semibold"}>({shift.durationHours}h)</span>
           </p>
           <p className="text-xs text-muted-foreground">{staffingSummary}</p>
-          <p className="text-xs font-medium tracking-wide text-muted-foreground">
-            {DAY_KEYS.filter((k) => shift.applicableDays[k]).map((k) => DAY_SHORT_LABELS[DAY_KEYS.indexOf(k)]).join(" · ")}
+          <p className="text-xs font-medium tracking-widest text-muted-foreground">
+            {DAY_KEYS.map((k, i) => (
+              <span key={k} className={shift.applicableDays[k] ? "text-card-foreground" : "opacity-20"}>{DAY_SHORT_LABELS[i][0]}</span>
+            ))}
           </p>
           <div className="flex flex-wrap gap-1">
             {BADGE_DEFS.map(({ key, label, emoji, activeClasses }) => {
