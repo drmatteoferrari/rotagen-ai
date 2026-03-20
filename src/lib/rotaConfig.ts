@@ -57,8 +57,6 @@ export interface RotaConfig {
     endDate: string | null;
     durationDays: number | null;
     durationWeeks: number | null;
-    startTime: string;
-    endTime: string;
     bankHolidays: Array<{
       id: string;
       date: string;
