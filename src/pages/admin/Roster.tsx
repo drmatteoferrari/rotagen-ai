@@ -982,6 +982,11 @@ export default function Roster() {
                   />
                 </PopoverContent>
               </Popover>
+              {deadlineIsPast && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
+                  <AlertTriangle className="h-3 w-3" /> Deadline passed
+                </span>
+              )}
             </div>
             {!rotaStartDate && (
               <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
