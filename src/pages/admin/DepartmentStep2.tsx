@@ -826,11 +826,7 @@ export default function DepartmentStep2() {
                 ))}
                 <button
                   type="button"
-                  onClick={() => {
-                    const newId = addShift();
-                    setExpandedShiftId(newId);
-                    setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 150);
-                  }}
+                  onClick={() => { setShowTemplatePicker(true); setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 150); }}
                   className="inline-flex min-h-[32px] flex-shrink-0 items-center gap-1 rounded-full border border-dashed border-purple-300 px-3 py-1.5 text-xs font-medium text-purple-600 transition-colors hover:bg-purple-50"
                 >
                   <Plus className="h-3.5 w-3.5" /> Add shift type
