@@ -150,7 +150,11 @@ function DayColumn({
                     e.stopPropagation();
                     setActiveChipId(null);
                     setExpandedShiftId(shift.id);
-                    setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 100);
+                    setTimeout(() => {
+                      const el = document.getElementById(`shift-card-${shift.id}`);
+                      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      else window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+                    }, 100);
                   }}
                   aria-label={`Edit ${shift.abbreviation}`}
                 >
