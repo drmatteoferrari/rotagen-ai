@@ -898,6 +898,20 @@ export default function Roster() {
     <AdminLayout title="Roster & Invites" subtitle="Build the team and send survey invitations" accentColor="teal">
       <div className="mx-auto max-w-5xl space-y-4 sm:space-y-6 animate-fadeSlideUp">
 
+        {/* No config banner */}
+        {!currentRotaConfigId && (
+          <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 flex items-center gap-3">
+            <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-amber-800">No active rota config</p>
+              <p className="text-xs text-amber-700">Complete setup before managing the roster.</p>
+            </div>
+            <Button size="sm" onClick={() => navigate("/admin/setup")} className="shrink-0">
+              Go to Setup
+            </Button>
+          </div>
+        )}
+
         {/* DEV TOOLS Banner */}
         <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 flex flex-col sm:flex-row sm:items-center gap-3">
           <span className="text-sm font-medium text-amber-800">⚙️ DEV TOOLS — not visible in production</span>
