@@ -133,7 +133,16 @@ export function SurveyResponsePanel({ doctor, open, onClose, onSaved }: SurveyRe
                 </div>
                 <div>
                   <label className="text-xs font-medium text-muted-foreground">Grade</label>
-                  <Input value={data.grade ?? ""} onChange={(e) => setField("grade", e.target.value)} />
+                  <select
+                    value={data.grade ?? ""}
+                    onChange={(e) => setField("grade", e.target.value)}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    <option value="">Select grade</option>
+                    {GRADE_OPTIONS.map((g) => (
+                      <option key={g} value={g}>{g}</option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="text-xs font-medium text-muted-foreground">Specialty</label>
