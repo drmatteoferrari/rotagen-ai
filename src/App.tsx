@@ -35,6 +35,7 @@ import PreRotaCalendarPage from "./pages/admin/PreRotaCalendarPage";
 import PreRotaTargetsPage from "./pages/admin/PreRotaTargetsPage";
 import PreRotaPage from "./pages/admin/PreRotaPage";
 import SetupPage from "./pages/admin/SetupPage";
+import DoctorProfile from "./pages/admin/DoctorProfile";
 import Privacy from "./pages/Privacy";
 import LandingPage from "./pages/LandingPage";
 import Pricing from "./pages/Pricing";
