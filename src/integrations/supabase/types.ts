@@ -46,6 +46,7 @@ export type Database = {
           created_at: string | null
           date: string
           id: string
+          is_active: boolean
           is_auto_added: boolean | null
           name: string
           rota_config_id: string
@@ -55,6 +56,7 @@ export type Database = {
           created_at?: string | null
           date: string
           id?: string
+          is_active?: boolean
           is_auto_added?: boolean | null
           name: string
           rota_config_id: string
@@ -64,6 +66,7 @@ export type Database = {
           created_at?: string | null
           date?: string
           id?: string
+          is_active?: boolean
           is_auto_added?: boolean | null
           name?: string
           rota_config_id?: string

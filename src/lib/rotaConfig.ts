@@ -2,8 +2,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 
-// SECTION 7 — getRotaConfig() retrieval function
-
 function generateAbbreviationForConfig(name: string): string {
   const base = name.split(/\s[—\-]\s/)[0].trim();
   const initials = base.split(/\s+/).map((w: string) => w[0]?.toUpperCase() ?? "").join("").slice(0, 4);
@@ -36,7 +34,6 @@ export interface RotaConfigShift {
   maxDoctors: number | null;
   targetPercentage: number | null;
   sortOrder: number;
-  // ✅ Section 2 — competency & grade requirements
   reqIac: number;
   reqIaoc: number;
   reqIcu: number;
@@ -63,9 +60,11 @@ export interface RotaConfig {
     startTime: string;
     endTime: string;
     bankHolidays: Array<{
+      id: string;
       date: string;
       name: string;
       isAutoAdded: boolean;
+      isActive: boolean;
     }>;
   };
   shifts: RotaConfigShift[];
@@ -74,6 +73,8 @@ export interface RotaConfig {
     globalNonOncallPct: number;
     byShift: Array<{ shiftKey: string; targetPct: number }>;
   };
+  bhSameAsWeekend: boolean | null;
+  bhShiftRules: any[] | null;
   wtr: {
     maxHoursPerWeek: number;
     maxHoursPer168h: number;
@@ -137,7 +138,6 @@ export async function getRotaConfig(id: string): Promise<RotaConfig> {
       ...(s.badge_night_manual_override !== null ? { night: s.badge_night_manual_override } : {}),
       ...(s.badge_long_manual_override !== null ? { long: s.badge_long_manual_override } : {}),
       ...(s.badge_ooh_manual_override !== null ? { ooh: s.badge_ooh_manual_override } : {}),
-      
       ...(s.badge_oncall_manual_override !== null ? { oncall: s.badge_oncall_manual_override } : {}),
       ...(s.badge_nonres_manual_override !== null ? { nonres: s.badge_nonres_manual_override } : {}),
     },
@@ -154,12 +154,13 @@ export async function getRotaConfig(id: string): Promise<RotaConfig> {
     abbreviation: s.abbreviation ?? generateAbbreviationForConfig(s.name),
     targetDoctors: s.target_doctors ?? s.min_doctors ?? 1,
   }));
-  // ✅ Section 2 complete (rotaConfig mapping)
 
   const bankHolidays = (holidaysRes.data ?? []).map((h: any) => ({
+    id: h.id,
     date: h.date,
     name: h.name,
     isAutoAdded: h.is_auto_added,
+    isActive: h.is_active ?? true,
   }));
 
   const w = wtrRes.data;
@@ -219,13 +220,14 @@ export async function getRotaConfig(id: string): Promise<RotaConfig> {
         targetPct: s.targetPercentage!,
       })),
     },
+    bhSameAsWeekend: c.bh_same_as_weekend ?? null,
+    bhShiftRules: (c.bh_shift_rules as any[]) ?? null,
     wtr,
     createdAt: c.created_at ?? "",
     updatedAt: c.updated_at ?? "",
   };
 }
 
-// SECTION 3 — getCurrentRotaConfig now filters by username
 export async function getCurrentRotaConfig(userId: string): Promise<RotaConfig | null> {
   const { data } = await supabase
     .from("rota_configs")
@@ -239,7 +241,6 @@ export async function getCurrentRotaConfig(userId: string): Promise<RotaConfig |
   if (!data) return null;
   return getRotaConfig(data.id);
 }
-// SECTION 3 COMPLETE
 
 export function useRotaConfig() {
   const [config, setConfig] = useState<RotaConfig | null>(null);
@@ -269,5 +270,3 @@ export function useRotaConfig() {
 
   return { config, loading, error, refresh };
 }
-
-// SECTION 7 COMPLETE
