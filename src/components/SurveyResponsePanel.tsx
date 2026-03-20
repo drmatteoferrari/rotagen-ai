@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { GRADE_OPTIONS } from "@/lib/gradeOptions";
 
 // SECTION 8 — Admin edit slide-over panel
 
