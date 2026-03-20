@@ -100,20 +100,73 @@ export default function Roster() {
     invalidateDoctors();
   }, [invalidateDoctors]);
 
+  // ─── Backfill null survey tokens ───
+  const backfillRan = useRef(false);
+  useEffect(() => {
+    if (backfillRan.current) return;
+    const nullTokenDoctors = doctors.filter((d) => !d.survey_token);
+    if (nullTokenDoctors.length === 0) return;
+    backfillRan.current = true;
+    (async () => {
+      for (const d of nullTokenDoctors) {
+        await supabase
+          .from("doctors")
+          .update({ survey_token: crypto.randomUUID() })
+          .eq("id", d.id);
+      }
+      invalidateDoctors();
+    })();
+  }, [doctors]);
+
+  // ─── Realtime subscription for survey status ───
+  useEffect(() => {
+    if (!currentRotaConfigId) return;
+    const channel = supabase
+      .channel(`doctors-roster-${currentRotaConfigId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "doctors",
+          filter: `rota_config_id=eq.${currentRotaConfigId}`,
+        },
+        () => {
+          invalidateDoctors();
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentRotaConfigId]);
+
   // ─── Add doctor to DB ───
   const addDoctor = async () => {
-    if (!firstName || !lastName || !email || !currentRotaConfigId) return;
+    if (!firstName.trim() || !lastName.trim() || !email.trim()) {
+      toast.error("Please fill in first name, last name, and email");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+    if (!currentRotaConfigId) {
+      toast.error("No active rota config — please complete setup first");
+      return;
+    }
     const { error } = await supabase.from("doctors").insert({
       rota_config_id: currentRotaConfigId,
-      first_name: firstName,
-      last_name: lastName,
-      email,
-      grade: "—",
+      first_name: firstName.trim(),
+      last_name: lastName.trim(),
+      email: email.trim(),
+      grade: "",
       survey_status: "not_started",
+      survey_token: crypto.randomUUID(),
     });
     if (error) { toast.error("Failed to add doctor"); console.error(error); return; }
     setFirstName(""); setLastName(""); setEmail("");
-    toast.success(`${firstName} ${lastName} added to the roster`);
+    toast.success(`${firstName.trim()} ${lastName.trim()} added to the roster`);
     loadDoctors();
   };
 
