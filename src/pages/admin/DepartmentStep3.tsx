@@ -483,7 +483,7 @@ export default function DepartmentStep3() {
             <div key={shift.id} className="rounded-xl border bg-card p-4 space-y-2" style={{ borderLeftWidth: 4, borderLeftColor: color.solid }}>
               {/* Identity row */}
               <div className="flex flex-wrap items-center gap-2">
-                <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-bold ${color.bg} ${color.text}`}>
+                <span className={`inline-flex items-center rounded-full px-2 py-0.5 font-mono text-xs font-bold border ${color.bg} ${color.text} ${color.border}`}>
                   {shift.abbreviation}
                 </span>
                 <span className="text-sm font-medium">{shift.name}</span>
@@ -546,9 +546,7 @@ export default function DepartmentStep3() {
                   On-call vs non-on-call split
                 </CardTitle>
                 <CardDescription>
-                  Drag the bar to set how much of each doctor's contracted time is on-call.{' '}
-                  Higher on-call = better shift coverage, but a heavier rota for doctors.{' '}
-                  Lower = more protected non-on-call time, but harder to fill all on-call shifts.
+                  Set the on-call fraction of contracted time. Higher = more coverage, heavier rota. Lower = lighter rota, harder to fill all shifts.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -608,7 +606,7 @@ export default function DepartmentStep3() {
                               const color = getShiftColor(idx);
                               const pct = Math.round(activeOncallPcts[shift.id] ?? 0);
                               return (
-                                <span key={shift.id} className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-medium ${color.bg} ${color.text}`}>
+                                <span key={shift.id} className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[11px] font-medium border ${color.bg} ${color.text} ${color.border}`}>
                                   {shift.abbreviation}
                                   <span className="font-bold">{pct}%</span>
                                 </span>
@@ -625,7 +623,7 @@ export default function DepartmentStep3() {
                               const color = getShiftColor(idx);
                               const pct = Math.round(activeNonOncallPcts[shift.id] ?? 0);
                               return (
-                                <span key={shift.id} className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-medium ${color.bg} ${color.text}`}>
+                                <span key={shift.id} className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[11px] font-medium border ${color.bg} ${color.text} ${color.border}`}>
                                   {shift.abbreviation}
                                   <span className="font-bold">{pct}%</span>
                                 </span>

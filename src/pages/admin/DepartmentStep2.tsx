@@ -118,7 +118,7 @@ function DayColumn({
           <div
             key={chipKey}
             className={`group relative flex min-h-[36px] items-center gap-2 rounded-full px-2 py-1.5 text-xs font-semibold transition-all mb-2 ${isActive ? "ring-2 ring-purple-300 ring-offset-1" : ""}`}
-            onTouchStart={() => { longPressRef.current = setTimeout(() => setActiveChipId(chipKey), 500); }}
+            onTouchStart={() => { longPressRef.current = setTimeout(() => setActiveChipId(chipKey), 250); }}
             onTouchEnd={() => { if (longPressRef.current) clearTimeout(longPressRef.current); }}
             onTouchMove={() => { if (longPressRef.current) clearTimeout(longPressRef.current); }}
           >
@@ -150,7 +150,11 @@ function DayColumn({
                     e.stopPropagation();
                     setActiveChipId(null);
                     setExpandedShiftId(shift.id);
-                    setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 100);
+                    setTimeout(() => {
+                      const el = document.getElementById(`shift-card-${shift.id}`);
+                      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      else window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+                    }, 100);
                   }}
                   aria-label={`Edit ${shift.abbreviation}`}
                 >
@@ -226,6 +230,7 @@ function ExpandedCard({
     abbreviation: originalShift.abbreviation,
   });
   const [abbrevManuallyEdited, setAbbrevManuallyEdited] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const recalc = useCallback((d: ShiftType): ShiftType => {
     const dur = calcDurationHours(d.startTime, d.endTime);
@@ -323,7 +328,7 @@ function ExpandedCard({
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">&nbsp;</Label>
-          <div className="flex min-h-[40px] items-center gap-2 rounded-md border border-border bg-muted px-3 text-sm font-medium text-muted-foreground">
+          <div className={`flex min-h-[40px] items-center gap-2 rounded-md border border-border bg-muted px-3 text-sm font-medium ${draft.durationHours <= 13 ? "text-green-600" : "text-destructive"}`}>
             <Clock className="h-4 w-4" /> {draft.durationHours}h
           </div>
         </div>
@@ -378,9 +383,8 @@ function ExpandedCard({
 
       {/* ROW 5 — Badges: flex-wrap, no horizontal scroll */}
       <div className="space-y-2">
-        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Badges (auto-detected · click to override)
-        </Label>
+        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Badges</Label>
+        <p className="text-[10px] text-muted-foreground mt-0.5">Auto-detected · click to override · ✏️ = manually set</p>
         <div className="flex flex-wrap gap-1.5">
           {BADGE_DEFS.map(({ key, label, emoji, activeClasses }) => {
             const auto = detectBadges(draft.startTime, draft.endTime, draft.applicableDays, draft.isOncall, draft.isNonRes);
@@ -402,7 +406,7 @@ function ExpandedCard({
             );
           })}
         </div>
-        <p className="text-[10px] text-muted-foreground">⚡ = auto-detected · ✏️ = manually overridden · click any badge to toggle</p>
+        
       </div>
 
       {/* ROW 6 — Staffing */}
@@ -427,7 +431,7 @@ function ExpandedCard({
                 update({ staffing: { min: val, target: newTarget, max: newMax } });
               }}
             />
-            <p className="text-xs text-muted-foreground">Rota invalid below this</p>
+            <p className="text-xs text-muted-foreground">Below this = invalid</p>
           </div>
 
           <div className="space-y-1.5">
@@ -443,7 +447,7 @@ function ExpandedCard({
                 update({ staffing: { ...draft.staffing, target: val, max: newMax } });
               }}
             />
-            <p className="text-xs text-muted-foreground">Algorithm aims for exactly this</p>
+            <p className="text-xs text-muted-foreground">Algorithm targets this</p>
           </div>
 
           <div className="space-y-1.5">
@@ -458,7 +462,7 @@ function ExpandedCard({
                 update({ staffing: { ...draft.staffing, max: raw === "" ? null : Math.max(draft.staffing.target, parseInt(raw) || draft.staffing.target) } });
               }}
             />
-            <p className="text-xs text-muted-foreground">Leave blank = the algorithm allocates exactly {draft.staffing.min} doctor{draft.staffing.min !== 1 ? "s" : ""} — no more, no less. Set a number to allow a flexible range.</p>
+            <p className="text-xs text-muted-foreground">Optional — leave blank for no maximum</p>
           </div>
         </div>
       </div>
@@ -493,7 +497,7 @@ function ExpandedCard({
 
       {/* ROW 8 — Grade requirement */}
       <div className="space-y-2">
-        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Min grade required (optional)</Label>
+        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Min Grade Required</Label>
         <Select value={draft.reqMinGrade ?? "__none__"} onValueChange={(v) => update({ reqMinGrade: v === "__none__" ? null : v })}>
           <SelectTrigger className="min-h-[44px] w-full">
             <SelectValue placeholder="No requirement" />
@@ -525,9 +529,17 @@ function ExpandedCard({
       {/* ROW 10 — Actions: delete left, save/cancel right, single row */}
       <div className="flex items-center justify-between gap-3 pt-2">
         {canRemove ? (
-          <Button variant="ghost" size="sm" className="min-h-[44px] text-destructive hover:text-destructive" onClick={onRemove}>
-            <Trash2 className="mr-1.5 h-4 w-4" /> Delete
-          </Button>
+          !confirmDelete ? (
+            <Button variant="ghost" size="sm" className="min-h-[44px] text-destructive hover:text-destructive" onClick={() => setConfirmDelete(true)}>
+              <Trash2 className="mr-1.5 h-4 w-4" /> Delete
+            </Button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-destructive font-medium">Remove this shift?</span>
+              <Button variant="destructive" size="sm" className="min-h-[36px]" onClick={onRemove}>Yes, remove</Button>
+              <Button variant="outline" size="sm" className="min-h-[36px]" onClick={() => setConfirmDelete(false)}>Cancel</Button>
+            </div>
+          )
         ) : <div />}
         <div className="flex items-center gap-2">
           <Button variant="outline" className="min-h-[44px]" onClick={() => onCancel(initialShiftRef.current)}>
@@ -573,16 +585,18 @@ function CollapsedCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1 space-y-1.5">
           <div className="flex items-center gap-2">
-            <span className="rounded-full bg-muted px-2 py-0.5 font-mono text-xs font-bold tracking-widest text-muted-foreground">{shift.abbreviation}</span>
+            <span className={`rounded-full px-2 py-0.5 font-mono text-xs font-bold tracking-widest border ${getShiftColor(index).bg} ${getShiftColor(index).text} ${getShiftColor(index).border}`}>{shift.abbreviation}</span>
             <h3 className="truncate text-sm font-semibold text-card-foreground">{shift.name}</h3>
           </div>
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Clock className="h-3.5 w-3.5 shrink-0" />
-            {shift.startTime} – {shift.endTime} ({shift.durationHours}h)
+            {shift.startTime.slice(0, 5)} – {shift.endTime.slice(0, 5)} <span className={shift.durationHours <= 13 ? "text-green-600 font-semibold" : "text-destructive font-semibold"}>({shift.durationHours}h)</span>
           </p>
           <p className="text-xs text-muted-foreground">{staffingSummary}</p>
-          <p className="text-xs font-medium tracking-wide text-muted-foreground">
-            {DAY_KEYS.filter((k) => shift.applicableDays[k]).map((k) => DAY_SHORT_LABELS[DAY_KEYS.indexOf(k)]).join(" · ")}
+          <p className="text-xs font-medium tracking-widest text-muted-foreground">
+            {DAY_KEYS.map((k, i) => (
+              <span key={k} className={shift.applicableDays[k] ? "text-card-foreground" : "opacity-20"}>{DAY_SHORT_LABELS[i][0]}</span>
+            ))}
           </p>
           <div className="flex flex-wrap gap-1">
             {BADGE_DEFS.map(({ key, label, emoji, activeClasses }) => {
@@ -627,6 +641,14 @@ export default function DepartmentStep2() {
   const [activeDayIndex, setActiveDayIndex] = useState(0);
   const [activeChipId, setActiveChipId] = useState<string | null>(null);
   const [badgeMeaningsOpen, setBadgeMeaningsOpen] = useState(false);
+  const [showTemplatePicker, setShowTemplatePicker] = useState(false);
+
+  const SHIFT_TEMPLATES = [
+    { label: "Standard Day", abbrev: "SD", start: "08:00", end: "17:30", isOncall: false },
+    { label: "Long Day",     abbrev: "LD", start: "08:00", end: "20:30", isOncall: true  },
+    { label: "Night",        abbrev: "N",  start: "20:00", end: "08:30", isOncall: true  },
+    { label: "Twilight",     abbrev: "Tw", start: "16:00", end: "00:00", isOncall: true  },
+  ] as const;
   const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const [saving, setSaving] = useState(false);
@@ -636,7 +658,7 @@ export default function DepartmentStep2() {
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } })
+    useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 12 } })
   );
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -822,11 +844,7 @@ export default function DepartmentStep2() {
                 ))}
                 <button
                   type="button"
-                  onClick={() => {
-                    const newId = addShift();
-                    setExpandedShiftId(newId);
-                    setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 150);
-                  }}
+                  onClick={() => { setShowTemplatePicker(true); setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 150); }}
                   className="inline-flex min-h-[32px] flex-shrink-0 items-center gap-1 rounded-full border border-dashed border-purple-300 px-3 py-1.5 text-xs font-medium text-purple-600 transition-colors hover:bg-purple-50"
                 >
                   <Plus className="h-3.5 w-3.5" /> Add shift type
@@ -942,41 +960,104 @@ export default function DepartmentStep2() {
               )}
 
               <div className="space-y-4">
-                {shifts.map((shift, index) =>
-                  expandedShiftId === shift.id ? (
-                    <ExpandedCard
-                      key={`${shift.id}-${Object.values(shift.applicableDays).join("")}-${shift.staffing.min}-${shift.staffing.target}-${shift.staffing.max ?? "x"}`}
-                      shift={shift}
-                      index={index}
-                      onSave={handleSaveCard}
-                      onCancel={(original) => {
-                        setShifts(prev => prev.map(s => s.id === original.id ? original : s));
-                        setExpandedShiftId(null);
-                      }}
-                      onDraftChange={(updated) => setShifts(prev => prev.map(s => s.id === updated.id ? updated : s))}
-                      onRemove={() => { removeShift(shift.id); setExpandedShiftId(null); }}
-                      canRemove={shifts.length > 1}
-                    />
-                  ) : (
-                    <CollapsedCard
-                      key={shift.id}
-                      shift={shift}
-                      index={index}
-                      onExpand={() => setExpandedShiftId(shift.id)}
-                      onRemove={() => removeShift(shift.id)}
-                      canRemove={shifts.length > 1}
-                    />
-                  )
-                )}
+                {shifts.map((shift, index) => (
+                  <div key={shift.id} id={`shift-card-${shift.id}`}>
+                    {expandedShiftId === shift.id ? (
+                      <ExpandedCard
+                        key={`${shift.id}-${Object.values(shift.applicableDays).join("")}-${shift.staffing.min}-${shift.staffing.target}-${shift.staffing.max ?? "x"}`}
+                        shift={shift}
+                        index={index}
+                        onSave={handleSaveCard}
+                        onCancel={(original) => {
+                          setShifts(prev => prev.map(s => s.id === original.id ? original : s));
+                          setExpandedShiftId(null);
+                        }}
+                        onDraftChange={(updated) => setShifts(prev => prev.map(s => s.id === updated.id ? updated : s))}
+                        onRemove={() => { removeShift(shift.id); setExpandedShiftId(null); }}
+                        canRemove={shifts.length > 1}
+                      />
+                    ) : (
+                      <CollapsedCard
+                        shift={shift}
+                        index={index}
+                        onExpand={() => setExpandedShiftId(shift.id)}
+                        onRemove={() => removeShift(shift.id)}
+                        canRemove={shifts.length > 1}
+                      />
+                    )}
+                  </div>
+                ))}
               </div>
 
-              <button
-                type="button"
-                onClick={() => { const newId = addShift(); setExpandedShiftId(newId); setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 150); }}
-                className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-purple-300 p-3 text-sm font-medium text-purple-600 transition-colors hover:bg-purple-50"
-              >
-                <Plus className="h-4 w-4" /> Add shift type
-              </button>
+              {!showTemplatePicker ? (
+                <button
+                  type="button"
+                  onClick={() => setShowTemplatePicker(true)}
+                  className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-purple-300 p-3 text-sm font-medium text-purple-600 transition-colors hover:bg-purple-50"
+                >
+                  <Plus className="h-4 w-4" /> Add shift type
+                </button>
+              ) : (
+                <div className="rounded-lg border border-purple-200 bg-purple-50/50 p-3 space-y-3">
+                  <p className="text-xs font-semibold text-purple-700">Choose a template or add custom:</p>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    {SHIFT_TEMPLATES.map((t) => (
+                      <button
+                        key={t.abbrev}
+                        type="button"
+                        onClick={() => {
+                          const id = String(Date.now());
+                          const tplDays: ApplicableDays = { mon: true, tue: true, wed: true, thu: true, fri: true, sat: true, sun: true };
+                          const dur = calcDurationHours(t.start, t.end);
+                          const autoBadges = detectBadges(t.start, t.end, tplDays, t.isOncall, false);
+                          const newShift: ShiftType = {
+                            id, name: t.label, abbreviation: t.abbrev,
+                            startTime: t.start, endTime: t.end, durationHours: dur,
+                            applicableDays: tplDays, isOncall: t.isOncall, isNonRes: false,
+                            staffing: { min: 1, target: 1, max: null }, targetOverridePct: null,
+                            badges: autoBadges, badgeOverrides: {}, oncallManuallySet: false,
+                            reqIac: 0, reqIaoc: 0, reqIcu: 0, reqTransfer: 0, reqMinGrade: null,
+                          };
+                          setShifts(prev => [...prev, newShift]);
+                          setExpandedShiftId(id);
+                          setShowTemplatePicker(false);
+                          setTimeout(() => {
+                            const el = document.getElementById(`shift-card-${id}`);
+                            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                          }, 150);
+                        }}
+                        className="flex flex-col items-center gap-1 rounded-lg border border-purple-200 bg-white px-2 py-2.5 text-xs font-semibold text-purple-700 hover:bg-purple-50 transition-colors"
+                      >
+                        <span className="font-mono text-sm font-bold">{t.abbrev}</span>
+                        <span className="text-[10px] text-muted-foreground font-normal">{t.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newId = addShift();
+                        setShowTemplatePicker(false);
+                        setTimeout(() => {
+                          const el = document.getElementById(`shift-card-${newId}`);
+                          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }, 150);
+                      }}
+                      className="flex items-center gap-1.5 rounded-lg border border-dashed border-purple-300 px-3 py-2 text-xs font-medium text-purple-600 hover:bg-purple-50 transition-colors"
+                    >
+                      <Plus className="h-3.5 w-3.5" /> Custom shift
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowTemplatePicker(false)}
+                      className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -985,7 +1066,7 @@ export default function DepartmentStep2() {
               <ArrowLeft className="mr-2 h-4 w-4" /> Back
             </Button>
             <Button size="lg" className="min-h-[44px] bg-purple-600 text-white hover:bg-purple-700" disabled={!canSavePage} onClick={handleSaveAndContinue}>
-              {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving…</> : <><Save className="mr-2 h-4 w-4" />Save & Continue <ChevronRight className="ml-2 h-4 w-4" /></>}
+              {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving…</> : <>Continue <ChevronRight className="ml-2 h-4 w-4" /></>}
             </Button>
           </div>
         </div>

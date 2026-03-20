@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
-import { CalendarCheck, CalendarIcon, Plus, Trash2, ArrowLeft, Save, Info, RotateCcw } from "lucide-react";
+import { CalendarCheck, CalendarIcon, Plus, Trash2, ArrowLeft, ArrowRight, Save, Info, RotateCcw } from "lucide-react";
 import { format, isWithinInterval, differenceInDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useAdminSetup, type BankHolidayEntry, type BhShiftRule } from "@/contexts/AdminSetupContext";
@@ -255,17 +255,15 @@ export default function RotaPeriodStep2() {
               <CalendarCheck className="h-5 w-5 text-amber-600" />
               Bank Holidays
             </CardTitle>
-            <CardDescription>Bank holidays within the rota period are auto-populated. You can modify or add custom dates.</CardDescription>
+            <CardDescription>Auto-populated from your rota dates. Toggle or add custom dates.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Add holiday */}
-            <div className="rounded-lg border border-dashed border-amber-300 p-3 flex flex-col gap-3 sm:flex-row sm:items-end">
+            <div className="rounded-lg border border-dashed border-amber-300 p-3 flex flex-col gap-2 sm:flex-row sm:items-end">
               <div className="flex-1 space-y-2">
-                <Label>Holiday Name</Label>
                 <Input placeholder="e.g. Easter Monday" value={newHolidayName} onChange={(e) => setNewHolidayName(e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label>Date</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className={cn("w-full sm:w-[200px] justify-start text-left font-normal", !newHolidayDate && "text-muted-foreground")}>
@@ -303,7 +301,7 @@ export default function RotaPeriodStep2() {
                   <div
                     key={holiday.id}
                     className={cn(
-                      "rounded-lg border border-border p-4 flex items-center justify-between transition-opacity",
+                      "rounded-lg border border-border p-2.5 flex items-center justify-between transition-opacity",
                       !holiday.isActive && "opacity-50"
                     )}
                   >
@@ -465,8 +463,8 @@ export default function RotaPeriodStep2() {
             <ArrowLeft className="mr-2 h-4 w-4" />Back
           </Button>
           <Button size="lg" disabled={saving} onClick={handleSave} className="bg-amber-600 hover:bg-amber-700">
-            {saving ? "Saving…" : "Save Rota Period"}
-            {!saving && <Save className="ml-2 h-4 w-4" />}
+            {saving ? "Saving…" : "Save & Continue"}
+            {!saving && <ArrowRight className="ml-2 h-4 w-4" />}
           </Button>
         </div>
       </div>
