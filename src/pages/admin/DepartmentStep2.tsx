@@ -496,7 +496,7 @@ function ExpandedCard({
 
       {/* ROW 8 — Grade requirement */}
       <div className="space-y-2">
-        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Min grade required (optional)</Label>
+        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Min Grade Required</Label>
         <Select value={draft.reqMinGrade ?? "__none__"} onValueChange={(v) => update({ reqMinGrade: v === "__none__" ? null : v })}>
           <SelectTrigger className="min-h-[44px] w-full">
             <SelectValue placeholder="No requirement" />
