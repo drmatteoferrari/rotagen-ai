@@ -582,7 +582,7 @@ function CollapsedCard({
           </div>
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Clock className="h-3.5 w-3.5 shrink-0" />
-            {shift.startTime} – {shift.endTime} ({shift.durationHours}h)
+            {shift.startTime.slice(0, 5)} – {shift.endTime.slice(0, 5)} <span className={shift.durationHours <= 13 ? "text-green-600 font-semibold" : "text-destructive font-semibold"}>({shift.durationHours}h)</span>
           </p>
           <p className="text-xs text-muted-foreground">{staffingSummary}</p>
           <p className="text-xs font-medium tracking-wide text-muted-foreground">
