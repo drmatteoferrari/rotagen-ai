@@ -259,9 +259,8 @@ export default function RotaPeriodStep2() {
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Add holiday */}
-            <div className="rounded-lg border border-dashed border-amber-300 p-3 flex flex-col gap-3 sm:flex-row sm:items-end">
+            <div className="rounded-lg border border-dashed border-amber-300 p-3 flex flex-col gap-2 sm:flex-row sm:items-end">
               <div className="flex-1 space-y-2">
-                <Label>Holiday Name</Label>
                 <Input placeholder="e.g. Easter Monday" value={newHolidayName} onChange={(e) => setNewHolidayName(e.target.value)} />
               </div>
               <div className="space-y-2">
