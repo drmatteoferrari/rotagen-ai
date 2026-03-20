@@ -979,13 +979,75 @@ export default function DepartmentStep2() {
                 ))}
               </div>
 
-              <button
-                type="button"
-                onClick={() => { const newId = addShift(); setExpandedShiftId(newId); setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 150); }}
-                className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-purple-300 p-3 text-sm font-medium text-purple-600 transition-colors hover:bg-purple-50"
-              >
-                <Plus className="h-4 w-4" /> Add shift type
-              </button>
+              {!showTemplatePicker ? (
+                <button
+                  type="button"
+                  onClick={() => setShowTemplatePicker(true)}
+                  className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-purple-300 p-3 text-sm font-medium text-purple-600 transition-colors hover:bg-purple-50"
+                >
+                  <Plus className="h-4 w-4" /> Add shift type
+                </button>
+              ) : (
+                <div className="rounded-lg border border-purple-200 bg-purple-50/50 p-3 space-y-3">
+                  <p className="text-xs font-semibold text-purple-700">Choose a template or add custom:</p>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    {SHIFT_TEMPLATES.map((t) => (
+                      <button
+                        key={t.abbrev}
+                        type="button"
+                        onClick={() => {
+                          const id = String(Date.now());
+                          const tplDays: ApplicableDays = { mon: true, tue: true, wed: true, thu: true, fri: true, sat: true, sun: true };
+                          const dur = calcDurationHours(t.start, t.end);
+                          const autoBadges = detectBadges(t.start, t.end, tplDays, t.isOncall, false);
+                          const newShift: ShiftType = {
+                            id, name: t.label, abbreviation: t.abbrev,
+                            startTime: t.start, endTime: t.end, durationHours: dur,
+                            applicableDays: tplDays, isOncall: t.isOncall, isNonRes: false,
+                            staffing: { min: 1, target: 1, max: null }, targetOverridePct: null,
+                            badges: autoBadges, badgeOverrides: {}, oncallManuallySet: false,
+                            reqIac: 0, reqIaoc: 0, reqIcu: 0, reqTransfer: 0, reqMinGrade: null,
+                          };
+                          setShifts(prev => [...prev, newShift]);
+                          setExpandedShiftId(id);
+                          setShowTemplatePicker(false);
+                          setTimeout(() => {
+                            const el = document.getElementById(`shift-card-${id}`);
+                            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                          }, 150);
+                        }}
+                        className="flex flex-col items-center gap-1 rounded-lg border border-purple-200 bg-white px-2 py-2.5 text-xs font-semibold text-purple-700 hover:bg-purple-50 transition-colors"
+                      >
+                        <span className="font-mono text-sm font-bold">{t.abbrev}</span>
+                        <span className="text-[10px] text-muted-foreground font-normal">{t.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newId = addShift();
+                        setShowTemplatePicker(false);
+                        setTimeout(() => {
+                          const el = document.getElementById(`shift-card-${newId}`);
+                          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        }, 150);
+                      }}
+                      className="flex items-center gap-1.5 rounded-lg border border-dashed border-purple-300 px-3 py-2 text-xs font-medium text-purple-600 hover:bg-purple-50 transition-colors"
+                    >
+                      <Plus className="h-3.5 w-3.5" /> Custom shift
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowTemplatePicker(false)}
+                      className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
