@@ -405,7 +405,7 @@ function ExpandedCard({
             );
           })}
         </div>
-        <p className="text-[10px] text-muted-foreground">⚡ = auto-detected · ✏️ = manually overridden · click any badge to toggle</p>
+        
       </div>
 
       {/* ROW 6 — Staffing */}
