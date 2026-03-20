@@ -430,7 +430,7 @@ function ExpandedCard({
                 update({ staffing: { min: val, target: newTarget, max: newMax } });
               }}
             />
-            <p className="text-xs text-muted-foreground">Rota invalid below this</p>
+            <p className="text-xs text-muted-foreground">Below this = invalid</p>
           </div>
 
           <div className="space-y-1.5">
