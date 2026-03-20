@@ -130,7 +130,7 @@ export function useRotaConfigDetailsQuery() {
       if (!currentRotaConfigId) return null;
       const { data } = await supabase
         .from("rota_configs")
-        .select("survey_deadline, bh_same_as_weekend, bh_custom_rules, bh_shift_rules, rota_start_time, rota_end_time")
+        .select("survey_deadline, bh_same_as_weekend, bh_shift_rules")
         .eq("id", currentRotaConfigId)
         .single();
       return data ?? null;

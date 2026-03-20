@@ -526,7 +526,6 @@ export type Database = {
       }
       rota_configs: {
         Row: {
-          bh_custom_rules: string | null
           bh_same_as_weekend: boolean | null
           bh_shift_rules: Json | null
           contact_email: string | null
@@ -540,16 +539,13 @@ export type Database = {
           rota_duration_days: number | null
           rota_duration_weeks: number | null
           rota_end_date: string | null
-          rota_end_time: string | null
           rota_start_date: string | null
-          rota_start_time: string | null
           status: string | null
           survey_deadline: string | null
           trust_name: string | null
           updated_at: string | null
         }
         Insert: {
-          bh_custom_rules?: string | null
           bh_same_as_weekend?: boolean | null
           bh_shift_rules?: Json | null
           contact_email?: string | null
@@ -563,16 +559,13 @@ export type Database = {
           rota_duration_days?: number | null
           rota_duration_weeks?: number | null
           rota_end_date?: string | null
-          rota_end_time?: string | null
           rota_start_date?: string | null
-          rota_start_time?: string | null
           status?: string | null
           survey_deadline?: string | null
           trust_name?: string | null
           updated_at?: string | null
         }
         Update: {
-          bh_custom_rules?: string | null
           bh_same_as_weekend?: boolean | null
           bh_shift_rules?: Json | null
           contact_email?: string | null
@@ -586,9 +579,7 @@ export type Database = {
           rota_duration_days?: number | null
           rota_duration_weeks?: number | null
           rota_end_date?: string | null
-          rota_end_time?: string | null
           rota_start_date?: string | null
-          rota_start_time?: string | null
           status?: string | null
           survey_deadline?: string | null
           trust_name?: string | null

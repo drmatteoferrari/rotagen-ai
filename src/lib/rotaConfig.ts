@@ -212,8 +212,6 @@ export async function getRotaConfig(id: string): Promise<RotaConfig> {
       endDate: c.rota_end_date,
       durationDays: c.rota_duration_days,
       durationWeeks: c.rota_duration_weeks != null ? Number(c.rota_duration_weeks) : null,
-      startTime: c.rota_start_time ?? "08:00",
-      endTime: c.rota_end_time ?? "08:00",
       bankHolidays,
     },
     shifts,

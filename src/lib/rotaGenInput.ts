@@ -92,7 +92,11 @@ export async function buildPreRotaInput(configId: string): Promise<PreRotaInput>
       endDate: cfg.rotaPeriod.endDate ?? "",
       totalDays: cfg.rotaPeriod.durationDays ?? 0,
       totalWeeks: cfg.rotaPeriod.durationWeeks ?? 0,
-      bankHolidayDates: cfg.rotaPeriod.bankHolidays.map((h) => h.date),
+      bankHolidayDates: cfg.rotaPeriod.bankHolidays
+        .filter((h) => h.isActive)
+        .map((h) => h.date),
+      bhSameAsWeekend: cfg.bhSameAsWeekend ?? null,
+      bhShiftRules: cfg.bhShiftRules ?? null,
     },
     shiftSlots: cfg.shifts.map((s) => ({
       shiftId: s.id,

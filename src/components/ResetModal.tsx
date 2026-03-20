@@ -99,6 +99,10 @@ export function ResetModal({ open, onClose }: ResetModalProps) {
         setPeriodComplete(false);
         setRotaStartDate(undefined);
         setRotaEndDate(undefined);
+        setRotaBankHolidays([]);
+        setBhSameAsWeekend(null);
+        setBhShiftRules([]);
+        setPeriodWorkingStateLoaded(false);
       }
       if (resetRoster) {
         await supabase.from('doctors')
