@@ -26,17 +26,18 @@ function MaxWarning({ value, max, label }: { value: number; max: number; label: 
 
 export default function WtrStep1() {
   const navigate = useNavigate();
-  const { maxAvgWeekly, setMaxAvgWeekly, maxIn7Days, setMaxIn7Days } = useAdminSetup();
+  const { maxAvgWeekly, setMaxAvgWeekly, maxIn7Days, setMaxIn7Days, maxShiftLengthH, setMaxShiftLengthH } = useAdminSetup();
 
   const limits = [
     {
       label: "Max Avg Weekly Hours",
-      sub: "Calculated over a 17-week reference period",
+      sub: "Calculated over the rota period",
       hint: "WTR maximum: 48 hrs",
       value: maxAvgWeekly,
       set: setMaxAvgWeekly,
       max: 48,
       warnLabel: "Average weekly hours",
+      minVal: 40,
     },
     {
       label: "Max Hours in 7 Days",
@@ -46,11 +47,22 @@ export default function WtrStep1() {
       set: setMaxIn7Days,
       max: 72,
       warnLabel: "Hours in any 7-day period",
+      minVal: 1,
+    },
+    {
+      label: "Max Single Shift Length",
+      sub: "Applies to all rostered shifts. On-call periods are governed separately in Step 4.",
+      hint: "WTR maximum: 13 hrs (TCS §9)",
+      value: maxShiftLengthH,
+      set: setMaxShiftLengthH,
+      max: 13,
+      warnLabel: "Single shift length",
+      minVal: 1,
     },
   ];
 
   return (
-    <AdminLayout title="Working Time Regulations" subtitle="Step 1 of 4 — Rest Period Rules" accentColor="red">
+    <AdminLayout title="Working Time Regulations" subtitle="Step 1 of 4 — Hours & Shift Limits" accentColor="red">
       <div className="mx-auto max-w-3xl space-y-6 animate-fadeSlideUp">
         <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700">
           <Info className="h-4 w-4 shrink-0 text-red-600" />
@@ -61,9 +73,9 @@ export default function WtrStep1() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <ShieldCheck className="h-5 w-5 text-red-600" />
-              Rest Period Rules
+              Hours & Shift Limits
             </CardTitle>
-            <CardDescription>Legally fixed minimum rest intervals between and after shifts.</CardDescription>
+            <CardDescription>Set the base legal limits for your rota. All values are configurable — WTR compliance status is shown automatically.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {limits.map((item) => (
@@ -77,7 +89,7 @@ export default function WtrStep1() {
                   <div className="flex items-center gap-3 bg-muted p-1.5 rounded-lg border border-border">
                     <button
                       className="w-8 h-8 flex items-center justify-center rounded-md bg-card shadow-sm text-muted-foreground hover:text-red-600 transition-all"
-                      onClick={() => item.set(Math.max(1, item.value - 1))}
+                      onClick={() => item.set(Math.max(item.minVal, item.value - 1))}
                     >
                       <Minus className="h-4 w-4" />
                     </button>
