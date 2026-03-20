@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "@/components/AdminLayout";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,6 @@ import { cn } from "@/lib/utils";
 import { useAdminSetup } from "@/contexts/AdminSetupContext";
 import { useRotaContext } from "@/contexts/RotaContext";
 import { supabase } from "@/integrations/supabase/client";
-import { useRotaConfigDetailsQuery } from "@/hooks/useAdminQueries";
 import { toast } from "sonner";
 import type { DateRange } from "react-day-picker";
 
@@ -35,9 +34,9 @@ export default function RotaPeriodStep1() {
   const {
     rotaStartDate, rotaEndDate, setRotaStartDate, setRotaEndDate,
     rotaStartTime, rotaEndTime, setRotaStartTime, setRotaEndTime,
+    setPeriodWorkingStateLoaded,
   } = useAdminSetup();
   const { currentRotaConfigId } = useRotaContext();
-  const { data: configDetails } = useRotaConfigDetailsQuery();
 
   const [range, setRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
     from: rotaStartDate,
@@ -64,25 +63,6 @@ export default function RotaPeriodStep1() {
     return () => window.removeEventListener("resize", update);
   }, []);
 
-  // Restore saved times from DB
-  const restoredRef = useRef(false);
-  useEffect(() => {
-    if (restoredRef.current) return;
-    if (!configDetails) return;
-    const cd = configDetails as any;
-    const savedStart = cd.rota_start_time ? String(cd.rota_start_time).slice(0, 5) : null;
-    const savedEnd = cd.rota_end_time ? String(cd.rota_end_time).slice(0, 5) : null;
-    if (savedStart) {
-      setStartTime(savedStart);
-      setRotaStartTime(savedStart);
-    }
-    if (savedEnd) {
-      setEndTime(savedEnd);
-      setRotaEndTime(savedEnd);
-    }
-    restoredRef.current = true;
-  }, [configDetails]);
-
   // Auto-derive times from shift types when dates change
   useEffect(() => {
     if (!range.from || !range.to || !currentRotaConfigId) return;
@@ -104,6 +84,7 @@ export default function RotaPeriodStep1() {
         setAutoStartTime(minStart);
         if (!startTimeManual) {
           setStartTime(minStart);
+          setRotaStartTime(minStart);
           setTimesAutoSet(true);
         }
       }
@@ -126,6 +107,7 @@ export default function RotaPeriodStep1() {
         setAutoEndTime(derivedEndTime);
         if (!endTimeManual) {
           setEndTime(derivedEndTime);
+          setRotaEndTime(derivedEndTime);
           setTimesAutoSet(true);
         }
       }
@@ -134,14 +116,29 @@ export default function RotaPeriodStep1() {
   }, [range.from, range.to, currentRotaConfigId, startTimeManual, endTimeManual]);
 
   const handleDayClick = (day: Date) => {
+    let newRange: { from: Date | undefined; to: Date | undefined };
     if (!range.from || (range.from && range.to)) {
-      setRange({ from: day, to: undefined });
+      newRange = { from: day, to: undefined };
     } else {
       if (day > range.from) {
-        setRange({ from: range.from, to: day });
+        newRange = { from: range.from, to: day };
       } else {
-        setRange({ from: day, to: undefined });
+        newRange = { from: day, to: undefined };
       }
+    }
+    setRange(newRange);
+
+    // Check if dates actually changed — if so, signal Step 2 to recalculate BH
+    const prevStart = rotaStartDate?.getTime();
+    const prevEnd = rotaEndDate?.getTime();
+    const newStart = newRange.from?.getTime();
+    const newEnd = newRange.to?.getTime();
+
+    setRotaStartDate(newRange.from);
+    setRotaEndDate(newRange.to);
+
+    if (newStart !== prevStart || newEnd !== prevEnd) {
+      setPeriodWorkingStateLoaded(false);
     }
   };
 
@@ -162,10 +159,6 @@ export default function RotaPeriodStep1() {
       toast.error("End date must be after start date.");
       return;
     }
-    setRotaStartDate(range.from);
-    setRotaEndDate(range.to);
-    setRotaStartTime(startTime);
-    setRotaEndTime(endTime);
     navigate("/admin/rota-period/step-2");
   };
 
@@ -242,7 +235,11 @@ export default function RotaPeriodStep1() {
                 <Input
                   type="time"
                   value={startTime}
-                  onChange={(e) => { setStartTime(e.target.value); setStartTimeManual(true); }}
+                  onChange={(e) => {
+                    setStartTime(e.target.value);
+                    setStartTimeManual(true);
+                    setRotaStartTime(e.target.value);
+                  }}
                   className="w-full sm:w-[180px]"
                 />
                 {startTimeManual && autoStartTime && (
@@ -250,7 +247,11 @@ export default function RotaPeriodStep1() {
                     variant="outline"
                     size="sm"
                     className="text-xs text-amber-700 border-amber-300 hover:bg-amber-50 whitespace-nowrap min-h-[44px]"
-                    onClick={() => { setStartTime(autoStartTime); setStartTimeManual(false); }}
+                    onClick={() => {
+                      setStartTime(autoStartTime);
+                      setRotaStartTime(autoStartTime);
+                      setStartTimeManual(false);
+                    }}
                   >
                     <RotateCcw className="h-3 w-3 mr-1" />Reset to auto
                   </Button>
@@ -279,7 +280,11 @@ export default function RotaPeriodStep1() {
                 <Input
                   type="time"
                   value={endTime}
-                  onChange={(e) => { setEndTime(e.target.value); setEndTimeManual(true); }}
+                  onChange={(e) => {
+                    setEndTime(e.target.value);
+                    setEndTimeManual(true);
+                    setRotaEndTime(e.target.value);
+                  }}
                   className="w-full sm:w-[180px]"
                 />
                 {endTimeManual && autoEndTime && (
@@ -287,7 +292,11 @@ export default function RotaPeriodStep1() {
                     variant="outline"
                     size="sm"
                     className="text-xs text-amber-700 border-amber-300 hover:bg-amber-50 whitespace-nowrap min-h-[44px]"
-                    onClick={() => { setEndTime(autoEndTime); setEndTimeManual(false); }}
+                    onClick={() => {
+                      setEndTime(autoEndTime);
+                      setRotaEndTime(autoEndTime);
+                      setEndTimeManual(false);
+                    }}
                   >
                     <RotateCcw className="h-3 w-3 mr-1" />Reset to auto
                   </Button>

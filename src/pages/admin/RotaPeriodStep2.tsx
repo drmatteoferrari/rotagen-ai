@@ -8,30 +8,16 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
-import { CalendarCheck, CalendarIcon, Plus, Trash2, ArrowLeft, Save, Info } from "lucide-react";
+import { CalendarCheck, CalendarIcon, Plus, Trash2, ArrowLeft, Save, Info, RotateCcw } from "lucide-react";
 import { format, isWithinInterval, differenceInDays } from "date-fns";
 import { cn } from "@/lib/utils";
-import { useAdminSetup } from "@/contexts/AdminSetupContext";
+import { useAdminSetup, type BankHolidayEntry, type BhShiftRule } from "@/contexts/AdminSetupContext";
 import { useRotaContext } from "@/contexts/RotaContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useRotaConfigDetailsQuery } from "@/hooks/useAdminQueries";
-
-interface BankHoliday {
-  id: string;
-  date: Date;
-  name: string;
-}
-
-interface BhShiftRule {
-  shift_key: string;
-  name: string;
-  start_time: string;
-  end_time: string;
-  target_doctors: number;
-  included: boolean;
-}
+import { getRotaConfig } from "@/lib/rotaConfig";
+import { useInvalidateQuery } from "@/hooks/useAdminQueries";
 
 const UK_BANK_HOLIDAYS: { date: [number, number, number]; name: string }[] = [
   // 2025
@@ -63,62 +49,47 @@ const UK_BANK_HOLIDAYS: { date: [number, number, number]; name: string }[] = [
   { date: [2027, 11, 28], name: "Boxing Day (substitute)" },
 ];
 
-import { getRotaConfig } from "@/lib/rotaConfig";
-
 export default function RotaPeriodStep2() {
   const navigate = useNavigate();
-  const { setPeriodComplete, rotaStartDate, rotaEndDate, rotaStartTime, rotaEndTime } = useAdminSetup();
+  const {
+    setPeriodComplete, rotaStartDate, rotaEndDate, rotaStartTime, rotaEndTime,
+    rotaBankHolidays, setRotaBankHolidays,
+    bhSameAsWeekend, setBhSameAsWeekend,
+    bhShiftRules, setBhShiftRules,
+    periodWorkingStateLoaded, setPeriodWorkingStateLoaded,
+  } = useAdminSetup();
   const { currentRotaConfigId, setCurrentRotaConfigId, setRestoredConfig } = useRotaContext();
   const { user } = useAuth();
-  const [saving, setSaving] = useState(false);
-  const [bankHolidays, setBankHolidays] = useState<BankHoliday[]>([]);
+  const { invalidateRotaConfigDetails } = useInvalidateQuery();
+
+  const [shiftTypes, setShiftTypes] = useState<any[]>([]);
   const [newHolidayName, setNewHolidayName] = useState("");
   const [newHolidayDate, setNewHolidayDate] = useState<Date>();
-  const [initialized, setInitialized] = useState(false);
-  const [bhSameAsWeekend, setBhSameAsWeekend] = useState<boolean | null>(null);
-  const [bhInitialized, setBhInitialized] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  // Shift types for BH rules
-  const [shiftTypes, setShiftTypes] = useState<any[]>([]);
-  const [bhShiftRules, setBhShiftRules] = useState<BhShiftRule[]>([]);
-  const [bhShiftRulesInitialized, setBhShiftRulesInitialized] = useState(false);
-
-  const { data: configDetails } = useRotaConfigDetailsQuery();
-
-  // Load bank holidays from DB first, fall back to static list
+  // Bank holiday initialisation — from context or static list
   useEffect(() => {
-    if (initialized || !currentRotaConfigId || !rotaStartDate || !rotaEndDate) return;
-    const load = async () => {
-      const { data: saved } = await supabase
-        .from("bank_holidays")
-        .select("id, date, name, is_auto_added")
-        .eq("rota_config_id", currentRotaConfigId)
-        .order("date", { ascending: true });
+    if (periodWorkingStateLoaded) return;
+    if (!rotaStartDate || !rotaEndDate) return;
 
-      if (saved && saved.length > 0) {
-        setBankHolidays(
-          saved.map((h: any) => ({
-            id: h.id,
-            date: new Date(h.date + "T00:00:00"),
-            name: h.name,
-          }))
-        );
-      } else {
-        const filtered = UK_BANK_HOLIDAYS
-          .map((h) => ({ ...h, dateObj: new Date(h.date[0], h.date[1], h.date[2]) }))
-          .filter((h) => isWithinInterval(h.dateObj, { start: rotaStartDate, end: rotaEndDate }))
-          .map((h, i) => ({ id: `bh-${i}`, date: h.dateObj, name: h.name }));
-        setBankHolidays(filtered);
-      }
-      setInitialized(true);
-    };
-    load();
-  }, [currentRotaConfigId, rotaStartDate, rotaEndDate, initialized]);
+    const filtered = UK_BANK_HOLIDAYS
+      .map((h) => ({ ...h, dateObj: new Date(h.date[0], h.date[1], h.date[2]) }))
+      .filter((h) => isWithinInterval(h.dateObj, { start: rotaStartDate, end: rotaEndDate }))
+      .map((h, i): BankHolidayEntry => ({
+        id: `bh-${i}`,
+        date: new Date(h.date[0], h.date[1], h.date[2]),
+        name: h.name,
+        isAutoAdded: true,
+        isActive: true,
+      }));
+    setRotaBankHolidays(filtered);
+    setPeriodWorkingStateLoaded(true);
+  }, [periodWorkingStateLoaded, rotaStartDate, rotaEndDate]);
 
   // Fetch shift types
   useEffect(() => {
     if (!currentRotaConfigId) return;
-    const fetch = async () => {
+    const fetchShifts = async () => {
       const { data } = await supabase
         .from("shift_types")
         .select("id, shift_key, name, start_time, end_time, target_doctors, applicable_sun, sort_order")
@@ -126,76 +97,52 @@ export default function RotaPeriodStep2() {
         .order("sort_order", { ascending: true });
       setShiftTypes(data ?? []);
     };
-    fetch();
+    fetchShifts();
   }, [currentRotaConfigId]);
 
-  // Initialize BH shift rules and bhSameAsWeekend — wait for BOTH shiftTypes and configDetails
+  // BH shift rules initialisation from shift types (if not already loaded from context/DB)
   useEffect(() => {
-    if (bhShiftRulesInitialized) return;
     if (shiftTypes.length === 0) return;
-    if (!configDetails) return;
-
-    const cd = configDetails as any;
-
-    // Restore bhSameAsWeekend
-    if (cd.bh_same_as_weekend !== undefined && cd.bh_same_as_weekend !== null) {
-      setBhSameAsWeekend(cd.bh_same_as_weekend);
-    }
-    setBhInitialized(true);
-
-    // Restore bh_shift_rules
-    if (cd.bh_shift_rules && Array.isArray(cd.bh_shift_rules) && cd.bh_shift_rules.length > 0) {
-      const saved = cd.bh_shift_rules as { shift_key: string; name: string; target_doctors: number }[];
-      const savedKeys = new Set(saved.map((s: any) => s.shift_key));
-      const merged: BhShiftRule[] = [
-        ...saved.map((s: any) => {
-          const st = shiftTypes.find((t: any) => t.shift_key === s.shift_key);
-          return {
-            shift_key: s.shift_key,
-            name: s.name,
-            start_time: st ? String(st.start_time).slice(0, 5) : "",
-            end_time: st ? String(st.end_time).slice(0, 5) : "",
-            target_doctors: s.target_doctors,
-            included: true,
-          };
-        }),
-        ...shiftTypes
-          .filter((t: any) => !savedKeys.has(t.shift_key))
-          .map((t: any) => ({
-            shift_key: t.shift_key,
-            name: t.name,
-            start_time: String(t.start_time).slice(0, 5),
-            end_time: String(t.end_time).slice(0, 5),
-            target_doctors: t.target_doctors ?? 1,
-            included: false,
-          })),
-      ];
-      setBhShiftRules(merged);
-    } else {
-      setBhShiftRules(
-        shiftTypes.map((t: any) => ({
-          shift_key: t.shift_key,
-          name: t.name,
-          start_time: String(t.start_time).slice(0, 5),
-          end_time: String(t.end_time).slice(0, 5),
-          target_doctors: t.target_doctors ?? 1,
-          included: true,
-        }))
-      );
-    }
-    setBhShiftRulesInitialized(true);
-  }, [shiftTypes, configDetails, bhShiftRulesInitialized]);
+    if (bhShiftRules.length > 0) return;
+    setBhShiftRules(
+      shiftTypes.map((t: any): BhShiftRule => ({
+        shift_key: t.shift_key,
+        name: t.name,
+        start_time: String(t.start_time).slice(0, 5),
+        end_time: String(t.end_time).slice(0, 5),
+        target_doctors: t.target_doctors ?? 1,
+        included: true,
+      }))
+    );
+  }, [shiftTypes]);
 
   const addBankHoliday = () => {
     if (newHolidayDate && newHolidayName) {
-      setBankHolidays([...bankHolidays, { id: Date.now().toString(), date: newHolidayDate, name: newHolidayName }]);
+      setRotaBankHolidays([
+        ...rotaBankHolidays,
+        {
+          id: Date.now().toString(),
+          date: newHolidayDate,
+          name: newHolidayName,
+          isAutoAdded: false,
+          isActive: true,
+        },
+      ]);
       setNewHolidayName("");
       setNewHolidayDate(undefined);
     }
   };
 
-  const removeBankHoliday = (id: string) => {
-    setBankHolidays(bankHolidays.filter((h) => h.id !== id));
+  const handleToggleBankHoliday = (id: string) => {
+    setRotaBankHolidays(prev => prev.map(h => {
+      if (h.id !== id) return h;
+      if (h.isAutoAdded) return { ...h, isActive: !h.isActive };
+      return h;
+    }));
+  };
+
+  const handleRemoveManualHoliday = (id: string) => {
+    setRotaBankHolidays(prev => prev.filter(h => h.id !== id || h.isAutoAdded));
   };
 
   const updateBhRule = (shiftKey: string, field: Partial<BhShiftRule>) => {
@@ -244,21 +191,25 @@ export default function RotaPeriodStep2() {
         if (error) throw error;
       }
 
+      // Delete all existing bank holidays and re-insert (including inactive)
       await supabase.from("bank_holidays").delete().eq("rota_config_id", configId);
 
-      if (bankHolidays.length > 0) {
-        const rows = bankHolidays.map((h) => ({
+      if (rotaBankHolidays.length > 0) {
+        const rows = rotaBankHolidays.map((h) => ({
           rota_config_id: configId!,
           date: format(h.date, "yyyy-MM-dd"),
           name: h.name,
-          is_auto_added: h.id.startsWith("bh-"),
+          is_auto_added: h.isAutoAdded,
+          is_active: h.isActive,
         }));
         const { error: insertError } = await supabase.from("bank_holidays").insert(rows);
         if (insertError) throw insertError;
       }
 
+      // Refresh cache
       const refreshedConfig = await getRotaConfig(configId!);
       setRestoredConfig(refreshedConfig);
+      invalidateRotaConfigDetails();
 
       toast.success("✓ Rota period saved");
       setPeriodComplete(true);
@@ -272,6 +223,7 @@ export default function RotaPeriodStep2() {
   };
 
   const sundayShifts = shiftTypes.filter(s => s.applicable_sun === true);
+  const activeHolidayCount = rotaBankHolidays.filter(h => h.isActive).length;
 
   return (
     <AdminLayout title="Rota Period" subtitle="Step 2 of 2 — Bank Holidays" accentColor="yellow">
@@ -317,25 +269,77 @@ export default function RotaPeriodStep2() {
             </div>
 
             {/* Holiday count banner */}
-            {bankHolidays.length > 0 && (
+            {rotaBankHolidays.length > 0 && (
               <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-700">
                 <Info className="h-4 w-4 shrink-0 text-amber-600" />
-                {bankHolidays.length} bank holiday{bankHolidays.length !== 1 ? "s" : ""} included in this rota period.
+                {activeHolidayCount} active bank holiday{activeHolidayCount !== 1 ? "s" : ""} included in this rota period.
+                {rotaBankHolidays.length !== activeHolidayCount && (
+                  <span className="text-muted-foreground ml-1">
+                    ({rotaBankHolidays.length - activeHolidayCount} deactivated)
+                  </span>
+                )}
               </div>
             )}
 
             {/* Holiday list */}
-            {bankHolidays.length > 0 ? (
+            {rotaBankHolidays.length > 0 ? (
               <div className="space-y-2">
-                {bankHolidays.map((holiday) => (
-                  <div key={holiday.id} className="rounded-lg border border-border p-4 flex items-center justify-between">
+                {rotaBankHolidays.map((holiday) => (
+                  <div
+                    key={holiday.id}
+                    className={cn(
+                      "rounded-lg border border-border p-4 flex items-center justify-between transition-opacity",
+                      !holiday.isActive && "opacity-50"
+                    )}
+                  >
                     <div>
-                      <p className="text-sm font-medium text-card-foreground">{holiday.name}</p>
-                      <p className="text-xs text-muted-foreground">{format(holiday.date, "EEEE, d MMMM yyyy")}</p>
+                      <p className={cn(
+                        "text-sm font-medium text-card-foreground",
+                        !holiday.isActive && "line-through text-muted-foreground"
+                      )}>
+                        {holiday.name}
+                      </p>
+                      <p className={cn(
+                        "text-xs text-muted-foreground",
+                        !holiday.isActive && "opacity-50"
+                      )}>
+                        {format(holiday.date, "EEEE, d MMMM yyyy")}
+                      </p>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={() => removeBankHoliday(holiday.id)} className="text-muted-foreground hover:text-destructive">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {holiday.isAutoAdded ? (
+                      holiday.isActive ? (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleToggleBankHoliday(holiday.id)}
+                          className="text-muted-foreground hover:text-destructive min-h-[44px] min-w-[44px]"
+                          title="Deactivate"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleToggleBankHoliday(holiday.id)}
+                          className="text-amber-700 hover:bg-amber-50 min-h-[44px]"
+                          title="Reactivate"
+                        >
+                          <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                          Reactivate
+                        </Button>
+                      )
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleRemoveManualHoliday(holiday.id)}
+                        className="text-muted-foreground hover:text-destructive min-h-[44px] min-w-[44px]"
+                        title="Remove"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 ))}
               </div>

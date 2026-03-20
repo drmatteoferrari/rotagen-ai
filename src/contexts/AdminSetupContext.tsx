@@ -2,6 +2,23 @@ import { createContext, useContext, useState, useEffect, useCallback, type React
 import { useRotaContext } from "@/contexts/RotaContext";
 import type { RotaConfig } from "@/lib/rotaConfig";
 
+export interface BankHolidayEntry {
+  id: string;
+  date: Date;
+  name: string;
+  isAutoAdded: boolean;
+  isActive: boolean;
+}
+
+export interface BhShiftRule {
+  shift_key: string;
+  name: string;
+  start_time: string;
+  end_time: string;
+  target_doctors: number;
+  included: boolean;
+}
+
 interface AdminSetupContextType {
   isDepartmentComplete: boolean;
   isWtrComplete: boolean;
@@ -19,6 +36,15 @@ interface AdminSetupContextType {
   rotaEndTime: string;
   setRotaStartTime: (t: string) => void;
   setRotaEndTime: (t: string) => void;
+  // Bank holidays working state (Step 2 temp memory)
+  rotaBankHolidays: BankHolidayEntry[];
+  setRotaBankHolidays: (v: BankHolidayEntry[]) => void;
+  bhSameAsWeekend: boolean | null;
+  setBhSameAsWeekend: (v: boolean | null) => void;
+  bhShiftRules: BhShiftRule[];
+  setBhShiftRules: (v: BhShiftRule[]) => void;
+  periodWorkingStateLoaded: boolean;
+  setPeriodWorkingStateLoaded: (v: boolean) => void;
   // WTR Step 1
   maxAvgWeekly: number;
   maxIn7Days: number;
@@ -69,6 +95,13 @@ export function AdminSetupProvider({ children }: { children: ReactNode }) {
   const [rotaStartTime, setRotaStartTime] = useState("08:00");
   const [rotaEndTime, setRotaEndTime] = useState("08:00");
   const [restoredFromDb, setRestoredFromDb] = useState(false);
+
+  // Bank holidays / Step 2 working state
+  const [rotaBankHolidays, setRotaBankHolidays] = useState<BankHolidayEntry[]>([]);
+  const [bhSameAsWeekend, setBhSameAsWeekend] = useState<boolean | null>(null);
+  const [bhShiftRules, setBhShiftRules] = useState<BhShiftRule[]>([]);
+  const [periodWorkingStateLoaded, setPeriodWorkingStateLoaded] = useState(false);
+
   // WTR Step 1
   const [maxAvgWeekly, setMaxAvgWeekly] = useState(48);
   const [maxIn7Days, setMaxIn7Days] = useState(72);
@@ -101,6 +134,36 @@ export function AdminSetupProvider({ children }: { children: ReactNode }) {
     if (config.rotaPeriod.endDate) {
       setRotaEndDate(new Date(config.rotaPeriod.endDate));
     }
+
+    // Restore times
+    if (config.rotaPeriod.startTime && config.rotaPeriod.startTime !== "08:00") {
+      setRotaStartTime(config.rotaPeriod.startTime);
+    }
+    if (config.rotaPeriod.endTime && config.rotaPeriod.endTime !== "08:00") {
+      setRotaEndTime(config.rotaPeriod.endTime);
+    }
+
+    // Restore bank holidays
+    if (config.rotaPeriod.bankHolidays && config.rotaPeriod.bankHolidays.length > 0) {
+      setRotaBankHolidays(
+        config.rotaPeriod.bankHolidays.map((h: any, i: number) => ({
+          id: h.id ?? `bh-${i}`,
+          date: new Date(h.date + "T00:00:00"),
+          name: h.name,
+          isAutoAdded: h.isAutoAdded ?? true,
+          isActive: h.isActive ?? true,
+        }))
+      );
+    }
+
+    // Restore BH settings
+    if ((config as any).bhSameAsWeekend !== undefined) {
+      setBhSameAsWeekend((config as any).bhSameAsWeekend ?? null);
+    }
+    if ((config as any).bhShiftRules && Array.isArray((config as any).bhShiftRules)) {
+      setBhShiftRules((config as any).bhShiftRules);
+    }
+    setPeriodWorkingStateLoaded(true);
 
     if (config.shifts.length > 0) {
       setDepartmentComplete(true);
@@ -153,6 +216,10 @@ export function AdminSetupProvider({ children }: { children: ReactNode }) {
         setDepartmentComplete, setWtrComplete, setPeriodComplete, setSurveysDone,
         rotaStartDate, rotaEndDate, setRotaStartDate, setRotaEndDate,
         rotaStartTime, rotaEndTime, setRotaStartTime, setRotaEndTime,
+        rotaBankHolidays, setRotaBankHolidays,
+        bhSameAsWeekend, setBhSameAsWeekend,
+        bhShiftRules, setBhShiftRules,
+        periodWorkingStateLoaded, setPeriodWorkingStateLoaded,
         maxAvgWeekly, maxIn7Days, setMaxAvgWeekly, setMaxIn7Days,
         maxConsecDays, maxConsecLong, maxConsecNights, setMaxConsecDays, setMaxConsecLong, setMaxConsecNights,
         restPostNights, restPostBlock, restAfter7, weekendFreq, setRestPostNights, setRestPostBlock, setRestAfter7, setWeekendFreq,
