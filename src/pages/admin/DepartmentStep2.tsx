@@ -118,7 +118,7 @@ function DayColumn({
           <div
             key={chipKey}
             className={`group relative flex min-h-[36px] items-center gap-2 rounded-full px-2 py-1.5 text-xs font-semibold transition-all mb-2 ${isActive ? "ring-2 ring-purple-300 ring-offset-1" : ""}`}
-            onTouchStart={() => { longPressRef.current = setTimeout(() => setActiveChipId(chipKey), 500); }}
+            onTouchStart={() => { longPressRef.current = setTimeout(() => setActiveChipId(chipKey), 250); }}
             onTouchEnd={() => { if (longPressRef.current) clearTimeout(longPressRef.current); }}
             onTouchMove={() => { if (longPressRef.current) clearTimeout(longPressRef.current); }}
           >
