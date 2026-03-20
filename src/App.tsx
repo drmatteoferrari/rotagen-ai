@@ -35,6 +35,7 @@ import PreRotaCalendarPage from "./pages/admin/PreRotaCalendarPage";
 import PreRotaTargetsPage from "./pages/admin/PreRotaTargetsPage";
 import PreRotaPage from "./pages/admin/PreRotaPage";
 import SetupPage from "./pages/admin/SetupPage";
+import DoctorProfile from "./pages/admin/DoctorProfile";
 import Privacy from "./pages/Privacy";
 import LandingPage from "./pages/LandingPage";
 import Pricing from "./pages/Pricing";
@@ -101,6 +102,7 @@ const App = () => (
             <Route path="/admin/pre-rota-calendar" element={<PreRotaCalendarPage />} />
             <Route path="/admin/pre-rota-targets" element={<PreRotaTargetsPage />} />
             <Route path="/admin/survey-override/:doctorId/:step" element={<SurveyOverride />} />
+            <Route path="/admin/doctor/:doctorId" element={<DoctorProfile />} />
           </Route>
           {/* Doctor survey — token-based, no auth required */}
           <Route path="/doctor/survey" element={<Survey />} />
