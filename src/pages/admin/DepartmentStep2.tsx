@@ -528,9 +528,17 @@ function ExpandedCard({
       {/* ROW 10 — Actions: delete left, save/cancel right, single row */}
       <div className="flex items-center justify-between gap-3 pt-2">
         {canRemove ? (
-          <Button variant="ghost" size="sm" className="min-h-[44px] text-destructive hover:text-destructive" onClick={onRemove}>
-            <Trash2 className="mr-1.5 h-4 w-4" /> Delete
-          </Button>
+          !confirmDelete ? (
+            <Button variant="ghost" size="sm" className="min-h-[44px] text-destructive hover:text-destructive" onClick={() => setConfirmDelete(true)}>
+              <Trash2 className="mr-1.5 h-4 w-4" /> Delete
+            </Button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-destructive font-medium">Remove this shift?</span>
+              <Button variant="destructive" size="sm" className="min-h-[36px]" onClick={onRemove}>Yes, remove</Button>
+              <Button variant="outline" size="sm" className="min-h-[36px]" onClick={() => setConfirmDelete(false)}>Cancel</Button>
+            </div>
+          )
         ) : <div />}
         <div className="flex items-center gap-2">
           <Button variant="outline" className="min-h-[44px]" onClick={() => onCancel(initialShiftRef.current)}>
