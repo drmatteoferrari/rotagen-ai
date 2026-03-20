@@ -26,6 +26,7 @@ import WtrStep1 from "./pages/admin/WtrStep1";
 import WtrStep2 from "./pages/admin/WtrStep2";
 import WtrStep3 from "./pages/admin/WtrStep3";
 import WtrStep4 from "./pages/admin/WtrStep4";
+import WtrStep5 from "./pages/admin/WtrStep5";
 import Survey from "./pages/doctor/Survey";
 import SurveyOverride from "./pages/admin/SurveyOverride";
 import Audit from "./pages/Audit";
@@ -94,6 +95,7 @@ const App = () => (
             <Route path="/admin/wtr/step-2" element={<WtrStep2 />} />
             <Route path="/admin/wtr/step-3" element={<WtrStep3 />} />
             <Route path="/admin/wtr/step-4" element={<WtrStep4 />} />
+            <Route path="/admin/wtr/step-5" element={<WtrStep5 />} />
             <Route path="/admin/roster" element={<Roster />} />
             <Route path="/admin/pre-rota" element={<PreRotaPage />} />
             <Route path="/admin/pre-rota-calendar" element={<PreRotaCalendarPage />} />
