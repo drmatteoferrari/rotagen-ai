@@ -83,12 +83,16 @@ export interface RotaConfig {
   wtr: {
     maxHoursPerWeek: number;
     maxHoursPer168h: number;
+    maxShiftLengthH: number;
+    minInterShiftRestH: number;
     maxConsecStandard: number;
     maxConsecLong: number;
     maxConsecNights: number;
+    maxLongEveningConsec: number;
     restAfterNightsH: number;
     restAfterLongH: number;
     restAfterStandardH: number;
+    restAfterLongEveningH: number;
     weekendFrequency: number;
     oncall: {
       noConsecExceptWknd: boolean;
