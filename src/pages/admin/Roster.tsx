@@ -1063,10 +1063,10 @@ export default function Roster() {
             {/* Quick add row */}
             <div className="flex flex-col gap-2 rounded-lg border border-dashed border-border p-3 sm:flex-row sm:items-end sm:gap-3 sm:p-4">
               <div className="grid grid-cols-2 gap-2 sm:contents">
-                <Input placeholder="First Name" value={firstName} onChange={(e) => setFirstName(e.target.value)} className="sm:flex-1" />
-                <Input placeholder="Last Name" value={lastName} onChange={(e) => setLastName(e.target.value)} className="sm:flex-1" />
+                <Input placeholder="First Name" value={firstName} onChange={(e) => setFirstName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addDoctor(); }} className="sm:flex-1" />
+                <Input placeholder="Last Name" value={lastName} onChange={(e) => setLastName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addDoctor(); }} className="sm:flex-1" />
               </div>
-              <Input placeholder="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="sm:flex-[2]" />
+              <Input placeholder="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addDoctor(); }} className="sm:flex-[2]" />
               <Button onClick={addDoctor} disabled={!firstName || !lastName || !email} className="w-full sm:w-auto">
                 <UserPlus className="mr-1.5 h-4 w-4" /> Add
               </Button>
