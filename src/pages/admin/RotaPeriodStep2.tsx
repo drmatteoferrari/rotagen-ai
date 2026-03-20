@@ -255,7 +255,7 @@ export default function RotaPeriodStep2() {
               <CalendarCheck className="h-5 w-5 text-amber-600" />
               Bank Holidays
             </CardTitle>
-            <CardDescription>Bank holidays within the rota period are auto-populated. You can modify or add custom dates.</CardDescription>
+            <CardDescription>Auto-populated from your rota dates. Toggle or add custom dates.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Add holiday */}
