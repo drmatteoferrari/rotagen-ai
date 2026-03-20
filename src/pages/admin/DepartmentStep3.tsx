@@ -546,9 +546,7 @@ export default function DepartmentStep3() {
                   On-call vs non-on-call split
                 </CardTitle>
                 <CardDescription>
-                  Drag the bar to set how much of each doctor's contracted time is on-call.{' '}
-                  Higher on-call = better shift coverage, but a heavier rota for doctors.{' '}
-                  Lower = more protected non-on-call time, but harder to fill all on-call shifts.
+                  Set the on-call fraction of contracted time. Higher = more coverage, heavier rota. Lower = lighter rota, harder to fill all shifts.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
