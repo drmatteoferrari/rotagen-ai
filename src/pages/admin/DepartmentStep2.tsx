@@ -327,7 +327,7 @@ function ExpandedCard({
         </div>
         <div className="space-y-1.5">
           <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">&nbsp;</Label>
-          <div className="flex min-h-[40px] items-center gap-2 rounded-md border border-border bg-muted px-3 text-sm font-medium text-muted-foreground">
+          <div className={`flex min-h-[40px] items-center gap-2 rounded-md border border-border bg-muted px-3 text-sm font-medium ${draft.durationHours <= 13 ? "text-green-600" : "text-destructive"}`}>
             <Clock className="h-4 w-4" /> {draft.durationHours}h
           </div>
         </div>
