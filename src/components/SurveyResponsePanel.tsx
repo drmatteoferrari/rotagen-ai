@@ -78,6 +78,25 @@ export function SurveyResponsePanel({ doctor, open, onClose, onSaved }: SurveyRe
           { onConflict: "doctor_id,rota_config_id" }
         );
       if (error) throw error;
+
+      // Sync identity fields back to doctors table (single source of truth)
+      const fullName: string = data.full_name ?? "";
+      const nameParts = fullName.trim().split(/\s+/);
+      const syncFirst = nameParts[0] ?? "";
+      const syncLast = nameParts.slice(1).join(" ");
+      const { error: docSyncErr } = await supabase
+        .from("doctors")
+        .update({
+          first_name: syncFirst || doctor.first_name,
+          last_name: syncLast || doctor.last_name,
+          email: (data.nhs_email as string | null) || doctor.email,
+          grade: (data.grade as string | null) || doctor.grade,
+        })
+        .eq("id", doctor.id);
+      if (docSyncErr) {
+        console.error("Failed to sync doctors table:", docSyncErr);
+      }
+
       toast.success(`✓ ${doctor.first_name} ${doctor.last_name}'s responses saved`);
       onSaved();
       onClose();
