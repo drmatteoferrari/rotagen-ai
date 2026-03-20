@@ -107,6 +107,10 @@ export function SurveyResponsePanel({ doctor, open, onClose, onSaved }: SurveyRe
               <Badge className={statusColor}>{doctor.survey_status}</Badge>
             </div>
           )}
+          <div className="flex items-center gap-2 text-xs text-amber-700 text-left mt-2">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0" />
+            Changes here update both the survey record and the doctor's profile.
+          </div>
         </SheetHeader>
 
         {loading ? (
