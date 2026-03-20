@@ -751,6 +751,9 @@ export type Database = {
           max_consec_standard: number | null
           max_hours_per_168h: number | null
           max_hours_per_week: number | null
+          max_long_evening_consec: number | null
+          max_shift_length_h: number | null
+          min_inter_shift_rest_h: number | null
           oncall_break_fine_threshold_pct: number | null
           oncall_break_reference_weeks: number | null
           oncall_clinical_exception_allowed: boolean | null
@@ -766,6 +769,7 @@ export type Database = {
           oncall_no_simultaneous_shift: boolean | null
           oncall_rest_per_24h: number | null
           oncall_saturday_sunday_paired: boolean | null
+          rest_after_long_evening_h: number | null
           rest_after_long_h: number | null
           rest_after_nights_h: number | null
           rest_after_standard_h: number | null
@@ -781,6 +785,9 @@ export type Database = {
           max_consec_standard?: number | null
           max_hours_per_168h?: number | null
           max_hours_per_week?: number | null
+          max_long_evening_consec?: number | null
+          max_shift_length_h?: number | null
+          min_inter_shift_rest_h?: number | null
           oncall_break_fine_threshold_pct?: number | null
           oncall_break_reference_weeks?: number | null
           oncall_clinical_exception_allowed?: boolean | null
@@ -796,6 +803,7 @@ export type Database = {
           oncall_no_simultaneous_shift?: boolean | null
           oncall_rest_per_24h?: number | null
           oncall_saturday_sunday_paired?: boolean | null
+          rest_after_long_evening_h?: number | null
           rest_after_long_h?: number | null
           rest_after_nights_h?: number | null
           rest_after_standard_h?: number | null
@@ -811,6 +819,9 @@ export type Database = {
           max_consec_standard?: number | null
           max_hours_per_168h?: number | null
           max_hours_per_week?: number | null
+          max_long_evening_consec?: number | null
+          max_shift_length_h?: number | null
+          min_inter_shift_rest_h?: number | null
           oncall_break_fine_threshold_pct?: number | null
           oncall_break_reference_weeks?: number | null
           oncall_clinical_exception_allowed?: boolean | null
@@ -826,6 +837,7 @@ export type Database = {
           oncall_no_simultaneous_shift?: boolean | null
           oncall_rest_per_24h?: number | null
           oncall_saturday_sunday_paired?: boolean | null
+          rest_after_long_evening_h?: number | null
           rest_after_long_h?: number | null
           rest_after_nights_h?: number | null
           rest_after_standard_h?: number | null

@@ -128,15 +128,19 @@ export async function buildPreRotaInput(configId: string): Promise<PreRotaInput>
     wtrConstraints: {
       maxAvgHoursPerWeek: cfg.wtr?.maxHoursPerWeek ?? 48,
       maxHoursIn168h: cfg.wtr?.maxHoursPer168h ?? 72,
+      maxShiftLengthH: cfg.wtr?.maxShiftLengthH ?? 13,
+      minInterShiftRestH: cfg.wtr?.minInterShiftRestH ?? 11,
       maxConsecutive: {
         standard: cfg.wtr?.maxConsecStandard ?? 7,
-        long: cfg.wtr?.maxConsecLong ?? 7,
+        long: cfg.wtr?.maxConsecLong ?? 4,
         nights: cfg.wtr?.maxConsecNights ?? 4,
+        longEvening: cfg.wtr?.maxLongEveningConsec ?? 4,
       },
       minRestHoursAfter: {
         nights: cfg.wtr?.restAfterNightsH ?? 46,
         longShifts: cfg.wtr?.restAfterLongH ?? 48,
         standardShifts: cfg.wtr?.restAfterStandardH ?? 48,
+        longEveningShifts: cfg.wtr?.restAfterLongEveningH ?? 48,
       },
       weekendFrequencyMax: cfg.wtr?.weekendFrequency ?? 3,
       oncall: {
@@ -149,6 +153,8 @@ export async function buildPreRotaInput(configId: string): Promise<PreRotaInput>
         continuousRestEnd: cfg.wtr?.oncall.continuousRestEnd ?? "07:00",
         ifRestNotMetNextDayMaxHours: cfg.wtr?.oncall.ifRestNotMetMaxHours ?? 5,
         noSimultaneousShift: cfg.wtr?.oncall.noSimultaneousShift ?? true,
+        noConsecExceptWknd: cfg.wtr?.oncall.noConsecExceptWknd ?? true,
+        dayAfterLastConsecMaxH: cfg.wtr?.oncall.dayAfterLastConsecMaxH ?? 10,
       },
     },
     distributionTargets: {
