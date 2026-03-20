@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "@/components/AdminLayout";
 import { Button } from "@/components/ui/button";
@@ -12,9 +12,10 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  Copy, Trash2, UserPlus, Send, Users, Pencil, CalendarIcon, Loader2, Check, AlertTriangle, Link2, ExternalLink, ChevronDown,
+  Copy, Trash2, UserPlus, Send, Users, Pencil, CalendarIcon, Loader2, Check, AlertTriangle, Link2, ExternalLink, ChevronDown, Clock,
 } from "lucide-react";
 import { toast } from "sonner";
+import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { format, subDays, parseISO } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -99,20 +100,73 @@ export default function Roster() {
     invalidateDoctors();
   }, [invalidateDoctors]);
 
+  // ─── Backfill null survey tokens ───
+  const backfillRan = useRef(false);
+  useEffect(() => {
+    if (backfillRan.current) return;
+    const nullTokenDoctors = doctors.filter((d) => !d.survey_token);
+    if (nullTokenDoctors.length === 0) return;
+    backfillRan.current = true;
+    (async () => {
+      for (const d of nullTokenDoctors) {
+        await supabase
+          .from("doctors")
+          .update({ survey_token: crypto.randomUUID() })
+          .eq("id", d.id);
+      }
+      invalidateDoctors();
+    })();
+  }, [doctors]);
+
+  // ─── Realtime subscription for survey status ───
+  useEffect(() => {
+    if (!currentRotaConfigId) return;
+    const channel = supabase
+      .channel(`doctors-roster-${currentRotaConfigId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "doctors",
+          filter: `rota_config_id=eq.${currentRotaConfigId}`,
+        },
+        () => {
+          invalidateDoctors();
+        }
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [currentRotaConfigId]);
+
   // ─── Add doctor to DB ───
   const addDoctor = async () => {
-    if (!firstName || !lastName || !email || !currentRotaConfigId) return;
+    if (!firstName.trim() || !lastName.trim() || !email.trim()) {
+      toast.error("Please fill in first name, last name, and email");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+    if (!currentRotaConfigId) {
+      toast.error("No active rota config — please complete setup first");
+      return;
+    }
     const { error } = await supabase.from("doctors").insert({
       rota_config_id: currentRotaConfigId,
-      first_name: firstName,
-      last_name: lastName,
-      email,
-      grade: "—",
+      first_name: firstName.trim(),
+      last_name: lastName.trim(),
+      email: email.trim(),
+      grade: "",
       survey_status: "not_started",
+      survey_token: crypto.randomUUID(),
     });
     if (error) { toast.error("Failed to add doctor"); console.error(error); return; }
     setFirstName(""); setLastName(""); setEmail("");
-    toast.success(`${firstName} ${lastName} added to the roster`);
+    toast.success(`${firstName.trim()} ${lastName.trim()} added to the roster`);
     loadDoctors();
   };
 
@@ -257,6 +311,15 @@ export default function Roster() {
   const submitted = doctors.filter((d) => d.survey_status === "submitted").length;
   const inProgress = doctors.filter((d) => d.survey_status === "in_progress").length;
   const notStarted = doctors.filter((d) => !["submitted", "in_progress"].includes(d.survey_status)).length;
+  const progressPct = doctors.length > 0 ? Math.round((submitted / doctors.length) * 100) : 0;
+
+  const deadlineIsPast = surveyDeadline
+    ? (() => {
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        const dl = new Date(surveyDeadline); dl.setHours(0, 0, 0, 0);
+        return dl < today;
+      })()
+    : false;
 
   // SECTION 7 — Status badge
   const statusBadge = (doctor: Doctor) => {
@@ -835,6 +898,20 @@ export default function Roster() {
     <AdminLayout title="Roster & Invites" subtitle="Build the team and send survey invitations" accentColor="teal">
       <div className="mx-auto max-w-5xl space-y-4 sm:space-y-6 animate-fadeSlideUp">
 
+        {/* No config banner */}
+        {!currentRotaConfigId && (
+          <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 flex items-center gap-3">
+            <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-amber-800">No active rota config</p>
+              <p className="text-xs text-amber-700">Complete setup before managing the roster.</p>
+            </div>
+            <Button size="sm" onClick={() => navigate("/admin/setup")} className="shrink-0">
+              Go to Setup
+            </Button>
+          </div>
+        )}
+
         {/* DEV TOOLS Banner */}
         <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 flex flex-col sm:flex-row sm:items-center gap-3">
           <span className="text-sm font-medium text-amber-800">⚙️ DEV TOOLS — not visible in production</span>
@@ -905,6 +982,11 @@ export default function Roster() {
                   />
                 </PopoverContent>
               </Popover>
+              {deadlineIsPast && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
+                  <AlertTriangle className="h-3 w-3" /> Deadline passed
+                </span>
+              )}
             </div>
             {!rotaStartDate && (
               <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
@@ -923,35 +1005,57 @@ export default function Roster() {
                 <CardTitle className="text-base sm:text-lg">Team Roster</CardTitle>
                 <CardDescription className="text-xs sm:text-sm">Add doctors and track survey progress.</CardDescription>
               </div>
-              {/* Inline summary stats */}
-              <div className="flex items-center gap-3 sm:gap-4">
-                <div className="flex items-center gap-1.5">
-                  <div className="flex h-6 w-6 items-center justify-center rounded bg-primary/10">
-                    <Users className="h-3.5 w-3.5 text-primary" />
+              {/* Inline summary stats + progress */}
+              <div className="w-full sm:w-auto space-y-2">
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <div className="flex items-center gap-1.5">
+                    <div className="flex h-6 w-6 items-center justify-center rounded bg-primary/10">
+                      <Users className="h-3.5 w-3.5 text-primary" />
+                    </div>
+                    <div className="leading-tight">
+                      <p className="text-sm font-bold text-card-foreground">{doctors.length}</p>
+                      <p className="text-[10px] text-muted-foreground">Total</p>
+                    </div>
                   </div>
-                  <div className="leading-tight">
-                    <p className="text-sm font-bold text-card-foreground">{doctors.length}</p>
-                    <p className="text-[10px] text-muted-foreground">Total</p>
+                  <div className="flex items-center gap-1.5">
+                    <div className="flex h-6 w-6 items-center justify-center rounded bg-emerald-500/10">
+                      <Check className="h-3.5 w-3.5 text-emerald-500" />
+                    </div>
+                    <div className="leading-tight">
+                      <p className="text-sm font-bold text-card-foreground">{submitted}</p>
+                      <p className="text-[10px] text-muted-foreground">Submitted</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="flex h-6 w-6 items-center justify-center rounded bg-amber-500/10">
+                      <Pencil className="h-3.5 w-3.5 text-amber-500" />
+                    </div>
+                    <div className="leading-tight">
+                      <p className="text-sm font-bold text-card-foreground">{inProgress}</p>
+                      <p className="text-[10px] text-muted-foreground">In progress</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="flex h-6 w-6 items-center justify-center rounded bg-muted">
+                      <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                    </div>
+                    <div className="leading-tight">
+                      <p className="text-sm font-bold text-card-foreground">{notStarted}</p>
+                      <p className="text-[10px] text-muted-foreground">Not started</p>
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="flex h-6 w-6 items-center justify-center rounded bg-emerald-500/10">
-                    <Check className="h-3.5 w-3.5 text-emerald-500" />
+                {doctors.length > 0 && (
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-muted-foreground">Survey completion</span>
+                      <span className="text-[10px] font-semibold text-card-foreground">{progressPct}%</span>
+                    </div>
+                    <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                      <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${progressPct}%` }} />
+                    </div>
                   </div>
-                  <div className="leading-tight">
-                    <p className="text-sm font-bold text-card-foreground">{submitted}</p>
-                    <p className="text-[10px] text-muted-foreground">Done</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="flex h-6 w-6 items-center justify-center rounded bg-amber-500/10">
-                    <Pencil className="h-3.5 w-3.5 text-amber-500" />
-                  </div>
-                  <div className="leading-tight">
-                    <p className="text-sm font-bold text-card-foreground">{inProgress}</p>
-                    <p className="text-[10px] text-muted-foreground">WIP</p>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
           </CardHeader>
@@ -959,10 +1063,10 @@ export default function Roster() {
             {/* Quick add row */}
             <div className="flex flex-col gap-2 rounded-lg border border-dashed border-border p-3 sm:flex-row sm:items-end sm:gap-3 sm:p-4">
               <div className="grid grid-cols-2 gap-2 sm:contents">
-                <Input placeholder="First Name" value={firstName} onChange={(e) => setFirstName(e.target.value)} className="sm:flex-1" />
-                <Input placeholder="Last Name" value={lastName} onChange={(e) => setLastName(e.target.value)} className="sm:flex-1" />
+                <Input placeholder="First Name" value={firstName} onChange={(e) => setFirstName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addDoctor(); }} className="sm:flex-1" />
+                <Input placeholder="Last Name" value={lastName} onChange={(e) => setLastName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addDoctor(); }} className="sm:flex-1" />
               </div>
-              <Input placeholder="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="sm:flex-[2]" />
+              <Input placeholder="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addDoctor(); }} className="sm:flex-[2]" />
               <Button onClick={addDoctor} disabled={!firstName || !lastName || !email} className="w-full sm:w-auto">
                 <UserPlus className="mr-1.5 h-4 w-4" /> Add
               </Button>
@@ -1063,6 +1167,18 @@ export default function Roster() {
                       <div className="flex items-center gap-0.5">
                         {renderSendButton(doctor, sendState, isSending, isSuccess, "mobile")}
                         {renderCopyButton(doctor, isCopied)}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => doctor.survey_token && window.open(buildSurveyLink(doctor.survey_token), "_blank")} disabled={!doctor.survey_token}>
+                                <ExternalLink className="h-3.5 w-3.5" />
+                              </Button>
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {doctor.survey_token ? "Open survey in new tab" : "Survey link not yet available — try refreshing"}
+                          </TooltipContent>
+                        </Tooltip>
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => doctor.survey_token && navigate(`/doctor/survey?token=${doctor.survey_token}&admin=true`)} disabled={!doctor.survey_token}>
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
