@@ -83,12 +83,16 @@ export interface RotaConfig {
   wtr: {
     maxHoursPerWeek: number;
     maxHoursPer168h: number;
+    maxShiftLengthH: number;
+    minInterShiftRestH: number;
     maxConsecStandard: number;
     maxConsecLong: number;
     maxConsecNights: number;
+    maxLongEveningConsec: number;
     restAfterNightsH: number;
     restAfterLongH: number;
     restAfterStandardH: number;
+    restAfterLongEveningH: number;
     weekendFrequency: number;
     oncall: {
       noConsecExceptWknd: boolean;
@@ -172,12 +176,16 @@ export async function getRotaConfig(id: string): Promise<RotaConfig> {
   const wtr = w ? {
     maxHoursPerWeek: Number(w.max_hours_per_week),
     maxHoursPer168h: Number(w.max_hours_per_168h),
+    maxShiftLengthH: Number((w as any).max_shift_length_h ?? 13),
+    minInterShiftRestH: Number((w as any).min_inter_shift_rest_h ?? 11),
     maxConsecStandard: w.max_consec_standard,
     maxConsecLong: w.max_consec_long,
     maxConsecNights: w.max_consec_nights,
+    maxLongEveningConsec: (w as any).max_long_evening_consec ?? 4,
     restAfterNightsH: Number(w.rest_after_nights_h),
     restAfterLongH: Number(w.rest_after_long_h),
     restAfterStandardH: Number(w.rest_after_standard_h),
+    restAfterLongEveningH: Number((w as any).rest_after_long_evening_h ?? 48),
     weekendFrequency: w.weekend_frequency,
     oncall: {
       noConsecExceptWknd: w.oncall_no_consec_except_wknd,

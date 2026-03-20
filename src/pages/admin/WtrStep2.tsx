@@ -1,6 +1,6 @@
-import { useAdminSetup } from "@/contexts/AdminSetupContext";
 import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "@/components/AdminLayout";
+import { useAdminSetup } from "@/contexts/AdminSetupContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ArrowLeft, ArrowRight, Minus, Plus, Layers, CheckCircle, AlertTriangle, Info } from "lucide-react";
@@ -16,23 +16,59 @@ function ConsecWarning({ value, max, label }: { value: number; max: number; labe
       </div>
     );
   }
-  const extra = label === "nights" ? " Rest of at least 46 hours must follow." : "";
   return (
     <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 mt-2">
       <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-      ⚠️ WTR WARNING: Exceeding {max} consecutive {label} may breach Working Time Regulations.{extra}
+      ⚠️ WTR WARNING: Exceeding {max} consecutive {label} may breach Working Time Regulations.
     </div>
   );
 }
 
 export default function WtrStep2() {
   const navigate = useNavigate();
-  const { maxConsecDays, setMaxConsecDays, maxConsecLong, setMaxConsecLong, maxConsecNights, setMaxConsecNights } = useAdminSetup();
+  const {
+    maxConsecDays, setMaxConsecDays, maxConsecLong, setMaxConsecLong,
+    maxConsecNights, setMaxConsecNights, maxLongEveningConsec, setMaxLongEveningConsec,
+  } = useAdminSetup();
 
   const limits = [
-    { label: "Max Consecutive Days", sub: "Standard shifts", hint: "WTR maximum: 7 days", value: maxConsecDays, set: setMaxConsecDays, max: 7, type: "days" },
-    { label: "Max Consecutive Long Shifts", sub: "Consecutive long shifts", hint: "WTR maximum: 4 shifts", value: maxConsecLong, set: setMaxConsecLong, max: 4, type: "long shifts" },
-    { label: "Max Consecutive Nights", sub: "Consecutive nights", hint: "WTR maximum: 4 nights", value: maxConsecNights, set: setMaxConsecNights, max: 4, type: "nights" },
+    {
+      label: "Max Consecutive Days",
+      sub: "Standard shifts",
+      extraNote: "TCS §15: can be locally extended to 8 with Guardian of Safe Working Hours and Resident Doctors' Forum approval.",
+      hint: "WTR maximum: 7 days",
+      value: maxConsecDays,
+      set: setMaxConsecDays,
+      max: 7,
+      type: "days",
+    },
+    {
+      label: "Max Consecutive Long Shifts",
+      sub: "Shifts rostered to last longer than 10 hours",
+      hint: "WTR maximum: 4 shifts",
+      value: maxConsecLong,
+      set: setMaxConsecLong,
+      max: 4,
+      type: "long shifts",
+    },
+    {
+      label: "Max Consecutive Nights",
+      sub: "Night shift = ≥3 hours of work between 23:00–06:00 (TCS §12)",
+      hint: "WTR maximum: 4 nights",
+      value: maxConsecNights,
+      set: setMaxConsecNights,
+      max: 4,
+      type: "nights",
+    },
+    {
+      label: "Max Consecutive Long Evening Shifts",
+      sub: "A long shift starting before 16:00 and finishing after 23:00 (TCS §11). Shifts starting after 16:00 are classified as night shifts instead.",
+      hint: "WTR maximum: 4 shifts",
+      value: maxLongEveningConsec,
+      set: setMaxLongEveningConsec,
+      max: 4,
+      type: "long evening shifts",
+    },
   ];
 
   return (
@@ -58,6 +94,9 @@ export default function WtrStep2() {
                   <div className="flex flex-col">
                     <span className="text-sm font-medium text-card-foreground">{item.label}</span>
                     <span className="text-xs text-muted-foreground">{item.sub}</span>
+                    {"extraNote" in item && item.extraNote && (
+                      <span className="text-xs text-muted-foreground italic">{item.extraNote}</span>
+                    )}
                     <span className="text-[11px] font-semibold text-red-600 mt-0.5">{item.hint}</span>
                   </div>
                   <div className="flex items-center gap-3 bg-muted p-1.5 rounded-lg border border-border">
