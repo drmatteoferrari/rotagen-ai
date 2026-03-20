@@ -461,7 +461,7 @@ function ExpandedCard({
                 update({ staffing: { ...draft.staffing, max: raw === "" ? null : Math.max(draft.staffing.target, parseInt(raw) || draft.staffing.target) } });
               }}
             />
-            <p className="text-xs text-muted-foreground">Leave blank = the algorithm allocates exactly {draft.staffing.min} doctor{draft.staffing.min !== 1 ? "s" : ""} — no more, no less. Set a number to allow a flexible range.</p>
+            <p className="text-xs text-muted-foreground">Optional — leave blank for no maximum</p>
           </div>
         </div>
       </div>
