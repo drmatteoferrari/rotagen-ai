@@ -577,7 +577,7 @@ function CollapsedCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1 space-y-1.5">
           <div className="flex items-center gap-2">
-            <span className="rounded-full bg-muted px-2 py-0.5 font-mono text-xs font-bold tracking-widest text-muted-foreground">{shift.abbreviation}</span>
+            <span className={`rounded-full px-2 py-0.5 font-mono text-xs font-bold tracking-widest border ${getShiftColor(index).bg} ${getShiftColor(index).text} ${getShiftColor(index).border}`}>{shift.abbreviation}</span>
             <h3 className="truncate text-sm font-semibold text-card-foreground">{shift.name}</h3>
           </div>
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
