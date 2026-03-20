@@ -72,7 +72,14 @@ export interface RotaConfig {
     byShift: Array<{ shiftKey: string; targetPct: number }>;
   };
   bhSameAsWeekend: boolean | null;
-  bhShiftRules: any[] | null;
+  bhShiftRules: Array<{
+    shift_key: string;
+    name: string;
+    start_time: string;
+    end_time: string;
+    target_doctors: number;
+    included: boolean;
+  }> | null;
   wtr: {
     maxHoursPerWeek: number;
     maxHoursPer168h: number;
