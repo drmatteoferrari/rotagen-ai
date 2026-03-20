@@ -95,6 +95,7 @@ const App = () => (
             <Route path="/admin/wtr/step-2" element={<WtrStep2 />} />
             <Route path="/admin/wtr/step-3" element={<WtrStep3 />} />
             <Route path="/admin/wtr/step-4" element={<WtrStep4 />} />
+            <Route path="/admin/wtr/step-5" element={<WtrStep5 />} />
             <Route path="/admin/roster" element={<Roster />} />
             <Route path="/admin/pre-rota" element={<PreRotaPage />} />
             <Route path="/admin/pre-rota-calendar" element={<PreRotaCalendarPage />} />
