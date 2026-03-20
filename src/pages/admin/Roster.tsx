@@ -12,7 +12,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  Copy, Trash2, UserPlus, Send, Users, Pencil, CalendarIcon, Loader2, Check, AlertTriangle, Link2, ExternalLink, ChevronDown, Clock,
+  Copy, Trash2, UserPlus, Send, Users, Pencil, CalendarIcon, Loader2, Check, AlertTriangle, Link2, ExternalLink, ChevronDown, ChevronUp, Clock, ArrowUpDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
@@ -23,6 +23,7 @@ import { useRotaContext } from "@/contexts/RotaContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { buildSurveyLink } from "@/lib/surveyLinks";
 import { useDoctorsQuery, useInactiveDoctorsQuery, useRotaConfigDetailsQuery, useInvalidateQuery } from "@/hooks/useAdminQueries";
+import { GRADE_OPTIONS, GRADE_ORDER } from "@/lib/gradeOptions";
 
 
 // SECTION 6 — Doctor interface from DB
@@ -40,6 +41,98 @@ interface Doctor {
   survey_submitted_at: string | null;
 }
 // SECTION 6 COMPLETE
+
+// ── Expanded panel component ──
+function ExpandedDoctorPanel({
+  doctorId,
+  surveyData,
+  isLoading,
+  invitedAt,
+  onNavigateProfile,
+}: {
+  doctorId: string;
+  surveyData: any;
+  isLoading: boolean;
+  invitedAt: string | null;
+  onNavigateProfile: () => void;
+}) {
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-4">
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  const cj = surveyData?.competencies_json ?? {};
+  const compIcon = (val: boolean | null | undefined) =>
+    val === true ? "✓" : val === false ? "✗" : "?";
+  const compColor = (val: boolean | null | undefined) =>
+    val === true
+      ? "bg-emerald-100 text-emerald-700"
+      : val === false
+      ? "bg-red-100 text-red-700"
+      : "bg-muted text-muted-foreground";
+
+  const wte = surveyData?.wte_percent ?? null;
+  const ltftDays: string[] = surveyData?.ltft_days_off ?? [];
+  const nightFlex: any[] = Array.isArray(surveyData?.ltft_night_flexibility)
+    ? surveyData.ltft_night_flexibility
+    : [];
+
+  return (
+    <div className="space-y-3 text-sm">
+      {!surveyData && (
+        <p className="text-xs text-muted-foreground italic">No survey data yet — invite this doctor to complete their preferences.</p>
+      )}
+      {surveyData && (
+        <>
+          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-xs">
+            <dt className="text-muted-foreground">WTE</dt>
+            <dd className="font-medium">{wte != null ? `${wte}%` : "—"}</dd>
+            <dt className="text-muted-foreground">LTFT</dt>
+            <dd className="font-medium">{wte != null && wte < 100 ? "Yes" : "No"}</dd>
+            <dt className="text-muted-foreground">Days off</dt>
+            <dd className="font-medium">{ltftDays.length > 0 ? ltftDays.join(", ") : "—"}</dd>
+            {nightFlex.length > 0 && (
+              <>
+                <dt className="text-muted-foreground">Night flexibility</dt>
+                <dd className="font-medium">{nightFlex.map((n: any) => (
+                  <span key={n.day} className="block">
+                    {n.day}: {n.canStart ? "Can start ✓" : "Can't start ✗"} · {n.canEnd ? "Can end ✓" : "Can't end ✗"}
+                  </span>
+                ))}</dd>
+              </>
+            )}
+          </dl>
+
+          <div className="space-y-1">
+            <p className="text-xs font-semibold text-muted-foreground">Competencies</p>
+            <div className="flex flex-wrap gap-1.5">
+              {(["iac", "iaoc", "icu", "transfer"] as const).map((key) => {
+                const val = cj[key]?.achieved;
+                return (
+                  <span key={key} className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${compColor(val)}`}>
+                    {key.toUpperCase()} {compIcon(val)}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+
+          {invitedAt && (
+            <p className="text-[10px] text-muted-foreground">
+              Last invited: {format(parseISO(invitedAt), "d MMM yyyy, HH:mm")}
+            </p>
+          )}
+        </>
+      )}
+      <button type="button" onClick={onNavigateProfile} className="text-xs font-medium text-primary hover:underline">
+        See full profile →
+      </button>
+    </div>
+  );
+}
 
 export default function Roster() {
   const navigate = useNavigate();
@@ -85,6 +178,15 @@ export default function Roster() {
 
   // Copy tooltip state
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  // Expand / survey cache / sort / bulk state
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [surveyCache, setSurveyCache] = useState<Record<string, any>>({});
+  const [surveyLoading, setSurveyLoading] = useState<Record<string, boolean>>({});
+  type SortKey = "surname_asc" | "surname_desc" | "status" | "grade";
+  const [sortKey, setSortKey] = useState<SortKey>("surname_asc");
+  const [bulkSending, setBulkSending] = useState(false);
+  const [bulkPopoverOpen, setBulkPopoverOpen] = useState(false);
 
   // Rota period info from restored config
   const rotaStartDate = restoredConfig?.rotaPeriod?.startDate
@@ -190,7 +292,6 @@ export default function Roster() {
 
   // ─── Remove doctor from DB (permanent delete) ───
   const removeDoctor = async (id: string) => {
-    // Also delete survey responses first
     await supabase.from("doctor_survey_responses").delete().eq("doctor_id", id);
     const { error } = await supabase.from("doctors").delete().eq("id", id);
     if (error) { toast.error("Failed to remove doctor"); return; }
@@ -223,15 +324,13 @@ export default function Roster() {
       .eq("id", currentRotaConfigId);
     if (error) { toast.error("Failed to save deadline"); console.error(error); }
   };
-  // SECTION 8 COMPLETE
 
   // SECTION 4 — Formatted deadline for email
   const formattedDeadline = surveyDeadline
     ? format(surveyDeadline, "EEEE, d MMMM yyyy")
     : null;
-  // SECTION 4 COMPLETE
 
-  // SECTION 5 — Send invite handler (SECTION 9 — uses token-based URL)
+  // SECTION 5 — Send invite handler
   const sendInvite = async (doctor: Doctor) => {
     setPopoverId(null);
 
@@ -242,10 +341,8 @@ export default function Roster() {
 
     if (!formattedDeadline) { toast.error("Set a survey deadline first."); return; }
 
-
     setSendingId(doctor.id);
 
-    // SECTION 9 — Use real token-based URL
     const surveyLink = doctor.survey_token ? buildSurveyLink(doctor.survey_token) : "";
 
     const body = {
@@ -296,8 +393,6 @@ export default function Roster() {
       toast.error(msg);
     }
   };
-  // SECTION 5 COMPLETE
-  // SECTION 9 COMPLETE
 
   const copyMagicLink = (doctor: Doctor) => {
     if (!doctor.survey_token) { toast.error("No survey token available"); return; }
@@ -307,11 +402,100 @@ export default function Roster() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  // ─── Toggle expand and lazy-load survey data ───
+  const toggleExpand = async (doctorId: string) => {
+    const isCurrentlyExpanded = expandedIds.has(doctorId);
+
+    if (!isCurrentlyExpanded && !surveyCache[doctorId]) {
+      setSurveyLoading((prev) => ({ ...prev, [doctorId]: true }));
+    }
+
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(doctorId)) {
+        next.delete(doctorId);
+      } else {
+        next.add(doctorId);
+      }
+      return next;
+    });
+
+    if (!isCurrentlyExpanded && !surveyCache[doctorId]) {
+      const doctor = doctors.find((d) => d.id === doctorId);
+      if (doctor) {
+        const { data } = await supabase
+          .from("doctor_survey_responses")
+          .select("wte_percent, ltft_days_off, ltft_night_flexibility, competencies_json, annual_leave, study_leave, noc_dates, exempt_from_nights, exempt_from_weekends, exempt_from_oncall")
+          .eq("doctor_id", doctorId)
+          .eq("rota_config_id", doctor.rota_config_id)
+          .maybeSingle();
+        setSurveyCache((prev) => ({ ...prev, [doctorId]: data ?? null }));
+      }
+      setSurveyLoading((prev) => ({ ...prev, [doctorId]: false }));
+    }
+  };
+
+  // ─── Bulk send handler ───
+  const handleBulkSend = async () => {
+    if (!departmentName || !hospitalName) {
+      toast.error("Please set your department and hospital name before sending invites.");
+      setBulkPopoverOpen(false);
+      return;
+    }
+    if (!formattedDeadline) {
+      toast.error("Please set a survey deadline before sending invites.");
+      setBulkPopoverOpen(false);
+      return;
+    }
+    const eligible = doctors.filter(
+      (d) => !d.survey_invite_sent_at && d.email && d.survey_status !== "submitted"
+    );
+    if (eligible.length === 0) {
+      setBulkPopoverOpen(false);
+      return;
+    }
+    setBulkPopoverOpen(false);
+    setBulkSending(true);
+    let successCount = 0;
+    for (const doctor of eligible) {
+      try {
+        await sendInvite(doctor);
+        successCount++;
+        await new Promise((r) => setTimeout(r, 300));
+      } catch {
+        // individual failures already toasted inside sendInvite
+      }
+    }
+    setBulkSending(false);
+    invalidateDoctors();
+    if (successCount > 0) {
+      toast.success(`✓ Sent invites to ${successCount} doctor${successCount > 1 ? "s" : ""}`);
+    }
+  };
+
   // SECTION 7 — Survey status counts
   const submitted = doctors.filter((d) => d.survey_status === "submitted").length;
   const inProgress = doctors.filter((d) => d.survey_status === "in_progress").length;
   const notStarted = doctors.filter((d) => !["submitted", "in_progress"].includes(d.survey_status)).length;
   const progressPct = doctors.length > 0 ? Math.round((submitted / doctors.length) * 100) : 0;
+
+  // Sorted doctors
+  const STATUS_ORDER: Record<string, number> = { not_started: 0, in_progress: 1, submitted: 2 };
+  const sortedDoctors = [...doctors].sort((a, b) => {
+    switch (sortKey) {
+      case "surname_asc":
+        return a.last_name.localeCompare(b.last_name);
+      case "surname_desc":
+        return b.last_name.localeCompare(a.last_name);
+      case "status":
+        return (STATUS_ORDER[a.survey_status ?? "not_started"] ?? 0) -
+               (STATUS_ORDER[b.survey_status ?? "not_started"] ?? 0);
+      case "grade":
+        return (GRADE_ORDER[a.grade ?? ""] ?? 99) - (GRADE_ORDER[b.grade ?? ""] ?? 99);
+      default:
+        return 0;
+    }
+  });
 
   const deadlineIsPast = surveyDeadline
     ? (() => {
@@ -341,7 +525,6 @@ export default function Roster() {
         return <Badge className="bg-muted text-muted-foreground border-border hover:bg-muted">○ Not started</Badge>;
     }
   };
-  // SECTION 7 COMPLETE
 
   // SECTION 7 — Determine send icon state
   const getSendIconState = (doctor: Doctor): {
@@ -373,12 +556,12 @@ export default function Roster() {
     sendState: ReturnType<typeof getSendIconState>,
     isSending: boolean,
     isSuccess: boolean,
-    view: "desktop" | "mobile"
+    view: string
   ) => {
-    if (isSending) return <Button variant="ghost" size="icon" disabled><Loader2 className="h-4 w-4 animate-spin" /></Button>;
-    if (isSuccess) return <Button variant="ghost" size="icon" disabled><Check className="h-4 w-4 text-emerald-600" /></Button>;
+    if (isSending) return <Button variant="ghost" size="icon" disabled className="h-8 w-8"><Loader2 className="h-4 w-4 animate-spin" /></Button>;
+    if (isSuccess) return <Button variant="ghost" size="icon" disabled className="h-8 w-8"><Check className="h-4 w-4 text-emerald-600" /></Button>;
     if (sendState.disabled) return (
-      <Tooltip><TooltipTrigger asChild><span><Button variant="ghost" size="icon" disabled className="text-muted-foreground"><Send className="h-4 w-4" /></Button></span></TooltipTrigger><TooltipContent>{sendState.tooltip}</TooltipContent></Tooltip>
+      <Tooltip><TooltipTrigger asChild><span><Button variant="ghost" size="icon" disabled className="h-8 w-8 text-muted-foreground"><Send className="h-4 w-4" /></Button></span></TooltipTrigger><TooltipContent>{sendState.tooltip}</TooltipContent></Tooltip>
     );
 
     const popoverKey = `${doctor.id}:${view}`;
@@ -386,7 +569,7 @@ export default function Roster() {
     return (
       <Popover open={popoverId === popoverKey} onOpenChange={(open) => setPopoverId(open ? popoverKey : null)}>
         <PopoverTrigger asChild>
-          <Button variant="ghost" size="icon" className={cn("relative", sendState.color)} title={sendState.tooltip}>
+          <Button variant="ghost" size="icon" className={cn("relative h-8 w-8", sendState.color)} title={sendState.tooltip}>
             <Send className="h-4 w-4" />
             {sendState.badge && <span className="absolute -top-1 -right-1 text-[9px] font-bold bg-emerald-100 text-emerald-700 rounded-full px-1">{sendState.badge}</span>}
           </Button>
@@ -408,7 +591,7 @@ export default function Roster() {
   const renderCopyButton = (doctor: Doctor, isCopied: boolean) => (
     <Tooltip>
       <TooltipTrigger asChild>
-        <Button variant="ghost" size="icon" onClick={() => copyMagicLink(doctor)}>
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => copyMagicLink(doctor)}>
           {isCopied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
         </Button>
       </TooltipTrigger>
@@ -460,13 +643,11 @@ export default function Roster() {
     const wte = wteRoll < 0.10 ? 60 : wteRoll < 0.40 ? 80 : 100;
     const isLtft = wte < 100;
 
-    // ── GRADE GROUPS ──
     const isCT1    = (g: string) => g.includes('CT1') && !g.includes('CT2') && !g.includes('CT3');
     const isCT2up  = (g: string) => ['CT2','CT3','ST4','ST5','ST6','ST7','ST8','ST9','SAS','Fellow','Consultant'].some(x => g.includes(x));
     const isCT3up  = (g: string) => ['CT3','ST4','ST5','ST6','ST7','ST8','ST9','SAS','Fellow','Consultant'].some(x => g.includes(x));
-    const isSenior = (g: string) => ['ST6','ST7','ST8','ST9','SAS','Fellow','Consultant'].some(x => g.includes(x));
+    const isSeniorLocal = (g: string) => ['ST6','ST7','ST8','ST9','SAS','Fellow','Consultant'].some(x => g.includes(x));
 
-    // ── STEP 2: COMPETENCIES ──
     const iacAchieved      = isCT2up(grade);
     const iaocAchieved     = isCT3up(grade);
     const icuAchieved      = isCT3up(grade);
@@ -495,7 +676,6 @@ export default function Roster() {
       },
     };
 
-    // ── STEP 3: LTFT ──
     const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
     const shuffledDays = [...WEEKDAYS].sort(() => Math.random() - 0.5);
     const ltft_days_off: string[] = isLtft
@@ -507,7 +687,6 @@ export default function Roster() {
       canEnd:   Math.random() < 0.8,
     }));
 
-    // ── STEP 4: LEAVE — all blocks share one bookedRanges list, no overlaps anywhere ──
     const rotaStartMs  = new Date(rotaStart).getTime();
     const rotaEndMs    = new Date(rotaEnd).getTime();
     const rotaWeeks    = (rotaEndMs - rotaStartMs) / (7 * 86400000);
@@ -515,17 +694,12 @@ export default function Roster() {
     const al_entitlement = Math.random() < 0.5 ? 27 : 32;
     const proRataAL    = Math.max(1, Math.round((rotaWeeks / 52) * al_entitlement * (effectiveWte / 100)));
 
-    // Single shared registry — every placed block is registered here
     const booked: { start: number; end: number }[] = [];
-
     const hasOverlap = (sMs: number, eMs: number): boolean =>
       booked.some(r => sMs < r.end && eMs > r.start);
-
     const registerBlock = (sMs: number, eMs: number) =>
       booked.push({ start: sMs, end: eMs });
 
-    // Place a block of exactly lengthDays calendar days with no overlap.
-    // Returns { startDate, endDate, id, reason:'' } or null if no gap found.
     const placeBlock = (lengthDays: number, maxAttempts = 60): { id: string; startDate: string; endDate: string; reason: string } | null => {
       const blockMs  = lengthDays * 86400000;
       const maxStart = rotaEndMs - blockMs;
@@ -539,7 +713,7 @@ export default function Roster() {
           return {
             id:        crypto.randomUUID(),
             startDate: new Date(sMs).toISOString().split('T')[0],
-            endDate:   new Date(eMs - 86400000).toISOString().split('T')[0], // inclusive end
+            endDate:   new Date(eMs - 86400000).toISOString().split('T')[0],
             reason:    '',
           };
         }
@@ -547,7 +721,6 @@ export default function Roster() {
       return null;
     };
 
-    // Annual Leave: 2–5 blocks, total days = proRataAL (never exceeded)
     const numALBlocks  = rand(2, 5);
     const annual_leave: { id: string; startDate: string; endDate: string; reason: string }[] = [];
     let alBudget = proRataAL;
@@ -559,7 +732,6 @@ export default function Roster() {
       if (entry) { annual_leave.push(entry); alBudget -= blockLen; }
     }
 
-    // Study Leave: 2–4 blocks, total 3–10 days
     const numSLBlocks = rand(2, 4);
     const slReasons   = ['FRCA Primary', 'FRCA Final', 'ALS Course', 'ATLS Course', 'Conference', 'Exam', 'Teaching'];
     const study_leave: { id: string; startDate: string; endDate: string; reason: string }[] = [];
@@ -572,7 +744,6 @@ export default function Roster() {
       if (entry) { study_leave.push({ ...entry, reason: pick(slReasons) }); slBudget -= blockLen; }
     }
 
-    // NOC dates: 2–5 blocks, total 5–15 days
     const numNOCBlocks = rand(2, 5);
     const noc_dates: { id: string; startDate: string; endDate: string; reason: string }[] = [];
     let nocBudget = rand(5, 15);
@@ -584,7 +755,6 @@ export default function Roster() {
       if (entry) { noc_dates.push(entry); nocBudget -= blockLen; }
     }
 
-    // Rotation: 1 in 5 doctors, Mon→Sun 14 days, no overlap
     const other_unavailability: { id: string; startDate: string; endDate: string; location: string }[] = [];
     if (Math.random() < 0.2) {
       const maxOffsetDays = Math.max(0, Math.floor((rotaEndMs - rotaStartMs) / 86400000) - 14);
@@ -608,7 +778,6 @@ export default function Roster() {
       }
     }
 
-    // ── STEP 5: EXEMPTIONS ──
     const exempt_from_nights   = Math.random() < 0.04;
     const exempt_from_weekends = Math.random() < 0.03;
     const exemption_details    = exempt_from_nights
@@ -617,7 +786,6 @@ export default function Roster() {
         ? 'Exempt from weekend shifts — Occupational Health recommendation.'
         : '';
 
-    // ── STEP 6: PREFERENCES ──
     const ALL_SPECIALTIES = [
       'Paediatric', 'Obstetric', 'Cardiothoracic', 'Neuro', 'Vascular',
       'T&O and regional anaesthesia', 'ENT and maxillofacial', 'Ophthalmology',
@@ -640,7 +808,7 @@ export default function Roster() {
         ])
       : '';
 
-    const special_sessions: string[] = isSenior(grade) && Math.random() < 0.3
+    const special_sessions: string[] = isSeniorLocal(grade) && Math.random() < 0.3
       ? [pick(['Pain medicine', 'Pre-op clinics'])]
       : [];
 
@@ -706,7 +874,6 @@ export default function Roster() {
   };
 
   const handleFillAllSurveys = async () => {
-    // 1. Get rota config id from localStorage (matching RotaContext storage key)
     const rotaConfigId = currentRotaConfigId;
     if (!rotaConfigId) {
       toast.error('No active rota config');
@@ -716,7 +883,6 @@ export default function Roster() {
     setFillingAll(true);
 
     try {
-      // 2. Fetch rota dates
       const { data: rotaConfig, error: rotaError } = await supabase
         .from('rota_configs')
         .select('rota_start_date, rota_end_date')
@@ -733,7 +899,6 @@ export default function Roster() {
       const rotaEnd = rotaConfig.rota_end_date ??
         new Date(Date.now() + 90 * 86400000).toISOString().split('T')[0];
 
-      // 3. Fetch doctors
       const { data: doctorsList, error: doctorsError } = await supabase
         .from('doctors')
         .select('id, first_name, last_name, email, grade')
@@ -749,7 +914,6 @@ export default function Roster() {
         return;
       }
 
-      // 4. Upsert survey response for each doctor — sequential for reliability
       for (const doctor of doctorsList) {
         const payload = buildSurveyPayload(doctor, rotaConfigId, rotaStart, rotaEnd);
 
@@ -777,67 +941,64 @@ export default function Roster() {
         }
       }
 
-    const plCandidates = [...doctorsList].sort(() => Math.random() - 0.5).slice(0, 2);
-    for (const plDoctor of plCandidates) {
-      const { data: existing } = await supabase
-        .from('doctor_survey_responses')
-        .select('annual_leave, study_leave, noc_dates, other_unavailability')
-        .eq('doctor_id', plDoctor.id)
-        .eq('rota_config_id', rotaConfigId)
-        .single();
+      const plCandidates = [...doctorsList].sort(() => Math.random() - 0.5).slice(0, 2);
+      for (const plDoctor of plCandidates) {
+        const { data: existing } = await supabase
+          .from('doctor_survey_responses')
+          .select('annual_leave, study_leave, noc_dates, other_unavailability')
+          .eq('doctor_id', plDoctor.id)
+          .eq('rota_config_id', rotaConfigId)
+          .single();
 
-      const takenMs: { start: number; end: number }[] = [];
-      const addTaken = (arr: { startDate: string; endDate: string }[] | null) => {
-        if (!arr) return;
-        for (const e of arr) {
-          if (e.startDate && e.endDate) {
-            takenMs.push({
-              start: new Date(e.startDate).getTime(),
-              end:   new Date(e.endDate).getTime() + 86400000,
-            });
+        const takenMs: { start: number; end: number }[] = [];
+        const addTaken = (arr: { startDate: string; endDate: string }[] | null) => {
+          if (!arr) return;
+          for (const e of arr) {
+            if (e.startDate && e.endDate) {
+              takenMs.push({
+                start: new Date(e.startDate).getTime(),
+                end:   new Date(e.endDate).getTime() + 86400000,
+              });
+            }
+          }
+        };
+        if (existing) {
+          addTaken(existing.annual_leave as any);
+          addTaken(existing.study_leave as any);
+          addTaken(existing.noc_dates as any);
+          addTaken(existing.other_unavailability as any);
+        }
+
+        const plOverlaps = (sMs: number, eMs: number) =>
+          takenMs.some(r => sMs < r.end && eMs > r.start);
+
+        const rotaStartMs2 = new Date(rotaStart).getTime();
+        const rotaEndMs2   = new Date(rotaEnd).getTime();
+        const maxOffset    = Math.max(0, Math.floor((rotaEndMs2 - rotaStartMs2) / 86400000) - 14);
+        for (let attempt = 0; attempt < 60; attempt++) {
+          const offsetDays = Math.floor(Math.random() * maxOffset);
+          const candidate  = new Date(rotaStartMs2 + offsetDays * 86400000);
+          const dow        = candidate.getDay();
+          const toMonday   = dow === 1 ? 0 : (8 - dow) % 7 || 7;
+          const plStartMs  = candidate.getTime() + toMonday * 86400000;
+          const plEndMs    = plStartMs + 13 * 86400000;
+          if (plEndMs + 86400000 <= rotaEndMs2 && !plOverlaps(plStartMs, plEndMs + 86400000)) {
+            await supabase
+              .from('doctor_survey_responses')
+              .update({
+                parental_leave_expected: true,
+                parental_leave_start:    new Date(plStartMs).toISOString().split('T')[0],
+                parental_leave_end:      new Date(plEndMs).toISOString().split('T')[0],
+                parental_leave_notes:    'Parental leave — dates confirmed with HR.',
+              })
+              .eq('doctor_id', plDoctor.id)
+              .eq('rota_config_id', rotaConfigId);
+            break;
           }
         }
-      };
-      if (existing) {
-        addTaken(existing.annual_leave as any);
-        addTaken(existing.study_leave as any);
-        addTaken(existing.noc_dates as any);
-        addTaken(existing.other_unavailability as any);
       }
 
-      const plOverlaps = (sMs: number, eMs: number) =>
-        takenMs.some(r => sMs < r.end && eMs > r.start);
-
-      const rotaStartMs2 = new Date(rotaStart).getTime();
-      const rotaEndMs2   = new Date(rotaEnd).getTime();
-      const maxOffset    = Math.max(0, Math.floor((rotaEndMs2 - rotaStartMs2) / 86400000) - 14);
-      for (let attempt = 0; attempt < 60; attempt++) {
-        const offsetDays = Math.floor(Math.random() * maxOffset);
-        const candidate  = new Date(rotaStartMs2 + offsetDays * 86400000);
-        const dow        = candidate.getDay();
-        const toMonday   = dow === 1 ? 0 : (8 - dow) % 7 || 7;
-        const plStartMs  = candidate.getTime() + toMonday * 86400000;
-        const plEndMs    = plStartMs + 13 * 86400000;
-        if (plEndMs + 86400000 <= rotaEndMs2 && !plOverlaps(plStartMs, plEndMs + 86400000)) {
-          await supabase
-            .from('doctor_survey_responses')
-            .update({
-              parental_leave_expected: true,
-              parental_leave_start:    new Date(plStartMs).toISOString().split('T')[0],
-              parental_leave_end:      new Date(plEndMs).toISOString().split('T')[0],
-              parental_leave_notes:    'Parental leave — dates confirmed with HR.',
-            })
-            .eq('doctor_id', plDoctor.id)
-            .eq('rota_config_id', rotaConfigId);
-          break;
-        }
-      }
-    }
-
-      // 5. Refresh roster
       await loadDoctors();
-
-      // 6. Success toast — only fires if everything above succeeded
       toast.success(`✅ ${doctorsList.length} surveys filled with test data`);
 
     } catch (err) {
@@ -858,7 +1019,6 @@ export default function Roster() {
     setCancellingAll(true);
 
     try {
-      // Delete all survey responses for this config
       const { error: deleteError } = await supabase
         .from('doctor_survey_responses')
         .delete()
@@ -869,22 +1029,23 @@ export default function Roster() {
         throw deleteError;
       }
 
-      // Reset doctor statuses
-      const { error: updateError } = await supabase
+      const { error: resetError } = await supabase
         .from('doctors')
         .update({
           survey_status: 'not_started',
           survey_submitted_at: null,
+          survey_invite_sent_at: null,
+          survey_invite_count: 0,
         })
         .eq('rota_config_id', rotaConfigId);
 
-      if (updateError) {
-        console.error('Supabase update error:', updateError);
-        throw updateError;
+      if (resetError) {
+        console.error('Supabase reset error:', resetError);
+        throw resetError;
       }
 
       await loadDoctors();
-      toast.success('🗑️ All survey responses cleared');
+      toast.success('All surveys cancelled and reset');
 
     } catch (err) {
       console.error('handleCancelAllSurveys failed:', err);
@@ -895,8 +1056,8 @@ export default function Roster() {
   };
 
   return (
-    <AdminLayout title="Roster & Invites" subtitle="Build the team and send survey invitations" accentColor="teal">
-      <div className="mx-auto max-w-5xl space-y-4 sm:space-y-6 animate-fadeSlideUp">
+    <AdminLayout title="Team Roster" subtitle="Manage doctors and track survey completion" accentColor="blue">
+      <div className="mx-auto max-w-3xl space-y-4 animate-fadeSlideUp">
 
         {/* No config banner */}
         {!currentRotaConfigId && (
@@ -1072,120 +1233,158 @@ export default function Roster() {
               </Button>
             </div>
 
-            {/* Desktop table */}
-            <div className="hidden sm:block rounded-lg border border-border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Doctor Name</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Grade</TableHead>
-                    <TableHead>Survey Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {doctors.map((doctor) => {
-                    const sendState = getSendIconState(doctor);
-                    const isSending = sendingId === doctor.id;
-                    const isSuccess = successId === doctor.id;
-                    const isCopied = copiedId === doctor.id;
+            {/* Bulk send button */}
+            {(() => {
+              const neverInvited = doctors.filter(
+                (d) => !d.survey_invite_sent_at && d.email && d.survey_status !== "submitted"
+              );
+              if (neverInvited.length === 0 || !surveyDeadline) return null;
+              const label =
+                neverInvited.length === doctors.length
+                  ? `Send invites to all ${doctors.length} doctors`
+                  : `Send invites to ${neverInvited.length} doctor${neverInvited.length > 1 ? "s" : ""} not yet invited`;
+              return (
+                <div className="flex justify-end">
+                  <Popover open={bulkPopoverOpen} onOpenChange={setBulkPopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" size="sm" disabled={bulkSending} className="gap-1.5">
+                        {bulkSending
+                          ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          : <Send className="h-3.5 w-3.5" />}
+                        {bulkSending ? "Sending…" : label}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-72 pointer-events-auto" align="end" onOpenAutoFocus={(e) => e.preventDefault()}>
+                      <div className="space-y-3">
+                        <p className="text-sm font-medium">Send invites to {neverInvited.length} doctor{neverInvited.length > 1 ? "s" : ""}?</p>
+                        <p className="text-xs text-muted-foreground">Each doctor will receive an email with their personalised survey link.</p>
+                        <div className="flex gap-2 justify-end">
+                          <Button variant="ghost" size="sm" onClick={() => setBulkPopoverOpen(false)}>Cancel</Button>
+                          <Button size="sm" onClick={handleBulkSend}>Send all</Button>
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              );
+            })()}
 
+            {/* Sort controls */}
+            {doctors.length > 1 && (
+              <div className="flex items-center gap-2">
+                {/* Mobile: native select */}
+                <div className="sm:hidden flex-1">
+                  <select
+                    value={sortKey}
+                    onChange={(e) => setSortKey(e.target.value as SortKey)}
+                    className="w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm"
+                  >
+                    <option value="surname_asc">Sort: A–Z</option>
+                    <option value="surname_desc">Sort: Z–A</option>
+                    <option value="status">Sort: Status</option>
+                    <option value="grade">Sort: Grade</option>
+                  </select>
+                </div>
+                {/* Desktop: pills */}
+                <div className="hidden sm:flex items-center gap-1.5">
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <ArrowUpDown className="h-3 w-3" /> Sort:
+                  </span>
+                  {(["surname_asc", "surname_desc", "status", "grade"] as const).map((key) => {
+                    const labels: Record<SortKey, string> = {
+                      surname_asc: "A–Z",
+                      surname_desc: "Z–A",
+                      status: "Status",
+                      grade: "Grade",
+                    };
                     return (
-                      <TableRow key={doctor.id}>
-                        <TableCell className="font-medium">{doctor.first_name} {doctor.last_name}</TableCell>
-                        <TableCell className="text-muted-foreground">{doctor.email ?? "—"}</TableCell>
-                        <TableCell>{doctor.grade}</TableCell>
-                        <TableCell>{statusBadge(doctor)}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            {renderSendButton(doctor, sendState, isSending, isSuccess, "desktop")}
-                            {renderCopyButton(doctor, isCopied)}
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button variant="ghost" size="icon" onClick={() => doctor.survey_token && window.open(buildSurveyLink(doctor.survey_token), "_blank")} disabled={!doctor.survey_token}><ExternalLink className="h-4 w-4" /></Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Open survey in new tab</TooltipContent>
-                            </Tooltip>
-                            <Button variant="ghost" size="icon" onClick={() => doctor.survey_token && navigate(`/doctor/survey?token=${doctor.survey_token}&admin=true`)} disabled={!doctor.survey_token} className={doctor.survey_status === "submitted" ? "text-amber-600 hover:text-amber-700" : ""}><Pencil className="h-4 w-4" /></Button>
-                            <Popover open={removeDialogId === `desktop:${doctor.id}`} onOpenChange={(open) => setRemoveDialogId(open ? `desktop:${doctor.id}` : null)}>
-                              <PopoverTrigger asChild>
-                                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-56 pointer-events-auto" align="end" side="bottom" sideOffset={4} onOpenAutoFocus={(e) => e.preventDefault()}>
-                                <div className="space-y-2">
-                                  <p className="text-sm font-medium">Remove {doctor.first_name}?</p>
-                                  <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => deactivateDoctor(doctor.id)}>
-                                    Move to inactive
-                                  </Button>
-                                  <Button variant="destructive" size="sm" className="w-full justify-start" onClick={() => removeDoctor(doctor.id)}>
-                                    Delete permanently
-                                  </Button>
-                                </div>
-                              </PopoverContent>
-                            </Popover>
-                          </div>
-                        </TableCell>
-                      </TableRow>
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setSortKey(key)}
+                        className={`rounded-full px-2.5 py-0.5 text-xs font-medium border transition-colors ${
+                          sortKey === key
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-background text-muted-foreground border-border hover:border-primary/50"
+                        }`}
+                      >
+                        {labels[key]}
+                      </button>
                     );
                   })}
-                  {!loading && doctors.length === 0 && (
-                    <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">No doctors added yet.</TableCell></TableRow>
-                  )}
-                  {loading && (
-                    <TableRow><TableCell colSpan={5} className="text-center py-8"><Loader2 className="h-5 w-5 animate-spin mx-auto" /></TableCell></TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                </div>
+              </div>
+            )}
 
-            {/* Mobile card list */}
-            <div className="sm:hidden space-y-2">
+            {/* Unified doctor list */}
+            <div className="space-y-0 divide-y divide-border rounded-lg border border-border overflow-hidden">
               {loading && (
-                <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin" /></div>
+                <div className="flex justify-center py-8">
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                </div>
               )}
-              {!loading && doctors.length === 0 && (
-                <p className="text-center text-sm text-muted-foreground py-6">No doctors added yet.</p>
+              {!loading && sortedDoctors.length === 0 && (
+                <p className="text-center text-sm text-muted-foreground py-8">No doctors added yet.</p>
               )}
-              {doctors.map((doctor) => {
+              {sortedDoctors.map((doctor) => {
+                const isExpanded = expandedIds.has(doctor.id);
                 const sendState = getSendIconState(doctor);
                 const isSending = sendingId === doctor.id;
                 const isSuccess = successId === doctor.id;
                 const isCopied = copiedId === doctor.id;
 
                 return (
-                  <div key={doctor.id} className="rounded-lg border border-border p-3 space-y-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-card-foreground truncate">{doctor.first_name} {doctor.last_name}</p>
-                        <p className="text-xs text-muted-foreground truncate">{doctor.email ?? "No email"}</p>
-                      </div>
-                      {statusBadge(doctor)}
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">Grade: {doctor.grade}</span>
-                      <div className="flex items-center gap-0.5">
-                        {renderSendButton(doctor, sendState, isSending, isSuccess, "mobile")}
+                  <div key={doctor.id} className="bg-card">
+                    <div className="flex items-center gap-2 px-3 py-2.5 sm:px-4">
+                      {/* Name — clickable to expand */}
+                      <button
+                        type="button"
+                        onClick={() => toggleExpand(doctor.id)}
+                        className="flex items-center gap-1.5 min-w-0 flex-1 text-left"
+                      >
+                        {isExpanded ? <ChevronUp className="h-3.5 w-3.5 shrink-0 text-muted-foreground" /> : <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
+                        <span className="text-sm font-medium truncate">
+                          {doctor.last_name}, {doctor.first_name}
+                        </span>
+                      </button>
+                      {/* Email — large screens only */}
+                      <span className="hidden lg:block text-xs text-muted-foreground truncate max-w-[180px]">
+                        {doctor.email ?? "No email"}
+                      </span>
+                      {/* Grade — tablet and up */}
+                      <span className="hidden sm:block text-xs text-muted-foreground w-16 text-center truncate">
+                        {doctor.grade || "—"}
+                      </span>
+                      {/* Status badge */}
+                      <div className="shrink-0">{statusBadge(doctor)}</div>
+                      {/* Actions */}
+                      <div className="flex items-center gap-0.5 shrink-0">
+                        {renderSendButton(doctor, sendState, isSending, isSuccess, "unified")}
                         {renderCopyButton(doctor, isCopied)}
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span>
-                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => doctor.survey_token && window.open(buildSurveyLink(doctor.survey_token), "_blank")} disabled={!doctor.survey_token}>
-                                <ExternalLink className="h-3.5 w-3.5" />
-                              </Button>
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {doctor.survey_token ? "Open survey in new tab" : "Survey link not yet available — try refreshing"}
-                          </TooltipContent>
-                        </Tooltip>
+                        {/* Open in new tab — tablet/desktop only */}
+                        <span className="hidden sm:flex">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span>
+                                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => doctor.survey_token && window.open(buildSurveyLink(doctor.survey_token), "_blank")} disabled={!doctor.survey_token}>
+                                  <ExternalLink className="h-4 w-4" />
+                                </Button>
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {doctor.survey_token ? "Open survey in new tab" : "Survey link not yet available"}
+                            </TooltipContent>
+                          </Tooltip>
+                        </span>
+                        {/* Edit survey */}
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => doctor.survey_token && navigate(`/doctor/survey?token=${doctor.survey_token}&admin=true`)} disabled={!doctor.survey_token}>
-                          <Pencil className="h-3.5 w-3.5" />
+                          <Pencil className="h-4 w-4" />
                         </Button>
-                        <Popover open={removeDialogId === `mobile:${doctor.id}`} onOpenChange={(open) => setRemoveDialogId(open ? `mobile:${doctor.id}` : null)}>
+                        {/* Delete */}
+                        <Popover open={removeDialogId === doctor.id} onOpenChange={(open) => setRemoveDialogId(open ? doctor.id : null)}>
                           <PopoverTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive">
-                              <Trash2 className="h-3.5 w-3.5" />
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-56 pointer-events-auto" align="end" side="bottom" sideOffset={4} onOpenAutoFocus={(e) => e.preventDefault()}>
@@ -1202,6 +1401,19 @@ export default function Roster() {
                         </Popover>
                       </div>
                     </div>
+
+                    {/* Expanded panel */}
+                    {isExpanded && (
+                      <div className="border-t border-border bg-muted/30 px-3 py-3 sm:px-4">
+                        <ExpandedDoctorPanel
+                          doctorId={doctor.id}
+                          surveyData={surveyCache[doctor.id]}
+                          isLoading={surveyLoading[doctor.id] ?? false}
+                          invitedAt={doctor.survey_invite_sent_at}
+                          onNavigateProfile={() => navigate(`/admin/doctor/${doctor.id}`)}
+                        />
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -1213,6 +1425,7 @@ export default function Roster() {
         {inactiveDoctors.length > 0 && (
           <div className="rounded-xl border border-border bg-card shadow-sm">
             <button
+              type="button"
               className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
               onClick={() => setInactiveSectionOpen(v => !v)}
             >
