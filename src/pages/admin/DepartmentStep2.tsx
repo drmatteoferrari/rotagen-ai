@@ -382,9 +382,8 @@ function ExpandedCard({
 
       {/* ROW 5 — Badges: flex-wrap, no horizontal scroll */}
       <div className="space-y-2">
-        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Badges (auto-detected · click to override)
-        </Label>
+        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Badges</Label>
+        <p className="text-[10px] text-muted-foreground mt-0.5">Auto-detected · click to override · ✏️ = manually set</p>
         <div className="flex flex-wrap gap-1.5">
           {BADGE_DEFS.map(({ key, label, emoji, activeClasses }) => {
             const auto = detectBadges(draft.startTime, draft.endTime, draft.applicableDays, draft.isOncall, draft.isNonRes);
