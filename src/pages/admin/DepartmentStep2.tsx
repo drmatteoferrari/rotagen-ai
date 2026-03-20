@@ -446,7 +446,7 @@ function ExpandedCard({
                 update({ staffing: { ...draft.staffing, target: val, max: newMax } });
               }}
             />
-            <p className="text-xs text-muted-foreground">Algorithm aims for exactly this</p>
+            <p className="text-xs text-muted-foreground">Algorithm targets this</p>
           </div>
 
           <div className="space-y-1.5">
