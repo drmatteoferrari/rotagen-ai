@@ -13,6 +13,15 @@ export interface PreRotaInput {
     totalDays: number;
     totalWeeks: number;
     bankHolidayDates: string[];
+    bhSameAsWeekend: boolean | null;
+    bhShiftRules: Array<{
+      shift_key: string;
+      name: string;
+      start_time: string;
+      end_time: string;
+      target_doctors: number;
+      included: boolean;
+    }> | null;
   };
   shiftSlots: Array<{
     shiftId: string;
