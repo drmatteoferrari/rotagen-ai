@@ -230,6 +230,7 @@ function ExpandedCard({
     abbreviation: originalShift.abbreviation,
   });
   const [abbrevManuallyEdited, setAbbrevManuallyEdited] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const recalc = useCallback((d: ShiftType): ShiftType => {
     const dur = calcDurationHours(d.startTime, d.endTime);

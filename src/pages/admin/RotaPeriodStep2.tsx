@@ -463,8 +463,8 @@ export default function RotaPeriodStep2() {
             <ArrowLeft className="mr-2 h-4 w-4" />Back
           </Button>
           <Button size="lg" disabled={saving} onClick={handleSave} className="bg-amber-600 hover:bg-amber-700">
-            {saving ? "Saving…" : "Save Rota Period"}
-            {!saving && <Save className="ml-2 h-4 w-4" />}
+            {saving ? "Saving…" : "Save & Continue"}
+            {!saving && <ArrowRight className="ml-2 h-4 w-4" />}
           </Button>
         </div>
       </div>

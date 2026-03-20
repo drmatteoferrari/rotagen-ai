@@ -104,7 +104,7 @@ export default function RotaPeriodStep1() {
               <CalendarDays className="h-5 w-5 text-amber-600" />
               Rota Dates
             </CardTitle>
-            <CardDescription>Click to select a start date, then click again for the end date.</CardDescription>
+            
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Hint text */}
