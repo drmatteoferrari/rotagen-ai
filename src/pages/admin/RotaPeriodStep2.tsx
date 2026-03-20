@@ -301,7 +301,7 @@ export default function RotaPeriodStep2() {
                   <div
                     key={holiday.id}
                     className={cn(
-                      "rounded-lg border border-border p-4 flex items-center justify-between transition-opacity",
+                      "rounded-lg border border-border p-2.5 flex items-center justify-between transition-opacity",
                       !holiday.isActive && "opacity-50"
                     )}
                   >
