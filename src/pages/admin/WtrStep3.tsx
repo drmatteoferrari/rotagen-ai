@@ -160,7 +160,7 @@ export default function WtrStep3() {
           <Button variant="outline" size="lg" onClick={() => navigate("/admin/wtr/step-2")}>
             <ArrowLeft className="mr-2 h-4 w-4" />Back
           </Button>
-          <Button size="lg" onClick={() => navigate("/admin/wtr/step-3")} className="bg-red-600 hover:bg-red-700">
+          <Button size="lg" onClick={() => navigate("/admin/wtr/step-4")} className="bg-red-600 hover:bg-red-700">
             Continue
             <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
