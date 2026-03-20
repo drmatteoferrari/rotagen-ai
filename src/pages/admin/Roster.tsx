@@ -311,6 +311,15 @@ export default function Roster() {
   const submitted = doctors.filter((d) => d.survey_status === "submitted").length;
   const inProgress = doctors.filter((d) => d.survey_status === "in_progress").length;
   const notStarted = doctors.filter((d) => !["submitted", "in_progress"].includes(d.survey_status)).length;
+  const progressPct = doctors.length > 0 ? Math.round((submitted / doctors.length) * 100) : 0;
+
+  const deadlineIsPast = surveyDeadline
+    ? (() => {
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        const dl = new Date(surveyDeadline); dl.setHours(0, 0, 0, 0);
+        return dl < today;
+      })()
+    : false;
 
   // SECTION 7 — Status badge
   const statusBadge = (doctor: Doctor) => {
