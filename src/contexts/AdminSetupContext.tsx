@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode, type Dispatch, type SetStateAction } from "react";
 import { useRotaContext } from "@/contexts/RotaContext";
 import type { RotaConfig } from "@/lib/rotaConfig";
 
