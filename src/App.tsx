@@ -102,6 +102,7 @@ const App = () => (
             <Route path="/admin/pre-rota-calendar" element={<PreRotaCalendarPage />} />
             <Route path="/admin/pre-rota-targets" element={<PreRotaTargetsPage />} />
             <Route path="/admin/survey-override/:doctorId/:step" element={<SurveyOverride />} />
+            <Route path="/admin/doctor/:doctorId" element={<DoctorProfile />} />
           </Route>
           {/* Doctor survey — token-based, no auth required */}
           <Route path="/doctor/survey" element={<Survey />} />
