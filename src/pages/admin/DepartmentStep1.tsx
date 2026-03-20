@@ -91,7 +91,6 @@ export default function DepartmentStep1New() {
               <Building2 className="h-5 w-5 text-purple-600" />
               Department Details
             </CardTitle>
-            <CardDescription>Your department and hospital name for rota outputs and emails.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {loading ? (
