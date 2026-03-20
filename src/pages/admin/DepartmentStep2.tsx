@@ -946,32 +946,33 @@ export default function DepartmentStep2() {
               )}
 
               <div className="space-y-4">
-                {shifts.map((shift, index) =>
-                  expandedShiftId === shift.id ? (
-                    <ExpandedCard
-                      key={`${shift.id}-${Object.values(shift.applicableDays).join("")}-${shift.staffing.min}-${shift.staffing.target}-${shift.staffing.max ?? "x"}`}
-                      shift={shift}
-                      index={index}
-                      onSave={handleSaveCard}
-                      onCancel={(original) => {
-                        setShifts(prev => prev.map(s => s.id === original.id ? original : s));
-                        setExpandedShiftId(null);
-                      }}
-                      onDraftChange={(updated) => setShifts(prev => prev.map(s => s.id === updated.id ? updated : s))}
-                      onRemove={() => { removeShift(shift.id); setExpandedShiftId(null); }}
-                      canRemove={shifts.length > 1}
-                    />
-                  ) : (
-                    <CollapsedCard
-                      key={shift.id}
-                      shift={shift}
-                      index={index}
-                      onExpand={() => setExpandedShiftId(shift.id)}
-                      onRemove={() => removeShift(shift.id)}
-                      canRemove={shifts.length > 1}
-                    />
-                  )
-                )}
+                {shifts.map((shift, index) => (
+                  <div key={shift.id} id={`shift-card-${shift.id}`}>
+                    {expandedShiftId === shift.id ? (
+                      <ExpandedCard
+                        key={`${shift.id}-${Object.values(shift.applicableDays).join("")}-${shift.staffing.min}-${shift.staffing.target}-${shift.staffing.max ?? "x"}`}
+                        shift={shift}
+                        index={index}
+                        onSave={handleSaveCard}
+                        onCancel={(original) => {
+                          setShifts(prev => prev.map(s => s.id === original.id ? original : s));
+                          setExpandedShiftId(null);
+                        }}
+                        onDraftChange={(updated) => setShifts(prev => prev.map(s => s.id === updated.id ? updated : s))}
+                        onRemove={() => { removeShift(shift.id); setExpandedShiftId(null); }}
+                        canRemove={shifts.length > 1}
+                      />
+                    ) : (
+                      <CollapsedCard
+                        shift={shift}
+                        index={index}
+                        onExpand={() => setExpandedShiftId(shift.id)}
+                        onRemove={() => removeShift(shift.id)}
+                        canRemove={shifts.length > 1}
+                      />
+                    )}
+                  </div>
+                ))}
               </div>
 
               <button
