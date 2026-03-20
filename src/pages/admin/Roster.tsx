@@ -1167,6 +1167,18 @@ export default function Roster() {
                       <div className="flex items-center gap-0.5">
                         {renderSendButton(doctor, sendState, isSending, isSuccess, "mobile")}
                         {renderCopyButton(doctor, isCopied)}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => doctor.survey_token && window.open(buildSurveyLink(doctor.survey_token), "_blank")} disabled={!doctor.survey_token}>
+                                <ExternalLink className="h-3.5 w-3.5" />
+                              </Button>
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {doctor.survey_token ? "Open survey in new tab" : "Survey link not yet available — try refreshing"}
+                          </TooltipContent>
+                        </Tooltip>
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => doctor.survey_token && navigate(`/doctor/survey?token=${doctor.survey_token}&admin=true`)} disabled={!doctor.survey_token}>
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
