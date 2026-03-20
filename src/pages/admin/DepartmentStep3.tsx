@@ -606,7 +606,7 @@ export default function DepartmentStep3() {
                               const color = getShiftColor(idx);
                               const pct = Math.round(activeOncallPcts[shift.id] ?? 0);
                               return (
-                                <span key={shift.id} className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-medium ${color.bg} ${color.text}`}>
+                                <span key={shift.id} className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[11px] font-medium border ${color.bg} ${color.text} ${color.border}`}>
                                   {shift.abbreviation}
                                   <span className="font-bold">{pct}%</span>
                                 </span>
