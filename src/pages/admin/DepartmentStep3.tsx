@@ -483,7 +483,7 @@ export default function DepartmentStep3() {
             <div key={shift.id} className="rounded-xl border bg-card p-4 space-y-2" style={{ borderLeftWidth: 4, borderLeftColor: color.solid }}>
               {/* Identity row */}
               <div className="flex flex-wrap items-center gap-2">
-                <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-bold ${color.bg} ${color.text}`}>
+                <span className={`inline-flex items-center rounded-full px-2 py-0.5 font-mono text-xs font-bold border ${color.bg} ${color.text} ${color.border}`}>
                   {shift.abbreviation}
                 </span>
                 <span className="text-sm font-medium">{shift.name}</span>
