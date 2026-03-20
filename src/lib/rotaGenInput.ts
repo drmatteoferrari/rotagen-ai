@@ -46,15 +46,19 @@ export interface PreRotaInput {
   wtrConstraints: {
     maxAvgHoursPerWeek: number;
     maxHoursIn168h: number;
+    maxShiftLengthH: number;
+    minInterShiftRestH: number;
     maxConsecutive: {
       standard: number;
       long: number;
       nights: number;
+      longEvening: number;
     };
     minRestHoursAfter: {
       nights: number;
       longShifts: number;
       standardShifts: number;
+      longEveningShifts: number;
     };
     weekendFrequencyMax: number;
     oncall: {
@@ -67,6 +71,8 @@ export interface PreRotaInput {
       continuousRestEnd: string;
       ifRestNotMetNextDayMaxHours: number;
       noSimultaneousShift: boolean;
+      noConsecExceptWknd: boolean;
+      dayAfterLastConsecMaxH: number;
     };
   };
   distributionTargets: {
