@@ -100,38 +100,34 @@ export default function DepartmentStep1New() {
             ) : (
               <>
                 {/* Department Name */}
-                <div className="rounded-lg border border-border p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium text-card-foreground">Department Name</span>
-                    <span className="text-xs text-muted-foreground">Used on rota outputs and survey emails</span>
-                    <span className="text-[11px] font-semibold text-purple-600 mt-0.5">Required</span>
-                  </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium text-card-foreground">
+                    Department Name <span className="text-[11px] font-semibold text-purple-600 ml-1">Required</span>
+                  </label>
                   <Input
                     placeholder="e.g. Anaesthetics"
                     value={deptName}
                     onChange={(e) => { setDeptName(e.target.value.slice(0, 100)); setDeptError(""); }}
                     maxLength={100}
-                    className="w-full sm:w-[220px]"
+                    className="min-h-[44px]"
                   />
+                  {deptError && <p className="text-xs text-destructive">{deptError}</p>}
                 </div>
-                {deptError && <p className="text-xs text-destructive">{deptError}</p>}
 
                 {/* Hospital / Trust Name */}
-                <div className="rounded-lg border border-border p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium text-card-foreground">Hospital or Trust</span>
-                    <span className="text-xs text-muted-foreground">Full name of the hospital or NHS trust</span>
-                    <span className="text-[11px] font-semibold text-purple-600 mt-0.5">Required</span>
-                  </div>
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-medium text-card-foreground">
+                    Hospital or Trust <span className="text-[11px] font-semibold text-purple-600 ml-1">Required</span>
+                  </label>
                   <Input
                     placeholder="e.g. Manchester University NHS Foundation Trust"
                     value={trustName}
                     onChange={(e) => { setTrustName(e.target.value.slice(0, 100)); setTrustError(""); }}
                     maxLength={100}
-                    className="w-full sm:w-[220px]"
+                    className="min-h-[44px]"
                   />
+                  {trustError && <p className="text-xs text-destructive">{trustError}</p>}
                 </div>
-                {trustError && <p className="text-xs text-destructive">{trustError}</p>}
 
                 {/* Confirmation row */}
                 {bothFilled && (
