@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { GRADE_OPTIONS } from "@/lib/gradeOptions";
 
 // SECTION 8 — Admin edit slide-over panel
 
@@ -77,6 +78,25 @@ export function SurveyResponsePanel({ doctor, open, onClose, onSaved }: SurveyRe
           { onConflict: "doctor_id,rota_config_id" }
         );
       if (error) throw error;
+
+      // Sync identity fields back to doctors table (single source of truth)
+      const fullName: string = data.full_name ?? "";
+      const nameParts = fullName.trim().split(/\s+/);
+      const syncFirst = nameParts[0] ?? "";
+      const syncLast = nameParts.slice(1).join(" ");
+      const { error: docSyncErr } = await supabase
+        .from("doctors")
+        .update({
+          first_name: syncFirst || doctor.first_name,
+          last_name: syncLast || doctor.last_name,
+          email: (data.nhs_email as string | null) || doctor.email,
+          grade: (data.grade as string | null) || doctor.grade,
+        })
+        .eq("id", doctor.id);
+      if (docSyncErr) {
+        console.error("Failed to sync doctors table:", docSyncErr);
+      }
+
       toast.success(`✓ ${doctor.first_name} ${doctor.last_name}'s responses saved`);
       onSaved();
       onClose();
@@ -106,6 +126,10 @@ export function SurveyResponsePanel({ doctor, open, onClose, onSaved }: SurveyRe
               <Badge className={statusColor}>{doctor.survey_status}</Badge>
             </div>
           )}
+          <div className="flex items-center gap-2 text-xs text-amber-700 text-left mt-2">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0" />
+            Changes here update both the survey record and the doctor's profile.
+          </div>
         </SheetHeader>
 
         {loading ? (
@@ -128,7 +152,16 @@ export function SurveyResponsePanel({ doctor, open, onClose, onSaved }: SurveyRe
                 </div>
                 <div>
                   <label className="text-xs font-medium text-muted-foreground">Grade</label>
-                  <Input value={data.grade ?? ""} onChange={(e) => setField("grade", e.target.value)} />
+                  <select
+                    value={data.grade ?? ""}
+                    onChange={(e) => setField("grade", e.target.value)}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    <option value="">Select grade</option>
+                    {GRADE_OPTIONS.map((g) => (
+                      <option key={g} value={g}>{g}</option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="text-xs font-medium text-muted-foreground">Specialty</label>
