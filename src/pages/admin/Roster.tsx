@@ -1005,35 +1005,57 @@ export default function Roster() {
                 <CardTitle className="text-base sm:text-lg">Team Roster</CardTitle>
                 <CardDescription className="text-xs sm:text-sm">Add doctors and track survey progress.</CardDescription>
               </div>
-              {/* Inline summary stats */}
-              <div className="flex items-center gap-3 sm:gap-4">
-                <div className="flex items-center gap-1.5">
-                  <div className="flex h-6 w-6 items-center justify-center rounded bg-primary/10">
-                    <Users className="h-3.5 w-3.5 text-primary" />
+              {/* Inline summary stats + progress */}
+              <div className="w-full sm:w-auto space-y-2">
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <div className="flex items-center gap-1.5">
+                    <div className="flex h-6 w-6 items-center justify-center rounded bg-primary/10">
+                      <Users className="h-3.5 w-3.5 text-primary" />
+                    </div>
+                    <div className="leading-tight">
+                      <p className="text-sm font-bold text-card-foreground">{doctors.length}</p>
+                      <p className="text-[10px] text-muted-foreground">Total</p>
+                    </div>
                   </div>
-                  <div className="leading-tight">
-                    <p className="text-sm font-bold text-card-foreground">{doctors.length}</p>
-                    <p className="text-[10px] text-muted-foreground">Total</p>
+                  <div className="flex items-center gap-1.5">
+                    <div className="flex h-6 w-6 items-center justify-center rounded bg-emerald-500/10">
+                      <Check className="h-3.5 w-3.5 text-emerald-500" />
+                    </div>
+                    <div className="leading-tight">
+                      <p className="text-sm font-bold text-card-foreground">{submitted}</p>
+                      <p className="text-[10px] text-muted-foreground">Submitted</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="flex h-6 w-6 items-center justify-center rounded bg-amber-500/10">
+                      <Pencil className="h-3.5 w-3.5 text-amber-500" />
+                    </div>
+                    <div className="leading-tight">
+                      <p className="text-sm font-bold text-card-foreground">{inProgress}</p>
+                      <p className="text-[10px] text-muted-foreground">In progress</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="flex h-6 w-6 items-center justify-center rounded bg-muted">
+                      <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                    </div>
+                    <div className="leading-tight">
+                      <p className="text-sm font-bold text-card-foreground">{notStarted}</p>
+                      <p className="text-[10px] text-muted-foreground">Not started</p>
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="flex h-6 w-6 items-center justify-center rounded bg-emerald-500/10">
-                    <Check className="h-3.5 w-3.5 text-emerald-500" />
+                {doctors.length > 0 && (
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-muted-foreground">Survey completion</span>
+                      <span className="text-[10px] font-semibold text-card-foreground">{progressPct}%</span>
+                    </div>
+                    <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                      <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${progressPct}%` }} />
+                    </div>
                   </div>
-                  <div className="leading-tight">
-                    <p className="text-sm font-bold text-card-foreground">{submitted}</p>
-                    <p className="text-[10px] text-muted-foreground">Done</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="flex h-6 w-6 items-center justify-center rounded bg-amber-500/10">
-                    <Pencil className="h-3.5 w-3.5 text-amber-500" />
-                  </div>
-                  <div className="leading-tight">
-                    <p className="text-sm font-bold text-card-foreground">{inProgress}</p>
-                    <p className="text-[10px] text-muted-foreground">WIP</p>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
           </CardHeader>
