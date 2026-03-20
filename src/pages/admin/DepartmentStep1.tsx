@@ -130,12 +130,6 @@ export default function DepartmentStep1New() {
                 </div>
 
                 {/* Confirmation row */}
-                {bothFilled && (
-                  <div className="flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-xs text-green-700 mt-2">
-                    <CheckCircle2 className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-                    Department details saved — will appear on all outputs.
-                  </div>
-                )}
               </>
             )}
           </CardContent>
