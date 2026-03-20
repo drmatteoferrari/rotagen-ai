@@ -102,12 +102,12 @@ export function generateAbbreviation(name: string): string {
 }
 
 export const SHIFT_COLORS = [
-  { bg: "bg-purple-100", text: "text-purple-700", border: "border-purple-300", solid: "#9333ea" },
-  { bg: "bg-teal-100",   text: "text-teal-700",   border: "border-teal-300",   solid: "#0d9488" },
-  { bg: "bg-amber-100",  text: "text-amber-700",  border: "border-amber-300",  solid: "#d97706" },
-  { bg: "bg-rose-100",   text: "text-rose-700",   border: "border-rose-300",   solid: "#e11d48" },
-  { bg: "bg-blue-100",   text: "text-blue-700",   border: "border-blue-300",   solid: "#2563eb" },
-  { bg: "bg-green-100",  text: "text-green-700",  border: "border-green-300",  solid: "#16a34a" },
+  { bg: "bg-purple-600", text: "text-white", border: "border-purple-700", solid: "#9333ea" },
+  { bg: "bg-teal-600",   text: "text-white", border: "border-teal-700",   solid: "#0d9488" },
+  { bg: "bg-amber-500",  text: "text-white", border: "border-amber-600",  solid: "#d97706" },
+  { bg: "bg-rose-600",   text: "text-white", border: "border-rose-700",   solid: "#e11d48" },
+  { bg: "bg-blue-600",   text: "text-white", border: "border-blue-700",   solid: "#2563eb" },
+  { bg: "bg-green-600",  text: "text-white", border: "border-green-700",  solid: "#16a34a" },
 ] as const;
 
 export function getShiftColor(index: number) {
