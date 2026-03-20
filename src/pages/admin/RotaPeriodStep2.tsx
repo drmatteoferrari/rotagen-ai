@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
-import { CalendarCheck, CalendarIcon, Plus, Trash2, ArrowLeft, Save, Info, RotateCcw } from "lucide-react";
+import { CalendarCheck, CalendarIcon, Plus, Trash2, ArrowLeft, ArrowRight, Save, Info, RotateCcw } from "lucide-react";
 import { format, isWithinInterval, differenceInDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useAdminSetup, type BankHolidayEntry, type BhShiftRule } from "@/contexts/AdminSetupContext";
