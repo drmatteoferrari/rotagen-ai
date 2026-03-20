@@ -26,6 +26,7 @@ import WtrStep1 from "./pages/admin/WtrStep1";
 import WtrStep2 from "./pages/admin/WtrStep2";
 import WtrStep3 from "./pages/admin/WtrStep3";
 import WtrStep4 from "./pages/admin/WtrStep4";
+import WtrStep5 from "./pages/admin/WtrStep5";
 import Survey from "./pages/doctor/Survey";
 import SurveyOverride from "./pages/admin/SurveyOverride";
 import Audit from "./pages/Audit";

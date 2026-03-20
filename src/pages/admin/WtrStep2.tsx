@@ -19,7 +19,21 @@ function ConsecWarning({ value, max, label }: { value: number; max: number; labe
   return (
     <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 mt-2">
       <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-      ⚠️ WTR WARNING: Exceeding {max} consecutive {label} may breach Working Time Regulations.
+      WTR WARNING: Exceeding {max} consecutive {label} may breach Working Time Regulations.
+    </div>
+  );
+}
+
+function Stepper({ value, onDec, onInc }: { value: number; onDec: () => void; onInc: () => void }) {
+  return (
+    <div className="flex items-center gap-3 bg-muted p-1.5 rounded-lg border border-border shrink-0">
+      <button className="w-8 h-8 flex items-center justify-center rounded-md bg-card shadow-sm text-muted-foreground hover:text-red-600 transition-all" onClick={onDec}>
+        <Minus className="h-4 w-4" />
+      </button>
+      <span className="w-8 text-center text-lg font-bold text-card-foreground">{value}</span>
+      <button className="w-8 h-8 flex items-center justify-center rounded-md bg-card shadow-sm text-muted-foreground hover:text-red-600 transition-all" onClick={onInc}>
+        <Plus className="h-4 w-4" />
+      </button>
     </div>
   );
 }
@@ -72,11 +86,11 @@ export default function WtrStep2() {
   ];
 
   return (
-    <AdminLayout title="Working Time Regulations" subtitle="Step 2 of 4 — Consecutive Limits" accentColor="red">
+    <AdminLayout title="Working Time Regulations" subtitle="Step 2 of 5 — Consecutive Limits" accentColor="red">
       <div className="mx-auto max-w-3xl space-y-6 animate-fadeSlideUp">
         <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700">
           <Info className="h-4 w-4 shrink-0 text-red-600" />
-          Configure limits for consecutive work days to ensure staff safety and WTR compliance.
+          Set limits for consecutive work patterns.
         </div>
 
         <Card>
@@ -90,8 +104,8 @@ export default function WtrStep2() {
           <CardContent className="space-y-4">
             {limits.map((item) => (
               <div key={item.label}>
-                <div className="rounded-lg border border-border p-4 flex items-center justify-between">
-                  <div className="flex flex-col">
+                <div className="rounded-lg border border-border p-4 flex items-center justify-between gap-4">
+                  <div className="flex flex-col flex-1 min-w-0">
                     <span className="text-sm font-medium text-card-foreground">{item.label}</span>
                     <span className="text-xs text-muted-foreground">{item.sub}</span>
                     {"extraNote" in item && item.extraNote && (
@@ -99,21 +113,11 @@ export default function WtrStep2() {
                     )}
                     <span className="text-[11px] font-semibold text-red-600 mt-0.5">{item.hint}</span>
                   </div>
-                  <div className="flex items-center gap-3 bg-muted p-1.5 rounded-lg border border-border">
-                    <button
-                      className="w-8 h-8 flex items-center justify-center rounded-md bg-card shadow-sm text-muted-foreground hover:text-red-600 transition-all"
-                      onClick={() => item.set(Math.max(1, item.value - 1))}
-                    >
-                      <Minus className="h-4 w-4" />
-                    </button>
-                    <span className="w-8 text-center text-lg font-bold text-card-foreground">{item.value}</span>
-                    <button
-                      className="w-8 h-8 flex items-center justify-center rounded-md bg-card shadow-sm text-muted-foreground hover:text-red-600 transition-all"
-                      onClick={() => item.set(item.value + 1)}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </button>
-                  </div>
+                  <Stepper
+                    value={item.value}
+                    onDec={() => item.set(Math.max(1, item.value - 1))}
+                    onInc={() => item.set(item.value + 1)}
+                  />
                 </div>
                 <ConsecWarning value={item.value} max={item.max} label={item.type} />
               </div>

@@ -19,7 +19,21 @@ function MinWarning({ value, min, label }: { value: number; min: number; label: 
   return (
     <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 mt-2">
       <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-      ⚠️ WTR WARNING: {label} must be at least {min} hrs. Setting below this may breach Working Time Regulations.
+      WTR WARNING: {label} must be at least {min} hrs. Setting below this may breach Working Time Regulations.
+    </div>
+  );
+}
+
+function Stepper({ value, onDec, onInc }: { value: number; onDec: () => void; onInc: () => void }) {
+  return (
+    <div className="flex items-center gap-3 bg-muted p-1.5 rounded-lg border border-border shrink-0">
+      <button className="w-8 h-8 flex items-center justify-center rounded-md bg-card shadow-sm text-muted-foreground hover:text-red-600 transition-all" onClick={onDec}>
+        <Minus className="h-4 w-4" />
+      </button>
+      <span className="w-8 text-center text-lg font-bold text-card-foreground">{value}</span>
+      <button className="w-8 h-8 flex items-center justify-center rounded-md bg-card shadow-sm text-muted-foreground hover:text-red-600 transition-all" onClick={onInc}>
+        <Plus className="h-4 w-4" />
+      </button>
     </div>
   );
 }
@@ -71,11 +85,11 @@ export default function WtrStep3() {
   ];
 
   return (
-    <AdminLayout title="Working Time Regulations" subtitle="Step 3 of 4 — Rest Periods & Weekend" accentColor="red">
+    <AdminLayout title="Working Time Regulations" subtitle="Step 3 of 5 — Rest Periods & Weekend" accentColor="red">
       <div className="mx-auto max-w-3xl space-y-6 animate-fadeSlideUp">
         <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700">
           <Info className="h-4 w-4 shrink-0 text-red-600" />
-          Configure mandatory rest periods and weekend working frequency according to regulations.
+          Set mandatory rest periods and weekend frequency.
         </div>
 
         <Card>
@@ -90,27 +104,17 @@ export default function WtrStep3() {
             <h3 className="text-sm font-semibold text-card-foreground">Rest Requirements</h3>
             {restFields.map((field) => (
               <div key={field.label}>
-                <div className="rounded-lg border border-border p-4 flex items-center justify-between">
-                  <div className="flex flex-col">
+                <div className="rounded-lg border border-border p-4 flex items-center justify-between gap-4">
+                  <div className="flex flex-col flex-1 min-w-0">
                     <span className="text-sm font-medium text-card-foreground">{field.label}</span>
                     <span className="text-xs text-muted-foreground">{field.sub}</span>
                     <span className="text-[11px] font-semibold text-red-600 mt-0.5">{field.hint}</span>
                   </div>
-                  <div className="flex items-center gap-3 bg-muted p-1.5 rounded-lg border border-border">
-                    <button
-                      className="w-8 h-8 flex items-center justify-center rounded-md bg-card shadow-sm text-muted-foreground hover:text-red-600 transition-all"
-                      onClick={() => field.set(Math.max(1, field.value - 1))}
-                    >
-                      <Minus className="h-4 w-4" />
-                    </button>
-                    <span className="w-8 text-center text-lg font-bold text-card-foreground">{field.value}</span>
-                    <button
-                      className="w-8 h-8 flex items-center justify-center rounded-md bg-card shadow-sm text-muted-foreground hover:text-red-600 transition-all"
-                      onClick={() => field.set(field.value + 1)}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </button>
-                  </div>
+                  <Stepper
+                    value={field.value}
+                    onDec={() => field.set(Math.max(1, field.value - 1))}
+                    onInc={() => field.set(field.value + 1)}
+                  />
                 </div>
                 <MinWarning value={field.value} min={field.min} label={field.warnLabel} />
               </div>
@@ -118,32 +122,22 @@ export default function WtrStep3() {
 
             <h3 className="text-sm font-semibold text-card-foreground pt-2">Max Weekend Frequency</h3>
             <div>
-              <div className="rounded-lg border border-border p-4 flex items-center justify-between">
-                <div className="flex flex-col">
+              <div className="rounded-lg border border-border p-4 flex items-center justify-between gap-4">
+                <div className="flex flex-col flex-1 min-w-0">
                   <span className="text-sm font-medium text-card-foreground">Weekend frequency: 1 in</span>
                   <span className="text-xs text-muted-foreground">Maximum weekend working ratio</span>
                   <span className="text-[11px] font-semibold text-red-600 mt-0.5">WTR advised: 1 in 3 or less frequent</span>
                 </div>
-                <div className="flex items-center gap-3 bg-muted p-1.5 rounded-lg border border-border">
-                  <button
-                    className="w-8 h-8 flex items-center justify-center rounded-md bg-card shadow-sm text-muted-foreground hover:text-red-600 transition-all"
-                    onClick={() => setWeekendFreq(Math.max(2, weekendFreq - 1))}
-                  >
-                    <Minus className="h-4 w-4" />
-                  </button>
-                  <span className="w-8 text-center text-lg font-bold text-card-foreground">{weekendFreq}</span>
-                  <button
-                    className="w-8 h-8 flex items-center justify-center rounded-md bg-card shadow-sm text-muted-foreground hover:text-red-600 transition-all"
-                    onClick={() => setWeekendFreq(weekendFreq + 1)}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </button>
-                </div>
+                <Stepper
+                  value={weekendFreq}
+                  onDec={() => setWeekendFreq(Math.max(2, weekendFreq - 1))}
+                  onInc={() => setWeekendFreq(weekendFreq + 1)}
+                />
               </div>
               {weekendFreq === 2 && (
                 <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700 mt-2">
                   <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-                  ⚠️ AUTHORISATION REQUIRED: 1 in 2 weekends requires authorisation from the Clinical Director and Guardian of Safe Working Hours.
+                  AUTHORISATION REQUIRED: 1 in 2 weekends requires authorisation from the Clinical Director and Guardian of Safe Working Hours.
                 </div>
               )}
               {weekendFreq >= 3 && (
