@@ -21,7 +21,13 @@ export function ResetModal({ open, onClose }: ResetModalProps) {
   const navigate = useNavigate();
   const { currentRotaConfigId } = useRotaContext();
   const { resetDepartment: resetDepartmentContext } = useDepartmentSetup();
-  const { resetWtr: resetWtrContext, setDepartmentComplete, setPeriodComplete, setRotaStartDate, setRotaEndDate } = useAdminSetup();
+  const {
+    resetWtr: resetWtrContext,
+    setDepartmentComplete, setPeriodComplete,
+    setRotaStartDate, setRotaEndDate,
+    setRotaBankHolidays, setBhSameAsWeekend,
+    setBhShiftRules, setPeriodWorkingStateLoaded,
+  } = useAdminSetup();
   const { invalidateDoctors, invalidateInactiveDoctors } = useInvalidateQuery();
 
   const [step, setStep] = useState<1 | 2>(1);
