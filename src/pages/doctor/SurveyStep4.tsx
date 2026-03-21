@@ -1,5 +1,4 @@
-// SECTION 1 COMPLETE
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useSurveyContext, type LeaveEntry, type RotationEntry } from "@/contexts/SurveyContext";
 import { StepNav } from "@/components/survey/StepNav";
 import { SurveySection } from "@/components/survey/SurveySection";
@@ -7,8 +6,9 @@ import { FieldError } from "@/components/survey/FieldError";
 import { InfoBox } from "@/components/survey/InfoBox";
 import { DateRangePicker } from "@/components/survey/DateRangePicker";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Trash2, CalendarX, Info } from "lucide-react";
+import { eachDayOfInterval, parseISO } from "date-fns";
 
 function genId() { return crypto.randomUUID(); }
 
@@ -105,15 +105,41 @@ export default function SurveyStep4() {
   const rs = rotaInfo?.startDate || undefined;
   const re = rotaInfo?.endDate || undefined;
   const dw = rotaInfo?.durationWeeks || 0;
-  const effectiveWte = formData.wtePercent === 0 ? (formData.wteOtherValue || 100) : formData.wtePercent;
+  const effectiveWte = (formData.wtePercent === 0 ? formData.wteOtherValue : formData.wtePercent) ?? 100;
 
-  const proRata = formData.alEntitlement ? Math.round((dw / 52) * formData.alEntitlement * (effectiveWte / 100)) : null;
+  const proRata = formData.alEntitlement ? Math.round(formData.alEntitlement * (dw / 52) * (effectiveWte / 100)) : null;
   const alTotalDays = formData.annualLeave.reduce((sum, e) => {
     if (e.startDate && e.endDate && e.endDate >= e.startDate) {
       return sum + Math.ceil((new Date(e.endDate).getTime() - new Date(e.startDate).getTime()) / 86400000) + 1;
     }
     return sum;
   }, 0);
+
+  // Overlap detection
+  const hasOverlap = useMemo(() => {
+    const allEntries = [
+      ...formData.annualLeave,
+      ...formData.studyLeave,
+      ...formData.nocDates,
+      ...formData.rotations.map((r) => ({ startDate: r.startDate, endDate: r.endDate })),
+    ].filter((e) => e.startDate && e.endDate);
+
+    if (allEntries.length < 2) return false;
+
+    const intervals = allEntries.map((e) => {
+      try {
+        return eachDayOfInterval({ start: parseISO(e.startDate), end: parseISO(e.endDate) }).map((d) => d.getTime());
+      } catch { return []; }
+    });
+
+    for (let i = 0; i < intervals.length; i++) {
+      const setA = new Set(intervals[i]);
+      for (let j = i + 1; j < intervals.length; j++) {
+        if (intervals[j].some((d) => setA.has(d))) return true;
+      }
+    }
+    return false;
+  }, [formData.annualLeave, formData.studyLeave, formData.nocDates, formData.rotations]);
 
   const updateEntry = <T extends LeaveEntry | RotationEntry>(arr: T[], idx: number, updated: T, key: keyof typeof formData) => {
     const newArr = [...arr];
@@ -128,6 +154,15 @@ export default function SurveyStep4() {
   const validate = (): boolean => {
     const allErrors: Record<string, Record<string, string>> = {};
     let valid = true;
+
+    if (formData.alEntitlement === null) {
+      allErrors["al_entitlement"] = { entitlement: "Please select your annual leave entitlement" };
+      valid = false;
+    } else if (formData.alEntitlement !== 27 && formData.alEntitlement !== 32) {
+      allErrors["al_entitlement"] = { entitlement: "Entitlement must be 27 or 32 days" };
+      valid = false;
+    }
+
     formData.annualLeave.forEach((e, i) => {
       if (e.startDate || e.endDate) {
         const errs = validateDateEntry(e, rs, re);
@@ -168,7 +203,7 @@ export default function SurveyStep4() {
         {/* Info banner */}
         <div className="flex items-start gap-2 rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-xs sm:text-sm font-medium text-teal-700">
           <Info className="h-4 w-4 shrink-0 mt-0.5 text-teal-600" />
-          All leave entered here will be blocked in the rota. Add everything you know now.
+          Leave entered here will be considered in rota generation. We'll try to honour all requests, but staffing minimums take priority.
         </div>
 
         <Card>
@@ -177,7 +212,6 @@ export default function SurveyStep4() {
               <CalendarX className="h-5 w-5 text-teal-600" />
               Leave & Unavailability
             </CardTitle>
-            <CardDescription className="text-xs">All leave and unavailability during the rota period.</CardDescription>
           </CardHeader>
           <CardContent className="px-3 sm:px-6 space-y-4">
             <InfoBox type="danger">Enter all known leave now. Changes after submission require coordinator approval.</InfoBox>
@@ -186,25 +220,29 @@ export default function SurveyStep4() {
             <SurveySection number={1} title="Annual Leave" badge="high">
               <div className="space-y-3">
                 <div className="rounded-lg border border-border p-3 space-y-2">
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium text-card-foreground">AL entitlement</span>
-                    <span className="text-xs text-muted-foreground">Select your annual entitlement</span>
-                    <span className="text-[11px] font-semibold text-teal-600 mt-0.5">Required</span>
+                  <span className="text-sm font-medium text-card-foreground">AL entitlement *</span>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setField("alEntitlement", 27)}
+                      className={`flex-1 py-2 rounded-lg text-sm font-bold border transition-all ${formData.alEntitlement === 27 ? "bg-teal-600 text-white border-teal-600" : "bg-card text-muted-foreground border-border hover:border-teal-300"}`}
+                    >
+                      27 days
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setField("alEntitlement", 32)}
+                      className={`flex-1 py-2 rounded-lg text-sm font-bold border transition-all ${formData.alEntitlement === 32 ? "bg-teal-600 text-white border-teal-600" : "bg-card text-muted-foreground border-border hover:border-teal-300"}`}
+                    >
+                      32 days
+                    </button>
                   </div>
-                  <select
-                    value={formData.alEntitlement ?? ""}
-                    onChange={(e) => setField("alEntitlement", e.target.value ? Number(e.target.value) : null)}
-                    className="w-full rounded-md border border-border bg-muted px-3 py-2 text-sm"
-                  >
-                    <option value="">Select</option>
-                    <option value="27">27 days</option>
-                    <option value="32">32 days</option>
-                  </select>
+                  <FieldError message={errors["al_entitlement"]?.entitlement} />
                 </div>
-                {proRata !== null && (
-                  <InfoBox type="info">
+                {proRata !== null && proRata > 0 && (
+                  <p className="text-[10px] text-muted-foreground italic mt-1">
                     For a {dw}-week rota at {effectiveWte}%, your estimated pro-rata entitlement is approximately {proRata} days.
-                  </InfoBox>
+                  </p>
                 )}
                 {formData.annualLeave.map((e, i) => (
                   <DateRow
@@ -260,7 +298,7 @@ export default function SurveyStep4() {
             </SurveySection>
 
             {/* NOC */}
-            <SurveySection number={3} title="Not On-Call (NOC)" badge="medium">
+            <SurveySection number={3} title="Not On-Call (NOC) Dates" badge="medium">
               <div className="space-y-3">
                 <InfoBox type="info">On these dates you won't be allocated on-call duties, but may still be assigned day shifts.</InfoBox>
                 {formData.nocDates.map((e, i) => (
@@ -314,6 +352,11 @@ export default function SurveyStep4() {
                 )}
               </div>
             </SurveySection>
+
+            {/* Overlap warning */}
+            {hasOverlap && (
+              <InfoBox type="warn">One or more leave entries overlap — please review your dates.</InfoBox>
+            )}
           </CardContent>
         </Card>
       </div>

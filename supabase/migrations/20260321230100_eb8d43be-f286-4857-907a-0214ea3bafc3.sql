@@ -1,0 +1,6 @@
+ALTER TABLE doctor_survey_responses
+DROP CONSTRAINT IF EXISTS doctor_survey_responses_doctor_id_rota_config_id_key;
+
+ALTER TABLE doctor_survey_responses
+ADD CONSTRAINT doctor_survey_responses_doctor_id_rota_config_id_key
+UNIQUE (doctor_id, rota_config_id);

@@ -1,11 +1,9 @@
-// SECTION 1 COMPLETE
 import { useState } from "react";
 import { useSurveyContext } from "@/contexts/SurveyContext";
 import { StepNav } from "@/components/survey/StepNav";
 import { SurveySection } from "@/components/survey/SurveySection";
 import { FieldError } from "@/components/survey/FieldError";
-import { InfoBox } from "@/components/survey/InfoBox";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Stethoscope, Info } from "lucide-react";
 
 interface CompBlock {
@@ -15,13 +13,14 @@ interface CompBlock {
   achievedField: "iacAchieved" | "iaocAchieved" | "icuAchieved" | "transferAchieved";
   workingField: "iacWorkingTowards" | "iaocWorkingTowards" | "icuWorkingTowards" | "transferWorkingTowards";
   remoteField: "iacRemoteSupervision" | "iaocRemoteSupervision" | "icuRemoteSupervision" | "transferRemoteSupervision";
+  remoteLabel: string;
 }
 
 const BLOCKS: CompBlock[] = [
-  { key: "iac", shortName: "IAC", title: "IAC — Initial Assessment of Competency", achievedField: "iacAchieved", workingField: "iacWorkingTowards", remoteField: "iacRemoteSupervision" },
-  { key: "iaoc", shortName: "IAOC", title: "IAOC — Initial Assessment of Obstetrics Competency", achievedField: "iaocAchieved", workingField: "iaocWorkingTowards", remoteField: "iaocRemoteSupervision" },
-  { key: "icu", shortName: "ICU", title: "ICU — Intensive Care Medicine", achievedField: "icuAchieved", workingField: "icuWorkingTowards", remoteField: "icuRemoteSupervision" },
-  { key: "transfer", shortName: "Transfer", title: "Transfer", achievedField: "transferAchieved", workingField: "transferWorkingTowards", remoteField: "transferRemoteSupervision" },
+  { key: "iac", shortName: "IAC", title: "IAC — Initial Assessment of Competency", achievedField: "iacAchieved", workingField: "iacWorkingTowards", remoteField: "iacRemoteSupervision", remoteLabel: "Covered anaesthetic on-calls with remote supervision?" },
+  { key: "iaoc", shortName: "IAOC", title: "IAOC — Initial Assessment of Obstetrics Competency", achievedField: "iaocAchieved", workingField: "iaocWorkingTowards", remoteField: "iaocRemoteSupervision", remoteLabel: "Covered obstetrics on-calls with remote supervision?" },
+  { key: "icu", shortName: "ICU", title: "ICU — Intensive Care Medicine", achievedField: "icuAchieved", workingField: "icuWorkingTowards", remoteField: "icuRemoteSupervision", remoteLabel: "Covered ICU with remote supervision?" },
+  { key: "transfer", shortName: "Transfer", title: "Transfers — inter-hospital", achievedField: "transferAchieved", workingField: "transferWorkingTowards", remoteField: "transferRemoteSupervision", remoteLabel: "Performed inter-hospital transfers with remote supervision?" },
 ];
 
 function RadioYesNo({ value, onChange, label }: { value: boolean | null; onChange: (v: boolean) => void; label: string }) {
@@ -63,6 +62,9 @@ export default function SurveyStep2() {
       if (formData[b.achievedField] === true && formData[b.remoteField] === null) e[b.remoteField] = "Please answer this question";
     }
     setErrors(e);
+    if (Object.keys(e).length > 0) {
+      setTimeout(() => document.querySelector('[data-error="true"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
+    }
     return Object.keys(e).length === 0;
   };
 
@@ -74,7 +76,7 @@ export default function SurveyStep2() {
         {/* Info banner */}
         <div className="flex items-start gap-2 rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-xs sm:text-sm font-medium text-teal-700">
           <Info className="h-4 w-4 shrink-0 mt-0.5 text-teal-600" />
-          Only tick competencies where you have confirmed clinical sign-off.
+          Tick only competencies with confirmed clinical sign-off.
         </div>
 
         <Card>
@@ -83,12 +85,18 @@ export default function SurveyStep2() {
               <Stethoscope className="h-5 w-5 text-teal-600" />
               Clinical Competencies
             </CardTitle>
-            <CardDescription className="text-xs">Areas you are trained and signed off to work in.</CardDescription>
           </CardHeader>
           <CardContent className="px-3 sm:px-6 space-y-4">
             {BLOCKS.map((b) => (
-              <SurveySection key={b.key} number={BLOCKS.indexOf(b) + 1} title={b.title}>
-                <div className="space-y-3">
+              <SurveySection
+                key={b.key}
+                number={BLOCKS.indexOf(b) + 1}
+                title={b.title}
+              >
+                <div
+                  className="space-y-3"
+                  data-error={(errors[b.achievedField] || errors[b.workingField] || errors[b.remoteField]) ? "true" : undefined}
+                >
                   <RadioYesNo
                     label={`Have you achieved ${b.shortName}?`}
                     value={formData[b.achievedField]}
@@ -114,7 +122,7 @@ export default function SurveyStep2() {
                   {formData[b.achievedField] === true && (
                     <>
                       <RadioYesNo
-                        label={`Covered ${b.shortName} with remote supervision?`}
+                        label={b.remoteLabel}
                         value={formData[b.remoteField]}
                         onChange={(v) => setField(b.remoteField, v)}
                       />

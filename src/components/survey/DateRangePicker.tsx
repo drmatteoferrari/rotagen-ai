@@ -28,12 +28,19 @@ export function DateRangePicker({
   const [tempStart, setTempStart] = useState<Date | undefined>(undefined);
 
   const handleOpenChange = (isOpen: boolean) => {
-    setOpen(isOpen);
-    if (isOpen) {
+    if (!isOpen) {
+      // Dismissing — if we had a start date selected but no end, save as single-day
+      if (phase === "end" && tempStart) {
+        onChange(format(tempStart, "yyyy-MM-dd"), format(tempStart, "yyyy-MM-dd"));
+      }
+      setPhase("start");
+      setTempStart(undefined);
+    } else {
       // Always start fresh — pick start date first
       setPhase("start");
       setTempStart(undefined);
     }
+    setOpen(isOpen);
   };
 
   const handleDayClick = (day: Date) => {
@@ -42,7 +49,15 @@ export function DateRangePicker({
       setPhase("end");
       onChange(format(day, "yyyy-MM-dd"), "");
     } else {
-      // Phase "end" — finalize range (allows same day for single-day selection)
+      // Phase "end" — check for same-day (double-click)
+      if (tempStart && format(day, "yyyy-MM-dd") === format(tempStart, "yyyy-MM-dd")) {
+        onChange(format(day, "yyyy-MM-dd"), format(day, "yyyy-MM-dd"));
+        setPhase("start");
+        setTempStart(undefined);
+        setOpen(false);
+        return;
+      }
+      // Finalize range
       if (tempStart) {
         const [s, e] = tempStart <= day ? [tempStart, day] : [day, tempStart];
         onChange(format(s, "yyyy-MM-dd"), format(e, "yyyy-MM-dd"));
@@ -108,8 +123,8 @@ export function DateRangePicker({
     : "Select dates";
 
   const hint = phase === "start"
-    ? "Select start date"
-    : "Now select end date";
+    ? "Select a date. Tap again to save as a single day, or pick an end date."
+    : "Select end date — or tap outside to save as a single day.";
 
   return (
     <div className="space-y-1">
