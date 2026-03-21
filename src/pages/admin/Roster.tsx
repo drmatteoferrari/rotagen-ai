@@ -102,7 +102,7 @@ function ExpandedDoctorPanel({
             const workingTowards = cj[key]?.workingTowards as boolean | null | undefined;
             const color = achieved === true
               ? "bg-emerald-100 text-emerald-700"
-              : achieved !== true && workingTowards === true
+              : (achieved !== true && workingTowards)
               ? "bg-amber-100 text-amber-700"
               : "bg-red-100 text-red-700";
             const text = `${key.toUpperCase()} ${achieved === true ? "✓" : "✗"}${workingTowards === true ? " – working towards" : ""}`;
