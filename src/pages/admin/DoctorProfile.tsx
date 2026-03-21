@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Loader2, ArrowLeft, Check, User, ClipboardList, ExternalLink, Send, Copy, Pencil } from "lucide-react";
+import { Loader2, ArrowLeft, Check, User, ClipboardList, ExternalLink, Send, Copy, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { GRADE_OPTIONS } from "@/lib/gradeOptions";
@@ -96,6 +97,7 @@ export default function DoctorProfile() {
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [sendingInvite, setSendingInvite] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [removePopoverOpen, setRemovePopoverOpen] = useState(false);
 
   useEffect(() => {
     if (!doctorId) { setError(true); setLoading(false); return; }
@@ -387,17 +389,53 @@ export default function DoctorProfile() {
                 Edit survey
               </Button>
 
-              {/* Active toggle */}
-              <div className="ml-auto flex items-center gap-2">
-                <span className="text-xs font-medium text-muted-foreground">{isActive ? "Active" : "Inactive"}</span>
-                <button
-                  type="button"
-                  onClick={() => setIsActive((v) => !v)}
-                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${isActive ? "bg-primary" : "bg-muted"}`}
-                >
-                  <span className={`inline-block h-4 w-4 rounded-full bg-white transition-transform ${isActive ? "translate-x-4" : "translate-x-0.5"}`} />
-                </button>
-              </div>
+              {/* Remove button */}
+              <Popover open={removePopoverOpen} onOpenChange={setRemovePopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/5 hover:text-destructive ml-auto"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Remove
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-52 pointer-events-auto" align="end" onOpenAutoFocus={(e) => e.preventDefault()}>
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Remove {doctor.first_name}?</p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full justify-start"
+                      onClick={async () => {
+                        const { error } = await supabase.from("doctors").update({ is_active: false }).eq("id", doctor.id);
+                        if (error) { toast.error("Failed to deactivate doctor"); return; }
+                        toast.success("Doctor moved to inactive");
+                        setRemovePopoverOpen(false);
+                        navigate("/admin/roster");
+                      }}
+                    >
+                      Move to inactive
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="w-full justify-start"
+                      onClick={async () => {
+                        await supabase.from("doctor_survey_responses").delete().eq("doctor_id", doctor.id);
+                        const { error } = await supabase.from("doctors").delete().eq("id", doctor.id);
+                        if (error) { toast.error("Failed to delete doctor"); return; }
+                        toast("Doctor permanently deleted");
+                        setRemovePopoverOpen(false);
+                        navigate("/admin/roster");
+                      }}
+                    >
+                      Delete permanently
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
             </div>
 
             {doctor.survey_status === "submitted" && (
@@ -455,11 +493,12 @@ export default function DoctorProfile() {
                 ))}
               </select>
             </div>
+            <p className="text-xs text-muted-foreground">Status: {doctor.is_active ? "Active" : "Inactive"}</p>
             <div className="flex justify-end">
               <Button onClick={handleSave} disabled={saveState === "saving"}>
                 {saveState === "saving" && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
                 {saveState === "saved" && <Check className="mr-1.5 h-4 w-4" />}
-                {saveState === "idle" ? "Save changes" : saveState === "saving" ? "Saving…" : "Saved ✓"}
+                {saveState === "idle" ? "Save changes" : saveState === "saving" ? "Saving\u2026" : "Saved \u2713"}
               </Button>
             </div>
           </CardContent>
