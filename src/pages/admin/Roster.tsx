@@ -1336,37 +1336,52 @@ export default function Roster() {
 
                 return (
                   <div key={doctor.id} className="bg-card">
-                    <div className="flex items-center gap-2 px-3 py-2.5 sm:px-4">
-                      {/* Chevron + Name — clickable to expand */}
-                      <button
-                        type="button"
-                        onClick={() => toggleExpand(doctor.id)}
-                        className="flex items-center gap-1.5 min-w-0 flex-1 text-left"
-                      >
-                        {isExpanded ? <ChevronUp className="h-3.5 w-3.5 shrink-0 text-muted-foreground" /> : <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
-                        <span className="text-sm font-medium truncate">
-                          {doctor.last_name}, {doctor.first_name}
+                    <div className="px-3 py-2 sm:px-4">
+                      {/* Row 1 — always visible on all breakpoints */}
+                      <div className="flex items-center gap-2">
+                        {/* Chevron */}
+                        <button type="button" onClick={() => toggleExpand(doctor.id)} className="shrink-0 p-0.5">
+                          {isExpanded
+                            ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" />
+                            : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />}
+                        </button>
+                        {/* Name — flex-1, always visible, clicking also toggles */}
+                        <button type="button" onClick={() => toggleExpand(doctor.id)} className="flex-1 min-w-0 text-left">
+                          <span className="text-sm font-medium truncate block">{doctor.last_name}, {doctor.first_name}</span>
+                        </button>
+                        {/* Grade pill — sm+ only */}
+                        <span className="hidden sm:block text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full shrink-0">
+                          {doctor.grade || "\u2014"}
                         </span>
-                      </button>
-                      {/* Grade — sm+ */}
-                      <span className="hidden sm:block text-xs text-muted-foreground w-16 text-center truncate">
-                        {doctor.grade || "—"}
-                      </span>
-                      {/* Email — lg+ */}
-                      <span className="hidden lg:block text-xs text-muted-foreground truncate max-w-[180px]">
-                        {doctor.email ?? "No email"}
-                      </span>
-                      {/* Status badge — always visible */}
-                      <div className="shrink-0">{statusBadge(doctor)}</div>
-                      {/* Actions */}
-                      <div className="flex items-center gap-0.5 shrink-0">
-                        {renderSendButton(doctor, sendState, isSending, isSuccess, "unified")}
-                        {/* Copy — sm+ */}
-                        <span className="hidden sm:flex">
+                        {/* Email — lg+ only */}
+                        <span className="hidden lg:block text-xs text-muted-foreground truncate max-w-[160px] shrink-0">
+                          {doctor.email ?? "No email"}
+                        </span>
+                        {/* Status badge — icon-only circle on mobile, full badge on sm+ */}
+                        <div className="shrink-0">
+                          <span className="sm:hidden">
+                            {doctor.survey_status === "submitted" && (
+                              <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-emerald-100">
+                                <Check className="h-3 w-3 text-emerald-600" />
+                              </span>
+                            )}
+                            {doctor.survey_status === "in_progress" && (
+                              <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-amber-100">
+                                <Pencil className="h-3 w-3 text-amber-600" />
+                              </span>
+                            )}
+                            {(!doctor.survey_status || doctor.survey_status === "not_started") && (
+                              <span className="inline-flex items-center justify-center h-5 w-5 rounded-full bg-muted">
+                                <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground" />
+                              </span>
+                            )}
+                          </span>
+                          <span className="hidden sm:block">{statusBadge(doctor)}</span>
+                        </div>
+                        {/* Action icons — hidden on mobile (shown in row 2), visible sm+ */}
+                        <div className="hidden sm:flex items-center gap-0.5 shrink-0">
+                          {renderSendButton(doctor, sendState, isSending, isSuccess, "unified")}
                           {renderCopyButton(doctor, isCopied)}
-                        </span>
-                        {/* Open in new tab — sm+ */}
-                        <span className="hidden sm:flex">
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <span>
@@ -1375,30 +1390,55 @@ export default function Roster() {
                                 </Button>
                               </span>
                             </TooltipTrigger>
-                            <TooltipContent>
-                              {doctor.survey_token ? "Open survey in new tab" : "Survey link not yet available"}
-                            </TooltipContent>
+                            <TooltipContent>{doctor.survey_token ? "Open survey in new tab" : "No survey link"}</TooltipContent>
                           </Tooltip>
-                        </span>
-                        {/* Edit survey — always visible */}
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate(`/admin/survey-override/${doctor.id}/1`)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Popover open={removeDialogId === doctor.id} onOpenChange={(open) => setRemoveDialogId(open ? doctor.id : null)}>
+                            <PopoverTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-52 pointer-events-auto" align="end" side="bottom" sideOffset={4} onOpenAutoFocus={(e) => e.preventDefault()}>
+                              <div className="space-y-2">
+                                <p className="text-sm font-medium">Remove {doctor.first_name}?</p>
+                                <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => deactivateDoctor(doctor.id)}>
+                                  Move to inactive
+                                </Button>
+                                <Button variant="destructive" size="sm" className="w-full justify-start" onClick={() => removeDoctor(doctor.id)}>
+                                  Delete permanently
+                                </Button>
+                              </div>
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                      </div>
+                      {/* Row 2 — mobile only: all 5 action icons */}
+                      <div className="flex sm:hidden items-center justify-end gap-0.5 pt-1 pb-0.5">
+                        {renderSendButton(doctor, sendState, isSending, isSuccess, "unified")}
+                        {renderCopyButton(doctor, isCopied)}
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => doctor.survey_token && window.open(buildSurveyLink(doctor.survey_token), "_blank")} disabled={!doctor.survey_token}>
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate(`/admin/survey-override/${doctor.id}/1`)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        {/* Delete — always visible */}
                         <Popover open={removeDialogId === doctor.id} onOpenChange={(open) => setRemoveDialogId(open ? doctor.id : null)}>
                           <PopoverTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive">
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </PopoverTrigger>
-                          <PopoverContent className="w-56 pointer-events-auto" align="end" side="bottom" sideOffset={4} onOpenAutoFocus={(e) => e.preventDefault()}>
+                          <PopoverContent className="w-52 pointer-events-auto" align="end" side="bottom" sideOffset={4} onOpenAutoFocus={(e) => e.preventDefault()}>
                             <div className="space-y-2">
                               <p className="text-sm font-medium">Remove {doctor.first_name}?</p>
                               <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => deactivateDoctor(doctor.id)}>
-                                Move to inactive (survey data kept)
+                                Move to inactive
                               </Button>
                               <Button variant="destructive" size="sm" className="w-full justify-start" onClick={() => removeDoctor(doctor.id)}>
-                                Delete permanently (irreversible)
+                                Delete permanently
                               </Button>
                             </div>
                           </PopoverContent>
@@ -1410,7 +1450,7 @@ export default function Roster() {
                     {isExpanded && (
                       <div className="border-t border-border bg-muted/30 px-3 py-3 sm:px-4">
                         <ExpandedDoctorPanel
-                          doctorId={doctor.id}
+                          doctor={doctor}
                           surveyData={surveyCache[doctor.id]}
                           isLoading={surveyLoading[doctor.id] ?? false}
                           invitedAt={doctor.survey_invite_sent_at}
