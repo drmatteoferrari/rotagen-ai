@@ -1,15 +1,19 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AdminLayout } from "@/components/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Loader2, ArrowLeft, Check, User, ClipboardList, ExternalLink } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Loader2, ArrowLeft, Check, User, ClipboardList, ExternalLink, Send, Copy, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { GRADE_OPTIONS } from "@/lib/gradeOptions";
 import { format, parseISO } from "date-fns";
+import { useRotaContext } from "@/contexts/RotaContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { buildSurveyLink } from "@/lib/surveyLinks";
 
 interface DoctorRow {
   id: string;
@@ -21,20 +25,38 @@ interface DoctorRow {
   rota_config_id: string;
   survey_status: string | null;
   survey_submitted_at: string | null;
+  survey_token: string | null;
+  survey_invite_count: number | null;
 }
 
 interface SurveyRow {
   personal_email: string | null;
   phone_number: string | null;
   wte_percent: number | null;
+  wte_other_value: number | null;
+  al_entitlement: number | null;
   ltft_days_off: string[] | null;
+  ltft_night_flexibility: any;
   annual_leave: any;
   study_leave: any;
   noc_dates: any;
+  other_unavailability: any;
   competencies_json: any;
   exempt_from_nights: boolean | null;
   exempt_from_weekends: boolean | null;
   exempt_from_oncall: boolean | null;
+  exemption_details: string | null;
+  other_restrictions: string | null;
+  additional_restrictions: string | null;
+  parental_leave_expected: boolean | null;
+  parental_leave_start: string | null;
+  parental_leave_end: string | null;
+  parental_leave_notes: string | null;
+  specialties_requested: any;
+  special_sessions: string[] | null;
+  signoff_needs: string | null;
+  dual_specialty: boolean | null;
+  dual_specialty_types: string[] | null;
   additional_notes: string | null;
 }
 
@@ -49,9 +71,13 @@ function StatusBadge({ status }: { status: string | null }) {
   }
 }
 
+const DAY_ORDER = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
 export default function DoctorProfile() {
   const { doctorId } = useParams<{ doctorId: string }>();
   const navigate = useNavigate();
+  const { restoredConfig } = useRotaContext();
+  const { accountSettings } = useAuth();
 
   const [doctor, setDoctor] = useState<DoctorRow | null>(null);
   const [survey, setSurvey] = useState<SurveyRow | null>(null);
@@ -68,6 +94,8 @@ export default function DoctorProfile() {
 
   type SaveState = "idle" | "saving" | "saved";
   const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [sendingInvite, setSendingInvite] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   useEffect(() => {
     if (!doctorId) { setError(true); setLoading(false); return; }
@@ -79,7 +107,7 @@ export default function DoctorProfile() {
     try {
       const { data: doc, error: docErr } = await supabase
         .from("doctors")
-        .select("id, first_name, last_name, email, grade, is_active, rota_config_id, survey_status, survey_submitted_at")
+        .select("id, first_name, last_name, email, grade, is_active, rota_config_id, survey_status, survey_submitted_at, survey_token, survey_invite_count")
         .eq("id", doctorId!)
         .maybeSingle();
 
@@ -93,7 +121,7 @@ export default function DoctorProfile() {
 
       const { data: srv } = await supabase
         .from("doctor_survey_responses")
-        .select("personal_email, phone_number, wte_percent, ltft_days_off, annual_leave, study_leave, noc_dates, competencies_json, exempt_from_nights, exempt_from_weekends, exempt_from_oncall, additional_notes")
+        .select("personal_email, phone_number, wte_percent, wte_other_value, al_entitlement, ltft_days_off, ltft_night_flexibility, annual_leave, study_leave, noc_dates, other_unavailability, competencies_json, exempt_from_nights, exempt_from_weekends, exempt_from_oncall, exemption_details, other_restrictions, additional_restrictions, parental_leave_expected, parental_leave_start, parental_leave_end, parental_leave_notes, specialties_requested, special_sessions, signoff_needs, dual_specialty, dual_specialty_types, additional_notes")
         .eq("doctor_id", doctorId!)
         .eq("rota_config_id", doc.rota_config_id)
         .maybeSingle();
@@ -130,25 +158,29 @@ export default function DoctorProfile() {
         .eq("id", doctor.id);
       if (docErr) throw docErr;
 
-      const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
-      const now = new Date().toISOString();
-      const { error: srvErr } = await supabase
+      // Only update survey row if it already exists — no partial row creation
+      const { data: existingRow } = await supabase
         .from("doctor_survey_responses")
-        .upsert(
-          {
-            doctor_id: doctor.id,
-            rota_config_id: doctor.rota_config_id,
-            full_name: fullName,
+        .select("id")
+        .eq("doctor_id", doctor.id)
+        .eq("rota_config_id", doctor.rota_config_id)
+        .maybeSingle();
+
+      if (existingRow) {
+        const { error: srvErr } = await supabase
+          .from("doctor_survey_responses")
+          .update({
+            full_name: `${firstName.trim()} ${lastName.trim()}`.trim(),
             nhs_email: nhsEmail.trim() || null,
             personal_email: personalEmail.trim() || null,
             phone_number: phoneNumber.trim() || null,
             grade: grade || null,
-            updated_at: now,
-            last_saved_at: now,
-          },
-          { onConflict: "doctor_id,rota_config_id" }
-        );
-      if (srvErr) throw srvErr;
+            updated_at: new Date().toISOString(),
+          })
+          .eq("doctor_id", doctor.id)
+          .eq("rota_config_id", doctor.rota_config_id);
+        if (srvErr) throw srvErr;
+      }
 
       setDoctor((prev) => prev ? {
         ...prev,
@@ -175,13 +207,75 @@ export default function DoctorProfile() {
     }
   };
 
-  const countItems = (arr: any) => (Array.isArray(arr) ? arr.length : 0);
-  const compIcon = (val: boolean | null | undefined) =>
-    val === true ? "✓" : val === false ? "✗" : "?";
-  const compColor = (val: boolean | null | undefined) =>
-    val === true ? "bg-emerald-100 text-emerald-700"
-    : val === false ? "bg-red-100 text-red-700"
-    : "bg-muted text-muted-foreground";
+  const handleSendInvite = async () => {
+    if (!doctor) return;
+    if (!doctor.survey_token) { toast.error("No survey token — cannot send invite"); return; }
+    if (!doctor.email) { toast.error("No email address on file"); return; }
+    const departmentName = accountSettings?.departmentName ?? "";
+    const hospitalName = accountSettings?.trustName ?? "";
+    if (!departmentName || !hospitalName) {
+      toast.error("Please set your department and hospital name on the Dashboard first.");
+      return;
+    }
+    setSendingInvite(true);
+    try {
+      const surveyLink = buildSurveyLink(doctor.survey_token);
+      const body = {
+        to: doctor.email,
+        doctorName: `${doctor.first_name} ${doctor.last_name}`,
+        doctorId: doctor.id,
+        rotaPeriod: {
+          startDate: restoredConfig?.rotaPeriod?.startDate
+            ? format(parseISO(restoredConfig.rotaPeriod.startDate), "dd MMM yyyy")
+            : "TBC",
+          endDate: restoredConfig?.rotaPeriod?.endDate
+            ? format(parseISO(restoredConfig.rotaPeriod.endDate), "dd MMM yyyy")
+            : "TBC",
+          durationWeeks: restoredConfig?.rotaPeriod?.durationWeeks ?? 0,
+        },
+        departmentName,
+        hospitalName,
+        surveyDeadline: "See Roster page for deadline",
+        surveyLink,
+      };
+      const { data, error } = await supabase.functions.invoke("send-survey-invite", { body });
+      if (error) throw error;
+      if (data && !data.success) throw new Error(data.error ?? "Send failed");
+      await supabase.from("doctors").update({
+        survey_invite_sent_at: new Date().toISOString(),
+        survey_invite_count: (doctor.survey_invite_count ?? 0) + 1,
+      }).eq("id", doctor.id);
+      toast.success(`✓ Survey invite sent to ${doctor.first_name} ${doctor.last_name}`);
+      loadAll();
+    } catch (err: any) {
+      toast.error("Failed to send invite — please try again");
+      console.error(err);
+    } finally {
+      setSendingInvite(false);
+    }
+  };
+
+  const fmtDate = (d: string | null | undefined): string => {
+    if (!d) return "—";
+    try { return format(parseISO(d), "d MMM yyyy"); } catch { return d; }
+  };
+
+  const fmtRange = (start: string | null, end: string | null): string => {
+    if (!start) return "—";
+    if (!end) return fmtDate(start);
+    return `${fmtDate(start)} → ${fmtDate(end)}`;
+  };
+
+  const renderLeaveList = (arr: any): React.ReactNode => {
+    if (!Array.isArray(arr) || arr.length === 0) return <span className="text-muted-foreground">None</span>;
+    return (
+      <ul className="space-y-0.5">
+        {arr.map((entry: any, i: number) => (
+          <li key={i} className="text-sm">{fmtRange(entry.startDate, entry.endDate)}</li>
+        ))}
+      </ul>
+    );
+  };
 
   if (loading) {
     return (
@@ -206,8 +300,6 @@ export default function DoctorProfile() {
     );
   }
 
-  const cj = survey?.competencies_json ?? {};
-
   return (
     <AdminLayout title="Doctor Profile" subtitle={`${doctor.first_name} ${doctor.last_name}`} accentColor="blue">
       <div className="mx-auto max-w-3xl space-y-6">
@@ -219,6 +311,102 @@ export default function DoctorProfile() {
           </Button>
           <StatusBadge status={doctor.survey_status} />
         </div>
+
+        {/* Action bar */}
+        <Card>
+          <CardContent className="pt-4 pb-3">
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Send invite */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSendInvite}
+                    disabled={sendingInvite || !doctor.survey_token || !doctor.email}
+                    className="gap-1.5"
+                  >
+                    {sendingInvite
+                      ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      : <Send className="h-3.5 w-3.5" />}
+                    Send invite
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {!doctor.survey_token ? "No survey token available" : !doctor.email ? "No email on file" : "Send survey invite email"}
+                </TooltipContent>
+              </Tooltip>
+
+              {/* Copy link */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (!doctor.survey_token) return;
+                      navigator.clipboard.writeText(buildSurveyLink(doctor.survey_token));
+                      setCopiedLink(true);
+                      setTimeout(() => setCopiedLink(false), 2000);
+                    }}
+                    disabled={!doctor.survey_token}
+                    className="gap-1.5"
+                  >
+                    {copiedLink ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                    {copiedLink ? "Copied!" : "Copy link"}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{doctor.survey_token ? "Copy survey link to clipboard" : "No survey link available"}</TooltipContent>
+              </Tooltip>
+
+              {/* Open survey */}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => doctor.survey_token && window.open(buildSurveyLink(doctor.survey_token), "_blank")}
+                    disabled={!doctor.survey_token}
+                    className="gap-1.5"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    Open survey
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{doctor.survey_token ? "Open survey in new tab" : "No survey link available"}</TooltipContent>
+              </Tooltip>
+
+              {/* Edit survey */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate(`/admin/survey-override/${doctor.id}/1`)}
+                className="gap-1.5"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+                Edit survey
+              </Button>
+
+              {/* Active toggle */}
+              <div className="ml-auto flex items-center gap-2">
+                <span className="text-xs font-medium text-muted-foreground">{isActive ? "Active" : "Inactive"}</span>
+                <button
+                  type="button"
+                  onClick={() => setIsActive((v) => !v)}
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${isActive ? "bg-primary" : "bg-muted"}`}
+                >
+                  <span className={`inline-block h-4 w-4 rounded-full bg-white transition-transform ${isActive ? "translate-x-4" : "translate-x-0.5"}`} />
+                </button>
+              </div>
+            </div>
+
+            {doctor.survey_status === "submitted" && (
+              <p className="mt-2 text-xs text-amber-600 flex items-center gap-1">
+                This doctor has already submitted their survey. Sending a new invite allows them to edit their responses.
+              </p>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Section A — Identity (editable) */}
         <Card>
@@ -232,7 +420,6 @@ export default function DoctorProfile() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Name row */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-card-foreground">First name</label>
@@ -268,16 +455,6 @@ export default function DoctorProfile() {
                 ))}
               </select>
             </div>
-            <div className="flex items-center justify-between rounded-lg border border-border p-3">
-              <label className="text-sm font-medium text-card-foreground">Active doctor</label>
-              <button
-                type="button"
-                onClick={() => setIsActive((v) => !v)}
-                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${isActive ? "bg-primary" : "bg-muted"}`}
-              >
-                <span className={`inline-block h-4 w-4 rounded-full bg-white transition-transform ${isActive ? "translate-x-4" : "translate-x-0.5"}`} />
-              </button>
-            </div>
             <div className="flex justify-end">
               <Button onClick={handleSave} disabled={saveState === "saving"}>
                 {saveState === "saving" && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
@@ -299,80 +476,161 @@ export default function DoctorProfile() {
               From the doctor's survey. Edit via the survey override flow.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-5">
+          <CardContent>
             {!survey ? (
               <div className="rounded-lg border border-dashed border-border bg-muted/30 p-6 text-center text-sm text-muted-foreground">
                 No survey data yet — invite this doctor to complete their preferences.
               </div>
             ) : (
-              <>
-                <div className="space-y-2">
-                  <p className="text-sm font-semibold text-card-foreground">Working pattern</p>
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                    <span className="text-muted-foreground">WTE</span>
-                    <span>{survey.wte_percent != null ? `${survey.wte_percent}%` : "—"}</span>
-                    <span className="text-muted-foreground">LTFT</span>
-                    <span>{survey.wte_percent != null && survey.wte_percent < 100 ? "Yes" : "No"}</span>
-                    <span className="text-muted-foreground">Days off</span>
-                    <span>{(survey.ltft_days_off ?? []).length > 0 ? survey.ltft_days_off!.join(", ") : "—"}</span>
-                  </div>
+              <div className="divide-y divide-border">
+                {/* A — Working Pattern */}
+                <div className="space-y-2 py-4">
+                  <p className="text-sm font-semibold text-card-foreground">Working Pattern</p>
+                  <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+                    <dt className="text-muted-foreground">WTE</dt>
+                    <dd>{survey.wte_percent === 0 ? `${survey.wte_other_value ?? "?"}% (custom)` : survey.wte_percent != null ? `${survey.wte_percent}%` : "—"}</dd>
+                    <dt className="text-muted-foreground">LTFT</dt>
+                    <dd>{survey.wte_percent != null && survey.wte_percent < 100 ? "Yes" : "No"}</dd>
+                    <dt className="text-muted-foreground">AL entitlement</dt>
+                    <dd>{survey.al_entitlement != null ? `${survey.al_entitlement} days` : "—"}</dd>
+                    {survey.ltft_days_off && survey.ltft_days_off.length > 0 && (
+                      <>
+                        <dt className="text-muted-foreground">Days off</dt>
+                        <dd>{[...survey.ltft_days_off].sort((a, b) => DAY_ORDER.indexOf(a) - DAY_ORDER.indexOf(b)).join(", ")}</dd>
+                      </>
+                    )}
+                    {Array.isArray(survey.ltft_night_flexibility) && survey.ltft_night_flexibility.length > 0 && (
+                      <>
+                        <dt className="text-muted-foreground">Night flexibility</dt>
+                        <dd>
+                          {survey.ltft_night_flexibility.map((n: any, i: number) => (
+                            <span key={i} className="block text-xs">
+                              {n.day}: start {n.canStart ? "✓" : "✗"} / end {n.canEnd ? "✓" : "✗"}
+                            </span>
+                          ))}
+                        </dd>
+                      </>
+                    )}
+                  </dl>
                 </div>
-                <div className="space-y-2">
-                  <p className="text-sm font-semibold text-card-foreground">Leave</p>
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                    <span className="text-muted-foreground">Annual leave periods</span>
-                    <span>{countItems(survey.annual_leave)}</span>
-                    <span className="text-muted-foreground">Study leave periods</span>
-                    <span>{countItems(survey.study_leave)}</span>
-                    <span className="text-muted-foreground">NOC dates</span>
-                    <span>{countItems(survey.noc_dates)}</span>
-                  </div>
-                </div>
-                <div className="space-y-2">
+
+                {/* B — Competencies */}
+                <div className="space-y-2 py-4">
                   <p className="text-sm font-semibold text-card-foreground">Competencies</p>
-                  <div className="flex flex-wrap gap-2">
+                  <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
                     {(["iac", "iaoc", "icu", "transfer"] as const).map((key) => {
-                      const val = cj[key]?.achieved;
+                      const cj = survey.competencies_json ?? {};
+                      const achieved = cj[key]?.achieved as boolean | null;
+                      const workingTowards = cj[key]?.workingTowards as boolean | null;
+                      const remoteSupervision = cj[key]?.remoteSupervision as boolean | null;
+                      const labels: Record<string, string> = { iac: "IAC", iaoc: "IAOC", icu: "ICU", transfer: "Transfer" };
+                      let val = "—";
+                      if (achieved === true) {
+                        val = `✓ Achieved${remoteSupervision === true ? " · Remote ✓" : remoteSupervision === false ? " · Remote ✗" : ""}`;
+                      } else if (achieved === false && workingTowards === true) {
+                        val = "Working towards";
+                      } else if (achieved === false) {
+                        val = "✗ Not achieved";
+                      }
                       return (
-                        <span key={key} className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${compColor(val)}`}>
-                          {key.toUpperCase()} {compIcon(val)}
-                        </span>
+                        <React.Fragment key={key}>
+                          <dt className="text-muted-foreground">{labels[key]}</dt>
+                          <dd>{val}</dd>
+                        </React.Fragment>
                       );
                     })}
+                  </dl>
+                </div>
+
+                {/* C — Leave & Unavailability */}
+                <div className="space-y-2 py-4">
+                  <p className="text-sm font-semibold text-card-foreground">Leave & Unavailability</p>
+                  <div className="space-y-1.5 text-sm">
+                    <p><span className="text-muted-foreground">Annual leave:</span> {renderLeaveList(survey.annual_leave)}</p>
+                    <p><span className="text-muted-foreground">Study leave:</span> {renderLeaveList(survey.study_leave)}</p>
+                    <p><span className="text-muted-foreground">NOC dates:</span> {renderLeaveList(survey.noc_dates)}</p>
+                    <p><span className="text-muted-foreground">Rotations / other:</span> {renderLeaveList(survey.other_unavailability)}</p>
+                    <p>
+                      <span className="text-muted-foreground">Parental leave: </span>
+                      {survey.parental_leave_expected
+                        ? <span>{fmtRange(survey.parental_leave_start, survey.parental_leave_end)}{survey.parental_leave_notes ? ` — ${survey.parental_leave_notes}` : ""}</span>
+                        : <span className="text-muted-foreground">None</span>
+                      }
+                    </p>
                   </div>
                 </div>
-                {(survey.exempt_from_nights || survey.exempt_from_weekends || survey.exempt_from_oncall) && (
-                  <div className="space-y-2">
-                    <p className="text-sm font-semibold text-card-foreground">Exemptions</p>
-                    <div className="flex flex-wrap gap-2">
-                      {survey.exempt_from_nights && <Badge variant="secondary">Nights</Badge>}
-                      {survey.exempt_from_weekends && <Badge variant="secondary">Weekends</Badge>}
-                      {survey.exempt_from_oncall && <Badge variant="secondary">On-call</Badge>}
-                    </div>
-                  </div>
-                )}
-                {survey.additional_notes && (
-                  <div className="space-y-2">
-                    <p className="text-sm font-semibold text-card-foreground">Additional notes</p>
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{survey.additional_notes}</p>
-                  </div>
-                )}
-                {doctor.survey_submitted_at && (
-                  <p className="text-xs text-muted-foreground">
-                    Survey submitted: {format(parseISO(doctor.survey_submitted_at), "d MMM yyyy, HH:mm")}
-                  </p>
-                )}
-              </>
+
+                {/* D — Exemptions & Restrictions */}
+                <div className="space-y-2 py-4">
+                  <p className="text-sm font-semibold text-card-foreground">Exemptions & Restrictions</p>
+                  <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+                    <dt className="text-muted-foreground">Exempt from nights</dt>
+                    <dd>{survey.exempt_from_nights ? "Yes" : "No"}</dd>
+                    <dt className="text-muted-foreground">Exempt from weekends</dt>
+                    <dd>{survey.exempt_from_weekends ? "Yes" : "No"}</dd>
+                    <dt className="text-muted-foreground">Exempt from on-call</dt>
+                    <dd>{survey.exempt_from_oncall ? "Yes" : "No"}</dd>
+                    {survey.exemption_details && (
+                      <>
+                        <dt className="text-muted-foreground">Exemption details</dt>
+                        <dd>{survey.exemption_details}</dd>
+                      </>
+                    )}
+                    {survey.other_restrictions && (
+                      <>
+                        <dt className="text-muted-foreground">Other restrictions</dt>
+                        <dd>{survey.other_restrictions}</dd>
+                      </>
+                    )}
+                    {survey.additional_restrictions && (
+                      <>
+                        <dt className="text-muted-foreground">Additional scheduling</dt>
+                        <dd>{survey.additional_restrictions}</dd>
+                      </>
+                    )}
+                  </dl>
+                </div>
+
+                {/* E — Preferences & Sessions */}
+                <div className="space-y-2 py-4">
+                  <p className="text-sm font-semibold text-card-foreground">Preferences & Sessions</p>
+                  <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+                    <dt className="text-muted-foreground">Dual specialty</dt>
+                    <dd>{survey.dual_specialty ? `Yes${survey.dual_specialty_types?.length ? ` (${survey.dual_specialty_types.join(", ")})` : ""}` : "No"}</dd>
+                    <dt className="text-muted-foreground">Specialties</dt>
+                    <dd>
+                      {Array.isArray(survey.specialties_requested) && survey.specialties_requested.length > 0
+                        ? survey.specialties_requested.map((s: any, i: number) => (
+                            <span key={i} className="block text-xs">{s.name}{s.notes ? ` — ${s.notes}` : ""}</span>
+                          ))
+                        : <span className="text-muted-foreground">None</span>
+                      }
+                    </dd>
+                    <dt className="text-muted-foreground">Special sessions</dt>
+                    <dd>{survey.special_sessions?.length ? survey.special_sessions.join(", ") : <span className="text-muted-foreground">—</span>}</dd>
+                    <dt className="text-muted-foreground">Sign-off needs</dt>
+                    <dd>{survey.signoff_needs || <span className="text-muted-foreground">—</span>}</dd>
+                    <dt className="text-muted-foreground">Additional notes</dt>
+                    <dd>{survey.additional_notes || <span className="text-muted-foreground">—</span>}</dd>
+                  </dl>
+                </div>
+              </div>
             )}
-            <div className="flex justify-end pt-2">
+
+            {doctor.survey_submitted_at && (
+              <p className="text-xs text-muted-foreground mt-3">
+                Survey submitted: {format(parseISO(doctor.survey_submitted_at), "d MMM yyyy, HH:mm")}
+              </p>
+            )}
+            <div className="flex justify-end pt-3">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => navigate(`/admin/survey-override/${doctor.id}/1`)}
-                className="flex items-center gap-1.5"
+                className="gap-1.5"
               >
-                <ExternalLink className="h-3.5 w-3.5" />
-                Edit rota preferences
+                <Pencil className="h-3.5 w-3.5" />
+                Edit survey
               </Button>
             </div>
           </CardContent>

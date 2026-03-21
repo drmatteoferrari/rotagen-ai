@@ -13,6 +13,7 @@ import SurveyStep3 from "@/pages/doctor/SurveyStep3";
 import SurveyStep4 from "@/pages/doctor/SurveyStep4";
 import SurveyStep5 from "@/pages/doctor/SurveyStep5";
 import SurveyStep6 from "@/pages/doctor/SurveyStep6";
+import SurveyStep7 from "@/pages/doctor/SurveyStep7";
 
 const stepComponents: Record<number, React.ComponentType> = {
   1: SurveyStep1,
@@ -21,6 +22,7 @@ const stepComponents: Record<number, React.ComponentType> = {
   4: SurveyStep4,
   5: SurveyStep5,
   6: SurveyStep6,
+  7: SurveyStep7,
 };
 
 function OverrideInner() {
