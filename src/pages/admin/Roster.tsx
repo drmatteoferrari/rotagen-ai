@@ -39,13 +39,13 @@ interface Doctor {
 
 // ── Expanded panel component ──
 function ExpandedDoctorPanel({
-  doctorId,
+  doctor,
   surveyData,
   isLoading,
   invitedAt,
   onNavigateProfile,
 }: {
-  doctorId: string;
+  doctor: Doctor;
   surveyData: any;
   isLoading: boolean;
   invitedAt: string | null;
@@ -59,61 +59,68 @@ function ExpandedDoctorPanel({
     );
   }
 
-  if (!surveyData) {
-    return (
-      <div className="space-y-3 text-sm">
-        <p className="text-xs text-muted-foreground italic">No survey data yet.</p>
-        <button type="button" onClick={onNavigateProfile} className="text-xs font-medium text-primary hover:underline">
-          See full profile →
-        </button>
-      </div>
-    );
-  }
-
   const cj = surveyData?.competencies_json ?? {};
   const wte = surveyData?.wte_percent ?? null;
   const ltftDays: string[] = surveyData?.ltft_days_off ?? [];
   const DAY_ORDER = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
   const sortedDays = [...ltftDays].sort((a, b) => DAY_ORDER.indexOf(a) - DAY_ORDER.indexOf(b));
-  const isLtft = wte !== null && wte < 100;
+
+  const displayGrade = surveyData?.grade || doctor.grade || "—";
+  const displayEmail = surveyData?.nhs_email || doctor.email || "—";
+  const displayPhone = surveyData?.phone_number || "—";
 
   return (
-    <div className="space-y-3 text-sm">
-      {/* Working pattern */}
-      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-xs">
-        <dt className="text-muted-foreground">WTE</dt>
-        <dd className="font-medium">{wte !== null ? `${wte}%` : "—"}</dd>
-        <dt className="text-muted-foreground">LTFT</dt>
-        <dd className="font-medium">{isLtft ? "Yes" : "No"}</dd>
-        {isLtft && sortedDays.length > 0 && (
+    <div className="space-y-3">
+      {/* Contact & Identity — always shown */}
+      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+        <span className="text-muted-foreground">Grade</span>
+        <span className="font-medium">{displayGrade}</span>
+        <span className="text-muted-foreground">Email</span>
+        <span className="font-medium truncate">{displayEmail}</span>
+        {displayPhone !== "—" && (
           <>
-            <dt className="text-muted-foreground">Days off</dt>
-            <dd className="font-medium">{sortedDays.join(", ")}</dd>
+            <span className="text-muted-foreground">Phone</span>
+            <span className="font-medium">{displayPhone}</span>
           </>
         )}
-      </dl>
-
-      {/* Competencies */}
-      <div className="space-y-1">
-        <p className="text-xs font-semibold text-muted-foreground">Competencies</p>
-        <div className="flex flex-wrap gap-1.5">
-          {(["iac", "iaoc", "icu", "transfer"] as const).map((key) => {
-            const achieved = cj[key]?.achieved as boolean | null | undefined;
-            const workingTowards = cj[key]?.workingTowards as boolean | null | undefined;
-            const color = achieved === true
-              ? "bg-emerald-100 text-emerald-700"
-              : workingTowards
-              ? "bg-amber-100 text-amber-700"
-              : "bg-red-100 text-red-700";
-            const text = `${key.toUpperCase()} ${achieved === true ? "✓" : "✗"}${workingTowards === true ? " – working towards" : ""}`;
-            return (
-              <span key={key} className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${color}`}>
-                {text}
-              </span>
-            );
-          })}
-        </div>
       </div>
+
+      {/* Working pattern — only if survey data exists */}
+      {surveyData && (
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+          <span className="text-muted-foreground">WTE</span>
+          <span className="font-medium">{wte !== null ? `${wte}%` : "—"}</span>
+          {sortedDays.length > 0 && (
+            <>
+              <span className="text-muted-foreground">Days off</span>
+              <span className="font-medium">{sortedDays.join(", ")}</span>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Competencies — only if survey data exists */}
+      {surveyData && (
+        <div className="space-y-1">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Competencies</p>
+          <div className="flex flex-wrap gap-1.5">
+            {(["iac", "iaoc", "icu", "transfer"] as const).map((key) => {
+              const achieved = cj[key]?.achieved as boolean | null | undefined;
+              const workingTowards = cj[key]?.workingTowards as boolean | null | undefined;
+              const colour = achieved === true
+                ? "bg-emerald-100 text-emerald-700"
+                : workingTowards === true
+                ? "bg-amber-100 text-amber-700"
+                : "bg-red-100 text-red-700";
+              return (
+                <span key={key} className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold ${colour}`}>
+                  {key.toUpperCase()} {achieved === true ? "✓" : "✗"}{workingTowards === true ? " – working towards" : ""}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {invitedAt && (
         <p className="text-[10px] text-muted-foreground">
@@ -121,7 +128,12 @@ function ExpandedDoctorPanel({
         </p>
       )}
 
-      <button type="button" onClick={onNavigateProfile} className="text-xs font-medium text-primary hover:underline">
+      {/* Teal profile button */}
+      <button
+        type="button"
+        onClick={onNavigateProfile}
+        className="inline-flex items-center gap-1.5 rounded-md bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold px-3 py-1.5 transition-colors"
+      >
         See full profile →
       </button>
     </div>
