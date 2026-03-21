@@ -1483,9 +1483,8 @@ export default function Roster() {
                   const isCopied = copiedId === doctor.id;
                   return (
                     <div key={doctor.id} className="bg-card">
-                      {/* Row */}
                       <div className="flex items-center gap-2 px-3 py-2.5 sm:px-4">
-                        {/* Chevron + name */}
+                        {/* Chevron + name — clicking toggles expand */}
                         <button
                           type="button"
                           onClick={async () => {
@@ -1496,7 +1495,7 @@ export default function Roster() {
                               if (found) {
                                 const { data } = await supabase
                                   .from("doctor_survey_responses")
-                                  .select("wte_percent, ltft_days_off, competencies_json")
+                                  .select("wte_percent, ltft_days_off, competencies_json, grade, nhs_email, phone_number")
                                   .eq("doctor_id", doctor.id)
                                   .eq("rota_config_id", found.rota_config_id)
                                   .maybeSingle();
@@ -1517,15 +1516,12 @@ export default function Roster() {
                             : <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
                           <span className="text-sm font-medium truncate">{doctor.last_name}, {doctor.first_name}</span>
                         </button>
-                        {/* Grade — sm+ */}
-                        <span className="hidden sm:block text-xs text-muted-foreground w-16 text-center truncate">
-                          {doctor.grade || "—"}
+                        {/* Grade — sm+ only */}
+                        <span className="hidden sm:block text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full shrink-0">
+                          {doctor.grade || "\u2014"}
                         </span>
-                        {/* Inactive badge */}
-                        <Badge variant="secondary" className="shrink-0">Inactive</Badge>
-                        {/* Actions */}
-                        <div className="flex items-center gap-0.5 shrink-0">
-                          {/* Profile link */}
+                        {/* Profile + Copy — sm+ only */}
+                        <span className="hidden sm:flex items-center gap-0.5 shrink-0">
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate(`/admin/doctor/${doctor.id}`)}>
@@ -1534,71 +1530,79 @@ export default function Roster() {
                             </TooltipTrigger>
                             <TooltipContent>View full profile</TooltipContent>
                           </Tooltip>
-                          {/* Copy link — sm+ */}
-                          <span className="hidden sm:flex">
-                            {renderCopyButton(doctor, isCopied)}
-                          </span>
-                          {/* Reactivate */}
-                          <Popover open={reactivatePopoverId === doctor.id} onOpenChange={(open) => setReactivatePopoverId(open ? doctor.id : null)}>
-                            <PopoverTrigger asChild>
-                              <Button variant="outline" size="sm" className="h-8 text-xs" onClick={(e) => {
-                                e.preventDefault();
-                                handleReactivateClick(doctor);
-                              }}>
-                                Reactivate
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-72 pointer-events-auto" align="end" onOpenAutoFocus={(e) => e.preventDefault()}>
-                              <div className="space-y-3">
-                                <p className="text-sm font-medium">Reactivate {doctor.first_name} {doctor.last_name}?</p>
-                                <p className="text-xs text-muted-foreground">This doctor has previous survey data. How would you like to proceed?</p>
-                                <div className="space-y-2">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="w-full justify-start"
-                                    onClick={async () => {
-                                      await supabase.from("doctors").update({ is_active: true }).eq("id", doctor.id);
-                                      toast.success("Doctor reactivated with previous survey data");
-                                      setReactivatePopoverId(null);
-                                      invalidateDoctors();
-                                      invalidateInactiveDoctors();
-                                    }}
-                                  >
-                                    Restore previous survey
-                                  </Button>
-                                  <Button
-                                    variant="destructive"
-                                    size="sm"
-                                    className="w-full justify-start"
-                                    onClick={async () => {
-                                      await supabase.from("doctor_survey_responses").delete().eq("doctor_id", doctor.id);
-                                      await supabase.from("doctors").update({
-                                        is_active: true,
-                                        survey_status: "not_started",
-                                        survey_submitted_at: null,
-                                        survey_invite_sent_at: null,
-                                        survey_invite_count: 0,
-                                      }).eq("id", doctor.id);
-                                      setReactivatePopoverId(null);
-                                      invalidateDoctors();
-                                      invalidateInactiveDoctors();
-                                      toast.success("Doctor reactivated — survey reset");
-                                    }}
-                                  >
-                                    Start fresh (clears survey)
-                                  </Button>
-                                </div>
+                          {renderCopyButton(doctor, isCopied)}
+                        </span>
+                        {/* Reactivate — always visible */}
+                        <Popover
+                          open={reactivatePopoverId === doctor.id}
+                          onOpenChange={(open) => { if (!open) setReactivatePopoverId(null); }}
+                        >
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs px-2 shrink-0"
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                const { data: existingSurvey } = await supabase
+                                  .from("doctor_survey_responses")
+                                  .select("id")
+                                  .eq("doctor_id", doctor.id)
+                                  .eq("rota_config_id", doctor.rota_config_id)
+                                  .maybeSingle();
+                                if (!existingSurvey) {
+                                  await supabase.from("doctors").update({ is_active: true }).eq("id", doctor.id);
+                                  toast.success("Doctor reactivated");
+                                  invalidateDoctors();
+                                  invalidateInactiveDoctors();
+                                } else {
+                                  setReactivatePopoverId(doctor.id);
+                                }
+                              }}
+                            >
+                              Reactivate
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-72 pointer-events-auto" align="end" onOpenAutoFocus={(e) => e.preventDefault()}>
+                            <div className="space-y-3">
+                              <p className="text-sm font-medium">Reactivate {doctor.first_name} {doctor.last_name}?</p>
+                              <p className="text-xs text-muted-foreground">Previous survey data found. How would you like to proceed?</p>
+                              <div className="flex flex-col gap-2">
+                                <Button size="sm" onClick={async () => {
+                                  await supabase.from("doctors").update({ is_active: true }).eq("id", doctor.id);
+                                  toast.success("Doctor reactivated with previous survey data");
+                                  setReactivatePopoverId(null);
+                                  invalidateDoctors();
+                                  invalidateInactiveDoctors();
+                                }}>
+                                  Restore previous survey
+                                </Button>
+                                <Button variant="outline" size="sm" onClick={async () => {
+                                  await supabase.from("doctor_survey_responses").delete().eq("doctor_id", doctor.id);
+                                  await supabase.from("doctors").update({
+                                    is_active: true,
+                                    survey_status: "not_started",
+                                    survey_submitted_at: null,
+                                    survey_invite_sent_at: null,
+                                    survey_invite_count: 0,
+                                  }).eq("id", doctor.id);
+                                  setReactivatePopoverId(null);
+                                  invalidateDoctors();
+                                  invalidateInactiveDoctors();
+                                  toast.success("Doctor reactivated \u2014 survey reset");
+                                }}>
+                                  Start fresh (clears survey)
+                                </Button>
                               </div>
-                            </PopoverContent>
-                          </Popover>
-                        </div>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
                       </div>
                       {/* Expanded panel */}
                       {isExpanded && (
                         <div className="border-t border-border bg-muted/30 px-3 py-3 sm:px-4">
                           <ExpandedDoctorPanel
-                            doctorId={doctor.id}
+                            doctor={doctor}
                             surveyData={surveyCache[doctor.id]}
                             isLoading={surveyLoading[doctor.id] ?? false}
                             invitedAt={doctor.survey_invite_sent_at}
