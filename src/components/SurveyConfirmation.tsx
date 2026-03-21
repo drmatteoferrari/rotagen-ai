@@ -163,8 +163,8 @@ export function SurveyConfirmation() {
         </SummaryBlock>
 
         {/* Exemptions */}
-        <SummaryBlock icon={<ShieldAlert className="h-3.5 w-3.5" />} title="Exemptions & Restrictions">
-          <SummaryItem label="Health Restrictions" value={formData.otherRestrictions || "None"} />
+        <SummaryBlock icon={<ShieldAlert className="h-3.5 w-3.5" />} title="Medical Exemptions">
+          <SummaryItem label="Exemption Details" value={formData.exemptionDetails || "None"} />
           <SummaryItem label="Parental Leave" value={
             formData.parentalLeaveExpected
               ? (formData.parentalLeaveStart && formData.parentalLeaveEnd
@@ -192,7 +192,22 @@ export function SurveyConfirmation() {
           ) : (
             <SummaryItem label="Specialties" value="None selected" />
           )}
-          <SummaryItem label="Special Sessions" value={formData.specialSessions.length > 0 ? formData.specialSessions.join(", ") : "None"} />
+          <SummaryItem
+            label="Special Sessions"
+            value={formData.specialSessions.length > 0
+              ? formData.specialSessions.map(s => s.notes ? `${s.name} — ${s.notes}` : s.name).join(", ")
+              : "None"}
+          />
+          {formData.otherInterests.length > 0 && (
+            <div className="space-y-0.5">
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase">Other Interests</span>
+              {formData.otherInterests.map((item, idx) => (
+                <p key={idx} className="text-xs text-card-foreground">
+                  {item.name}{item.notes && <span className="text-muted-foreground"> — {item.notes}</span>}
+                </p>
+              ))}
+            </div>
+          )}
           <SummaryItem label="Sign-offs Needed" value={formData.signoffNeeds || "None"} />
           <SummaryItem label="Additional Notes" value={formData.additionalNotes || "None"} />
         </SummaryBlock>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, parseISO } from "date-fns";
 import { toast } from "sonner";
@@ -29,14 +29,27 @@ export default function SurveyStep7() {
   const [saveMessage, setSaveMessage] = useState("");
 
   if (!ctx) return null;
-  const { formData, setField, submitSurvey, submitting, submitError, saveDraft, setStep, isAdminMode } = ctx;
+  const { formData, setField, setFields, submitSurvey, submitting, submitError, saveDraft, setStep, isAdminMode, returnedFromEdit, setReturnedFromEdit } = ctx;
 
-  // Auto-set signature date to today if not already set
-  if (!formData.signatureDate) {
-    const today = new Date().toISOString().split("T")[0];
-    // Use setTimeout to avoid setting state during render
-    setTimeout(() => setField("signatureDate", today), 0);
-  }
+  // Auto-set signature date to today on mount
+  useEffect(() => {
+    if (!formData.signatureDate) {
+      setField("signatureDate", new Date().toISOString().split("T")[0]);
+    }
+  }, []);
+
+  // Re-confirmation after edits — reset all 4 declaration checkboxes
+  useEffect(() => {
+    if (returnedFromEdit) {
+      setFields({
+        confirmedAccurate: false,
+        confirmAlgorithmUnderstood: false,
+        confirmExemptionsUnderstood: false,
+        confirmFairnessUnderstood: false,
+      });
+      setReturnedFromEdit(false);
+    }
+  }, [returnedFromEdit]);
 
   const validate = (): boolean => {
     const e: Record<string, string> = {};
@@ -207,10 +220,10 @@ export default function SurveyStep7() {
                 {/* Exemptions */}
                 <SummaryBlock
                   icon={<ShieldAlert className="h-3.5 w-3.5" />}
-                  title="Exemptions & Restrictions"
+                  title="Medical Exemptions"
                   onEdit={() => setStep(5)}
                 >
-                  <SummaryItem label="Health Restrictions" value={formData.otherRestrictions || "None"} />
+                  <SummaryItem label="Exemption Details" value={formData.exemptionDetails || "None"} />
                   <SummaryItem label="Parental Leave" value={
                     formData.parentalLeaveExpected
                       ? (formData.parentalLeaveStart && formData.parentalLeaveEnd
@@ -242,7 +255,22 @@ export default function SurveyStep7() {
                   ) : (
                     <SummaryItem label="Specialties" value="None selected" />
                   )}
-                  <SummaryItem label="Special Sessions" value={formData.specialSessions.length > 0 ? formData.specialSessions.join(", ") : "None"} />
+                  <SummaryItem
+                    label="Special Sessions"
+                    value={formData.specialSessions.length > 0
+                      ? formData.specialSessions.map(s => s.notes ? `${s.name} — ${s.notes}` : s.name).join(", ")
+                      : "None"}
+                  />
+                  {formData.otherInterests.length > 0 && (
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] font-semibold text-muted-foreground uppercase">Other Interests</span>
+                      {formData.otherInterests.map((i, idx) => (
+                        <p key={idx} className="text-xs text-card-foreground">
+                          {i.name}{i.notes && <span className="text-muted-foreground"> — {i.notes}</span>}
+                        </p>
+                      ))}
+                    </div>
+                  )}
                   <SummaryItem label="Sign-offs Needed" value={formData.signoffNeeds || "None"} />
                   <SummaryItem label="Additional Notes" value={formData.additionalNotes || "None"} />
                 </SummaryBlock>

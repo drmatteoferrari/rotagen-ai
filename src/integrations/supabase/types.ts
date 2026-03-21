@@ -161,6 +161,7 @@ export type Database = {
           ltft_night_flexibility: Json | null
           nhs_email: string | null
           noc_dates: Json | null
+          other_interests: Json | null
           other_requests: string | null
           other_restrictions: string | null
           other_unavailability: Json | null
@@ -224,6 +225,7 @@ export type Database = {
           ltft_night_flexibility?: Json | null
           nhs_email?: string | null
           noc_dates?: Json | null
+          other_interests?: Json | null
           other_requests?: string | null
           other_restrictions?: string | null
           other_unavailability?: Json | null
@@ -287,6 +289,7 @@ export type Database = {
           ltft_night_flexibility?: Json | null
           nhs_email?: string | null
           noc_dates?: Json | null
+          other_interests?: Json | null
           other_requests?: string | null
           other_restrictions?: string | null
           other_unavailability?: Json | null

@@ -1,9 +1,6 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-// ✅ Section 1 complete (migration ran separately)
-// ✅ Section 2 complete
-
 // === Types ===
 
 export interface SurveyDoctorInfo {
@@ -45,6 +42,11 @@ export interface LtftNightFlex {
 }
 
 export interface SpecialtyEntry {
+  name: string;
+  notes: string;
+}
+
+export interface SessionEntry {
   name: string;
   notes: string;
 }
@@ -101,7 +103,8 @@ export interface SurveyFormData {
 
   // Step 6
   specialtiesRequested: SpecialtyEntry[];
-  specialSessions: string[];
+  specialSessions: SessionEntry[];
+  otherInterests: SessionEntry[];
   signoffNeeds: string;
   additionalNotes: string;
   confirmedAccurate: boolean;
@@ -154,6 +157,7 @@ const DEFAULT_FORM_DATA: SurveyFormData = {
   exemptionDetails: "",
   specialtiesRequested: [],
   specialSessions: [],
+  otherInterests: [],
   signoffNeeds: "",
   additionalNotes: "",
   confirmedAccurate: false,
@@ -165,7 +169,6 @@ const DEFAULT_FORM_DATA: SurveyFormData = {
 };
 
 type LoadState = "loading" | "error" | "submitted" | "ready";
-// ✅ Section 4 complete — SaveStatus type
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
 interface SurveyContextType {
@@ -191,6 +194,8 @@ interface SurveyContextType {
   setLoadState: (s: LoadState) => void;
   saveStatus: SaveStatus;
   isAdminMode: boolean;
+  returnedFromEdit: boolean;
+  setReturnedFromEdit: (v: boolean) => void;
 }
 
 const SurveyContext = createContext<SurveyContextType | null>(null);
@@ -235,7 +240,8 @@ function formDataToDbRow(fd: SurveyFormData) {
     specific_days_off: fd.specificDaysOff,
     exemption_details: fd.exemptionDetails,
     specialties_requested: fd.specialtiesRequested as any,
-    special_sessions: fd.specialSessions,
+    special_sessions: fd.specialSessions as any,
+    other_interests: fd.otherInterests as any,
     signoff_needs: fd.signoffNeeds,
     additional_notes: fd.additionalNotes,
     confirmed_accurate: fd.confirmedAccurate,
@@ -292,6 +298,7 @@ function dbRowToFormData(draft: any, base: SurveyFormData): SurveyFormData {
     exemptionDetails: draft.exemption_details || "",
     specialtiesRequested: draft.specialties_requested || [],
     specialSessions: draft.special_sessions || [],
+    otherInterests: draft.other_interests || [],
     signoffNeeds: draft.signoff_needs || "",
     additionalNotes: draft.additional_notes || "",
     confirmedAccurate: draft.confirmed_accurate || false,
@@ -317,6 +324,7 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
   const [draftSavedAt, setDraftSavedAt] = useState<Date | null>(null);
   const [submittedAt, setSubmittedAt] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+  const [returnedFromEdit, setReturnedFromEdit] = useState(false);
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const formDataRef = useRef(formData);
   const doctorRef = useRef(doctor);
@@ -451,7 +459,6 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
     }
   };
 
-  // ✅ Section 4 complete — Auto-save with status indicator
   const saveDraft = useCallback(async () => {
     const doc = doctorRef.current;
     if (!doc) return;
@@ -530,10 +537,11 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
   }, []);
 
   const goToStep = useCallback((step: number) => {
+    setReturnedFromEdit(true);
     setCurrentStep(Math.max(1, Math.min(6, step)));
   }, []);
 
-  // Submission — Section 10
+  // Submission
   const submitSurvey = useCallback(async (): Promise<boolean> => {
     const doc = doctorRef.current;
     if (!doc) return false;
@@ -624,8 +632,6 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
     }
   }, [rotaInfo]);
 
-  // ✅ Section 10 complete
-
   return (
     <SurveyContext.Provider
       value={{
@@ -633,6 +639,7 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
         setField, setFields, setStep, nextStep, prevStep, goToStep,
         submitSurvey, saveDraft, submitting, submitError, draftSavedAt, submittedAt,
         setSubmittedAt, setLoadState, saveStatus, isAdminMode: adminMode,
+        returnedFromEdit, setReturnedFromEdit,
       }}
     >
       {children}
