@@ -123,8 +123,8 @@ export function DateRangePicker({
     : "Select dates";
 
   const hint = phase === "start"
-    ? "Select start date"
-    : "Now select end date";
+    ? "Select a date. Tap again to save as a single day, or pick an end date."
+    : "Select end date — or tap outside to save as a single day.";
 
   return (
     <div className="space-y-1">

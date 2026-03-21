@@ -480,6 +480,7 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
       const nameParts = fd.fullName.trim().split(/\s+/);
       const syncFirst = nameParts[0] || "";
       const syncLast = nameParts.slice(1).join(" ") || "";
+      // NHS email edited in Step 1 is synced here on every auto-save
       await supabase
         .from("doctors")
         .update({

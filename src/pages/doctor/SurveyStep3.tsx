@@ -1,4 +1,3 @@
-// SECTION 1 COMPLETE
 import { useState } from "react";
 import { useSurveyContext, type LtftNightFlex } from "@/contexts/SurveyContext";
 import { StepNav } from "@/components/survey/StepNav";
@@ -7,7 +6,7 @@ import { FieldError } from "@/components/survey/FieldError";
 import { InfoBox } from "@/components/survey/InfoBox";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarDays, Info, CheckCircle2 } from "lucide-react";
 
 const WTE_OPTIONS = [
@@ -31,6 +30,14 @@ function expectedDaysOff(wte: number, otherVal: number | null): number {
   const pct = wte === 0 ? (otherVal || 100) : wte;
   if (pct >= 100) return 0;
   return Math.round((1 - pct / 100) * 5);
+}
+
+function bandedDaysOff(pct: number): number {
+  if (pct >= 81) return 0;
+  if (pct >= 61) return 1;
+  if (pct >= 41) return 2;
+  if (pct >= 21) return 3;
+  return 4;
 }
 
 function RadioYN({ value, onChange, label, hint }: { value: boolean | null; onChange: (v: boolean) => void; label: string; hint?: string }) {
@@ -107,7 +114,7 @@ export default function SurveyStep3() {
         {/* Info banner */}
         <div className="flex items-start gap-2 rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-xs sm:text-sm font-medium text-teal-700">
           <Info className="h-4 w-4 shrink-0 mt-0.5 text-teal-600" />
-          If you work full time, no action is needed here.
+          Select your working hours and pattern.
         </div>
 
         <Card>
@@ -116,7 +123,6 @@ export default function SurveyStep3() {
               <CalendarDays className="h-5 w-5 text-teal-600" />
               Working Pattern
             </CardTitle>
-            <CardDescription className="text-xs">Non-working days if LTFT. Full-time: nothing to do.</CardDescription>
           </CardHeader>
           <CardContent className="px-3 sm:px-6 space-y-4">
             <SurveySection number={1} title="WTE" badge="high">
@@ -152,6 +158,11 @@ export default function SurveyStep3() {
                       className="bg-muted border-border w-28"
                     />
                     <FieldError message={errors.wteOther} />
+                    {formData.wteOtherValue != null && formData.wteOtherValue > 0 && (
+                      <p className="text-[10px] text-muted-foreground italic mt-1">
+                        At {formData.wteOtherValue}%, approximately {bandedDaysOff(formData.wteOtherValue)} day(s) off per week expected.
+                      </p>
+                    )}
                   </div>
                 )}
 
@@ -171,7 +182,7 @@ export default function SurveyStep3() {
             {isLtft && (
               <SurveySection number={2} title="Day(s) Off">
                 <div className="space-y-3">
-                  <p className="text-[10px] sm:text-xs text-muted-foreground">Select your LTFT day(s) off. Consecutive days help night block scheduling.</p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">Select your LTFT non-working day(s). Consecutive days help with night block scheduling — please consider this when choosing.</p>
                   <div className="flex flex-wrap gap-2">
                     {DAYS.map((day) => (
                       <label key={day} className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 cursor-pointer transition-colors text-sm ${
@@ -202,7 +213,7 @@ export default function SurveyStep3() {
             {isLtft && formData.ltftDaysOff.length > 0 && (
               <SurveySection number={3} title="Night Flexibility">
                 <div className="space-y-3">
-                  <p className="text-[10px] sm:text-xs text-muted-foreground">Night blocks span 2–4 nights. Can they start/end on your day off?</p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">Night blocks span 2–4 nights. Can the block start or end on your day off? Selecting yes helps with scheduling — please consider it.</p>
                   {formData.ltftDaysOff.map((day) => {
                     const flex = formData.ltftNightFlexibility.find((f) => f.day === day);
                     return (

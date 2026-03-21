@@ -1,12 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSurveyContext } from "@/contexts/SurveyContext";
 import { StepNav } from "@/components/survey/StepNav";
 import { SurveySection } from "@/components/survey/SurveySection";
 import { FieldError } from "@/components/survey/FieldError";
-import { InfoBox } from "@/components/survey/InfoBox";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { User, Info } from "lucide-react";
 
 const GRADE_OPTIONS = [
@@ -20,12 +19,23 @@ const GRADE_OPTIONS = [
   "Other",
 ];
 
+const STANDARD_TYPES = ["Emergency Medicine", "Intensive Care Medicine"];
+
 export default function SurveyStep1() {
   const ctx = useSurveyContext();
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [otherDualText, setOtherDualText] = useState("");
 
   if (!ctx) return null;
   const { formData, setField } = ctx;
+
+  const dualOther = formData.dualSpecialtyTypes.some((t) => !STANDARD_TYPES.includes(t));
+
+  // Initialise otherDualText from existing data
+  useEffect(() => {
+    const existing = formData.dualSpecialtyTypes.find((t) => !STANDARD_TYPES.includes(t));
+    if (existing) setOtherDualText(existing);
+  }, []);
 
   const validate = (): boolean => {
     const e: Record<string, string> = {};
@@ -41,8 +51,6 @@ export default function SurveyStep1() {
     if (validate()) ctx.nextStep();
   };
 
-  const dualOther = formData.dualSpecialtyTypes.some((t) => t !== "Emergency Medicine" && t !== "Intensive Care Medicine");
-
   const toggleDualType = (type: string, checked: boolean) => {
     if (checked) {
       setField("dualSpecialtyTypes", [...formData.dualSpecialtyTypes.filter((t) => t !== type), type]);
@@ -57,7 +65,7 @@ export default function SurveyStep1() {
         {/* Info banner */}
         <div className="flex items-start gap-2 rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-xs sm:text-sm font-medium text-teal-700">
           <Info className="h-4 w-4 shrink-0 mt-0.5 text-teal-600" />
-          Confirm your details. Your WTE determines your proportional share of shifts.
+          Confirm your details.
         </div>
 
         <Card>
@@ -66,49 +74,33 @@ export default function SurveyStep1() {
               <User className="h-5 w-5 text-teal-600" />
               Personal Details
             </CardTitle>
-            <CardDescription className="text-xs">Name, grade, and WTE. Used to calculate your fair share of shifts.</CardDescription>
           </CardHeader>
           <CardContent className="px-3 sm:px-6 space-y-4">
             <SurveySection number={1} title="Identification">
               <div className="space-y-3">
                 {/* Full Name */}
                 <div className="rounded-lg border border-border p-3 space-y-2">
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium text-card-foreground">Full Name</span>
-                    <span className="text-xs text-muted-foreground">As it should appear on the rota</span>
-                    <span className="text-[11px] font-semibold text-teal-600 mt-0.5">Required</span>
-                  </div>
+                  <span className="text-sm font-medium text-card-foreground">Full Name *</span>
                   <Input value={formData.fullName} onChange={(e) => setField("fullName", e.target.value)} placeholder="Dr. Jane Smith" className="w-full bg-muted border-border" />
                 </div>
                 <FieldError message={errors.fullName} />
 
                 {/* NHS Email */}
                 <div className="rounded-lg border border-border p-3 space-y-2">
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium text-card-foreground">Work (NHS) Email</span>
-                    <span className="text-xs text-muted-foreground">For rota communications</span>
-                    <span className="text-[11px] font-semibold text-teal-600 mt-0.5">Required</span>
-                  </div>
+                  <span className="text-sm font-medium text-card-foreground">Work (NHS) Email *</span>
                   <Input type="email" value={formData.nhsEmail} onChange={(e) => setField("nhsEmail", e.target.value)} placeholder="j.smith@nhs.net" className="w-full bg-muted border-border" />
                 </div>
                 <FieldError message={errors.nhsEmail} />
 
                 {/* Personal Email */}
                 <div className="rounded-lg border border-border p-3 space-y-2">
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium text-card-foreground">Personal Email</span>
-                    <span className="text-xs text-muted-foreground">Optional backup contact</span>
-                  </div>
+                  <span className="text-sm font-medium text-card-foreground">Personal Email</span>
                   <Input type="email" value={formData.personalEmail} onChange={(e) => setField("personalEmail", e.target.value)} placeholder="jane@gmail.com" className="w-full bg-muted border-border" />
                 </div>
 
                 {/* Phone */}
                 <div className="rounded-lg border border-border p-3 space-y-2">
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium text-card-foreground">Phone Number</span>
-                    <span className="text-xs text-muted-foreground">For urgent rota changes</span>
-                    <span className="text-[11px] font-semibold text-teal-600 mt-0.5">Required</span>
-                  </div>
+                  <span className="text-sm font-medium text-card-foreground">Phone Number *</span>
                   <Input type="tel" value={formData.phoneNumber} onChange={(e) => setField("phoneNumber", e.target.value)} placeholder="07xxx xxx xxx" className="w-full bg-muted border-border" />
                 </div>
                 <FieldError message={errors.phoneNumber} />
@@ -119,11 +111,7 @@ export default function SurveyStep1() {
               <div className="space-y-3">
                 {/* Grade */}
                 <div className="rounded-lg border border-border p-3 space-y-2">
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium text-card-foreground">Grade</span>
-                    <span className="text-xs text-muted-foreground">Your current training level</span>
-                    <span className="text-[11px] font-semibold text-teal-600 mt-0.5">Required</span>
-                  </div>
+                  <span className="text-sm font-medium text-card-foreground">Grade *</span>
                   <select
                     value={formData.grade}
                     onChange={(e) => setField("grade", e.target.value)}
@@ -141,7 +129,7 @@ export default function SurveyStep1() {
                     checked={formData.dualSpecialty}
                     onCheckedChange={(v) => {
                       setField("dualSpecialty", !!v);
-                      if (!v) setField("dualSpecialtyTypes", []);
+                      if (!v) { setField("dualSpecialtyTypes", []); setOtherDualText(""); }
                     }}
                     className="mt-0.5"
                   />
@@ -169,8 +157,9 @@ export default function SurveyStep1() {
                         onCheckedChange={(v) => {
                           if (!v) {
                             setField("dualSpecialtyTypes", formData.dualSpecialtyTypes.filter(
-                              (t) => t === "Emergency Medicine" || t === "Intensive Care Medicine"
+                              (t) => STANDARD_TYPES.includes(t)
                             ));
+                            setOtherDualText("");
                           } else {
                             setField("dualSpecialtyTypes", [...formData.dualSpecialtyTypes, ""]);
                           }
@@ -181,12 +170,12 @@ export default function SurveyStep1() {
                     {dualOther && (
                       <Input
                         placeholder="Please specify"
-                        value={formData.dualSpecialtyTypes.find((t) => t !== "Emergency Medicine" && t !== "Intensive Care Medicine") || ""}
+                        value={otherDualText}
                         onChange={(e) => {
-                          const others = formData.dualSpecialtyTypes.filter(
-                            (t) => t === "Emergency Medicine" || t === "Intensive Care Medicine"
-                          );
-                          setField("dualSpecialtyTypes", e.target.value ? [...others, e.target.value] : others);
+                          const val = e.target.value;
+                          setOtherDualText(val);
+                          const others = formData.dualSpecialtyTypes.filter((t) => STANDARD_TYPES.includes(t));
+                          setField("dualSpecialtyTypes", val ? [...others, val] : others);
                         }}
                         className="bg-muted border-border"
                       />
