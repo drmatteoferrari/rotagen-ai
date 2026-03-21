@@ -5,12 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, X } from "lucide-react";
+import { Loader2, X, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { GRADE_OPTIONS } from "@/lib/gradeOptions";
-
-// SECTION 8 — Admin edit slide-over panel
+import { DateRangePicker } from "@/components/survey/DateRangePicker";
 
 interface Doctor {
   id: string;
@@ -79,7 +78,7 @@ export function SurveyResponsePanel({ doctor, open, onClose, onSaved }: SurveyRe
         );
       if (error) throw error;
 
-      // Sync identity fields back to doctors table (single source of truth)
+      // Sync identity fields back to doctors table
       const fullName: string = data.full_name ?? "";
       const nameParts = fullName.trim().split(/\s+/);
       const syncFirst = nameParts[0] ?? "";
@@ -110,6 +109,37 @@ export function SurveyResponsePanel({ doctor, open, onClose, onSaved }: SurveyRe
 
   const statusColor = doctor?.survey_status === "submitted" ? "bg-emerald-500/15 text-emerald-600" :
     doctor?.survey_status === "in_progress" ? "bg-amber-500/15 text-amber-600" : "bg-muted text-muted-foreground";
+
+  // Leave list helpers
+  const getLeaveList = (key: string): { startDate: string; endDate: string; reason: string }[] => {
+    const arr = data[key];
+    return Array.isArray(arr) ? arr : [];
+  };
+
+  const updateLeaveEntry = (key: string, index: number, field: string, value: string) => {
+    const list = [...getLeaveList(key)];
+    list[index] = { ...list[index], [field]: value };
+    setField(key, list);
+  };
+
+  const addLeaveEntry = (key: string) => {
+    setField(key, [...getLeaveList(key), { startDate: "", endDate: "", reason: "" }]);
+  };
+
+  const removeLeaveEntry = (key: string, index: number) => {
+    setField(key, getLeaveList(key).filter((_, i) => i !== index));
+  };
+
+  // Competency helpers
+  const getCj = () => (data.competencies_json ?? {}) as Record<string, any>;
+
+  const setCompField = (comp: string, subfield: string, value: boolean) => {
+    const cj = getCj();
+    setField("competencies_json", {
+      ...cj,
+      [comp]: { ...cj[comp], [subfield]: value },
+    });
+  };
 
   return (
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
@@ -170,23 +200,49 @@ export function SurveyResponsePanel({ doctor, open, onClose, onSaved }: SurveyRe
               </div>
             </section>
 
-            {/* Step 2: Competencies */}
+            {/* Step 2: Competencies — using competencies_json */}
             <section>
               <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-3">Step 2: Competencies</h3>
-              <div className="space-y-3">
-                {[
-                  { key: "comp_ip_anaesthesia", label: "IP Anaesthesia" },
-                  { key: "comp_ip_anaesthesia_here", label: "IP Anaesthesia (here)" },
-                  { key: "comp_obstetric", label: "Obstetric" },
-                  { key: "comp_obstetric_here", label: "Obstetric (here)" },
-                  { key: "comp_icu", label: "ICU" },
-                  { key: "comp_icu_here", label: "ICU (here)" },
-                ].map(({ key, label }) => (
-                  <div key={key} className="flex items-center justify-between">
-                    <span className="text-sm">{label}</span>
-                    <Switch checked={!!data[key]} onCheckedChange={(v) => setField(key, v)} />
-                  </div>
-                ))}
+              <div className="space-y-4">
+                {(["iac", "iaoc", "icu", "transfer"] as const).map((comp) => {
+                  const cj = getCj();
+                  const block = cj[comp] ?? {};
+                  const labels: Record<string, string> = { iac: "IAC", iaoc: "IAOC", icu: "ICU", transfer: "Transfer" };
+                  return (
+                    <div key={comp} className="rounded-lg border border-border p-3 space-y-2">
+                      <p className="text-sm font-semibold">{labels[comp]}</p>
+                      {(["achieved", "workingTowards", "remoteSupervision"] as const).map((sub) => {
+                        const subLabels: Record<string, string> = {
+                          achieved: "Achieved",
+                          workingTowards: "Working towards",
+                          remoteSupervision: "Remote supervision",
+                        };
+                        const val = block[sub] as boolean | null | undefined;
+                        return (
+                          <div key={sub} className="flex items-center justify-between">
+                            <span className="text-xs text-muted-foreground">{subLabels[sub]}</span>
+                            <div className="flex gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setCompField(comp, sub, true)}
+                                className={`px-2.5 py-0.5 rounded text-xs font-medium border transition-colors ${val === true ? "bg-emerald-100 text-emerald-700 border-emerald-300" : "bg-background text-muted-foreground border-border hover:border-emerald-300"}`}
+                              >
+                                Yes
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setCompField(comp, sub, false)}
+                                className={`px-2.5 py-0.5 rounded text-xs font-medium border transition-colors ${val === false ? "bg-red-100 text-red-700 border-red-300" : "bg-background text-muted-foreground border-border hover:border-red-300"}`}
+                              >
+                                No
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
               </div>
             </section>
 
@@ -208,40 +264,66 @@ export function SurveyResponsePanel({ doctor, open, onClose, onSaved }: SurveyRe
               </div>
             </section>
 
-            {/* Step 4: Leave */}
+            {/* Step 4: Leave — structured date-range UI */}
             <section>
               <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-3">Step 4: Leave & Unavailability</h3>
-              <div className="space-y-3">
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground">Annual Leave (JSON)</label>
-                  <Textarea
-                    value={JSON.stringify(data.annual_leave ?? [], null, 2)}
-                    onChange={(e) => { try { setField("annual_leave", JSON.parse(e.target.value)); } catch {} }}
-                    rows={3}
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground">Study Leave (JSON)</label>
-                  <Textarea
-                    value={JSON.stringify(data.study_leave ?? [], null, 2)}
-                    onChange={(e) => { try { setField("study_leave", JSON.parse(e.target.value)); } catch {} }}
-                    rows={3}
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-muted-foreground">NOC Dates (JSON)</label>
-                  <Textarea
-                    value={JSON.stringify(data.noc_dates ?? [], null, 2)}
-                    onChange={(e) => { try { setField("noc_dates", JSON.parse(e.target.value)); } catch {} }}
-                    rows={3}
-                  />
-                </div>
+              <div className="space-y-4">
+                {(["annual_leave", "study_leave", "noc_dates", "other_unavailability"] as const).map((key) => {
+                  const labels: Record<string, string> = {
+                    annual_leave: "Annual Leave",
+                    study_leave: "Study Leave",
+                    noc_dates: "NOC Dates",
+                    other_unavailability: "Other Unavailability",
+                  };
+                  const list = getLeaveList(key);
+                  return (
+                    <div key={key} className="space-y-2">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase">{labels[key]}</p>
+                      {list.map((entry, idx) => (
+                        <div key={idx} className="rounded-lg border border-border p-2.5 space-y-2">
+                          <DateRangePicker
+                            startDate={entry.startDate ?? ""}
+                            endDate={entry.endDate ?? ""}
+                            onChange={(s, e) => {
+                              const updated = [...list];
+                              updated[idx] = { ...updated[idx], startDate: s, endDate: e };
+                              setField(key, updated);
+                            }}
+                          />
+                          <div className="flex items-center gap-2">
+                            <Input
+                              placeholder="Reason (optional)"
+                              value={entry.reason ?? ""}
+                              onChange={(e) => updateLeaveEntry(key, idx, "reason", e.target.value)}
+                              className="text-xs flex-1"
+                            />
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive hover:text-destructive shrink-0"
+                              onClick={() => removeLeaveEntry(key, idx)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => addLeaveEntry(key)}
+                        className="flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+                      >
+                        <Plus className="h-3.5 w-3.5" /> Add entry
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             </section>
 
             {/* Step 5: Exemptions */}
             <section>
-              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-3">Step 5: Exemptions & Restrictions</h3>
+              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-3">Step 5: Medical Exemptions</h3>
               <div className="space-y-3">
                 {[
                   { key: "exempt_from_nights", label: "Exempt from nights" },
@@ -264,24 +346,35 @@ export function SurveyResponsePanel({ doctor, open, onClose, onSaved }: SurveyRe
               </div>
             </section>
 
-            {/* Step 6: Preferences */}
+            {/* Step 6: Preferences & Training */}
             <section>
               <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-3">Step 6: Preferences & Training</h3>
               <div className="space-y-3">
                 <div>
-                  <label className="text-xs font-medium text-muted-foreground">Preferred Shift Types (comma-separated)</label>
-                  <Input
-                    value={(data.preferred_shift_types ?? []).join(", ")}
-                    onChange={(e) => setField("preferred_shift_types", e.target.value.split(",").map((s: string) => s.trim()).filter(Boolean))}
-                  />
+                  <label className="text-xs font-medium text-muted-foreground">Specialties Requested</label>
+                  <div className="text-xs text-card-foreground bg-muted rounded-md p-2 mt-1">
+                    {Array.isArray(data.specialties_requested) && data.specialties_requested.length > 0
+                      ? data.specialties_requested.map((s: any, i: number) => (
+                          <p key={i}>{s.name}{s.notes ? ` — ${s.notes}` : ""}</p>
+                        ))
+                      : <p className="text-muted-foreground">None</p>
+                    }
+                  </div>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-muted-foreground">Other Requests</label>
-                  <Textarea value={data.other_requests ?? ""} onChange={(e) => setField("other_requests", e.target.value)} rows={2} />
+                  <label className="text-xs font-medium text-muted-foreground">Special Sessions</label>
+                  <div className="text-xs text-card-foreground bg-muted rounded-md p-2 mt-1">
+                    {Array.isArray(data.special_sessions) && data.special_sessions.length > 0
+                      ? data.special_sessions.map((s: any, i: number) => (
+                          <p key={i}>{typeof s === "string" ? s : s.name}{typeof s !== "string" && s.notes ? ` — ${s.notes}` : ""}</p>
+                        ))
+                      : <p className="text-muted-foreground">None</p>
+                    }
+                  </div>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-muted-foreground">Sign-off Requirements</label>
-                  <Textarea value={data.signoff_requirements ?? ""} onChange={(e) => setField("signoff_requirements", e.target.value)} rows={2} />
+                  <label className="text-xs font-medium text-muted-foreground">Sign-off Needs</label>
+                  <Textarea value={data.signoff_needs ?? ""} onChange={(e) => setField("signoff_needs", e.target.value)} rows={2} />
                 </div>
                 <div>
                   <label className="text-xs font-medium text-muted-foreground">Additional Notes</label>
@@ -305,5 +398,3 @@ export function SurveyResponsePanel({ doctor, open, onClose, onSaved }: SurveyRe
     </Sheet>
   );
 }
-
-// SECTION 8 COMPLETE

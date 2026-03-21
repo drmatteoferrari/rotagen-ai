@@ -37,22 +37,22 @@ export default function SurveyStep5() {
       <div className="flex-1 overflow-y-auto overscroll-contain p-3 sm:p-4 pb-4 space-y-4">
         <div className="flex items-start gap-2 rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-xs sm:text-sm font-medium text-teal-700">
           <Info className="h-4 w-4 shrink-0 mt-0.5 text-teal-600" />
-          Medical exemptions are treated as confidential.
+          Medical exemptions are confidential and will only be seen by the rota coordinator.
         </div>
 
         <Card>
           <CardHeader className="px-3 sm:px-6 py-3 sm:py-4">
             <CardTitle className="flex items-center gap-2 text-base">
               <ShieldAlert className="h-5 w-5 text-teal-600" />
-              Exemptions & Preferences
+              Medical Exemptions
             </CardTitle>
-            <CardDescription className="text-xs">Medical exemptions and scheduling preferences.</CardDescription>
+            <CardDescription className="text-xs">Formal exemptions from Occupational Health, your training programme, or other health circumstances.</CardDescription>
           </CardHeader>
           <CardContent className="px-3 sm:px-6 space-y-4">
             {/* Exemptions */}
             <SurveySection number={1} title="Exemptions">
               <div className="space-y-2">
-                <InfoBox type="info">Include any formal exemptions from Occupational Health or your training programme, and any health, personal, or occupational circumstances. Confidential — seen only by the rota coordinator.</InfoBox>
+                <InfoBox type="info">Include any formal exemptions from Occupational Health or your training programme, and any relevant health or occupational circumstances.</InfoBox>
                 <Textarea
                   value={formData.exemptionDetails}
                   onChange={(e) => setField("exemptionDetails", e.target.value)}
