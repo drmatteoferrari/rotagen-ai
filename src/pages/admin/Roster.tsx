@@ -466,26 +466,6 @@ export default function Roster() {
     }
   };
 
-  // ─── Reactivate handler ───
-  const handleReactivateClick = async (doctor: Doctor) => {
-    const { data: existingSurvey } = await supabase
-      .from("doctor_survey_responses")
-      .select("id")
-      .eq("doctor_id", doctor.id)
-      .eq("rota_config_id", doctor.rota_config_id)
-      .maybeSingle();
-
-    if (!existingSurvey) {
-      // No survey data — directly reactivate
-      await supabase.from("doctors").update({ is_active: true }).eq("id", doctor.id);
-      invalidateDoctors();
-      invalidateInactiveDoctors();
-      toast.success("Doctor reactivated");
-    } else {
-      // Has survey data — show popover
-      setReactivatePopoverId(doctor.id);
-    }
-  };
 
   // Survey status counts
   const submitted = doctors.filter((d) => d.survey_status === "submitted").length;
