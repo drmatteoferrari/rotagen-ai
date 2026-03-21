@@ -493,11 +493,12 @@ export default function DoctorProfile() {
                 ))}
               </select>
             </div>
+            <p className="text-xs text-muted-foreground">Status: {doctor.is_active ? "Active" : "Inactive"}</p>
             <div className="flex justify-end">
               <Button onClick={handleSave} disabled={saveState === "saving"}>
                 {saveState === "saving" && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
                 {saveState === "saved" && <Check className="mr-1.5 h-4 w-4" />}
-                {saveState === "idle" ? "Save changes" : saveState === "saving" ? "Saving…" : "Saved ✓"}
+                {saveState === "idle" ? "Save changes" : saveState === "saving" ? "Saving\u2026" : "Saved \u2713"}
               </Button>
             </div>
           </CardContent>
