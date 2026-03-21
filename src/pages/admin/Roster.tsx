@@ -4,20 +4,17 @@ import { AdminLayout } from "@/components/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  Copy, Trash2, UserPlus, Send, Users, Pencil, CalendarIcon, Loader2, Check, AlertTriangle, Link2, ExternalLink, ChevronDown, ChevronUp, Clock, ArrowUpDown,
+  Copy, Trash2, UserPlus, Send, Users, Pencil, CalendarIcon, Loader2, Check, AlertTriangle, ExternalLink, ChevronDown, ChevronUp, ArrowUpDown, Search,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
-import { format, subDays, parseISO } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useRotaContext } from "@/contexts/RotaContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -25,22 +22,20 @@ import { buildSurveyLink } from "@/lib/surveyLinks";
 import { useDoctorsQuery, useInactiveDoctorsQuery, useRotaConfigDetailsQuery, useInvalidateQuery } from "@/hooks/useAdminQueries";
 import { GRADE_OPTIONS, GRADE_ORDER } from "@/lib/gradeOptions";
 
-
-// SECTION 6 — Doctor interface from DB
 interface Doctor {
   id: string;
   rota_config_id: string;
   first_name: string;
   last_name: string;
   email: string | null;
-  grade: string;
+  grade: string | null;
   survey_status: string;
   survey_invite_sent_at: string | null;
   survey_invite_count: number;
   survey_token: string | null;
   survey_submitted_at: string | null;
+  is_active: boolean;
 }
-// SECTION 6 COMPLETE
 
 // ── Expanded panel component ──
 function ExpandedDoctorPanel({
@@ -64,69 +59,68 @@ function ExpandedDoctorPanel({
     );
   }
 
-  const cj = surveyData?.competencies_json ?? {};
-  const compIcon = (val: boolean | null | undefined) =>
-    val === true ? "✓" : val === false ? "✗" : "?";
-  const compColor = (val: boolean | null | undefined) =>
-    val === true
-      ? "bg-emerald-100 text-emerald-700"
-      : val === false
-      ? "bg-red-100 text-red-700"
-      : "bg-muted text-muted-foreground";
+  if (!surveyData) {
+    return (
+      <div className="space-y-3 text-sm">
+        <p className="text-xs text-muted-foreground italic">No survey data yet.</p>
+        <button type="button" onClick={onNavigateProfile} className="text-xs font-medium text-primary hover:underline">
+          See full profile →
+        </button>
+      </div>
+    );
+  }
 
+  const cj = surveyData?.competencies_json ?? {};
   const wte = surveyData?.wte_percent ?? null;
   const ltftDays: string[] = surveyData?.ltft_days_off ?? [];
-  const nightFlex: any[] = Array.isArray(surveyData?.ltft_night_flexibility)
-    ? surveyData.ltft_night_flexibility
-    : [];
+  const DAY_ORDER = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+  const sortedDays = [...ltftDays].sort((a, b) => DAY_ORDER.indexOf(a) - DAY_ORDER.indexOf(b));
+  const isLtft = wte !== null && wte < 100;
 
   return (
     <div className="space-y-3 text-sm">
-      {!surveyData && (
-        <p className="text-xs text-muted-foreground italic">No survey data yet — invite this doctor to complete their preferences.</p>
-      )}
-      {surveyData && (
-        <>
-          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-xs">
-            <dt className="text-muted-foreground">WTE</dt>
-            <dd className="font-medium">{wte != null ? `${wte}%` : "—"}</dd>
-            <dt className="text-muted-foreground">LTFT</dt>
-            <dd className="font-medium">{wte != null && wte < 100 ? "Yes" : "No"}</dd>
+      {/* Working pattern */}
+      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-xs">
+        <dt className="text-muted-foreground">WTE</dt>
+        <dd className="font-medium">{wte !== null ? `${wte}%` : "—"}</dd>
+        <dt className="text-muted-foreground">LTFT</dt>
+        <dd className="font-medium">{isLtft ? "Yes" : "No"}</dd>
+        {isLtft && sortedDays.length > 0 && (
+          <>
             <dt className="text-muted-foreground">Days off</dt>
-            <dd className="font-medium">{ltftDays.length > 0 ? ltftDays.join(", ") : "—"}</dd>
-            {nightFlex.length > 0 && (
-              <>
-                <dt className="text-muted-foreground">Night flexibility</dt>
-                <dd className="font-medium">{nightFlex.map((n: any) => (
-                  <span key={n.day} className="block">
-                    {n.day}: {n.canStart ? "Can start ✓" : "Can't start ✗"} · {n.canEnd ? "Can end ✓" : "Can't end ✗"}
-                  </span>
-                ))}</dd>
-              </>
-            )}
-          </dl>
+            <dd className="font-medium">{sortedDays.join(", ")}</dd>
+          </>
+        )}
+      </dl>
 
-          <div className="space-y-1">
-            <p className="text-xs font-semibold text-muted-foreground">Competencies</p>
-            <div className="flex flex-wrap gap-1.5">
-              {(["iac", "iaoc", "icu", "transfer"] as const).map((key) => {
-                const val = cj[key]?.achieved;
-                return (
-                  <span key={key} className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${compColor(val)}`}>
-                    {key.toUpperCase()} {compIcon(val)}
-                  </span>
-                );
-              })}
-            </div>
-          </div>
+      {/* Competencies */}
+      <div className="space-y-1">
+        <p className="text-xs font-semibold text-muted-foreground">Competencies</p>
+        <div className="flex flex-wrap gap-1.5">
+          {(["iac", "iaoc", "icu", "transfer"] as const).map((key) => {
+            const achieved = cj[key]?.achieved as boolean | null | undefined;
+            const workingTowards = cj[key]?.workingTowards as boolean | null | undefined;
+            const color = achieved === true
+              ? "bg-emerald-100 text-emerald-700"
+              : achieved !== true && workingTowards === true
+              ? "bg-amber-100 text-amber-700"
+              : "bg-red-100 text-red-700";
+            const text = `${key.toUpperCase()} ${achieved === true ? "✓" : "✗"}${workingTowards === true ? " – working towards" : ""}`;
+            return (
+              <span key={key} className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold ${color}`}>
+                {text}
+              </span>
+            );
+          })}
+        </div>
+      </div>
 
-          {invitedAt && (
-            <p className="text-[10px] text-muted-foreground">
-              Last invited: {format(parseISO(invitedAt), "d MMM yyyy, HH:mm")}
-            </p>
-          )}
-        </>
+      {invitedAt && (
+        <p className="text-[10px] text-muted-foreground">
+          Last invited: {format(parseISO(invitedAt), "d MMM yyyy, HH:mm")}
+        </p>
       )}
+
       <button type="button" onClick={onNavigateProfile} className="text-xs font-medium text-primary hover:underline">
         See full profile →
       </button>
@@ -157,7 +151,7 @@ export default function Roster() {
   // Cached deadline from React Query
   const { data: configDetails } = useRotaConfigDetailsQuery();
 
-  // SECTION 8 — Deadline picker state
+  // Deadline picker state
   const [surveyDeadline, setSurveyDeadline] = useState<Date | undefined>(undefined);
   const [deadlineOpen, setDeadlineOpen] = useState(false);
   const [deadlineInitialized, setDeadlineInitialized] = useState(false);
@@ -171,7 +165,7 @@ export default function Roster() {
     }
   }, [configDetails, deadlineInitialized]);
 
-  // SECTION 5 — Send state per doctor
+  // Send state per doctor
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [successId, setSuccessId] = useState<string | null>(null);
   const [popoverId, setPopoverId] = useState<string | null>(null);
@@ -188,12 +182,17 @@ export default function Roster() {
   const [bulkSending, setBulkSending] = useState(false);
   const [bulkPopoverOpen, setBulkPopoverOpen] = useState(false);
 
-  // Rota period info from restored config
-  const rotaStartDate = restoredConfig?.rotaPeriod?.startDate
-    ? (() => { const [y, m, d] = restoredConfig.rotaPeriod.startDate!.split("-").map(Number); return new Date(y, m - 1, d); })()
-    : null;
+  // Search state
+  const [searchQuery, setSearchQuery] = useState("");
 
-  // SECTION 5 — Read from accountSettings context
+  // Inactive section state
+  const [inactiveExpandedIds, setInactiveExpandedIds] = useState<Set<string>>(new Set());
+  const [reactivatePopoverId, setReactivatePopoverId] = useState<string | null>(null);
+
+  // Delete/Deactivate state
+  const [removeDialogId, setRemoveDialogId] = useState<string | null>(null);
+
+  // Read from accountSettings context
   const departmentName = accountSettings.departmentName ?? "";
   const hospitalName = accountSettings.trustName ?? "";
 
@@ -262,7 +261,7 @@ export default function Roster() {
       first_name: firstName.trim(),
       last_name: lastName.trim(),
       email: email.trim(),
-      grade: "",
+      grade: null,
       survey_status: "not_started",
       survey_token: crypto.randomUUID(),
     });
@@ -271,24 +270,6 @@ export default function Roster() {
     toast.success(`${firstName.trim()} ${lastName.trim()} added to the roster`);
     loadDoctors();
   };
-
-  // ─── Reactivate inactive doctor ───
-  const handleReactivate = async (doctorId: string) => {
-    const { error } = await supabase
-      .from('doctors')
-      .update({ is_active: true })
-      .eq('id', doctorId);
-    if (error) {
-      toast.error('Failed to reactivate doctor');
-      return;
-    }
-    invalidateDoctors();
-    invalidateInactiveDoctors();
-    toast.success('Doctor reactivated');
-  };
-
-  // ─── Delete vs Deactivate state ───
-  const [removeDialogId, setRemoveDialogId] = useState<string | null>(null);
 
   // ─── Remove doctor from DB (permanent delete) ───
   const removeDoctor = async (id: string) => {
@@ -313,7 +294,7 @@ export default function Roster() {
     setRemoveDialogId(null);
   };
 
-  // SECTION 8 — Save deadline to DB on change
+  // Save deadline to DB on change
   const handleDeadlineSelect = async (date: Date | undefined) => {
     setSurveyDeadline(date);
     setDeadlineOpen(false);
@@ -325,25 +306,31 @@ export default function Roster() {
     if (error) { toast.error("Failed to save deadline"); console.error(error); }
   };
 
-  // SECTION 4 — Formatted deadline for email
+  // Formatted deadline for email
   const formattedDeadline = surveyDeadline
     ? format(surveyDeadline, "EEEE, d MMMM yyyy")
     : null;
 
-  // SECTION 5 — Send invite handler
-  const sendInvite = async (doctor: Doctor) => {
-    setPopoverId(null);
-
+  // ─── Send invite core — all guards and DB/edge logic ───
+  const sendInviteCore = async (doctor: Doctor): Promise<void> => {
+    if (!doctor.survey_token) {
+      toast.error("No survey link available for this doctor — token missing");
+      return;
+    }
+    if (!doctor.email) {
+      toast.error("No email address on file for this doctor");
+      return;
+    }
     if (!departmentName || !hospitalName) {
       toast.error("Please set your department and hospital name on the Dashboard before sending invites.");
       return;
     }
+    if (!formattedDeadline) {
+      toast.error("Set a survey deadline first.");
+      return;
+    }
 
-    if (!formattedDeadline) { toast.error("Set a survey deadline first."); return; }
-
-    setSendingId(doctor.id);
-
-    const surveyLink = doctor.survey_token ? buildSurveyLink(doctor.survey_token) : "";
+    const surveyLink = buildSurveyLink(doctor.survey_token);
 
     const body = {
       to: doctor.email,
@@ -364,33 +351,37 @@ export default function Roster() {
       surveyLink,
     };
 
+    const { data, error } = await supabase.functions.invoke("send-survey-invite", { body });
+    if (error) throw error;
+    if (data && !data.success) throw new Error(data.error ?? "Send failed");
+
+    await supabase
+      .from("doctors")
+      .update({
+        survey_invite_sent_at: new Date().toISOString(),
+        survey_invite_count: (doctor.survey_invite_count ?? 0) + 1,
+      })
+      .eq("id", doctor.id);
+
+    toast.success(`✓ Survey invite sent to ${doctor.first_name} ${doctor.last_name}`);
+  };
+
+  const sendInvite = async (doctor: Doctor) => {
+    setPopoverId(null);
+    setSendingId(doctor.id);
     try {
-      const { data, error } = await supabase.functions.invoke("send-survey-invite", { body });
-
-      if (error) throw error;
-      if (data && !data.success) throw new Error(data.error ?? "Send failed");
-
-      await supabase
-        .from("doctors")
-        .update({
-          survey_invite_sent_at: new Date().toISOString(),
-          survey_invite_count: (doctor.survey_invite_count ?? 0) + 1,
-          survey_status: doctor.survey_status === "not_started" ? "not_started" : doctor.survey_status,
-        })
-        .eq("id", doctor.id);
-
-      setSendingId(null);
+      await sendInviteCore(doctor);
       setSuccessId(doctor.id);
-      toast.success(`✓ Survey invite sent to ${doctor.first_name} ${doctor.last_name}`);
       setTimeout(() => setSuccessId(null), 3000);
       loadDoctors();
     } catch (err: any) {
       console.error("Send invite error:", err);
-      setSendingId(null);
       const msg = err?.message?.includes("FunctionsFetchError") || err?.message?.includes("fetch")
         ? "Could not reach email service — check your connection and try again"
         : `Failed to send invite to ${doctor.first_name} ${doctor.last_name} — please try again`;
       toast.error(msg);
+    } finally {
+      setSendingId(null);
     }
   };
 
@@ -421,11 +412,11 @@ export default function Roster() {
     });
 
     if (!isCurrentlyExpanded && !surveyCache[doctorId]) {
-      const doctor = doctors.find((d) => d.id === doctorId);
+      const doctor = [...doctors, ...inactiveDoctors].find((d) => d.id === doctorId);
       if (doctor) {
         const { data } = await supabase
           .from("doctor_survey_responses")
-          .select("wte_percent, ltft_days_off, ltft_night_flexibility, competencies_json, annual_leave, study_leave, noc_dates, exempt_from_nights, exempt_from_weekends, exempt_from_oncall")
+          .select("wte_percent, ltft_days_off, competencies_json")
           .eq("doctor_id", doctorId)
           .eq("rota_config_id", doctor.rota_config_id)
           .maybeSingle();
@@ -437,16 +428,6 @@ export default function Roster() {
 
   // ─── Bulk send handler ───
   const handleBulkSend = async () => {
-    if (!departmentName || !hospitalName) {
-      toast.error("Please set your department and hospital name before sending invites.");
-      setBulkPopoverOpen(false);
-      return;
-    }
-    if (!formattedDeadline) {
-      toast.error("Please set a survey deadline before sending invites.");
-      setBulkPopoverOpen(false);
-      return;
-    }
     const eligible = doctors.filter(
       (d) => !d.survey_invite_sent_at && d.email && d.survey_status !== "submitted"
     );
@@ -459,11 +440,11 @@ export default function Roster() {
     let successCount = 0;
     for (const doctor of eligible) {
       try {
-        await sendInvite(doctor);
+        await sendInviteCore(doctor);
         successCount++;
         await new Promise((r) => setTimeout(r, 300));
       } catch {
-        // individual failures already toasted inside sendInvite
+        // individual failures already toasted inside sendInviteCore
       }
     }
     setBulkSending(false);
@@ -473,15 +454,47 @@ export default function Roster() {
     }
   };
 
-  // SECTION 7 — Survey status counts
+  // ─── Reactivate handler ───
+  const handleReactivateClick = async (doctor: Doctor) => {
+    const { data: existingSurvey } = await supabase
+      .from("doctor_survey_responses")
+      .select("id")
+      .eq("doctor_id", doctor.id)
+      .eq("rota_config_id", doctor.rota_config_id)
+      .maybeSingle();
+
+    if (!existingSurvey) {
+      // No survey data — directly reactivate
+      await supabase.from("doctors").update({ is_active: true }).eq("id", doctor.id);
+      invalidateDoctors();
+      invalidateInactiveDoctors();
+      toast.success("Doctor reactivated");
+    } else {
+      // Has survey data — show popover
+      setReactivatePopoverId(doctor.id);
+    }
+  };
+
+  // Survey status counts
   const submitted = doctors.filter((d) => d.survey_status === "submitted").length;
   const inProgress = doctors.filter((d) => d.survey_status === "in_progress").length;
   const notStarted = doctors.filter((d) => !["submitted", "in_progress"].includes(d.survey_status)).length;
   const progressPct = doctors.length > 0 ? Math.round((submitted / doctors.length) * 100) : 0;
 
-  // Sorted doctors
+  // Search + Sort
   const STATUS_ORDER: Record<string, number> = { not_started: 0, in_progress: 1, submitted: 2 };
-  const sortedDoctors = [...doctors].sort((a, b) => {
+  const filteredDoctors = searchQuery.trim()
+    ? doctors.filter((d) => {
+        const q = searchQuery.toLowerCase();
+        return (
+          d.first_name.toLowerCase().includes(q) ||
+          d.last_name.toLowerCase().includes(q) ||
+          `${d.last_name} ${d.first_name}`.toLowerCase().includes(q)
+        );
+      })
+    : doctors;
+
+  const sortedDoctors = [...filteredDoctors].sort((a, b) => {
     switch (sortKey) {
       case "surname_asc":
         return a.last_name.localeCompare(b.last_name);
@@ -505,7 +518,7 @@ export default function Roster() {
       })()
     : false;
 
-  // SECTION 7 — Status badge
+  // Status badge
   const statusBadge = (doctor: Doctor) => {
     switch (doctor.survey_status) {
       case "submitted":
@@ -526,7 +539,7 @@ export default function Roster() {
     }
   };
 
-  // SECTION 7 — Determine send icon state
+  // Determine send icon state
   const getSendIconState = (doctor: Doctor): {
     disabled: boolean;
     tooltip: string;
@@ -578,6 +591,11 @@ export default function Roster() {
           <div className="space-y-3">
             <p className="text-sm font-medium">Send invite to {doctor.first_name} {doctor.last_name}?</p>
             {formattedDeadline && <p className="text-xs text-muted-foreground">Deadline: {formattedDeadline}</p>}
+            {doctor.survey_status === "submitted" && (
+              <p className="text-xs text-amber-600">
+                This doctor has already submitted. Resending allows them to edit their responses.
+              </p>
+            )}
             <div className="flex gap-2 justify-end">
               <Button variant="ghost" size="sm" onClick={() => setPopoverId(null)}>Cancel</Button>
               <Button size="sm" onClick={() => sendInvite(doctor)}>Send</Button>
@@ -1125,19 +1143,7 @@ export default function Roster() {
                     mode="single"
                     selected={surveyDeadline}
                     onSelect={handleDeadlineSelect}
-                    disabled={(date) => {
-                      const today = new Date();
-                      today.setHours(0, 0, 0, 0);
-                      const picked = new Date(date);
-                      picked.setHours(0, 0, 0, 0);
-                      if (picked < today) return true;
-                      if (rotaStartDate) {
-                        const maxAllowed = subDays(rotaStartDate, 1);
-                        maxAllowed.setHours(0, 0, 0, 0);
-                        if (maxAllowed >= today && picked > maxAllowed) return true;
-                      }
-                      return false;
-                    }}
+                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                     initialFocus
                     className={cn("p-3 pointer-events-auto")}
                   />
@@ -1149,12 +1155,6 @@ export default function Roster() {
                 </span>
               )}
             </div>
-            {!rotaStartDate && (
-              <p className="text-xs text-amber-600 mt-2 flex items-center gap-1">
-                <AlertTriangle className="h-3 w-3" />
-                Rota start date not set — set it in Rota Period settings.
-              </p>
-            )}
           </CardContent>
         </Card>
 
@@ -1198,7 +1198,7 @@ export default function Roster() {
                   </div>
                   <div className="flex items-center gap-1.5">
                     <div className="flex h-6 w-6 items-center justify-center rounded bg-muted">
-                      <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                      <div className="h-3.5 w-3.5 rounded-full border-2 border-muted-foreground" />
                     </div>
                     <div className="leading-tight">
                       <p className="text-sm font-bold text-card-foreground">{notStarted}</p>
@@ -1269,10 +1269,20 @@ export default function Roster() {
               );
             })()}
 
+            {/* Search input */}
+            <div className="flex items-center gap-2">
+              <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+              <Input
+                placeholder="Search by name…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="max-w-xs h-8 text-sm"
+              />
+            </div>
+
             {/* Sort controls */}
             {doctors.length > 1 && (
               <div className="flex items-center gap-2">
-                {/* Mobile: native select */}
                 <div className="sm:hidden flex-1">
                   <select
                     value={sortKey}
@@ -1285,7 +1295,6 @@ export default function Roster() {
                     <option value="grade">Sort: Grade</option>
                   </select>
                 </div>
-                {/* Desktop: pills */}
                 <div className="hidden sm:flex items-center gap-1.5">
                   <span className="text-xs text-muted-foreground flex items-center gap-1">
                     <ArrowUpDown className="h-3 w-3" /> Sort:
@@ -1336,7 +1345,7 @@ export default function Roster() {
                 return (
                   <div key={doctor.id} className="bg-card">
                     <div className="flex items-center gap-2 px-3 py-2.5 sm:px-4">
-                      {/* Name — clickable to expand */}
+                      {/* Chevron + Name — clickable to expand */}
                       <button
                         type="button"
                         onClick={() => toggleExpand(doctor.id)}
@@ -1347,21 +1356,24 @@ export default function Roster() {
                           {doctor.last_name}, {doctor.first_name}
                         </span>
                       </button>
-                      {/* Email — large screens only */}
-                      <span className="hidden lg:block text-xs text-muted-foreground truncate max-w-[180px]">
-                        {doctor.email ?? "No email"}
-                      </span>
-                      {/* Grade — tablet and up */}
+                      {/* Grade — sm+ */}
                       <span className="hidden sm:block text-xs text-muted-foreground w-16 text-center truncate">
                         {doctor.grade || "—"}
                       </span>
-                      {/* Status badge */}
+                      {/* Email — lg+ */}
+                      <span className="hidden lg:block text-xs text-muted-foreground truncate max-w-[180px]">
+                        {doctor.email ?? "No email"}
+                      </span>
+                      {/* Status badge — always visible */}
                       <div className="shrink-0">{statusBadge(doctor)}</div>
                       {/* Actions */}
                       <div className="flex items-center gap-0.5 shrink-0">
                         {renderSendButton(doctor, sendState, isSending, isSuccess, "unified")}
-                        {renderCopyButton(doctor, isCopied)}
-                        {/* Open in new tab — tablet/desktop only */}
+                        {/* Copy — sm+ */}
+                        <span className="hidden sm:flex">
+                          {renderCopyButton(doctor, isCopied)}
+                        </span>
+                        {/* Open in new tab — sm+ */}
                         <span className="hidden sm:flex">
                           <Tooltip>
                             <TooltipTrigger asChild>
@@ -1376,11 +1388,11 @@ export default function Roster() {
                             </TooltipContent>
                           </Tooltip>
                         </span>
-                        {/* Edit survey */}
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => doctor.survey_token && navigate(`/doctor/survey?token=${doctor.survey_token}&admin=true`)} disabled={!doctor.survey_token}>
+                        {/* Edit survey — always visible */}
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate(`/admin/survey-override/${doctor.id}/1`)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        {/* Delete */}
+                        {/* Delete — always visible */}
                         <Popover open={removeDialogId === doctor.id} onOpenChange={(open) => setRemoveDialogId(open ? doctor.id : null)}>
                           <PopoverTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive">
@@ -1391,10 +1403,10 @@ export default function Roster() {
                             <div className="space-y-2">
                               <p className="text-sm font-medium">Remove {doctor.first_name}?</p>
                               <Button variant="outline" size="sm" className="w-full justify-start" onClick={() => deactivateDoctor(doctor.id)}>
-                                Move to inactive
+                                Move to inactive (survey data kept)
                               </Button>
                               <Button variant="destructive" size="sm" className="w-full justify-start" onClick={() => removeDoctor(doctor.id)}>
-                                Delete permanently
+                                Delete permanently (irreversible)
                               </Button>
                             </div>
                           </PopoverContent>
@@ -1433,33 +1445,138 @@ export default function Roster() {
               <ChevronDown className={`h-4 w-4 transition-transform ${inactiveSectionOpen ? 'rotate-180' : ''}`} />
             </button>
             {inactiveSectionOpen && (
-              <div className="px-4 pb-4">
-                <div className="rounded-lg border border-border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Grade</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead className="text-right"></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {inactiveDoctors.map(doc => (
-                        <TableRow key={doc.id}>
-                          <TableCell className="font-medium">{doc.last_name}, {doc.first_name}</TableCell>
-                          <TableCell>{doc.grade}</TableCell>
-                          <TableCell className="text-muted-foreground">{doc.email ?? '—'}</TableCell>
-                          <TableCell className="text-right">
-                            <Button variant="outline" size="sm" onClick={() => handleReactivate(doc.id)}>
-                              Reactivate
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+              <div className="divide-y divide-border border-t border-border">
+                {inactiveDoctors.map((doctor) => {
+                  const isExpanded = inactiveExpandedIds.has(doctor.id);
+                  const isCopied = copiedId === doctor.id;
+                  return (
+                    <div key={doctor.id} className="bg-card">
+                      {/* Row */}
+                      <div className="flex items-center gap-2 px-3 py-2.5 sm:px-4">
+                        {/* Chevron + name */}
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            const isCurrentlyExpanded = inactiveExpandedIds.has(doctor.id);
+                            if (!isCurrentlyExpanded && !surveyCache[doctor.id]) {
+                              setSurveyLoading((prev) => ({ ...prev, [doctor.id]: true }));
+                              const found = [...doctors, ...inactiveDoctors].find((d) => d.id === doctor.id);
+                              if (found) {
+                                const { data } = await supabase
+                                  .from("doctor_survey_responses")
+                                  .select("wte_percent, ltft_days_off, competencies_json")
+                                  .eq("doctor_id", doctor.id)
+                                  .eq("rota_config_id", found.rota_config_id)
+                                  .maybeSingle();
+                                setSurveyCache((prev) => ({ ...prev, [doctor.id]: data ?? null }));
+                              }
+                              setSurveyLoading((prev) => ({ ...prev, [doctor.id]: false }));
+                            }
+                            setInactiveExpandedIds((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(doctor.id)) { next.delete(doctor.id); } else { next.add(doctor.id); }
+                              return next;
+                            });
+                          }}
+                          className="flex items-center gap-1.5 min-w-0 flex-1 text-left"
+                        >
+                          {isExpanded
+                            ? <ChevronUp className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                            : <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
+                          <span className="text-sm font-medium truncate">{doctor.last_name}, {doctor.first_name}</span>
+                        </button>
+                        {/* Grade — sm+ */}
+                        <span className="hidden sm:block text-xs text-muted-foreground w-16 text-center truncate">
+                          {doctor.grade || "—"}
+                        </span>
+                        {/* Inactive badge */}
+                        <Badge variant="secondary" className="shrink-0">Inactive</Badge>
+                        {/* Actions */}
+                        <div className="flex items-center gap-0.5 shrink-0">
+                          {/* Profile link */}
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate(`/admin/doctor/${doctor.id}`)}>
+                                <ExternalLink className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>View full profile</TooltipContent>
+                          </Tooltip>
+                          {/* Copy link — sm+ */}
+                          <span className="hidden sm:flex">
+                            {renderCopyButton(doctor, isCopied)}
+                          </span>
+                          {/* Reactivate */}
+                          <Popover open={reactivatePopoverId === doctor.id} onOpenChange={(open) => setReactivatePopoverId(open ? doctor.id : null)}>
+                            <PopoverTrigger asChild>
+                              <Button variant="outline" size="sm" className="h-8 text-xs" onClick={(e) => {
+                                e.preventDefault();
+                                handleReactivateClick(doctor);
+                              }}>
+                                Reactivate
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-72 pointer-events-auto" align="end" onOpenAutoFocus={(e) => e.preventDefault()}>
+                              <div className="space-y-3">
+                                <p className="text-sm font-medium">Reactivate {doctor.first_name} {doctor.last_name}?</p>
+                                <p className="text-xs text-muted-foreground">This doctor has previous survey data. How would you like to proceed?</p>
+                                <div className="space-y-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="w-full justify-start"
+                                    onClick={async () => {
+                                      await supabase.from("doctors").update({ is_active: true }).eq("id", doctor.id);
+                                      toast.success("Doctor reactivated with previous survey data");
+                                      setReactivatePopoverId(null);
+                                      invalidateDoctors();
+                                      invalidateInactiveDoctors();
+                                    }}
+                                  >
+                                    Restore previous survey
+                                  </Button>
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    className="w-full justify-start"
+                                    onClick={async () => {
+                                      await supabase.from("doctor_survey_responses").delete().eq("doctor_id", doctor.id);
+                                      await supabase.from("doctors").update({
+                                        is_active: true,
+                                        survey_status: "not_started",
+                                        survey_submitted_at: null,
+                                        survey_invite_sent_at: null,
+                                        survey_invite_count: 0,
+                                      }).eq("id", doctor.id);
+                                      setReactivatePopoverId(null);
+                                      invalidateDoctors();
+                                      invalidateInactiveDoctors();
+                                      toast.success("Doctor reactivated — survey reset");
+                                    }}
+                                  >
+                                    Start fresh (clears survey)
+                                  </Button>
+                                </div>
+                              </div>
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                      </div>
+                      {/* Expanded panel */}
+                      {isExpanded && (
+                        <div className="border-t border-border bg-muted/30 px-3 py-3 sm:px-4">
+                          <ExpandedDoctorPanel
+                            doctorId={doctor.id}
+                            surveyData={surveyCache[doctor.id]}
+                            isLoading={surveyLoading[doctor.id] ?? false}
+                            invitedAt={doctor.survey_invite_sent_at}
+                            onNavigateProfile={() => navigate(`/admin/doctor/${doctor.id}`)}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
