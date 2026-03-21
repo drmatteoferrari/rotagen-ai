@@ -97,6 +97,7 @@ export default function DoctorProfile() {
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [sendingInvite, setSendingInvite] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [removePopoverOpen, setRemovePopoverOpen] = useState(false);
 
   useEffect(() => {
     if (!doctorId) { setError(true); setLoading(false); return; }
