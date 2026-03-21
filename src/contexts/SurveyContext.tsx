@@ -365,15 +365,16 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
       setDoctor(doc);
 
       const rc = doctorRow.rota_configs as any;
+      const rcObj = Array.isArray(rc) ? (rc[0] ?? {}) : (rc ?? {});
 
       // Try to get account_settings for department/trust name
-      let deptName = rc?.department_name ?? null;
-      let trustName = rc?.trust_name ?? null;
-      if (rc?.owned_by) {
+      let deptName = rcObj?.department_name ?? null;
+      let trustName = rcObj?.trust_name ?? null;
+      if (rcObj?.owned_by) {
         const { data: acct } = await supabase
           .from("account_settings")
           .select("department_name, trust_name")
-          .eq("owned_by", rc.owned_by)
+          .eq("owned_by", rcObj.owned_by)
           .maybeSingle();
         if (acct) {
           deptName = acct.department_name || deptName;
@@ -382,12 +383,12 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
       }
 
       setRotaInfo({
-        startDate: rc?.rota_start_date ?? null,
-        endDate: rc?.rota_end_date ?? null,
-        durationWeeks: rc?.rota_duration_weeks ?? null,
+        startDate: rcObj?.rota_start_date ?? null,
+        endDate: rcObj?.rota_end_date ?? null,
+        durationWeeks: rcObj?.rota_duration_weeks ?? null,
         departmentName: deptName,
         trustName: trustName,
-        surveyDeadline: rc?.survey_deadline ?? null,
+        surveyDeadline: rcObj?.survey_deadline ?? null,
       });
 
       if (doctorRow.survey_status === "submitted") {
