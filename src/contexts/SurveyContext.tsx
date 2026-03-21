@@ -466,13 +466,15 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
             doctor_id: doc.id,
             rota_config_id: doc.rotaConfigId,
             ...row,
-            status: "in_progress",
             last_saved_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           } as any,
           { onConflict: "doctor_id,rota_config_id" }
         );
-      if (error) throw error;
+      if (error) {
+        console.error("saveDraft upsert error:", error.message, error.code);
+        throw error;
+      }
 
       // Sync doctor name, email, grade back to doctors table
       const nameParts = fd.fullName.trim().split(/\s+/);
