@@ -1117,6 +1117,7 @@ export default function Roster() {
         )}
 
         {/* DEV TOOLS Banner */}
+        {import.meta.env.DEV && (
         <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 flex flex-col sm:flex-row sm:items-center gap-3">
           <span className="text-sm font-medium text-amber-800">⚙️ DEV TOOLS — not visible in production</span>
           <div className="flex gap-2">
@@ -1141,6 +1142,7 @@ export default function Roster() {
             </Button>
           </div>
         </div>
+        )}
 
         {/* Deadline picker */}
         <Card>
