@@ -624,6 +624,15 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
         .eq("id", doc.id);
       if (docErr) throw docErr;
 
+      // Normalize JSONB into relational tables (non-blocking)
+      try {
+        await supabase.functions.invoke("normalize-survey", {
+          body: { doctor_id: doc.id, rota_config_id: doc.rotaConfigId },
+        });
+      } catch (normErr) {
+        console.error("Survey normalization failed (non-blocking):", normErr);
+      }
+
       // Send confirmation email (non-blocking)
       try {
         const ri = rotaInfo;
