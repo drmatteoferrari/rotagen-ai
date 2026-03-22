@@ -298,7 +298,11 @@ function dbRowToFormData(draft: any, base: SurveyFormData): SurveyFormData {
     specificDaysOff: draft.specific_days_off || [],
     exemptionDetails: draft.exemption_details || "",
     specialtiesRequested: draft.specialties_requested || [],
-    specialSessions: draft.special_sessions || [],
+    specialSessions: (draft.special_sessions ?? []).map((s: string) => {
+      const colonIdx = s.indexOf(': ');
+      if (colonIdx === -1) return { name: s, notes: '' };
+      return { name: s.slice(0, colonIdx), notes: s.slice(colonIdx + 2) };
+    }),
     otherInterests: draft.other_interests || [],
     signoffNeeds: draft.signoff_needs || "",
     additionalNotes: draft.additional_notes || "",
