@@ -104,6 +104,12 @@ export default function DoctorProfile() {
     loadAll();
   }, [doctorId]);
 
+  // Relational data state
+  const [unavailBlocks, setUnavailBlocks] = useState<any[]>([]);
+  const [ltftPats, setLtftPats] = useState<any[]>([]);
+  const [trainingReqs, setTrainingReqs] = useState<any[]>([]);
+  const [dualSpecs, setDualSpecs] = useState<any[]>([]);
+
   const loadAll = async () => {
     setLoading(true);
     try {
@@ -121,16 +127,27 @@ export default function DoctorProfile() {
       setGrade(doc.grade ?? "");
       setIsActive(doc.is_active);
 
-      const { data: srv } = await supabase
-        .from("doctor_survey_responses")
-        .select("personal_email, phone_number, wte_percent, wte_other_value, al_entitlement, ltft_days_off, ltft_night_flexibility, annual_leave, study_leave, noc_dates, other_unavailability, competencies_json, exempt_from_nights, exempt_from_weekends, exempt_from_oncall, exemption_details, other_restrictions, additional_restrictions, parental_leave_expected, parental_leave_start, parental_leave_end, parental_leave_notes, specialties_requested, special_sessions, signoff_needs, dual_specialty, dual_specialty_types, additional_notes")
-        .eq("doctor_id", doctorId!)
-        .eq("rota_config_id", doc.rota_config_id)
-        .maybeSingle();
+      const [srvResult, blocksResult, ltftResult, reqsResult, dualsResult] = await Promise.all([
+        supabase
+          .from("doctor_survey_responses")
+          .select("personal_email, phone_number, wte_percent, wte_other_value, al_entitlement, ltft_days_off, ltft_night_flexibility, annual_leave, study_leave, noc_dates, other_unavailability, competencies_json, exempt_from_nights, exempt_from_weekends, exempt_from_oncall, exemption_details, other_restrictions, additional_restrictions, parental_leave_expected, parental_leave_start, parental_leave_end, parental_leave_notes, specialties_requested, special_sessions, signoff_needs, dual_specialty, dual_specialty_types, additional_notes, iac_achieved, iac_working, iac_remote, iaoc_achieved, iaoc_working, iaoc_remote, icu_achieved, icu_working, icu_remote, transfer_achieved, transfer_working, transfer_remote")
+          .eq("doctor_id", doctorId!)
+          .eq("rota_config_id", doc.rota_config_id)
+          .maybeSingle(),
+        supabase.from("unavailability_blocks").select("*").eq("doctor_id", doctorId!).eq("rota_config_id", doc.rota_config_id).order("start_date"),
+        supabase.from("ltft_patterns").select("*").eq("doctor_id", doctorId!).eq("rota_config_id", doc.rota_config_id),
+        supabase.from("training_requests").select("*").eq("doctor_id", doctorId!).eq("rota_config_id", doc.rota_config_id),
+        supabase.from("dual_specialties").select("*").eq("doctor_id", doctorId!).eq("rota_config_id", doc.rota_config_id),
+      ]);
 
+      const srv = srvResult.data;
       setSurvey(srv ?? null);
       setPersonalEmail(srv?.personal_email ?? "");
       setPhoneNumber(srv?.phone_number ?? "");
+      setUnavailBlocks(blocksResult.data ?? []);
+      setLtftPats(ltftResult.data ?? []);
+      setTrainingReqs(reqsResult.data ?? []);
+      setDualSpecs(dualsResult.data ?? []);
     } catch {
       setError(true);
     } finally {
