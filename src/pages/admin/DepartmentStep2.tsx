@@ -498,6 +498,22 @@ function ExpandedCard({
             </div>
           ))}
         </div>
+
+        {/* Competency sum warning */}
+        {(() => {
+          const compSum = draft.reqIac + draft.reqIaoc + draft.reqIcu + draft.reqTransfer;
+          if (compSum > draft.staffing.min) {
+            return (
+              <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                <span>Total competency requirements ({compSum}) exceed minimum staffing ({draft.staffing.min}). Some doctors would need multiple competencies.</span>
+              </div>
+            );
+          }
+          return null;
+        })()}
+          ))}
+        </div>
       </div>
 
       {/* ROW 8 — Grade requirement */}
