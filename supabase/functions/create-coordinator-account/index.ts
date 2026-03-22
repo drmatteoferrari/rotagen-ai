@@ -48,14 +48,14 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Create a blank account_settings row for the new coordinator
+    // Create account_settings row for the new coordinator
     await supabaseAdmin
       .from("account_settings")
       .upsert(
         {
           owned_by: newUser.user.id,
-          department_name: null,
-          trust_name: null,
+          department_name: departmentName ?? null,
+          trust_name: hospitalName ?? null,
         },
         { onConflict: "owned_by" }
       );

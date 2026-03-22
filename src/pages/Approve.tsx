@@ -100,6 +100,8 @@ export default function Approve() {
           password: tempPassword,
           fullName: request.full_name,
           username: username,
+          hospitalName: request.hospital ?? null,
+          departmentName: request.department ?? null,
         },
       });
       if (fnError || !fnData?.success) {
