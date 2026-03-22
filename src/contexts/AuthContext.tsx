@@ -60,7 +60,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { restoreForUser, clearSession } = useRotaContext();
 
   useEffect(() => {
-    // Check initial session safely
     const initSession = async () => {
       try {
         const {
@@ -68,9 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           error,
         } = await supabase.auth.getSession();
         if (error) throw error;
-        if (!session) {
-          setAuthLoading(false);
-        }
+        if (!session) setAuthLoading(false);
       } catch (err) {
         console.error("Failed to get initial session:", err);
         setAuthLoading(false);
@@ -91,19 +88,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const isMaster = email === MASTER_EMAIL;
 
           if (!isMaster) {
-            // Verify approval
-            const [{ data: regData }, { data: coordData }] = await Promise.all([
-              supabase
-                .from("registration_requests")
-                .select("status")
-                .eq("email", email)
-                .maybeSingle(),
-              supabase
-                .from("coordinator_accounts")
-                .select("status")
-                .eq("email", email)
-                .maybeSingle(),
-            ]);
+            console.log("Checking approval for:", email);
+
+            // FIXED: Reverted to sequential awaits to prevent the Supabase client from hanging
+            const { data: regData, error: regError } = await supabase
+              .from("registration_requests" as any)
+              .select("status")
+              .eq("email", email)
+              .maybeSingle();
+            if (regError) console.error("Reg check error:", regError);
+
+            const { data: coordData, error: coordError } = await supabase
+              .from("coordinator_accounts" as any)
+              .select("status")
+              .eq("email", email)
+              .maybeSingle();
+            if (coordError) console.error("Coord check error:", coordError);
 
             const isApproved = regData?.status === "approved" || coordData?.status === "active";
 
@@ -115,9 +115,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               setAuthLoading(false);
               return;
             }
+            console.log("User is approved!");
           }
 
-          // User is valid and approved
           setUser({
             id: session.user.id,
             username: meta.username ?? email.split("@")[0],
@@ -127,11 +127,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             mustChangePassword: meta.must_change_password ?? false,
           });
 
-          // Load background data safely without blocking the UI
-          Promise.all([
-            loadAccountSettings(session.user.id).then(setAccountSettings),
-            restoreForUser(session.user.id),
-          ]).catch((err) => console.error("Error loading user context:", err));
+          // Safely load the rest of the context
+          try {
+            const settings = await loadAccountSettings(session.user.id);
+            setAccountSettings(settings);
+            restoreForUser(session.user.id);
+          } catch (err) {
+            console.error("Error loading user context:", err);
+          }
         }
 
         if (event === "SIGNED_OUT") {
@@ -144,8 +147,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error("Critical error during auth state change:", err);
         toast.error("Something went wrong verifying your session.");
       } finally {
-        // ALWAYS turn off the loading spinner
-        setAuthLoading(false);
+        if (event === "INITIAL_SESSION" || event === "SIGNED_IN") {
+          setAuthLoading(false);
+        }
       }
     });
 
