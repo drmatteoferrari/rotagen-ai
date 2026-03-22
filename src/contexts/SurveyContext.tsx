@@ -186,7 +186,7 @@ interface SurveyContextType {
   prevStep: () => void;
   goToStep: (step: number) => void;
   submitSurvey: () => Promise<boolean>;
-  saveDraft: () => Promise<void>;
+  saveDraft: () => Promise<boolean>;
   submitting: boolean;
   submitError: string;
   draftSavedAt: Date | null;
