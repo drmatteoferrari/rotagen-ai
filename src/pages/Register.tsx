@@ -62,9 +62,14 @@ export default function Register() {
       if (dbError) throw dbError;
 
       try {
-        await supabase.functions.invoke("send-registration-request", {
-          body: { fullName, email: email.trim(), phone: phone.trim(), jobTitle: jobTitle.trim(), hospital: hospital.trim(), department: department.trim(), heardFrom: heardFrom.trim(), approvalToken: reqData.approval_token },
-        });
+        await Promise.race([
+          supabase.functions.invoke("send-registration-request", {
+            body: { fullName, email: email.trim(), phone: phone.trim(), jobTitle: jobTitle.trim(), hospital: hospital.trim(), department: department.trim(), heardFrom: heardFrom.trim(), approvalToken: reqData.approval_token },
+          }),
+          new Promise<void>((_, reject) =>
+            setTimeout(() => reject(new Error("Email notification timed out")), 10000)
+          ),
+        ]);
       } catch (emailErr) {
         console.warn("Email notification failed (request still saved):", emailErr);
       }

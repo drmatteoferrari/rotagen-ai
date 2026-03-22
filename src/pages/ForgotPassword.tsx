@@ -21,7 +21,7 @@ export default function ForgotPassword() {
     setSuccess(false);
 
     const { error: err } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin + "/reset-password",
+      redirectTo: "https://rotagen-ai.lovable.app/change-password",
     });
 
     setLoading(false);
