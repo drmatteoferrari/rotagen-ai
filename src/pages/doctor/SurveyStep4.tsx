@@ -26,7 +26,7 @@ interface DateRowProps {
 
 function DateRow({ entry, onChange, onRemove, rotaStart, rotaEnd, reasonLabel = "Reason", reasonRequired = false, reasonPlaceholder = "", errors = {} }: DateRowProps) {
   return (
-    <div className="rounded-lg border border-border p-3 space-y-2">
+    <div className="rounded-lg border border-border p-4 space-y-2">
       <div className="flex items-center justify-between gap-2">
         <DateRangePicker
           startDate={entry.startDate}
@@ -37,8 +37,9 @@ function DateRow({ entry, onChange, onRemove, rotaStart, rotaEnd, reasonLabel = 
           errors={{ startDate: errors.startDate, endDate: errors.endDate }}
         />
         <button
+          type="button"
           onClick={onRemove}
-          className="shrink-0 flex items-center justify-center h-10 w-10 rounded-lg border border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive hover:text-white transition-colors"
+          className="shrink-0 flex items-center justify-center h-11 w-11 rounded-lg border border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive hover:text-white transition-colors cursor-pointer"
           title="Remove"
         >
           <Trash2 className="h-4 w-4" />
@@ -55,7 +56,7 @@ function DateRow({ entry, onChange, onRemove, rotaStart, rotaEnd, reasonLabel = 
 
 function RotationRow({ entry, onChange, onRemove, rotaStart, rotaEnd, errors = {} }: { entry: RotationEntry; onChange: (e: RotationEntry) => void; onRemove: () => void; rotaStart?: string; rotaEnd?: string; errors?: Record<string, string> }) {
   return (
-    <div className="rounded-lg border border-border p-3 space-y-2">
+    <div className="rounded-lg border border-border p-4 space-y-2">
       <div className="flex items-center justify-between gap-2">
         <DateRangePicker
           startDate={entry.startDate}
@@ -66,8 +67,9 @@ function RotationRow({ entry, onChange, onRemove, rotaStart, rotaEnd, errors = {
           errors={{ startDate: errors.startDate, endDate: errors.endDate }}
         />
         <button
+          type="button"
           onClick={onRemove}
-          className="shrink-0 flex items-center justify-center h-10 w-10 rounded-lg border border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive hover:text-white transition-colors"
+          className="shrink-0 flex items-center justify-center h-11 w-11 rounded-lg border border-destructive/30 bg-destructive/10 text-destructive hover:bg-destructive hover:text-white transition-colors cursor-pointer"
           title="Remove"
         >
           <Trash2 className="h-4 w-4" />
@@ -199,40 +201,40 @@ export default function SurveyStep4() {
 
   return (
     <>
-      <div className="flex-1 overflow-y-auto overscroll-contain p-3 sm:p-4 pb-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 pb-6 space-y-4 sm:space-y-6">
         {/* Info banner */}
-        <div className="flex items-start gap-2 rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-xs sm:text-sm font-medium text-teal-700">
-          <Info className="h-4 w-4 shrink-0 mt-0.5 text-teal-600" />
+        <div className="flex items-start gap-2 rounded-lg border border-teal-200 bg-teal-50 px-4 py-3 text-sm font-medium text-teal-700">
+          <Info className="h-4 w-4 sm:h-5 sm:w-5 shrink-0 mt-0.5 text-teal-600" />
           Leave entered here will be considered in rota generation. We'll try to honour all requests, but staffing minimums take priority.
         </div>
 
-        <Card>
-          <CardHeader className="px-3 sm:px-6 py-3 sm:py-4">
-            <CardTitle className="flex items-center gap-2 text-base">
+        <Card className="bg-white shadow-sm">
+          <CardHeader className="px-4 sm:px-6 py-4 sm:py-5">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
               <CalendarX className="h-5 w-5 text-teal-600" />
               Leave & Unavailability
             </CardTitle>
           </CardHeader>
-          <CardContent className="px-3 sm:px-6 space-y-4">
+          <CardContent className="px-4 sm:px-6 space-y-4">
             <InfoBox type="danger">Enter all known leave now. Changes after submission require coordinator approval.</InfoBox>
 
             {/* Annual Leave */}
             <SurveySection number={1} title="Annual Leave" badge="high">
               <div className="space-y-3">
-                <div className="rounded-lg border border-border p-3 space-y-2">
-                  <span className="text-sm font-medium text-card-foreground">AL entitlement *</span>
+                <div className="rounded-lg border border-border p-4 space-y-2">
+                  <span className="text-sm sm:text-base font-medium text-card-foreground">AL entitlement *</span>
                   <div className="flex gap-2">
                     <button
                       type="button"
                       onClick={() => setField("alEntitlement", 27)}
-                      className={`flex-1 py-2 rounded-lg text-sm font-bold border transition-all ${formData.alEntitlement === 27 ? "bg-teal-600 text-white border-teal-600" : "bg-card text-muted-foreground border-border hover:border-teal-300"}`}
+                      className={`flex-1 py-2.5 sm:py-3 rounded-lg text-sm font-semibold border transition-all cursor-pointer ${formData.alEntitlement === 27 ? "bg-teal-600 text-white border-teal-600 active:bg-teal-700 active:border-teal-700" : "bg-card text-muted-foreground border-border hover:border-teal-300 active:bg-muted"}`}
                     >
                       27 days
                     </button>
                     <button
                       type="button"
                       onClick={() => setField("alEntitlement", 32)}
-                      className={`flex-1 py-2 rounded-lg text-sm font-bold border transition-all ${formData.alEntitlement === 32 ? "bg-teal-600 text-white border-teal-600" : "bg-card text-muted-foreground border-border hover:border-teal-300"}`}
+                      className={`flex-1 py-2.5 sm:py-3 rounded-lg text-sm font-semibold border transition-all cursor-pointer ${formData.alEntitlement === 32 ? "bg-teal-600 text-white border-teal-600 active:bg-teal-700 active:border-teal-700" : "bg-card text-muted-foreground border-border hover:border-teal-300 active:bg-muted"}`}
                     >
                       32 days
                     </button>
@@ -257,8 +259,9 @@ export default function SurveyStep4() {
                   />
                 ))}
                 <button
+                  type="button"
                   onClick={() => setField("annualLeave", [...formData.annualLeave, { id: genId(), startDate: "", endDate: "", reason: "" }])}
-                  className="w-full rounded-lg border border-dashed border-teal-300 p-3 flex items-center justify-center gap-2 text-sm font-medium text-teal-600 cursor-pointer hover:bg-teal-50 transition-colors"
+                  className="w-full rounded-lg border border-dashed border-teal-300 h-11 px-4 flex items-center justify-center gap-2 text-sm sm:text-base font-medium text-teal-600 cursor-pointer hover:bg-teal-50 transition-colors"
                 >
                   <Plus className="h-4 w-4" /> Add annual leave
                 </button>
@@ -289,8 +292,9 @@ export default function SurveyStep4() {
                   />
                 ))}
                 <button
+                  type="button"
                   onClick={() => setField("studyLeave", [...formData.studyLeave, { id: genId(), startDate: "", endDate: "", reason: "" }])}
-                  className="w-full rounded-lg border border-dashed border-teal-300 p-3 flex items-center justify-center gap-2 text-sm font-medium text-teal-600 cursor-pointer hover:bg-teal-50 transition-colors"
+                  className="w-full rounded-lg border border-dashed border-teal-300 h-11 px-4 flex items-center justify-center gap-2 text-sm sm:text-base font-medium text-teal-600 cursor-pointer hover:bg-teal-50 transition-colors"
                 >
                   <Plus className="h-4 w-4" /> Add study leave
                 </button>
@@ -313,8 +317,9 @@ export default function SurveyStep4() {
                   />
                 ))}
                 <button
+                  type="button"
                   onClick={() => setField("nocDates", [...formData.nocDates, { id: genId(), startDate: "", endDate: "", reason: "" }])}
-                  className="w-full rounded-lg border border-dashed border-teal-300 p-3 flex items-center justify-center gap-2 text-sm font-medium text-teal-600 cursor-pointer hover:bg-teal-50 transition-colors"
+                  className="w-full rounded-lg border border-dashed border-teal-300 h-11 px-4 flex items-center justify-center gap-2 text-sm sm:text-base font-medium text-teal-600 cursor-pointer hover:bg-teal-50 transition-colors"
                 >
                   <Plus className="h-4 w-4" /> Add not-on-call period
                 </button>
@@ -324,10 +329,10 @@ export default function SurveyStep4() {
             {/* Rotations */}
             <SurveySection number={4} title="Rotations" badge="hard">
               <div className="space-y-3">
-                <p className="text-xs text-card-foreground">Rotating to another hospital during this rota?</p>
+                <p className="text-sm sm:text-base text-card-foreground">Rotating to another hospital during this rota?</p>
                 <div className="flex gap-2">
-                  <button type="button" onClick={() => setHasRotation(false)} className={`flex-1 py-2 rounded-lg text-sm font-bold border ${!hasRotation ? "bg-teal-600 text-white border-teal-600" : "bg-card text-muted-foreground border-border"}`}>No</button>
-                  <button type="button" onClick={() => setHasRotation(true)} className={`flex-1 py-2 rounded-lg text-sm font-bold border ${hasRotation ? "bg-teal-600 text-white border-teal-600" : "bg-card text-muted-foreground border-border"}`}>Yes</button>
+                  <button type="button" onClick={() => setHasRotation(false)} className={`flex-1 py-2.5 sm:py-3 rounded-lg text-sm font-semibold border cursor-pointer transition-all ${!hasRotation ? "bg-teal-600 text-white border-teal-600 active:bg-teal-700 active:border-teal-700" : "bg-card text-muted-foreground border-border active:bg-muted"}`}>No</button>
+                  <button type="button" onClick={() => setHasRotation(true)} className={`flex-1 py-2.5 sm:py-3 rounded-lg text-sm font-semibold border cursor-pointer transition-all ${hasRotation ? "bg-teal-600 text-white border-teal-600 active:bg-teal-700 active:border-teal-700" : "bg-card text-muted-foreground border-border active:bg-muted"}`}>Yes</button>
                 </div>
                 {hasRotation && (
                   <>
@@ -343,8 +348,9 @@ export default function SurveyStep4() {
                       />
                     ))}
                     <button
+                      type="button"
                       onClick={() => setField("rotations", [...formData.rotations, { id: genId(), startDate: "", endDate: "", location: "" }])}
-                      className="w-full rounded-lg border border-dashed border-teal-300 p-3 flex items-center justify-center gap-2 text-sm font-medium text-teal-600 cursor-pointer hover:bg-teal-50 transition-colors"
+                      className="w-full rounded-lg border border-dashed border-teal-300 h-11 px-4 flex items-center justify-center gap-2 text-sm sm:text-base font-medium text-teal-600 cursor-pointer hover:bg-teal-50 transition-colors"
                     >
                       <Plus className="h-4 w-4" /> Add rotation
                     </button>

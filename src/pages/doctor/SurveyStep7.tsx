@@ -10,7 +10,7 @@ import { InfoBox } from "@/components/survey/InfoBox";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Pencil, ClipboardCheck, Info, User, Stethoscope, CalendarDays, CalendarX, ShieldAlert, Heart, Star } from "lucide-react";
+import { Pencil, ClipboardCheck, Info, User, Stethoscope, CalendarDays, CalendarX, ShieldAlert, Star } from "lucide-react";
 
 function fmtDateRange(start: string, end: string): string {
   try {
@@ -84,21 +84,21 @@ export default function SurveyStep7() {
 
   return (
     <>
-      <div className="flex-1 overflow-y-auto overscroll-contain p-3 sm:p-4 pb-4 space-y-4">
-        <div className="flex items-start gap-2 rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-xs sm:text-sm font-medium text-teal-700">
-          <Info className="h-4 w-4 shrink-0 mt-0.5 text-teal-600" />
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 pb-6 space-y-4 sm:space-y-6">
+        <div className="flex items-start gap-2 rounded-lg border border-teal-200 bg-teal-50 px-4 py-3 text-sm font-medium text-teal-700">
+          <Info className="h-4 w-4 sm:h-5 sm:w-5 shrink-0 mt-0.5 text-teal-600" />
           Review everything carefully before submitting.
         </div>
 
-        <Card>
-          <CardHeader className="px-3 sm:px-6 py-3 sm:py-4">
-            <CardTitle className="flex items-center gap-2 text-base">
+        <Card className="bg-white shadow-sm">
+          <CardHeader className="px-4 sm:px-6 py-4 sm:py-5">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
               <ClipboardCheck className="h-5 w-5 text-teal-600" />
               Review & Submit
             </CardTitle>
-            <CardDescription className="text-xs">Full summary of your survey responses.</CardDescription>
+            <CardDescription className="text-xs sm:text-sm">Full summary of your survey responses.</CardDescription>
           </CardHeader>
-          <CardContent className="px-3 sm:px-6 space-y-4">
+          <CardContent className="px-4 sm:px-6 space-y-4">
 
             {/* ── Full Summary ── */}
             <SurveySection number={1} title="Summary">
@@ -144,9 +144,9 @@ export default function SurveyStep7() {
                   )}
                   {formData.ltftNightFlexibility.length > 0 && (
                     <div className="space-y-0.5">
-                      <span className="text-[10px] font-semibold text-muted-foreground uppercase">Night Flexibility</span>
+                      <span className="text-xs sm:text-sm font-semibold text-muted-foreground uppercase tracking-wide">Night Flexibility</span>
                       {formData.ltftNightFlexibility.map(f => (
-                        <p key={f.day} className="text-xs text-card-foreground">
+                        <p key={f.day} className="text-xs sm:text-sm text-card-foreground">
                           {f.day.slice(0, 3)}: start {f.canStart ? "✓" : "✗"} · end {f.canEnd ? "✓" : "✗"}
                         </p>
                       ))}
@@ -164,9 +164,9 @@ export default function SurveyStep7() {
 
                   {formData.annualLeave.length > 0 ? (
                     <div className="space-y-0.5">
-                      <span className="text-[10px] font-semibold text-muted-foreground uppercase">Annual Leave ({formData.annualLeave.length})</span>
+                      <span className="text-xs sm:text-sm font-semibold text-muted-foreground uppercase tracking-wide">Annual Leave ({formData.annualLeave.length})</span>
                       {formData.annualLeave.map((e, i) => (
-                        <p key={i} className="text-xs text-card-foreground">
+                        <p key={i} className="text-xs sm:text-sm text-card-foreground">
                           {e.startDate && e.endDate ? fmtDateRange(e.startDate, e.endDate) : "Dates not set"}
                           {e.reason && <span className="text-muted-foreground"> — {e.reason}</span>}
                         </p>
@@ -178,9 +178,9 @@ export default function SurveyStep7() {
 
                   {formData.studyLeave.length > 0 ? (
                     <div className="space-y-0.5">
-                      <span className="text-[10px] font-semibold text-muted-foreground uppercase">Study Leave ({formData.studyLeave.length})</span>
+                      <span className="text-xs sm:text-sm font-semibold text-muted-foreground uppercase tracking-wide">Study Leave ({formData.studyLeave.length})</span>
                       {formData.studyLeave.map((e, i) => (
-                        <p key={i} className="text-xs text-card-foreground">
+                        <p key={i} className="text-xs sm:text-sm text-card-foreground">
                           {e.startDate && e.endDate ? fmtDateRange(e.startDate, e.endDate) : "Dates not set"}
                           {e.reason && <span className="text-muted-foreground"> — {e.reason}</span>}
                         </p>
@@ -192,9 +192,9 @@ export default function SurveyStep7() {
 
                   {formData.nocDates.length > 0 ? (
                     <div className="space-y-0.5">
-                      <span className="text-[10px] font-semibold text-muted-foreground uppercase">Not On-Call ({formData.nocDates.length})</span>
+                      <span className="text-xs sm:text-sm font-semibold text-muted-foreground uppercase tracking-wide">Not On-Call ({formData.nocDates.length})</span>
                       {formData.nocDates.map((e, i) => (
-                        <p key={i} className="text-xs text-card-foreground">
+                        <p key={i} className="text-xs sm:text-sm text-card-foreground">
                           {e.startDate && e.endDate ? fmtDateRange(e.startDate, e.endDate) : "Dates not set"}
                           {e.reason && <span className="text-muted-foreground"> — {e.reason}</span>}
                         </p>
@@ -206,9 +206,9 @@ export default function SurveyStep7() {
 
                   {formData.rotations.length > 0 && (
                     <div className="space-y-0.5">
-                      <span className="text-[10px] font-semibold text-muted-foreground uppercase">Rotations ({formData.rotations.length})</span>
+                      <span className="text-xs sm:text-sm font-semibold text-muted-foreground uppercase tracking-wide">Rotations ({formData.rotations.length})</span>
                       {formData.rotations.map((e, i) => (
-                        <p key={i} className="text-xs text-card-foreground">
+                        <p key={i} className="text-xs sm:text-sm text-card-foreground">
                           {e.startDate && e.endDate ? fmtDateRange(e.startDate, e.endDate) : "Dates not set"}
                           <span className="text-muted-foreground"> — {e.location || "No location"}</span>
                         </p>
@@ -245,9 +245,9 @@ export default function SurveyStep7() {
                 >
                   {formData.specialtiesRequested.length > 0 ? (
                     <div className="space-y-0.5">
-                      <span className="text-[10px] font-semibold text-muted-foreground uppercase">Specialties ({formData.specialtiesRequested.length})</span>
+                      <span className="text-xs sm:text-sm font-semibold text-muted-foreground uppercase tracking-wide">Specialties ({formData.specialtiesRequested.length})</span>
                       {formData.specialtiesRequested.map((s, i) => (
-                        <p key={i} className="text-xs text-card-foreground">
+                        <p key={i} className="text-xs sm:text-sm text-card-foreground">
                           {s.name}{s.notes && <span className="text-muted-foreground"> — {s.notes}</span>}
                         </p>
                       ))}
@@ -263,10 +263,10 @@ export default function SurveyStep7() {
                   />
                   {formData.otherInterests.length > 0 && (
                     <div className="space-y-0.5">
-                      <span className="text-[10px] font-semibold text-muted-foreground uppercase">Other Interests</span>
-                      {formData.otherInterests.map((i, idx) => (
-                        <p key={idx} className="text-xs text-card-foreground">
-                          {i.name}{i.notes && <span className="text-muted-foreground"> — {i.notes}</span>}
+                      <span className="text-xs sm:text-sm font-semibold text-muted-foreground uppercase tracking-wide">Other Interests</span>
+                      {formData.otherInterests.map((item, idx) => (
+                        <p key={idx} className="text-xs sm:text-sm text-card-foreground">
+                          {item.name}{item.notes && <span className="text-muted-foreground"> — {item.notes}</span>}
                         </p>
                       ))}
                     </div>
@@ -276,12 +276,12 @@ export default function SurveyStep7() {
                 </SummaryBlock>
 
                 {/* Warnings */}
-                {!formData.fullName && <InfoBox type="warn">Personal Details blank. <button className="underline font-medium" onClick={() => setStep(1)}>Edit →</button></InfoBox>}
+                {!formData.fullName && <InfoBox type="warn">Personal Details blank. <button className="underline font-medium cursor-pointer" onClick={() => setStep(1)}>Edit →</button></InfoBox>}
                 {formData.iacAchieved === null && formData.iaocAchieved === null && formData.icuAchieved === null && formData.transferAchieved === null && (
-                  <InfoBox type="warn">Competencies blank. <button className="underline font-medium" onClick={() => setStep(2)}>Edit →</button></InfoBox>
+                  <InfoBox type="warn">Competencies blank. <button className="underline font-medium cursor-pointer" onClick={() => setStep(2)}>Edit →</button></InfoBox>
                 )}
                 {formData.wtePercent !== 100 && formData.ltftDaysOff.length === 0 && (
-                  <InfoBox type="warn">LTFT but no days off. <button className="underline font-medium" onClick={() => setStep(3)}>Edit →</button></InfoBox>
+                  <InfoBox type="warn">LTFT but no days off. <button className="underline font-medium cursor-pointer" onClick={() => setStep(3)}>Edit →</button></InfoBox>
                 )}
               </div>
             </SurveySection>
@@ -319,18 +319,16 @@ export default function SurveyStep7() {
             {/* Signature */}
             <SurveySection number={3} title="Signature">
               <div className="space-y-3">
-                <div className="rounded-lg border border-border p-3 space-y-2">
+                <div className="rounded-lg border border-border p-4 space-y-2">
                   <div className="flex flex-col">
-                    <span className="text-sm font-medium text-card-foreground">Your name</span>
-                    <span className="text-[11px] font-semibold text-teal-600 mt-0.5">Required</span>
+                    <span className="text-sm sm:text-base font-medium text-card-foreground">Your name *</span>
                   </div>
                   <Input value={formData.signatureName} onChange={(e) => setField("signatureName", e.target.value)} className="w-full bg-muted border-border" />
                 </div>
                 <FieldError message={errors.sigName} />
-                <div className="rounded-lg border border-border p-3 space-y-2">
+                <div className="rounded-lg border border-border p-4 space-y-2">
                   <div className="flex flex-col">
-                    <span className="text-sm font-medium text-card-foreground">Date</span>
-                    <span className="text-[11px] font-semibold text-teal-600 mt-0.5">Required</span>
+                    <span className="text-sm sm:text-base font-medium text-card-foreground">Date *</span>
                   </div>
                   <Input type="date" value={formData.signatureDate || new Date().toISOString().split("T")[0]} onChange={(e) => setField("signatureDate", e.target.value)} className="w-full bg-muted border-border" readOnly />
                 </div>
@@ -340,8 +338,9 @@ export default function SurveyStep7() {
 
             {/* Save and return */}
             <button
+              type="button"
               onClick={handleSaveAndReturn}
-              className="w-full py-2.5 rounded-lg border border-border text-muted-foreground text-sm font-medium hover:bg-muted transition-colors"
+              className="w-full py-2.5 rounded-lg border border-border text-muted-foreground text-sm font-medium hover:bg-muted transition-colors cursor-pointer"
             >
               Save and return later
             </button>
@@ -368,11 +367,11 @@ function SummaryBlock({ icon, title, onEdit, children }: { icon: React.ReactNode
   return (
     <div className="rounded-lg border border-border overflow-hidden">
       <div className="flex items-center justify-between bg-muted/50 px-3 py-2 border-b border-border">
-        <div className="flex items-center gap-1.5 text-xs font-semibold text-card-foreground">
+        <div className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           {icon}
           {title}
         </div>
-        <button onClick={onEdit} className="text-teal-600 hover:underline text-[10px] font-medium flex items-center gap-0.5">
+        <button type="button" onClick={onEdit} className="text-teal-600 hover:text-teal-700 hover:underline text-[10px] sm:text-xs font-medium flex items-center gap-0.5 cursor-pointer transition-colors">
           <Pencil className="h-3 w-3" /> Edit
         </button>
       </div>
@@ -386,8 +385,8 @@ function SummaryBlock({ icon, title, onEdit, children }: { icon: React.ReactNode
 function SummaryItem({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-start justify-between gap-2">
-      <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide shrink-0">{label}</span>
-      <span className="text-xs text-card-foreground text-right break-words min-w-0">{value}</span>
+      <span className="text-xs sm:text-sm font-semibold text-muted-foreground uppercase tracking-wide shrink-0">{label}</span>
+      <span className="text-xs sm:text-sm text-card-foreground text-right break-words min-w-0">{value}</span>
     </div>
   );
 }
@@ -401,8 +400,8 @@ function CompRow({ label, achieved, working, remote }: { label: string; achieved
   }
   return (
     <div className="flex items-start justify-between gap-2">
-      <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide shrink-0">{label}</span>
-      <span className="text-xs text-card-foreground text-right">{status}</span>
+      <span className="text-xs sm:text-sm font-semibold text-muted-foreground uppercase tracking-wide shrink-0">{label}</span>
+      <span className="text-xs sm:text-sm text-card-foreground text-right">{status}</span>
     </div>
   );
 }
@@ -410,10 +409,10 @@ function CompRow({ label, achieved, working, remote }: { label: string; achieved
 function ConfirmCheck({ checked, onChange, label, error }: { checked: boolean; onChange: (v: boolean) => void; label: string; error?: string }) {
   return (
     <div>
-      <div className="flex items-start gap-2">
+      <label className="flex items-start gap-2 cursor-pointer">
         <Checkbox checked={checked} onCheckedChange={(v) => onChange(!!v)} className="mt-0.5 h-4 w-4 shrink-0" />
         <span className="text-xs sm:text-sm text-card-foreground leading-relaxed">{label}</span>
-      </div>
+      </label>
       <FieldError message={error} />
     </div>
   );

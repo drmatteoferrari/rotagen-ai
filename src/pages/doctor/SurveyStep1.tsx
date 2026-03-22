@@ -61,46 +61,46 @@ export default function SurveyStep1() {
 
   return (
     <>
-      <div className="flex-1 overflow-y-auto overscroll-contain p-3 sm:p-4 pb-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 pb-6 space-y-4 sm:space-y-6">
         {/* Info banner */}
-        <div className="flex items-start gap-2 rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-xs sm:text-sm font-medium text-teal-700">
-          <Info className="h-4 w-4 shrink-0 mt-0.5 text-teal-600" />
+        <div className="flex items-start gap-2 rounded-lg border border-teal-200 bg-teal-50 px-4 py-3 text-sm font-medium text-teal-700">
+          <Info className="h-4 w-4 sm:h-5 sm:w-5 shrink-0 mt-0.5 text-teal-600" />
           Confirm your details.
         </div>
 
-        <Card>
-          <CardHeader className="px-3 sm:px-6 py-3 sm:py-4">
-            <CardTitle className="flex items-center gap-2 text-base">
+        <Card className="bg-white shadow-sm">
+          <CardHeader className="px-4 sm:px-6 py-4 sm:py-5">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
               <User className="h-5 w-5 text-teal-600" />
               Personal Details
             </CardTitle>
           </CardHeader>
-          <CardContent className="px-3 sm:px-6 space-y-4">
+          <CardContent className="px-4 sm:px-6 space-y-4">
             <SurveySection number={1} title="Identification">
               <div className="space-y-3">
                 {/* Full Name */}
-                <div className="rounded-lg border border-border p-3 space-y-2">
-                  <span className="text-sm font-medium text-card-foreground">Full Name *</span>
+                <div className="rounded-lg border border-border p-4 space-y-2">
+                  <span className="text-sm sm:text-base font-medium text-card-foreground">Full Name *</span>
                   <Input value={formData.fullName} onChange={(e) => setField("fullName", e.target.value)} placeholder="Dr. Jane Smith" className="w-full bg-muted border-border" />
                 </div>
                 <FieldError message={errors.fullName} />
 
                 {/* NHS Email */}
-                <div className="rounded-lg border border-border p-3 space-y-2">
-                  <span className="text-sm font-medium text-card-foreground">Work (NHS) Email *</span>
+                <div className="rounded-lg border border-border p-4 space-y-2">
+                  <span className="text-sm sm:text-base font-medium text-card-foreground">Work (NHS) Email *</span>
                   <Input type="email" value={formData.nhsEmail} onChange={(e) => setField("nhsEmail", e.target.value)} placeholder="j.smith@nhs.net" className="w-full bg-muted border-border" />
                 </div>
                 <FieldError message={errors.nhsEmail} />
 
                 {/* Personal Email */}
-                <div className="rounded-lg border border-border p-3 space-y-2">
-                  <span className="text-sm font-medium text-card-foreground">Personal Email</span>
+                <div className="rounded-lg border border-border p-4 space-y-2">
+                  <span className="text-sm sm:text-base font-medium text-card-foreground">Personal Email</span>
                   <Input type="email" value={formData.personalEmail} onChange={(e) => setField("personalEmail", e.target.value)} placeholder="jane@gmail.com" className="w-full bg-muted border-border" />
                 </div>
 
                 {/* Phone */}
-                <div className="rounded-lg border border-border p-3 space-y-2">
-                  <span className="text-sm font-medium text-card-foreground">Phone Number *</span>
+                <div className="rounded-lg border border-border p-4 space-y-2">
+                  <span className="text-sm sm:text-base font-medium text-card-foreground">Phone Number *</span>
                   <Input type="tel" value={formData.phoneNumber} onChange={(e) => setField("phoneNumber", e.target.value)} placeholder="07xxx xxx xxx" className="w-full bg-muted border-border" />
                 </div>
                 <FieldError message={errors.phoneNumber} />
@@ -110,12 +110,12 @@ export default function SurveyStep1() {
             <SurveySection number={2} title="Training Grade & Role">
               <div className="space-y-3">
                 {/* Grade */}
-                <div className="rounded-lg border border-border p-3 space-y-2">
-                  <span className="text-sm font-medium text-card-foreground">Grade *</span>
+                <div className="rounded-lg border border-border p-4 space-y-2">
+                  <span className="text-sm sm:text-base font-medium text-card-foreground">Grade *</span>
                   <select
                     value={formData.grade}
                     onChange={(e) => setField("grade", e.target.value)}
-                    className="w-full rounded-md border border-border bg-muted px-3 py-2 text-sm"
+                    className="w-full rounded-md border border-border bg-muted px-3 py-2 text-sm cursor-pointer"
                   >
                     <option value="">Select grade</option>
                     {GRADE_OPTIONS.map((g) => <option key={g} value={g}>{g}</option>)}
@@ -123,7 +123,7 @@ export default function SurveyStep1() {
                 </div>
                 <FieldError message={errors.grade} />
 
-                <div className="flex items-start gap-2 px-3">
+                <label className="flex items-start gap-2 px-3 sm:px-4 py-2.5 sm:py-3 cursor-pointer">
                   <Checkbox
                     id="dualSpec"
                     checked={formData.dualSpecialty}
@@ -133,25 +133,27 @@ export default function SurveyStep1() {
                     }}
                     className="mt-0.5"
                   />
-                  <label htmlFor="dualSpec" className="text-sm text-card-foreground cursor-pointer">Dual training programme</label>
-                </div>
+                  <span className="text-sm sm:text-base text-card-foreground">Dual training programme</span>
+                </label>
                 {formData.dualSpecialty && (
                   <div className="ml-4 space-y-2 border-l-2 border-border pl-3">
-                    <div className="flex items-center gap-2">
+                    <label className="flex items-center gap-2 cursor-pointer px-3 sm:px-4 py-2.5 sm:py-3">
                       <Checkbox
                         checked={formData.dualSpecialtyTypes.includes("Emergency Medicine")}
                         onCheckedChange={(v) => toggleDualType("Emergency Medicine", !!v)}
+                        className="h-4 w-4"
                       />
-                      <span className="text-sm text-card-foreground">Emergency Medicine</span>
-                    </div>
-                    <div className="flex items-center gap-2">
+                      <span className="text-sm sm:text-base text-card-foreground">Emergency Medicine</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer px-3 sm:px-4 py-2.5 sm:py-3">
                       <Checkbox
                         checked={formData.dualSpecialtyTypes.includes("Intensive Care Medicine")}
                         onCheckedChange={(v) => toggleDualType("Intensive Care Medicine", !!v)}
+                        className="h-4 w-4"
                       />
-                      <span className="text-sm text-card-foreground">Intensive Care Medicine</span>
-                    </div>
-                    <div className="flex items-center gap-2">
+                      <span className="text-sm sm:text-base text-card-foreground">Intensive Care Medicine</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer px-3 sm:px-4 py-2.5 sm:py-3">
                       <Checkbox
                         checked={dualOther}
                         onCheckedChange={(v) => {
@@ -164,9 +166,10 @@ export default function SurveyStep1() {
                             setField("dualSpecialtyTypes", [...formData.dualSpecialtyTypes, ""]);
                           }
                         }}
+                        className="h-4 w-4"
                       />
-                      <span className="text-sm text-card-foreground">Other</span>
-                    </div>
+                      <span className="text-sm sm:text-base text-card-foreground">Other</span>
+                    </label>
                     {dualOther && (
                       <Input
                         placeholder="Please specify"

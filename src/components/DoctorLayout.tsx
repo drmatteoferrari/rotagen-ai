@@ -6,8 +6,8 @@ interface DoctorLayoutProps {
 
 export function DoctorLayout({ children }: DoctorLayoutProps) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <div className="relative flex h-[844px] w-full max-w-md flex-col overflow-hidden rounded-[2.5rem] border border-border bg-background shadow-2xl">
+    <div className="min-h-screen bg-teal-50 flex flex-col">
+      <div className="w-full flex-1 flex flex-col mx-auto max-w-2xl">
         {children}
       </div>
     </div>

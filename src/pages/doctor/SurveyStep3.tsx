@@ -43,11 +43,11 @@ function bandedDaysOff(pct: number): number {
 function RadioYN({ value, onChange, label, hint }: { value: boolean | null; onChange: (v: boolean) => void; label: string; hint?: string }) {
   return (
     <div className="space-y-1">
-      <p className="text-xs sm:text-sm font-medium text-card-foreground">{label}</p>
+      <p className="text-sm sm:text-base font-medium text-card-foreground">{label}</p>
       {hint && <p className="text-[10px] sm:text-xs text-muted-foreground">{hint}</p>}
       <div className="flex gap-2">
-        <button type="button" onClick={() => onChange(true)} className={`flex-1 py-2 rounded-lg text-sm font-bold border transition-all ${value === true ? "bg-teal-600 text-white border-teal-600" : "bg-card text-muted-foreground border-border"}`}>Yes</button>
-        <button type="button" onClick={() => onChange(false)} className={`flex-1 py-2 rounded-lg text-sm font-bold border transition-all ${value === false ? "bg-teal-600 text-white border-teal-600" : "bg-card text-muted-foreground border-border"}`}>No</button>
+        <button type="button" onClick={() => onChange(true)} className={`flex-1 py-2.5 sm:py-3 rounded-lg text-sm font-semibold border transition-all cursor-pointer ${value === true ? "bg-teal-600 text-white border-teal-600 active:bg-teal-700 active:border-teal-700" : "bg-card text-muted-foreground border-border active:bg-muted"}`}>Yes</button>
+        <button type="button" onClick={() => onChange(false)} className={`flex-1 py-2.5 sm:py-3 rounded-lg text-sm font-semibold border transition-all cursor-pointer ${value === false ? "bg-teal-600 text-white border-teal-600 active:bg-teal-700 active:border-teal-700" : "bg-card text-muted-foreground border-border active:bg-muted"}`}>No</button>
       </div>
     </div>
   );
@@ -110,25 +110,25 @@ export default function SurveyStep3() {
 
   return (
     <>
-      <div className="flex-1 overflow-y-auto overscroll-contain p-3 sm:p-4 pb-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 pb-6 space-y-4 sm:space-y-6">
         {/* Info banner */}
-        <div className="flex items-start gap-2 rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-xs sm:text-sm font-medium text-teal-700">
-          <Info className="h-4 w-4 shrink-0 mt-0.5 text-teal-600" />
+        <div className="flex items-start gap-2 rounded-lg border border-teal-200 bg-teal-50 px-4 py-3 text-sm font-medium text-teal-700">
+          <Info className="h-4 w-4 sm:h-5 sm:w-5 shrink-0 mt-0.5 text-teal-600" />
           Select your working hours and pattern.
         </div>
 
-        <Card>
-          <CardHeader className="px-3 sm:px-6 py-3 sm:py-4">
-            <CardTitle className="flex items-center gap-2 text-base">
+        <Card className="bg-white shadow-sm">
+          <CardHeader className="px-4 sm:px-6 py-4 sm:py-5">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
               <CalendarDays className="h-5 w-5 text-teal-600" />
               Working Pattern
             </CardTitle>
           </CardHeader>
-          <CardContent className="px-3 sm:px-6 space-y-4">
+          <CardContent className="px-4 sm:px-6 space-y-4">
             <SurveySection number={1} title="WTE" badge="high">
               <div className="space-y-2">
                 {WTE_OPTIONS.map((opt) => (
-                  <label key={opt.value} className="flex items-center gap-2.5 cursor-pointer py-1">
+                  <label key={opt.value} className="flex items-center gap-2.5 cursor-pointer py-2.5 sm:py-3">
                     <input
                       type="radio"
                       name="wte"
@@ -140,9 +140,9 @@ export default function SurveyStep3() {
                           setField("ltftNightFlexibility", []);
                         }
                       }}
-                      className="accent-teal-600"
+                      className="accent-teal-600 cursor-pointer"
                     />
-                    <span className="text-sm text-card-foreground">{opt.label}{opt.sub ? ` — ${opt.sub}` : ""}</span>
+                    <span className="text-sm sm:text-base text-card-foreground">{opt.label}{opt.sub ? ` — ${opt.sub}` : ""}</span>
                   </label>
                 ))}
 
@@ -185,7 +185,7 @@ export default function SurveyStep3() {
                   <p className="text-[10px] sm:text-xs text-muted-foreground">Select your LTFT non-working day(s). Consecutive days help with night block scheduling — please consider this when choosing.</p>
                   <div className="flex flex-wrap gap-2">
                     {DAYS.map((day) => (
-                      <label key={day} className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 cursor-pointer transition-colors text-sm ${
+                      <label key={day} className={`flex items-center gap-1.5 rounded-lg border px-3 sm:px-4 py-2.5 sm:py-3 cursor-pointer transition-colors text-sm sm:text-base ${
                         formData.ltftDaysOff.includes(day)
                           ? "border-teal-300 bg-teal-50 text-teal-700 font-semibold"
                           : "border-border text-card-foreground"
@@ -217,8 +217,8 @@ export default function SurveyStep3() {
                   {formData.ltftDaysOff.map((day) => {
                     const flex = formData.ltftNightFlexibility.find((f) => f.day === day);
                     return (
-                      <div key={day} className="border border-border rounded-lg p-3 space-y-2">
-                        <h4 className="text-sm font-semibold text-card-foreground">{day}</h4>
+                      <div key={day} className="border border-border rounded-lg p-4 space-y-2">
+                        <h4 className="text-sm sm:text-base font-semibold text-card-foreground">{day}</h4>
                         <RadioYN
                           label={`Can START nights on ${DAY_SHORT[day as keyof typeof DAY_SHORT] || day}?`}
                           value={flex?.canStart ?? null}

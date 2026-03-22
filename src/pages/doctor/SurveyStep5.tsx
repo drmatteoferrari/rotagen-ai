@@ -34,21 +34,21 @@ export default function SurveyStep5() {
 
   return (
     <>
-      <div className="flex-1 overflow-y-auto overscroll-contain p-3 sm:p-4 pb-4 space-y-4">
-        <div className="flex items-start gap-2 rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-xs sm:text-sm font-medium text-teal-700">
-          <Info className="h-4 w-4 shrink-0 mt-0.5 text-teal-600" />
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 pb-6 space-y-4 sm:space-y-6">
+        <div className="flex items-start gap-2 rounded-lg border border-teal-200 bg-teal-50 px-4 py-3 text-sm font-medium text-teal-700">
+          <Info className="h-4 w-4 sm:h-5 sm:w-5 shrink-0 mt-0.5 text-teal-600" />
           Medical exemptions are confidential and will only be seen by the rota coordinator.
         </div>
 
-        <Card>
-          <CardHeader className="px-3 sm:px-6 py-3 sm:py-4">
-            <CardTitle className="flex items-center gap-2 text-base">
+        <Card className="bg-white shadow-sm">
+          <CardHeader className="px-4 sm:px-6 py-4 sm:py-5">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
               <ShieldAlert className="h-5 w-5 text-teal-600" />
               Medical Exemptions
             </CardTitle>
-            <CardDescription className="text-xs">Formal exemptions from Occupational Health, your training programme, or other health circumstances.</CardDescription>
+            <CardDescription className="text-xs sm:text-sm">Formal exemptions from Occupational Health, your training programme, or other health circumstances.</CardDescription>
           </CardHeader>
-          <CardContent className="px-3 sm:px-6 space-y-4">
+          <CardContent className="px-4 sm:px-6 space-y-4">
             {/* Exemptions */}
             <SurveySection number={1} title="Exemptions">
               <div className="space-y-2">
@@ -65,15 +65,15 @@ export default function SurveyStep5() {
             {/* Parental Leave */}
             <SurveySection number={2} title="Parental Leave">
               <div className="space-y-3">
-                <p className="text-xs sm:text-sm text-card-foreground">Expecting parental leave during this rota?</p>
+                <p className="text-sm sm:text-base text-card-foreground">Expecting parental leave during this rota?</p>
                 <div className="flex gap-2">
-                  <button type="button" onClick={() => setField("parentalLeaveExpected", false)} className={`flex-1 py-2 rounded-lg text-sm font-bold border ${!formData.parentalLeaveExpected ? "bg-teal-600 text-white border-teal-600" : "bg-card text-muted-foreground border-border"}`}>No</button>
-                  <button type="button" onClick={() => setField("parentalLeaveExpected", true)} className={`flex-1 py-2 rounded-lg text-sm font-bold border ${formData.parentalLeaveExpected ? "bg-teal-600 text-white border-teal-600" : "bg-card text-muted-foreground border-border"}`}>Yes</button>
+                  <button type="button" onClick={() => setField("parentalLeaveExpected", false)} className={`flex-1 py-2.5 sm:py-3 rounded-lg text-sm font-semibold border cursor-pointer transition-all ${!formData.parentalLeaveExpected ? "bg-teal-600 text-white border-teal-600 active:bg-teal-700 active:border-teal-700" : "bg-card text-muted-foreground border-border active:bg-muted"}`}>No</button>
+                  <button type="button" onClick={() => setField("parentalLeaveExpected", true)} className={`flex-1 py-2.5 sm:py-3 rounded-lg text-sm font-semibold border cursor-pointer transition-all ${formData.parentalLeaveExpected ? "bg-teal-600 text-white border-teal-600 active:bg-teal-700 active:border-teal-700" : "bg-card text-muted-foreground border-border active:bg-muted"}`}>Yes</button>
                 </div>
                 {formData.parentalLeaveExpected && (
                   <div className="space-y-3 border-l-2 border-border pl-3 mt-2">
                     <div>
-                      <label className="text-xs font-medium text-card-foreground block mb-1">Leave period *</label>
+                      <label className="text-xs sm:text-sm font-medium text-card-foreground block mb-1">Leave period *</label>
                       <DateRangePicker
                         startDate={formData.parentalLeaveStart}
                         endDate={formData.parentalLeaveEnd}
@@ -90,7 +90,7 @@ export default function SurveyStep5() {
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-card-foreground block mb-1">Notes *</label>
+                      <label className="text-xs sm:text-sm font-medium text-card-foreground block mb-1">Notes *</label>
                       <Textarea
                         value={formData.parentalLeaveNotes}
                         onChange={(e) => setField("parentalLeaveNotes", e.target.value)}
@@ -107,7 +107,7 @@ export default function SurveyStep5() {
             {/* Other Restrictions */}
             <SurveySection number={3} title="Other Restrictions">
               <div>
-                <label className="text-xs sm:text-sm font-semibold text-card-foreground block mb-1">Other scheduling constraints</label>
+                <label className="text-sm sm:text-base font-semibold text-card-foreground block mb-1">Other scheduling constraints</label>
                 <Textarea
                   value={formData.otherSchedulingRestrictions}
                   onChange={(e) => setField("otherSchedulingRestrictions", e.target.value)}
