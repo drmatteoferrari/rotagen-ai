@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface AuthUser {
-  id: string; // Supabase auth UUID — use this for all DB queries
+  id: string;
   username: string;
   email: string;
   role: string;
@@ -29,6 +29,10 @@ interface AuthContextType {
 
 const DEFAULT_ACCOUNT_SETTINGS: AccountSettings = { departmentName: null, trustName: null };
 
+const MASTER_EMAIL = "admin@rotagen.com";
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
 export async function loadAccountSettings(
   ownedBy: string
 ): Promise<AccountSettings> {
@@ -51,7 +55,13 @@ export async function loadAccountSettings(
   };
 }
 
-useEffect(() => {
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [accountSettings, setAccountSettings] = useState<AccountSettings>(DEFAULT_ACCOUNT_SETTINGS);
+  const { restoreForUser, clearSession } = useRotaContext();
+
+  useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         try {
@@ -59,10 +69,8 @@ useEffect(() => {
             const email = session.user.email ?? "";
             const meta = session.user.user_metadata ?? {};
 
-            // Check if user is the master admin or has an approved registration
             const isMaster = email === MASTER_EMAIL;
             if (!isMaster) {
-              // Add error catching to your database queries
               const { data: regApproved, error: regError } = await supabase
                 .from("registration_requests" as any)
                 .select("status")
@@ -102,12 +110,11 @@ useEffect(() => {
               displayName,
               mustChangePassword: meta.must_change_password ?? false,
             });
-            
-            // Load settings and restore rota context in background
+
             loadAccountSettings(session.user.id).then(setAccountSettings);
             restoreForUser(session.user.id);
           }
-          
+
           if (event === "SIGNED_OUT") {
             localStorage.removeItem("currentRotaConfigId");
             setUser(null);
@@ -116,47 +123,15 @@ useEffect(() => {
           }
         } catch (error) {
           console.error("Auth state change error:", error);
-          // Don't leave the user hanging if the code crashes
           toast.error("An error occurred while verifying your account.");
         } finally {
-          // CRITICAL: This guarantees the spinner stops for both initial loads AND new logins,
-          // even if the database checks crash.
           if (event === "INITIAL_SESSION" || event === "SIGNED_IN") {
             setAuthLoading(false);
           }
         }
       }
     );
-    
-    return () => subscription.unsubscribe();
-  }, [restoreForUser, clearSession]);
 
-          const displayName = meta.full_name ?? email;
-          const username = meta.username ?? email.split("@")[0];
-
-          setUser({
-            id: session.user.id,
-            username,
-            email,
-            role: "coordinator",
-            displayName,
-            mustChangePassword: meta.must_change_password ?? false,
-          });
-          // Load settings and restore rota context in background
-          loadAccountSettings(session.user.id).then(setAccountSettings);
-          restoreForUser(session.user.id);
-        }
-        if (event === "SIGNED_OUT") {
-          localStorage.removeItem("currentRotaConfigId");
-          setUser(null);
-          setAccountSettings(DEFAULT_ACCOUNT_SETTINGS);
-          clearSession();
-        }
-        if (event === "INITIAL_SESSION") {
-          setAuthLoading(false);
-        }
-      }
-    );
     return () => subscription.unsubscribe();
   }, [restoreForUser, clearSession]);
 
