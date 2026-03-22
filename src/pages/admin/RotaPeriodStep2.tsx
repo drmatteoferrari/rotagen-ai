@@ -67,22 +67,43 @@ export default function RotaPeriodStep2() {
   const [newHolidayDate, setNewHolidayDate] = useState<Date>();
   const [saving, setSaving] = useState(false);
 
-  // Bank holiday initialisation — from context or static list
+  // Smart bank holiday re-sync: preserve manual holidays & isActive state
   useEffect(() => {
     if (periodWorkingStateLoaded) return;
     if (!rotaStartDate || !rotaEndDate) return;
 
-    const filtered = UK_BANK_HOLIDAYS
+    const existing = rotaBankHolidays;
+
+    // Keep all manual holidays
+    const manualHolidays = existing.filter(h => !h.isAutoAdded);
+
+    // Build a map of existing auto-added holidays by date string for quick lookup
+    const existingAutoByDate = new Map<string, BankHolidayEntry>();
+    existing.filter(h => h.isAutoAdded).forEach(h => {
+      existingAutoByDate.set(format(h.date, "yyyy-MM-dd"), h);
+    });
+
+    // Get auto holidays that fall within the new range
+    const autoHolidays: BankHolidayEntry[] = UK_BANK_HOLIDAYS
       .map((h) => ({ ...h, dateObj: new Date(h.date[0], h.date[1], h.date[2]) }))
       .filter((h) => isWithinInterval(h.dateObj, { start: rotaStartDate, end: rotaEndDate }))
-      .map((h, i): BankHolidayEntry => ({
-        id: `bh-${i}`,
-        date: new Date(h.date[0], h.date[1], h.date[2]),
-        name: h.name,
-        isAutoAdded: true,
-        isActive: true,
-      }));
-    setRotaBankHolidays(filtered);
+      .map((h, i): BankHolidayEntry => {
+        const dateStr = format(h.dateObj, "yyyy-MM-dd");
+        const prev = existingAutoByDate.get(dateStr);
+        if (prev) {
+          // Preserve existing isActive status and name
+          return prev;
+        }
+        return {
+          id: `bh-auto-${dateStr}`,
+          date: h.dateObj,
+          name: h.name,
+          isAutoAdded: true,
+          isActive: true,
+        };
+      });
+
+    setRotaBankHolidays([...autoHolidays, ...manualHolidays]);
     setPeriodWorkingStateLoaded(true);
   }, [periodWorkingStateLoaded, rotaStartDate, rotaEndDate]);
 
@@ -167,8 +188,9 @@ export default function RotaPeriodStep2() {
     try {
       const startDateStr = rotaStartDate ? format(rotaStartDate, "yyyy-MM-dd") : null;
       const endDateStr = rotaEndDate ? format(rotaEndDate, "yyyy-MM-dd") : null;
-      const durationDays = rotaStartDate && rotaEndDate ? differenceInDays(rotaEndDate, rotaStartDate) : null;
-      const durationWeeks = durationDays != null ? Number((durationDays / 7).toFixed(1)) : null;
+      // Inclusive duration: Aug 1 to Aug 7 = 7 days
+      const durationDays = rotaStartDate && rotaEndDate ? differenceInDays(rotaEndDate, rotaStartDate) + 1 : null;
+      const durationWeeks = durationDays != null ? Number((durationDays / 7).toFixed(2)) : null;
 
       let configId = currentRotaConfigId;
       const configFields = {
@@ -206,20 +228,8 @@ export default function RotaPeriodStep2() {
         if (error) throw error;
       }
 
-      // Delete all existing bank holidays and re-insert (including inactive)
-      await supabase.from("bank_holidays").delete().eq("rota_config_id", configId);
-
-      if (rotaBankHolidays.length > 0) {
-        const rows = rotaBankHolidays.map((h) => ({
-          rota_config_id: configId!,
-          date: format(h.date, "yyyy-MM-dd"),
-          name: h.name,
-          is_auto_added: h.isAutoAdded,
-          is_active: h.isActive,
-        }));
-        const { error: insertError } = await supabase.from("bank_holidays").insert(rows);
-        if (insertError) throw insertError;
-      }
+      // Non-destructive bank holiday sync
+      await syncBankHolidays(configId!);
 
       // Refresh cache
       const refreshedConfig = await getRotaConfig(configId!);
@@ -234,6 +244,65 @@ export default function RotaPeriodStep2() {
       toast.error("Save failed — please try again");
     } finally {
       setSaving(false);
+    }
+  };
+
+  /** Non-destructive sync: update existing, insert new, delete removed */
+  const syncBankHolidays = async (configId: string) => {
+    // Fetch existing rows from DB
+    const { data: dbRows } = await supabase
+      .from("bank_holidays")
+      .select("id, date, name, is_auto_added, is_active")
+      .eq("rota_config_id", configId);
+
+    const existingByDate = new Map<string, { id: string; name: string; is_auto_added: boolean; is_active: boolean }>();
+    (dbRows ?? []).forEach(r => existingByDate.set(r.date, r));
+
+    const currentDates = new Set<string>();
+    const toInsert: any[] = [];
+    const toUpdate: { id: string; name: string; is_auto_added: boolean; is_active: boolean }[] = [];
+
+    for (const h of rotaBankHolidays) {
+      const dateStr = format(h.date, "yyyy-MM-dd");
+      currentDates.add(dateStr);
+
+      const existing = existingByDate.get(dateStr);
+      if (existing) {
+        // Update if anything changed
+        if (existing.name !== h.name || existing.is_auto_added !== h.isAutoAdded || existing.is_active !== h.isActive) {
+          toUpdate.push({ id: existing.id, name: h.name, is_auto_added: h.isAutoAdded, is_active: h.isActive });
+        }
+      } else {
+        toInsert.push({
+          rota_config_id: configId,
+          date: dateStr,
+          name: h.name,
+          is_auto_added: h.isAutoAdded,
+          is_active: h.isActive,
+        });
+      }
+    }
+
+    // Delete rows no longer in current setup
+    const toDeleteIds = (dbRows ?? [])
+      .filter(r => !currentDates.has(r.date))
+      .map(r => r.id);
+
+    if (toDeleteIds.length > 0) {
+      await supabase.from("bank_holidays").delete().in("id", toDeleteIds);
+    }
+
+    if (toInsert.length > 0) {
+      const { error } = await supabase.from("bank_holidays").insert(toInsert);
+      if (error) throw error;
+    }
+
+    for (const u of toUpdate) {
+      await supabase.from("bank_holidays").update({
+        name: u.name,
+        is_auto_added: u.is_auto_added,
+        is_active: u.is_active,
+      }).eq("id", u.id);
     }
   };
 
