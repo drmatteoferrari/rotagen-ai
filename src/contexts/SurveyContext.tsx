@@ -609,13 +609,24 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
       if (respErr) throw respErr;
 
       // 2. Atomic normalization via Postgres RPC (BLOCKING — must succeed)
-      const { error: rpcErr } = await supabase.rpc('handle_survey_normalization', {
-        p_doctor_id: doc.id,
-        p_rota_config_id: doc.rotaConfigId,
-      });
-      if (rpcErr) {
-        console.error("Survey normalization RPC failed:", rpcErr);
-        throw new Error("Critical: Could not finalize scheduling data. Please try again or contact support.");
+      try {
+        const { error: rpcErr } = await supabase.rpc('handle_survey_normalization', {
+          p_doctor_id: doc.id,
+          p_rota_config_id: doc.rotaConfigId,
+          p_signature_name: fd.signatureName || null,
+          p_signature_date: fd.signatureDate || null,
+        });
+        if (rpcErr) {
+          console.error("Survey normalization RPC failed:", rpcErr);
+          toast.error("Submission Failed: Your scheduling data could not be saved. Please check your connection and try again.");
+          setSubmitting(false);
+          return false;
+        }
+      } catch (rpcCatchErr) {
+        console.error("Survey normalization RPC exception:", rpcCatchErr);
+        toast.error("Submission Failed: Your scheduling data could not be saved. Please check your connection and try again.");
+        setSubmitting(false);
+        return false;
       }
 
       // 3. Send confirmation email (non-blocking)
