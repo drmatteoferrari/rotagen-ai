@@ -665,7 +665,7 @@ export default function DoctorProfile() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => navigate(`/admin/survey-override/${doctor.id}/1`)}
+                onClick={() => navigate(`/admin/survey-override/${doctor.id}/1?from=/admin/doctor/${doctor.id}`)}
                 className="gap-1.5"
               >
                 <Pencil className="h-3.5 w-3.5" />
