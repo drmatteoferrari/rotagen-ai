@@ -512,8 +512,6 @@ function ExpandedCard({
           }
           return null;
         })()}
-          ))}
-        </div>
       </div>
 
       {/* ROW 8 — Grade requirement */}
