@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,6 +19,14 @@ export default function ChangePassword() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ newPassword?: string; confirmPassword?: string }>({});
 
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      // PASSWORD_RECOVERY: Supabase has exchanged the reset token for a session.
+      // updateUser() will work correctly when the user submits the form.
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const errs: typeof errors = {};
@@ -27,7 +35,6 @@ export default function ChangePassword() {
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
 
-    if (!user) return;
     setLoading(true);
 
     try {

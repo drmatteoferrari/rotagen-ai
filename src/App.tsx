@@ -81,7 +81,7 @@ const App = () => (
           <Route path="/register" element={<Register />} />
           <Route path="/signup" element={<Navigate to="/register" replace />} />
           <Route path="/approve" element={<Approve />} />
-          <Route path="/change-password" element={<ProtectedRoute><ChangePassword /></ProtectedRoute>} />
+          <Route path="/change-password" element={<ChangePassword />} />
           <Route path="/" element={<LandingPage />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route element={<ProtectedRoute><AdminShell /></ProtectedRoute>}>
