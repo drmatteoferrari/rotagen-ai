@@ -952,6 +952,21 @@ export default function Roster() {
           console.error(`Status update failed for ${doctor.id}:`, statusError);
           throw statusError;
         }
+
+        // Normalize into relational tables (non-blocking — never aborts loop)
+        try {
+          const { error: rpcErr } = await supabase.rpc('handle_survey_normalization', {
+            p_doctor_id: doctor.id,
+            p_rota_config_id: rotaConfigId,
+            p_signature_name: payload.signature_name ?? null,
+            p_signature_date: payload.signature_date ?? null,
+          });
+          if (rpcErr) {
+            console.error(`Normalization RPC failed for ${doctor.id}:`, rpcErr.message);
+          }
+        } catch (rpcCatchErr) {
+          console.error(`Normalization RPC exception for ${doctor.id}:`, rpcCatchErr);
+        }
       }
 
       const plCandidates = [...doctorsList].sort(() => Math.random() - 0.5).slice(0, 2);
@@ -1032,6 +1047,21 @@ export default function Roster() {
     setCancellingAll(true);
 
     try {
+      // Delete relational rows first — no cascade from doctor_survey_responses
+      const relationalDeletes = await Promise.all([
+        supabase.from('unavailability_blocks').delete().eq('rota_config_id', rotaConfigId),
+        supabase.from('ltft_patterns').delete().eq('rota_config_id', rotaConfigId),
+        supabase.from('training_requests').delete().eq('rota_config_id', rotaConfigId),
+        supabase.from('dual_specialties').delete().eq('rota_config_id', rotaConfigId),
+      ]);
+
+      for (const result of relationalDeletes) {
+        if (result.error) {
+          console.error('Relational table delete error:', result.error);
+          throw result.error;
+        }
+      }
+
       const { error: deleteError } = await supabase
         .from('doctor_survey_responses')
         .delete()
