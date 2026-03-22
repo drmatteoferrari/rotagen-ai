@@ -90,16 +90,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (!isMaster) {
             console.log("Checking approval for:", email);
 
-            // FIXED: Reverted to sequential awaits to prevent the Supabase client from hanging
             const { data: regData, error: regError } = await supabase
-              .from("registration_requests" as any)
+              .from("registration_requests")
               .select("status")
               .eq("email", email)
               .maybeSingle();
             if (regError) console.error("Reg check error:", regError);
 
             const { data: coordData, error: coordError } = await supabase
-              .from("coordinator_accounts" as any)
+              .from("coordinator_accounts")
               .select("status")
               .eq("email", email)
               .maybeSingle();
