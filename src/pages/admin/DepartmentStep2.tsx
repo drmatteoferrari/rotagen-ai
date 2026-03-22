@@ -47,7 +47,7 @@ const BADGE_DEFS = [
   { key: "nonres" as BadgeKey, label: "NON-RES OC", emoji: "🏠", activeClasses: "bg-teal-700 text-white" },
 ] as const;
 
-function getShiftErrors(shift: ShiftType): string[] {
+function getShiftErrors(shift: ShiftType, allShifts?: ShiftType[]): string[] {
   const errors: string[] = [];
   if (!shift.name.trim()) errors.push("Shift name is required.");
   if (!shift.abbreviation.trim()) errors.push("Abbreviation is required.");
@@ -56,6 +56,11 @@ function getShiftErrors(shift: ShiftType): string[] {
   if (!Object.values(shift.applicableDays).some(Boolean)) errors.push("At least one day must be selected.");
   if (shift.staffing.target < shift.staffing.min) errors.push("Target cannot be less than minimum.");
   if (shift.staffing.max !== null && shift.staffing.max < shift.staffing.target) errors.push("Maximum cannot be less than target.");
+  // Unique abbreviation check
+  if (allShifts && shift.abbreviation.trim()) {
+    const dupes = allShifts.filter(s => s.id !== shift.id && s.abbreviation.trim().toUpperCase() === shift.abbreviation.trim().toUpperCase());
+    if (dupes.length > 0) errors.push(`Abbreviation "${shift.abbreviation}" is already used by another shift.`);
+  }
   return errors;
 }
 
@@ -206,6 +211,7 @@ function ExpandedCard({
   onDraftChange,
   canRemove,
   index,
+  allShifts,
 }: {
   shift: ShiftType;
   onSave: (updated: ShiftType) => void;
@@ -214,6 +220,7 @@ function ExpandedCard({
   onDraftChange: (updated: ShiftType) => void;
   canRemove: boolean;
   index: number;
+  allShifts: ShiftType[];
 }) {
   const initialShiftRef = useRef(originalShift);
   const [draft, setDraft] = useState({
@@ -493,6 +500,20 @@ function ExpandedCard({
             </div>
           ))}
         </div>
+
+        {/* Competency sum warning */}
+        {(() => {
+          const compSum = draft.reqIac + draft.reqIaoc + draft.reqIcu + draft.reqTransfer;
+          if (compSum > draft.staffing.min) {
+            return (
+              <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                <span>Total competency requirements ({compSum}) exceed minimum staffing ({draft.staffing.min}). Some doctors would need multiple competencies.</span>
+              </div>
+            );
+          }
+          return null;
+        })()}
       </div>
 
       {/* ROW 8 — Grade requirement */}
@@ -516,9 +537,9 @@ function ExpandedCard({
       </div>
 
       {/* ROW 9 — Validation errors */}
-      {getShiftErrors(draft).length > 0 && (
+      {getShiftErrors(draft, allShifts).length > 0 && (
         <div className="space-y-1 rounded-lg border border-destructive/20 bg-destructive/10 p-3">
-          {getShiftErrors(draft).map((err) => (
+          {getShiftErrors(draft, allShifts).map((err) => (
             <p key={err} className="text-sm text-destructive">
               • {err}
             </p>
@@ -547,7 +568,7 @@ function ExpandedCard({
           </Button>
           <Button
             className="min-h-[44px] bg-purple-600 text-white hover:bg-purple-700"
-            disabled={getShiftErrors(draft).length > 0}
+            disabled={getShiftErrors(draft, allShifts).length > 0}
             onClick={() => onSave(draft)}
           >
             <Save className="mr-2 h-4 w-4" /> Save
@@ -709,7 +730,7 @@ export default function DepartmentStep2() {
     setExpandedShiftId(null);
   };
 
-  const pageErrors = shifts.flatMap((shift) => getShiftErrors(shift).map((error) => `${shift.name || shift.abbreviation || shift.id}: ${error}`));
+  const pageErrors = shifts.flatMap((shift) => getShiftErrors(shift, shifts).map((error) => `${shift.name || shift.abbreviation || shift.id}: ${error}`));
   const canSavePage = shifts.length > 0 && pageErrors.length === 0 && !saving;
 
   const handleSaveAndContinue = async () => {
@@ -736,28 +757,29 @@ export default function DepartmentStep2() {
         if (error) throw error;
       }
 
-      await supabase.from("shift_types").delete().eq("rota_config_id", configId);
-
-      const oncallShiftIds = shifts.filter(s => s.isOncall).map(s => s.id);
-      const nonOncallShiftIds = shifts.filter(s => !s.isOncall).map(s => s.id);
-      const oncallOverrides: Record<string, number | undefined> = {};
-      const nonOncallOverrides: Record<string, number | undefined> = {};
-      Object.entries(shiftTargetOverrides).forEach(([id, pct]) => {
-        if (oncallShiftIds.includes(id)) oncallOverrides[id] = pct;
-        else nonOncallOverrides[id] = pct;
+      // Fetch existing shift_types to preserve target_percentage
+      const { data: existingShifts } = await supabase
+        .from("shift_types")
+        .select("shift_key, target_percentage")
+        .eq("rota_config_id", configId);
+      const existingPctMap: Record<string, number | null> = {};
+      (existingShifts ?? []).forEach((row: any) => {
+        existingPctMap[row.shift_key] = row.target_percentage;
       });
 
-      const getTargetPct = (shiftId: string, groupIds: string[], overrides: Record<string, number | undefined>) => {
-        const overriddenTotal = groupIds.filter(id => overrides[id] !== undefined).reduce((sum, id) => sum + (overrides[id] ?? 0), 0);
-        const nonOverriddenCount = groupIds.filter(id => overrides[id] === undefined).length;
-        const remaining = Math.max(0, 100 - overriddenTotal);
-        const autoShare = nonOverriddenCount > 0 ? remaining / nonOverriddenCount : 0;
-        return overrides[shiftId] ?? autoShare;
-      };
+      // Delete shifts that no longer exist
+      const currentShiftKeys = shifts.map(s => s.id);
+      const existingKeys = (existingShifts ?? []).map((r: any) => r.shift_key as string);
+      const keysToRemove = existingKeys.filter(k => !currentShiftKeys.includes(k));
+      if (keysToRemove.length > 0) {
+        for (const key of keysToRemove) {
+          await supabase.from("shift_types").delete()
+            .eq("rota_config_id", configId)
+            .eq("shift_key", key);
+        }
+      }
 
       const shiftRows = shifts.map((s, idx) => {
-        const groupIds = s.isOncall ? oncallShiftIds : nonOncallShiftIds;
-        const overrides = s.isOncall ? oncallOverrides : nonOncallOverrides;
         const merged = { ...s.badges };
         for (const key of Object.keys(s.badgeOverrides) as BadgeKey[]) {
           if (s.badgeOverrides[key] !== undefined) merged[key] = s.badgeOverrides[key]!;
@@ -792,7 +814,7 @@ export default function DepartmentStep2() {
           min_doctors: s.staffing.min,
           target_doctors: s.staffing.target,
           max_doctors: s.staffing.max,
-          target_percentage: null,
+          target_percentage: existingPctMap[s.id] ?? null,
           sort_order: idx,
           req_iac: s.reqIac,
           req_iaoc: s.reqIaoc,
@@ -803,8 +825,21 @@ export default function DepartmentStep2() {
         };
       });
 
-      const { error: insertError } = await supabase.from("shift_types").insert(shiftRows as any);
-      if (insertError) throw insertError;
+      // Upsert by rota_config_id + shift_key to preserve target_percentage
+      for (const row of shiftRows) {
+        const isExisting = existingKeys.includes(row.shift_key);
+        if (isExisting) {
+          const { target_percentage, rota_config_id, shift_key, ...updateFields } = row;
+          const { error } = await supabase.from("shift_types")
+            .update({ ...updateFields, target_percentage, updated_at: new Date().toISOString() })
+            .eq("rota_config_id", configId)
+            .eq("shift_key", shift_key);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase.from("shift_types").insert(row as any);
+          if (error) throw error;
+        }
+      }
 
       toast.success("✓ Shift configuration saved");
       navigate("/admin/department/step-3");
@@ -967,6 +1002,7 @@ export default function DepartmentStep2() {
                         key={`${shift.id}-${Object.values(shift.applicableDays).join("")}-${shift.staffing.min}-${shift.staffing.target}-${shift.staffing.max ?? "x"}`}
                         shift={shift}
                         index={index}
+                        allShifts={shifts}
                         onSave={handleSaveCard}
                         onCancel={(original) => {
                           setShifts(prev => prev.map(s => s.id === original.id ? original : s));

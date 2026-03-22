@@ -23,7 +23,7 @@ const REF_HPW   = 48;
 
 function getWeeklyDemand(shift: ShiftType): number {
   const days = Object.values(shift.applicableDays).filter(Boolean).length;
-  return days * shift.staffing.min * shift.durationHours;
+  return days * shift.staffing.target * shift.durationHours;
 }
 
 function getDemandWeightedPcts(shifts: ShiftType[]): Record<string, number> {
