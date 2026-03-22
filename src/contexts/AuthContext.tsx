@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 interface AuthUser {
-  id: string;
+  id: string; // Supabase auth UUID — use this for all DB queries
   username: string;
   email: string;
   role: string;
@@ -29,28 +29,30 @@ interface AuthContextType {
 
 const DEFAULT_ACCOUNT_SETTINGS: AccountSettings = { departmentName: null, trustName: null };
 
-export async function loadAccountSettings(ownedBy: string): Promise<AccountSettings> {
-  try {
-    const { data, error } = await supabase
-      .from("account_settings")
-      .select("department_name, trust_name")
-      .eq("owned_by", ownedBy)
-      .maybeSingle();
+export async function loadAccountSettings(
+  ownedBy: string
+): Promise<AccountSettings> {
+  const { data, error } = await supabase
+    .from("account_settings")
+    .select("department_name, trust_name")
+    .eq("owned_by", ownedBy)
+    .maybeSingle();
 
-    if (error) throw error;
-    if (!data) return DEFAULT_ACCOUNT_SETTINGS;
-
-    return {
-      departmentName: data.department_name || null,
-      trustName: data.trust_name || null,
-    };
-  } catch (error) {
+  if (error) {
     console.error("Failed to load account settings:", error);
-    return DEFAULT_ACCOUNT_SETTINGS;
+    return { departmentName: null, trustName: null };
   }
+
+  if (!data) return { departmentName: null, trustName: null };
+
+  return {
+    departmentName: data.department_name || null,
+    trustName: data.trust_name || null,
+  };
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
+
 const MASTER_EMAIL = "matteferro31@gmail.com";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -60,109 +62,74 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { restoreForUser, clearSession } = useRotaContext();
 
   useEffect(() => {
-    const initSession = async () => {
-      try {
-        const {
-          data: { session },
-          error,
-        } = await supabase.auth.getSession();
-        if (error) throw error;
-        if (!session) setAuthLoading(false);
-      } catch (err) {
-        console.error("Failed to get initial session:", err);
-        setAuthLoading(false);
-      }
-    };
-
-    initSession();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("Auth Event:", event, session?.user?.email);
-
-      try {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
         if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session?.user) {
           const email = session.user.email ?? "";
           const meta = session.user.user_metadata ?? {};
+
+          // Check if user is the master admin or has an approved registration
           const isMaster = email === MASTER_EMAIL;
-
           if (!isMaster) {
-            console.log("Checking approval for:", email);
-
-            const { data: regData, error: regError } = await supabase
-              .from("registration_requests")
+            // Check registration_requests first
+            const { data: regApproved } = await (supabase
+              .from("registration_requests" as any)
               .select("status")
               .eq("email", email)
-              .maybeSingle();
-            if (regError) console.error("Reg check error:", regError);
+              .maybeSingle() as any);
 
-            const { data: coordData, error: coordError } = await supabase
-              .from("coordinator_accounts")
+            // Also check coordinator_accounts as fallback
+            const { data: coordAccount } = await (supabase
+              .from("coordinator_accounts" as any)
               .select("status")
               .eq("email", email)
-              .maybeSingle();
-            if (coordError) console.error("Coord check error:", coordError);
+              .maybeSingle() as any);
 
-            const isApproved = regData?.status === "approved" || coordData?.status === "active";
+            const isApproved =
+              regApproved?.status === "approved" ||
+              coordAccount?.status === "active";
 
             if (!isApproved) {
-              console.warn("User not approved, signing out:", email);
               await supabase.auth.signOut();
-              toast.error("Access denied. Your account is not authorised yet.");
-              setUser(null);
+              toast.error("Access denied. You are not authorised.");
               setAuthLoading(false);
               return;
             }
-            console.log("User is approved!");
           }
+
+          const displayName = meta.full_name ?? email;
+          const username = meta.username ?? email.split("@")[0];
 
           setUser({
             id: session.user.id,
-            username: meta.username ?? email.split("@")[0],
+            username,
             email,
             role: "coordinator",
-            displayName: meta.full_name ?? email,
+            displayName,
             mustChangePassword: meta.must_change_password ?? false,
           });
-
-          // Safely load the rest of the context
-          try {
-            const settings = await loadAccountSettings(session.user.id);
-            setAccountSettings(settings);
-            restoreForUser(session.user.id);
-          } catch (err) {
-            console.error("Error loading user context:", err);
-          }
+          // Load settings and restore rota context in background
+          loadAccountSettings(session.user.id).then(setAccountSettings);
+          restoreForUser(session.user.id);
         }
-
         if (event === "SIGNED_OUT") {
           localStorage.removeItem("currentRotaConfigId");
           setUser(null);
           setAccountSettings(DEFAULT_ACCOUNT_SETTINGS);
           clearSession();
         }
-      } catch (err) {
-        console.error("Critical error during auth state change:", err);
-        toast.error("Something went wrong verifying your session.");
-      } finally {
-        if (event === "INITIAL_SESSION" || event === "SIGNED_IN") {
+        if (event === "INITIAL_SESSION") {
           setAuthLoading(false);
         }
       }
-    });
-
+    );
     return () => subscription.unsubscribe();
   }, [restoreForUser, clearSession]);
 
   const login = useCallback(async (email: string, password: string) => {
-    try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) return { success: false, error: error.message };
-      return { success: true };
-    } catch (err: any) {
-      return { success: false, error: err.message || "Login failed" };
-    }
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) return { success: false, error: error.message };
+    return { success: true };
   }, []);
 
   const logout = useCallback(async () => {
@@ -170,9 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider
-      value={{ user, isAuthenticated: !!user, authLoading, login, logout, accountSettings, setAccountSettings }}
-    >
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, authLoading, login, logout, accountSettings, setAccountSettings }}>
       {children}
     </AuthContext.Provider>
   );
