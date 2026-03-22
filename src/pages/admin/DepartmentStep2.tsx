@@ -211,6 +211,7 @@ function ExpandedCard({
   onDraftChange,
   canRemove,
   index,
+  allShifts,
 }: {
   shift: ShiftType;
   onSave: (updated: ShiftType) => void;
@@ -219,6 +220,7 @@ function ExpandedCard({
   onDraftChange: (updated: ShiftType) => void;
   canRemove: boolean;
   index: number;
+  allShifts: ShiftType[];
 }) {
   const initialShiftRef = useRef(originalShift);
   const [draft, setDraft] = useState({
