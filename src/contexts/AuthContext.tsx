@@ -51,51 +51,85 @@ export async function loadAccountSettings(
   };
 }
 
-const AuthContext = createContext<AuthContextType | null>(null);
-
-const MASTER_EMAIL = "matteferro31@gmail.com";
-
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
-  const [accountSettings, setAccountSettings] = useState<AccountSettings>(DEFAULT_ACCOUNT_SETTINGS);
-  const { restoreForUser, clearSession } = useRotaContext();
-
-  useEffect(() => {
+useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session?.user) {
-          const email = session.user.email ?? "";
-          const meta = session.user.user_metadata ?? {};
+        try {
+          if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session?.user) {
+            const email = session.user.email ?? "";
+            const meta = session.user.user_metadata ?? {};
 
-          // Check if user is the master admin or has an approved registration
-          const isMaster = email === MASTER_EMAIL;
-          if (!isMaster) {
-            // Check registration_requests first
-            const { data: regApproved } = await (supabase
-              .from("registration_requests" as any)
-              .select("status")
-              .eq("email", email)
-              .maybeSingle() as any);
+            // Check if user is the master admin or has an approved registration
+            const isMaster = email === MASTER_EMAIL;
+            if (!isMaster) {
+              // Add error catching to your database queries
+              const { data: regApproved, error: regError } = await supabase
+                .from("registration_requests" as any)
+                .select("status")
+                .eq("email", email)
+                .maybeSingle() as any;
 
-            // Also check coordinator_accounts as fallback
-            const { data: coordAccount } = await (supabase
-              .from("coordinator_accounts" as any)
-              .select("status")
-              .eq("email", email)
-              .maybeSingle() as any);
+              if (regError) console.error("Registration check error:", regError);
 
-            const isApproved =
-              regApproved?.status === "approved" ||
-              coordAccount?.status === "active";
+              const { data: coordAccount, error: coordError } = await supabase
+                .from("coordinator_accounts" as any)
+                .select("status")
+                .eq("email", email)
+                .maybeSingle() as any;
 
-            if (!isApproved) {
-              await supabase.auth.signOut();
-              toast.error("Access denied. You are not authorised.");
-              setAuthLoading(false);
-              return;
+              if (coordError) console.error("Coordinator check error:", coordError);
+
+              const isApproved =
+                regApproved?.status === "approved" ||
+                coordAccount?.status === "active";
+
+              if (!isApproved) {
+                await supabase.auth.signOut();
+                toast.error("Access denied. You are not authorised.");
+                setAuthLoading(false);
+                return;
+              }
             }
+
+            const displayName = meta.full_name ?? email;
+            const username = meta.username ?? email.split("@")[0];
+
+            setUser({
+              id: session.user.id,
+              username,
+              email,
+              role: "coordinator",
+              displayName,
+              mustChangePassword: meta.must_change_password ?? false,
+            });
+            
+            // Load settings and restore rota context in background
+            loadAccountSettings(session.user.id).then(setAccountSettings);
+            restoreForUser(session.user.id);
           }
+          
+          if (event === "SIGNED_OUT") {
+            localStorage.removeItem("currentRotaConfigId");
+            setUser(null);
+            setAccountSettings(DEFAULT_ACCOUNT_SETTINGS);
+            clearSession();
+          }
+        } catch (error) {
+          console.error("Auth state change error:", error);
+          // Don't leave the user hanging if the code crashes
+          toast.error("An error occurred while verifying your account.");
+        } finally {
+          // CRITICAL: This guarantees the spinner stops for both initial loads AND new logins,
+          // even if the database checks crash.
+          if (event === "INITIAL_SESSION" || event === "SIGNED_IN") {
+            setAuthLoading(false);
+          }
+        }
+      }
+    );
+    
+    return () => subscription.unsubscribe();
+  }, [restoreForUser, clearSession]);
 
           const displayName = meta.full_name ?? email;
           const username = meta.username ?? email.split("@")[0];
