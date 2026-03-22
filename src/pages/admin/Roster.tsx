@@ -59,8 +59,11 @@ function ExpandedDoctorPanel({
     );
   }
 
-  const cj = surveyData?.competencies_json ?? {};
   const wte = surveyData?.wte_percent ?? null;
+
+  // Prefer flat competency bools, fallback to JSONB
+  const flatKey = (k: string, suffix: string) => surveyData?.[`${k}_${suffix}`] as boolean | null | undefined;
+  const cj = surveyData?.competencies_json ?? {};
   const ltftDays: string[] = surveyData?.ltft_days_off ?? [];
   const DAY_ORDER = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
   const sortedDays = [...ltftDays].sort((a, b) => DAY_ORDER.indexOf(a) - DAY_ORDER.indexOf(b));
