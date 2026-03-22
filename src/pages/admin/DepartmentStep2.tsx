@@ -757,28 +757,29 @@ export default function DepartmentStep2() {
         if (error) throw error;
       }
 
-      await supabase.from("shift_types").delete().eq("rota_config_id", configId);
-
-      const oncallShiftIds = shifts.filter(s => s.isOncall).map(s => s.id);
-      const nonOncallShiftIds = shifts.filter(s => !s.isOncall).map(s => s.id);
-      const oncallOverrides: Record<string, number | undefined> = {};
-      const nonOncallOverrides: Record<string, number | undefined> = {};
-      Object.entries(shiftTargetOverrides).forEach(([id, pct]) => {
-        if (oncallShiftIds.includes(id)) oncallOverrides[id] = pct;
-        else nonOncallOverrides[id] = pct;
+      // Fetch existing shift_types to preserve target_percentage
+      const { data: existingShifts } = await supabase
+        .from("shift_types")
+        .select("shift_key, target_percentage")
+        .eq("rota_config_id", configId);
+      const existingPctMap: Record<string, number | null> = {};
+      (existingShifts ?? []).forEach((row: any) => {
+        existingPctMap[row.shift_key] = row.target_percentage;
       });
 
-      const getTargetPct = (shiftId: string, groupIds: string[], overrides: Record<string, number | undefined>) => {
-        const overriddenTotal = groupIds.filter(id => overrides[id] !== undefined).reduce((sum, id) => sum + (overrides[id] ?? 0), 0);
-        const nonOverriddenCount = groupIds.filter(id => overrides[id] === undefined).length;
-        const remaining = Math.max(0, 100 - overriddenTotal);
-        const autoShare = nonOverriddenCount > 0 ? remaining / nonOverriddenCount : 0;
-        return overrides[shiftId] ?? autoShare;
-      };
+      // Delete shifts that no longer exist
+      const currentShiftKeys = shifts.map(s => s.id);
+      const existingKeys = (existingShifts ?? []).map((r: any) => r.shift_key as string);
+      const keysToRemove = existingKeys.filter(k => !currentShiftKeys.includes(k));
+      if (keysToRemove.length > 0) {
+        for (const key of keysToRemove) {
+          await supabase.from("shift_types").delete()
+            .eq("rota_config_id", configId)
+            .eq("shift_key", key);
+        }
+      }
 
       const shiftRows = shifts.map((s, idx) => {
-        const groupIds = s.isOncall ? oncallShiftIds : nonOncallShiftIds;
-        const overrides = s.isOncall ? oncallOverrides : nonOncallOverrides;
         const merged = { ...s.badges };
         for (const key of Object.keys(s.badgeOverrides) as BadgeKey[]) {
           if (s.badgeOverrides[key] !== undefined) merged[key] = s.badgeOverrides[key]!;
@@ -813,7 +814,7 @@ export default function DepartmentStep2() {
           min_doctors: s.staffing.min,
           target_doctors: s.staffing.target,
           max_doctors: s.staffing.max,
-          target_percentage: null,
+          target_percentage: existingPctMap[s.id] ?? null,
           sort_order: idx,
           req_iac: s.reqIac,
           req_iaoc: s.reqIaoc,
@@ -824,8 +825,21 @@ export default function DepartmentStep2() {
         };
       });
 
-      const { error: insertError } = await supabase.from("shift_types").insert(shiftRows as any);
-      if (insertError) throw insertError;
+      // Upsert by rota_config_id + shift_key to preserve target_percentage
+      for (const row of shiftRows) {
+        const isExisting = existingKeys.includes(row.shift_key);
+        if (isExisting) {
+          const { target_percentage, rota_config_id, shift_key, ...updateFields } = row;
+          const { error } = await supabase.from("shift_types")
+            .update({ ...updateFields, target_percentage, updated_at: new Date().toISOString() })
+            .eq("rota_config_id", configId)
+            .eq("shift_key", shift_key);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase.from("shift_types").insert(row as any);
+          if (error) throw error;
+        }
+      }
 
       toast.success("✓ Shift configuration saved");
       navigate("/admin/department/step-3");
