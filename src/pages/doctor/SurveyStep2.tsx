@@ -68,7 +68,12 @@ export default function SurveyStep2() {
     return Object.keys(e).length === 0;
   };
 
-  const handleNext = () => { if (validate()) ctx.nextStep(); };
+  const handleNext = async () => {
+    if (!validate()) {
+      return;
+    }
+    await ctx.nextStep();
+  };
 
   return (
     <>
@@ -98,7 +103,7 @@ export default function SurveyStep2() {
                   data-error={(errors[b.achievedField] || errors[b.workingField] || errors[b.remoteField]) ? "true" : undefined}
                 >
                   <RadioYesNo
-                    label={`Have you achieved ${b.shortName}?`}
+                    label={b.key === "transfer" ? "Have you achieved Transfer training?" : `Have you achieved ${b.shortName}?`}
                     value={formData[b.achievedField]}
                     onChange={(v) => {
                       setField(b.achievedField, v);

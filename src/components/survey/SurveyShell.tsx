@@ -89,7 +89,7 @@ export function SurveyShell({ children }: SurveyShellProps) {
       {ctx?.saveStatus === 'error' && (
         <div className="shrink-0 flex items-center justify-center gap-1.5 text-xs sm:text-sm py-1 text-destructive font-semibold bg-white border-b border-border">
           <span className="inline-block w-2 h-2 rounded-full bg-destructive" />
-          Save failed — check your connection.
+          Auto-save failed — check your connection.
         </div>
       )}
 

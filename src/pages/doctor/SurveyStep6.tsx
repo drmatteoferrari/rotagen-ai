@@ -80,7 +80,9 @@ export default function SurveyStep6() {
     ));
   };
 
-  const handleNext = () => ctx.nextStep();
+  const handleNext = async () => {
+    await ctx.nextStep();
+  };
 
   return (
     <>

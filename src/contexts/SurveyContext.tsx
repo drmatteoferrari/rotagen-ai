@@ -19,6 +19,7 @@ export interface SurveyRotaInfo {
   departmentName: string | null;
   trustName: string | null;
   surveyDeadline: string | null;
+  bankHolidays: string[];
 }
 
 export interface LeaveEntry {
@@ -181,7 +182,7 @@ interface SurveyContextType {
   setField: <K extends keyof SurveyFormData>(key: K, value: SurveyFormData[K]) => void;
   setFields: (partial: Partial<SurveyFormData>) => void;
   setStep: (n: number) => void;
-  nextStep: () => void;
+  nextStep: () => Promise<void>;
   prevStep: () => void;
   goToStep: (step: number) => void;
   submitSurvey: () => Promise<boolean>;
@@ -325,6 +326,7 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
   const [submittedAt, setSubmittedAt] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [returnedFromEdit, setReturnedFromEdit] = useState(false);
+  const saveStatusRef = useRef<SaveStatus>('idle');
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const formDataRef = useRef(formData);
   const doctorRef = useRef(doctor);
@@ -390,6 +392,15 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
         }
       }
 
+      // Fetch bank holidays for the rota period
+      const { data: bhRows } = await supabase
+        .from("bank_holidays")
+        .select("date, is_active")
+        .eq("rota_config_id", doc.rotaConfigId);
+      const bankHolidayDates = (bhRows ?? [])
+        .filter((r: any) => r.is_active !== false)
+        .map((r: any) => r.date as string);
+
       setRotaInfo({
         startDate: rcObj?.rota_start_date ?? null,
         endDate: rcObj?.rota_end_date ?? null,
@@ -397,6 +408,7 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
         departmentName: deptName,
         trustName: trustName,
         surveyDeadline: rcObj?.survey_deadline ?? null,
+        bankHolidays: bankHolidayDates,
       });
 
       if (doctorRow.survey_status === "submitted") {
@@ -463,7 +475,15 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
     const doc = doctorRef.current;
     if (!doc) return;
     const fd = formDataRef.current;
+
+    // Clear previous error before retrying
+    if (saveStatusRef.current === 'error') {
+      setSaveStatus('idle');
+      saveStatusRef.current = 'idle';
+    }
+
     setSaveStatus('saving');
+    saveStatusRef.current = 'saving';
     try {
       const row = formDataToDbRow(fd);
       const { error } = await supabase
@@ -501,10 +521,19 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
 
       setDraftSavedAt(new Date());
       setSaveStatus('saved');
-      setTimeout(() => setSaveStatus('idle'), 2000);
+      saveStatusRef.current = 'saved';
+      setTimeout(() => {
+        setSaveStatus('idle');
+        saveStatusRef.current = 'idle';
+      }, 2000);
     } catch (err) {
       console.error("Auto-save failed:", err);
       setSaveStatus('error');
+      saveStatusRef.current = 'error';
+      setTimeout(() => {
+        setSaveStatus('idle');
+        saveStatusRef.current = 'idle';
+      }, 4000);
     }
   }, []);
 
@@ -527,9 +556,11 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
     setCurrentStep(Math.max(1, Math.min(7, n)));
   }, []);
 
-  const nextStep = useCallback(() => {
-    saveDraft();
-    setCurrentStep((s) => Math.min(s + 1, 7));
+  const nextStep = useCallback(async () => {
+    await saveDraft();
+    if (saveStatusRef.current !== 'error') {
+      setCurrentStep((s) => Math.min(s + 1, 7));
+    }
   }, [saveDraft]);
 
   const prevStep = useCallback(() => {

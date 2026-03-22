@@ -142,21 +142,22 @@ export function DateRangePicker({
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start" side="bottom">
-          <Calendar
-            mode="single"
-            selected={phase === "end" ? tempStart : (startDate ? parseISO(startDate) : undefined)}
-            onSelect={(day) => day && handleDayClick(day)}
-            numberOfMonths={1}
-            modifiers={modifiers}
-            modifiersStyles={modifiersStyles}
-            disabled={(date) => {
-              if (minDate && date < parseISO(minDate)) return true;
-              if (maxDate && date > parseISO(maxDate)) return true;
-              return false;
-            }}
-            initialFocus
-            className={cn("p-3 pointer-events-auto")}
-          />
+          <div style={{ minHeight: '320px' }}>
+            <Calendar
+              selected={phase === "end" ? tempStart : (startDate ? parseISO(startDate) : undefined)}
+              onDayClick={(day) => handleDayClick(day)}
+              numberOfMonths={1}
+              modifiers={modifiers}
+              modifiersStyles={modifiersStyles}
+              disabled={(date) => {
+                if (minDate && date < parseISO(minDate)) return true;
+                if (maxDate && date > parseISO(maxDate)) return true;
+                return false;
+              }}
+              initialFocus
+              className={cn("p-3 pointer-events-auto")}
+            />
+          </div>
           <p className="text-[10px] text-center text-muted-foreground pb-2 font-medium">
             {hint}
           </p>

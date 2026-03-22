@@ -26,16 +26,18 @@ interface DateRowProps {
 
 function DateRow({ entry, onChange, onRemove, rotaStart, rotaEnd, reasonLabel = "Reason", reasonRequired = false, reasonPlaceholder = "", errors = {} }: DateRowProps) {
   return (
-    <div className="rounded-lg border border-border p-4 space-y-2">
+    <div className="rounded-lg border border-border p-4 space-y-2 overflow-hidden">
       <div className="flex items-center justify-between gap-2">
-        <DateRangePicker
-          startDate={entry.startDate}
-          endDate={entry.endDate}
-          onChange={(s, e) => onChange({ ...entry, startDate: s, endDate: e })}
-          minDate={rotaStart}
-          maxDate={rotaEnd}
-          errors={{ startDate: errors.startDate, endDate: errors.endDate }}
-        />
+        <div className="flex-1 min-w-0">
+          <DateRangePicker
+            startDate={entry.startDate}
+            endDate={entry.endDate}
+            onChange={(s, e) => onChange({ ...entry, startDate: s, endDate: e })}
+            minDate={rotaStart}
+            maxDate={rotaEnd}
+            errors={{ startDate: errors.startDate, endDate: errors.endDate }}
+          />
+        </div>
         <button
           type="button"
           onClick={onRemove}
@@ -56,16 +58,18 @@ function DateRow({ entry, onChange, onRemove, rotaStart, rotaEnd, reasonLabel = 
 
 function RotationRow({ entry, onChange, onRemove, rotaStart, rotaEnd, errors = {} }: { entry: RotationEntry; onChange: (e: RotationEntry) => void; onRemove: () => void; rotaStart?: string; rotaEnd?: string; errors?: Record<string, string> }) {
   return (
-    <div className="rounded-lg border border-border p-4 space-y-2">
+    <div className="rounded-lg border border-border p-4 space-y-2 overflow-hidden">
       <div className="flex items-center justify-between gap-2">
-        <DateRangePicker
-          startDate={entry.startDate}
-          endDate={entry.endDate}
-          onChange={(s, e) => onChange({ ...entry, startDate: s, endDate: e })}
-          minDate={rotaStart}
-          maxDate={rotaEnd}
-          errors={{ startDate: errors.startDate, endDate: errors.endDate }}
-        />
+        <div className="flex-1 min-w-0">
+          <DateRangePicker
+            startDate={entry.startDate}
+            endDate={entry.endDate}
+            onChange={(s, e) => onChange({ ...entry, startDate: s, endDate: e })}
+            minDate={rotaStart}
+            maxDate={rotaEnd}
+            errors={{ startDate: errors.startDate, endDate: errors.endDate }}
+          />
+        </div>
         <button
           type="button"
           onClick={onRemove}
@@ -110,12 +114,29 @@ export default function SurveyStep4() {
   const effectiveWte = (formData.wtePercent === 0 ? formData.wteOtherValue : formData.wtePercent) ?? 100;
 
   const proRata = formData.alEntitlement ? Math.round(formData.alEntitlement * (dw / 52) * (effectiveWte / 100)) : null;
-  const alTotalDays = formData.annualLeave.reduce((sum, e) => {
-    if (e.startDate && e.endDate && e.endDate >= e.startDate) {
-      return sum + Math.ceil((new Date(e.endDate).getTime() - new Date(e.startDate).getTime()) / 86400000) + 1;
-    }
-    return sum;
-  }, 0);
+  const showProRata = formData.alEntitlement !== null && dw > 0 && proRata !== null && proRata > 0;
+
+  // AL total — weekdays only, excluding bank holidays
+  const bhSet = useMemo(
+    () => new Set(rotaInfo?.bankHolidays ?? []),
+    [rotaInfo?.bankHolidays]
+  );
+
+  const alTotalDays = useMemo(() => {
+    return formData.annualLeave.reduce((sum, e) => {
+      if (!e.startDate || !e.endDate || e.endDate < e.startDate) return sum;
+      let count = 0;
+      const cur = new Date(e.startDate + 'T00:00:00');
+      const end = new Date(e.endDate + 'T00:00:00');
+      while (cur <= end) {
+        const dow = cur.getDay();
+        const dateStr = cur.toISOString().split('T')[0];
+        if (dow !== 0 && dow !== 6 && !bhSet.has(dateStr)) count++;
+        cur.setDate(cur.getDate() + 1);
+      }
+      return sum + count;
+    }, 0);
+  }, [formData.annualLeave, bhSet]);
 
   // Overlap detection
   const hasOverlap = useMemo(() => {
@@ -197,7 +218,20 @@ export default function SurveyStep4() {
     return valid;
   };
 
-  const handleNext = () => { if (validate()) ctx.nextStep(); };
+  const handleNext = async () => {
+    if (!validate()) {
+      setTimeout(() => {
+        const firstError = document.querySelector('[data-error="true"]');
+        if (firstError) {
+          firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+          document.querySelector('.overflow-y-auto')?.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      }, 50);
+      return;
+    }
+    await ctx.nextStep();
+  };
 
   return (
     <>
@@ -216,12 +250,12 @@ export default function SurveyStep4() {
             </CardTitle>
           </CardHeader>
           <CardContent className="px-4 sm:px-6 space-y-4">
-            <InfoBox type="danger">Enter all known leave now. Changes after submission require coordinator approval.</InfoBox>
+            <InfoBox type="info">Changes after deadline require coordinator approval and may not be granted.</InfoBox>
 
             {/* Annual Leave */}
             <SurveySection number={1} title="Annual Leave" badge="high">
               <div className="space-y-3">
-                <div className="rounded-lg border border-border p-4 space-y-2">
+                <div className="rounded-lg border border-border p-4 space-y-2" data-error={errors["al_entitlement"] ? "true" : undefined}>
                   <span className="text-sm sm:text-base font-medium text-card-foreground">AL entitlement *</span>
                   <div className="flex gap-2">
                     <button
@@ -241,7 +275,7 @@ export default function SurveyStep4() {
                   </div>
                   <FieldError message={errors["al_entitlement"]?.entitlement} />
                 </div>
-                {proRata !== null && proRata > 0 && (
+                {showProRata && (
                   <p className="text-[10px] text-muted-foreground italic mt-1">
                     For a {dw}-week rota at {effectiveWte}%, your estimated pro-rata entitlement is approximately {proRata} days.
                   </p>
@@ -266,9 +300,9 @@ export default function SurveyStep4() {
                   <Plus className="h-4 w-4" /> Add annual leave
                 </button>
                 {formData.annualLeave.length > 0 && (
-                  <InfoBox type="info">Total AL: {alTotalDays} day(s) including weekends</InfoBox>
+                  <InfoBox type="info">Total AL entered: {alTotalDays} working day(s) (weekends and bank holidays excluded)</InfoBox>
                 )}
-                {proRata !== null && alTotalDays > 2 * proRata && (
+                {showProRata && alTotalDays > proRata! && (
                   <InfoBox type="warn">High leave entered — please check this does not exceed your pro-rata entitlement.</InfoBox>
                 )}
               </div>
