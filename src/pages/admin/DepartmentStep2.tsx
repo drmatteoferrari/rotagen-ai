@@ -537,9 +537,9 @@ function ExpandedCard({
       </div>
 
       {/* ROW 9 — Validation errors */}
-      {getShiftErrors(draft, shifts).length > 0 && (
+      {getShiftErrors(draft, allShifts).length > 0 && (
         <div className="space-y-1 rounded-lg border border-destructive/20 bg-destructive/10 p-3">
-          {getShiftErrors(draft, shifts).map((err) => (
+          {getShiftErrors(draft, allShifts).map((err) => (
             <p key={err} className="text-sm text-destructive">
               • {err}
             </p>
