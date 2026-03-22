@@ -730,7 +730,7 @@ export default function DepartmentStep2() {
     setExpandedShiftId(null);
   };
 
-  const pageErrors = shifts.flatMap((shift) => getShiftErrors(shift).map((error) => `${shift.name || shift.abbreviation || shift.id}: ${error}`));
+  const pageErrors = shifts.flatMap((shift) => getShiftErrors(shift, shifts).map((error) => `${shift.name || shift.abbreviation || shift.id}: ${error}`));
   const canSavePage = shifts.length > 0 && pageErrors.length === 0 && !saving;
 
   const handleSaveAndContinue = async () => {
