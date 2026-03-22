@@ -1,12 +1,11 @@
-// SECTION 2 COMPLETE
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { SurveyProvider, useSurveyContext } from "@/contexts/SurveyContext";
 import { SurveyModeProvider } from "@/contexts/SurveyModeContext";
 import { SurveyShell } from "@/components/survey/SurveyShell";
 import { DoctorLayout } from "@/components/DoctorLayout";
-import { Loader2, ShieldAlert } from "lucide-react";
+import { Loader2, ShieldAlert, ArrowLeft } from "lucide-react";
 import SurveyStep1 from "@/pages/doctor/SurveyStep1";
 import SurveyStep2 from "@/pages/doctor/SurveyStep2";
 import SurveyStep3 from "@/pages/doctor/SurveyStep3";
@@ -25,8 +24,9 @@ const stepComponents: Record<number, React.ComponentType> = {
   7: SurveyStep7,
 };
 
-function OverrideInner() {
+function OverrideInner({ fromPath, doctorName }: { fromPath: string; doctorName: string }) {
   const ctx = useSurveyContext();
+  const navigate = useNavigate();
   const { step } = useParams();
 
   useEffect(() => {
@@ -52,17 +52,27 @@ function OverrideInner() {
   const StepComponent = stepComponents[currentStep] || SurveyStep1;
 
   return (
-    <DoctorLayout>
-      <div className="flex flex-col min-h-full">
-        <div className="bg-amber-500/15 border-b border-amber-500/30 px-4 py-2.5 flex items-center gap-2">
-          <ShieldAlert className="h-4 w-4 text-amber-600 shrink-0" />
-          <span className="text-sm font-semibold text-amber-700">Admin Override Mode</span>
-        </div>
+    <div className="fixed inset-0 z-50 bg-teal-50 flex flex-col overflow-hidden">
+      <div className="shrink-0 bg-amber-500/15 border-b border-amber-500/30 px-4 py-2.5 flex items-center gap-2">
+        <button
+          onClick={() => navigate(fromPath)}
+          className="flex items-center gap-1.5 text-sm font-medium text-amber-700 hover:text-amber-900 transition-colors mr-1 cursor-pointer"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back
+        </button>
+        <div className="h-4 w-px bg-amber-400/50 mx-1" />
+        <ShieldAlert className="h-4 w-4 text-amber-600 shrink-0" />
+        <span className="text-sm font-semibold text-amber-700 truncate">
+          Admin Override — {doctorName}
+        </span>
+      </div>
+      <div className="flex-1 overflow-y-auto flex flex-col">
         <SurveyShell>
           <StepComponent />
         </SurveyShell>
       </div>
-    </DoctorLayout>
+    </div>
   );
 }
 
@@ -76,6 +86,8 @@ interface DoctorRow {
 
 export default function SurveyOverride() {
   const { doctorId } = useParams();
+  const [searchParams] = useSearchParams();
+  const fromPath = searchParams.get("from") || "/admin/roster";
   const [doctor, setDoctor] = useState<DoctorRow | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -118,15 +130,17 @@ export default function SurveyOverride() {
     );
   }
 
+  const doctorName = `${doctor.first_name} ${doctor.last_name}`;
+
   return (
     <SurveyModeProvider
       isAdminMode
       doctorId={doctor.id}
-      doctorName={`${doctor.first_name} ${doctor.last_name}`}
+      doctorName={doctorName}
       doctorEmail={doctor.email ?? undefined}
     >
       <SurveyProvider token={doctor.survey_token} adminMode>
-        <OverrideInner />
+        <OverrideInner fromPath={fromPath} doctorName={doctorName} />
       </SurveyProvider>
     </SurveyModeProvider>
   );
