@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { format, parseISO, eachDayOfInterval, isWithinInterval } from "date-fns";
+import { format, parseISO, eachDayOfInterval } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -133,7 +133,7 @@ export function DateRangePicker({
           <Button
             variant="outline"
             className={cn(
-              "w-full justify-start text-left font-normal h-10 text-sm",
+              "w-full justify-start text-left font-normal h-11 text-sm sm:text-base cursor-pointer",
               !startDate && "text-muted-foreground"
             )}
           >
