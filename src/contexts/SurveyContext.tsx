@@ -241,7 +241,7 @@ function formDataToDbRow(fd: SurveyFormData) {
     specific_days_off: fd.specificDaysOff,
     exemption_details: fd.exemptionDetails,
     specialties_requested: fd.specialtiesRequested as any,
-    special_sessions: fd.specialSessions as any,
+    special_sessions: fd.specialSessions.map((s) => s.notes ? `${s.name}: ${s.notes}` : s.name),
     other_interests: fd.otherInterests as any,
     signoff_needs: fd.signoffNeeds,
     additional_notes: fd.additionalNotes,
