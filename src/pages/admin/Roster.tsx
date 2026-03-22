@@ -155,12 +155,26 @@ export default function Roster() {
   const [email, setEmail] = useState("");
 
   // Cached doctors from React Query
-  const { data: doctorsData, isLoading: loading, refetch: refetchDoctors } = useDoctorsQuery();
+  const { data: doctorsData, isLoading: queryLoading, refetch: refetchDoctors } = useDoctorsQuery();
+  const loading = !!currentRotaConfigId && queryLoading;
   const doctors = (doctorsData as Doctor[]) ?? [];
 
   // Inactive doctors
   const { data: inactiveDoctorsData } = useInactiveDoctorsQuery();
   const inactiveDoctors = (inactiveDoctorsData as Doctor[]) ?? [];
+
+  // Empty state: no rota config
+  if (!currentRotaConfigId) {
+    return (
+      <AdminLayout title="Team Roster" accentColor="blue">
+        <div className="flex flex-col items-center justify-center py-16 gap-4">
+          <Users className="h-10 w-10 text-muted-foreground/50" />
+          <p className="text-muted-foreground text-sm">No rota configuration found. Please complete setup first.</p>
+          <Button variant="outline" onClick={() => navigate("/admin/setup")}>Go to Setup</Button>
+        </div>
+      </AdminLayout>
+    );
+  }
   const [inactiveSectionOpen, setInactiveSectionOpen] = useState(false);
 
   // Cached deadline from React Query

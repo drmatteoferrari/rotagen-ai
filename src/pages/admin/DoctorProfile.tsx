@@ -77,7 +77,7 @@ const DAY_ORDER = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Satu
 export default function DoctorProfile() {
   const { doctorId } = useParams<{ doctorId: string }>();
   const navigate = useNavigate();
-  const { restoredConfig } = useRotaContext();
+  const { currentRotaConfigId, restoredConfig } = useRotaContext();
   const { accountSettings } = useAuth();
 
   const [doctor, setDoctor] = useState<DoctorRow | null>(null);
@@ -103,6 +103,18 @@ export default function DoctorProfile() {
     if (!doctorId) { setError(true); setLoading(false); return; }
     loadAll();
   }, [doctorId]);
+
+  // Empty state: no rota config
+  if (!currentRotaConfigId) {
+    return (
+      <AdminLayout title="Doctor Profile" accentColor="blue">
+        <div className="flex flex-col items-center justify-center py-12">
+          <p className="text-muted-foreground">Please complete the setup to view doctor profiles.</p>
+          <Button variant="outline" className="mt-4" onClick={() => navigate("/admin/setup")}>Go to Setup</Button>
+        </div>
+      </AdminLayout>
+    );
+  }
 
   // Relational data state
   const [unavailBlocks, setUnavailBlocks] = useState<any[]>([]);

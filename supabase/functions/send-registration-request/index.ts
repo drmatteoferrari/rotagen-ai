@@ -41,7 +41,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    const approvalUrl = `https://rotagen-ai.lovable.app/approve?token=${approvalToken}`;
+    const appUrl = Deno.env.get("APP_URL") || "https://rotagen-ai.lovable.app";
+    const approvalUrl = `${appUrl}/approve?token=${approvalToken}`;
 
     const subject = `RotaGen — New Access Request: ${escHtml(fullName)}, ${escHtml(department)}, ${escHtml(hospital)}`;
 
