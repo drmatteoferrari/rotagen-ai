@@ -27,7 +27,15 @@ export default function ChangePassword() {
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
 
-    
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      // PASSWORD_RECOVERY: Supabase has exchanged the reset token for a session.
+      // updateUser() will work correctly when the user submits the form.
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+
     setLoading(true);
 
     try {
