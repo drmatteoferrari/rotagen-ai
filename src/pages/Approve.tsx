@@ -88,7 +88,7 @@ export default function Approve() {
             password: tempPassword,
             status: "active",
             must_change_password: true,
-          }, { onConflict: "email" }) as any);
+          }, { onConflict: "username" }) as any);
       } catch (insertErr) {
         console.warn("coordinator_accounts insert failed (non-blocking):", insertErr);
       }
