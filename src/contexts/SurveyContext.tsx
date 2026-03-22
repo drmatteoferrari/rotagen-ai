@@ -241,7 +241,7 @@ function formDataToDbRow(fd: SurveyFormData) {
     specific_days_off: fd.specificDaysOff,
     exemption_details: fd.exemptionDetails,
     specialties_requested: fd.specialtiesRequested as any,
-    special_sessions: fd.specialSessions as any,
+    special_sessions: fd.specialSessions.map((s) => s.notes ? `${s.name}: ${s.notes}` : s.name),
     other_interests: fd.otherInterests as any,
     signoff_needs: fd.signoffNeeds,
     additional_notes: fd.additionalNotes,
@@ -298,7 +298,11 @@ function dbRowToFormData(draft: any, base: SurveyFormData): SurveyFormData {
     specificDaysOff: draft.specific_days_off || [],
     exemptionDetails: draft.exemption_details || "",
     specialtiesRequested: draft.specialties_requested || [],
-    specialSessions: draft.special_sessions || [],
+    specialSessions: (draft.special_sessions ?? []).map((s: string) => {
+      const colonIdx = s.indexOf(': ');
+      if (colonIdx === -1) return { name: s, notes: '' };
+      return { name: s.slice(0, colonIdx), notes: s.slice(colonIdx + 2) };
+    }),
     otherInterests: draft.other_interests || [],
     signoffNeeds: draft.signoff_needs || "",
     additionalNotes: draft.additional_notes || "",
