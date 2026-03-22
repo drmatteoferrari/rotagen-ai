@@ -1047,6 +1047,21 @@ export default function Roster() {
     setCancellingAll(true);
 
     try {
+      // Delete relational rows first — no cascade from doctor_survey_responses
+      const relationalDeletes = await Promise.all([
+        supabase.from('unavailability_blocks').delete().eq('rota_config_id', rotaConfigId),
+        supabase.from('ltft_patterns').delete().eq('rota_config_id', rotaConfigId),
+        supabase.from('training_requests').delete().eq('rota_config_id', rotaConfigId),
+        supabase.from('dual_specialties').delete().eq('rota_config_id', rotaConfigId),
+      ]);
+
+      for (const result of relationalDeletes) {
+        if (result.error) {
+          console.error('Relational table delete error:', result.error);
+          throw result.error;
+        }
+      }
+
       const { error: deleteError } = await supabase
         .from('doctor_survey_responses')
         .delete()
