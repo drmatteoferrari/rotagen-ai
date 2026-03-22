@@ -566,10 +566,8 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
   }, []);
 
   const nextStep = useCallback(async () => {
-    const saved = await saveDraft();
-    if (saved) {
-      setCurrentStep((s) => Math.min(s + 1, 7));
-    }
+    await saveDraft();
+    setCurrentStep((s) => Math.min(s + 1, 7));
   }, [saveDraft]);
 
   const prevStep = useCallback(() => {
