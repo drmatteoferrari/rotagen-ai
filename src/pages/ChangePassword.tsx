@@ -27,7 +27,7 @@ export default function ChangePassword() {
     setErrors(errs);
     if (Object.keys(errs).length > 0) return;
 
-    if (!user) return;
+    
     setLoading(true);
 
     try {
