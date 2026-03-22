@@ -47,7 +47,7 @@ const BADGE_DEFS = [
   { key: "nonres" as BadgeKey, label: "NON-RES OC", emoji: "🏠", activeClasses: "bg-teal-700 text-white" },
 ] as const;
 
-function getShiftErrors(shift: ShiftType): string[] {
+function getShiftErrors(shift: ShiftType, allShifts?: ShiftType[]): string[] {
   const errors: string[] = [];
   if (!shift.name.trim()) errors.push("Shift name is required.");
   if (!shift.abbreviation.trim()) errors.push("Abbreviation is required.");
@@ -56,6 +56,11 @@ function getShiftErrors(shift: ShiftType): string[] {
   if (!Object.values(shift.applicableDays).some(Boolean)) errors.push("At least one day must be selected.");
   if (shift.staffing.target < shift.staffing.min) errors.push("Target cannot be less than minimum.");
   if (shift.staffing.max !== null && shift.staffing.max < shift.staffing.target) errors.push("Maximum cannot be less than target.");
+  // Unique abbreviation check
+  if (allShifts && shift.abbreviation.trim()) {
+    const dupes = allShifts.filter(s => s.id !== shift.id && s.abbreviation.trim().toUpperCase() === shift.abbreviation.trim().toUpperCase());
+    if (dupes.length > 0) errors.push(`Abbreviation "${shift.abbreviation}" is already used by another shift.`);
+  }
   return errors;
 }
 
