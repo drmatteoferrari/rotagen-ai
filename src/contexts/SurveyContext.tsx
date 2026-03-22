@@ -186,7 +186,7 @@ interface SurveyContextType {
   prevStep: () => void;
   goToStep: (step: number) => void;
   submitSurvey: () => Promise<boolean>;
-  saveDraft: () => Promise<void>;
+  saveDraft: () => Promise<boolean>;
   submitting: boolean;
   submitError: string;
   draftSavedAt: Date | null;
@@ -471,12 +471,11 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
     }
   };
 
-  const saveDraft = useCallback(async () => {
+  const saveDraft = useCallback(async (): Promise<boolean> => {
     const doc = doctorRef.current;
-    if (!doc) return;
+    if (!doc) return true; // nothing to save — do not block navigation
     const fd = formDataRef.current;
 
-    // Clear previous error before retrying
     if (saveStatusRef.current === 'error') {
       setSaveStatus('idle');
       saveStatusRef.current = 'idle';
@@ -485,6 +484,7 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
     setSaveStatus('saving');
     saveStatusRef.current = 'saving';
     try {
+      // PRIMARY SAVE — doctor_survey_responses
       const row = formDataToDbRow(fd);
       const { error } = await supabase
         .from("doctor_survey_responses")
@@ -503,21 +503,24 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
         throw error;
       }
 
-      // Sync doctor name, email, grade back to doctors table
-      const nameParts = fd.fullName.trim().split(/\s+/);
-      const syncFirst = nameParts[0] || "";
-      const syncLast = nameParts.slice(1).join(" ") || "";
-      // NHS email edited in Step 1 is synced here on every auto-save
-      await supabase
-        .from("doctors")
-        .update({
+      // SECONDARY SYNC — doctors table (non-blocking: failure must never prevent navigation)
+      try {
+        const nameParts = fd.fullName.trim().split(/\s+/);
+        const syncFirst = nameParts[0] || "";
+        const syncLast = nameParts.slice(1).join(" ") || "";
+        // NHS email edited in Step 1 is synced here on every auto-save
+        const updatePayload: Record<string, any> = {
           survey_status: "in_progress",
-          first_name: syncFirst,
-          last_name: syncLast,
-          email: fd.nhsEmail || undefined,
-          grade: fd.grade || undefined,
-        })
-        .eq("id", doc.id);
+        };
+        if (syncFirst) updatePayload.first_name = syncFirst;
+        if (syncLast) updatePayload.last_name = syncLast;
+        if (fd.nhsEmail) updatePayload.email = fd.nhsEmail;
+        if (fd.grade) updatePayload.grade = fd.grade;
+        await supabase.from("doctors").update(updatePayload).eq("id", doc.id);
+      } catch (syncErr) {
+        // Non-blocking: doctors table sync failure is logged but does not fail the save
+        console.warn("doctors table sync failed (non-blocking):", syncErr);
+      }
 
       setDraftSavedAt(new Date());
       setSaveStatus('saved');
@@ -526,6 +529,7 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
         setSaveStatus('idle');
         saveStatusRef.current = 'idle';
       }, 2000);
+      return true;
     } catch (err) {
       console.error("Auto-save failed:", err);
       setSaveStatus('error');
@@ -534,6 +538,7 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
         setSaveStatus('idle');
         saveStatusRef.current = 'idle';
       }, 4000);
+      return false;
     }
   }, []);
 
@@ -557,8 +562,8 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
   }, []);
 
   const nextStep = useCallback(async () => {
-    await saveDraft();
-    if (saveStatusRef.current !== 'error') {
+    const saved = await saveDraft();
+    if (saved) {
       setCurrentStep((s) => Math.min(s + 1, 7));
     }
   }, [saveDraft]);
