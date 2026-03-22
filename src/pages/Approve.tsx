@@ -93,6 +93,19 @@ export default function Approve() {
         console.warn("coordinator_accounts insert failed (non-blocking):", insertErr);
       }
 
+      // Create auth user via Edge Function (blocking)
+      const { data: fnData, error: fnError } = await supabase.functions.invoke("create-coordinator-account", {
+        body: {
+          email: request.email,
+          password: tempPassword,
+          fullName: request.full_name,
+          username: username,
+        },
+      });
+      if (fnError || !fnData?.success) {
+        throw new Error(fnData?.error ?? fnError?.message ?? "Failed to create auth account");
+      }
+
       // Send admin an email with the new user's credentials
       try {
         await supabase.functions.invoke("send-welcome-email", {
