@@ -94,12 +94,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             // Verify approval
             const [{ data: regData }, { data: coordData }] = await Promise.all([
               supabase
-                .from("registration_requests" as any)
+                .from("registration_requests")
                 .select("status")
                 .eq("email", email)
                 .maybeSingle(),
               supabase
-                .from("coordinator_accounts" as any)
+                .from("coordinator_accounts")
                 .select("status")
                 .eq("email", email)
                 .maybeSingle(),
