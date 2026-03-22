@@ -1,5 +1,4 @@
 import { ReactNode } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface SurveySectionProps {
   number: number;
@@ -27,7 +26,7 @@ export function SurveySection({ number, title, badge, children }: SurveySectionP
         <div className="w-7 h-7 rounded-full bg-teal-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
           {number}
         </div>
-        <h3 className="text-sm font-semibold text-card-foreground flex-1">{title}</h3>
+        <h3 className="text-xs sm:text-sm font-semibold text-card-foreground flex-1">{title}</h3>
         {badge && (
           <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${badgeStyles[badge]}`}>
             {badgeLabels[badge]}
