@@ -47,8 +47,19 @@ export default function SurveyStep1() {
     return Object.keys(e).length === 0;
   };
 
-  const handleNext = () => {
-    if (validate()) ctx.nextStep();
+  const handleNext = async () => {
+    if (!validate()) {
+      setTimeout(() => {
+        const firstError = document.querySelector('[data-error="true"]');
+        if (firstError) {
+          firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+          document.querySelector('.overflow-y-auto')?.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      }, 50);
+      return;
+    }
+    await ctx.nextStep();
   };
 
   const toggleDualType = (type: string, checked: boolean) => {
@@ -68,7 +79,7 @@ export default function SurveyStep1() {
           Confirm your details.
         </div>
 
-        <Card className="bg-white shadow-sm">
+        <Card className="bg-white shadow-sm" data-error={Object.keys(errors).length > 0 ? "true" : undefined}>
           <CardHeader className="px-4 sm:px-6 py-4 sm:py-5">
             <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
               <User className="h-5 w-5 text-teal-600" />

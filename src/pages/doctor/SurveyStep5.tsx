@@ -30,7 +30,20 @@ export default function SurveyStep5() {
     return Object.keys(e).length === 0;
   };
 
-  const handleNext = () => { if (validate()) ctx.nextStep(); };
+  const handleNext = async () => {
+    if (!validate()) {
+      setTimeout(() => {
+        const firstError = document.querySelector('[data-error="true"]');
+        if (firstError) {
+          firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+          document.querySelector('.overflow-y-auto')?.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      }, 50);
+      return;
+    }
+    await ctx.nextStep();
+  };
 
   return (
     <>
@@ -50,7 +63,7 @@ export default function SurveyStep5() {
           </CardHeader>
           <CardContent className="px-4 sm:px-6 space-y-4">
             {/* Exemptions */}
-            <SurveySection number={1} title="Exemptions">
+            <SurveySection number={1} title="Exemptions" data-error={Object.keys(errors).length > 0 ? "true" : undefined}>
               <div className="space-y-2">
                 <InfoBox type="info">Include any formal exemptions from Occupational Health or your training programme, and any relevant health or occupational circumstances.</InfoBox>
                 <Textarea
@@ -71,7 +84,7 @@ export default function SurveyStep5() {
                   <button type="button" onClick={() => setField("parentalLeaveExpected", true)} className={`flex-1 py-2.5 sm:py-3 rounded-lg text-sm font-semibold border cursor-pointer transition-all ${formData.parentalLeaveExpected ? "bg-teal-600 text-white border-teal-600 active:bg-teal-700 active:border-teal-700" : "bg-card text-muted-foreground border-border active:bg-muted"}`}>Yes</button>
                 </div>
                 {formData.parentalLeaveExpected && (
-                  <div className="space-y-3 border-l-2 border-border pl-3 mt-2">
+                  <div className="space-y-3 border-l-2 border-border pl-3 mt-2" data-error={errors.parentalLeaveStart || errors.parentalLeaveEnd || errors.parentalLeaveNotes ? "true" : undefined}>
                     <div>
                       <label className="text-xs sm:text-sm font-medium text-card-foreground block mb-1">Leave period *</label>
                       <DateRangePicker

@@ -61,13 +61,16 @@ export default function SurveyStep3() {
   const { formData, setField } = ctx;
   const isLtft = formData.wtePercent !== 100;
   const expected = expectedDaysOff(formData.wtePercent, formData.wteOtherValue);
+  const isFlexible = formData.ltftDaysOff.includes("flexible");
 
   const toggleDay = (day: string, checked: boolean) => {
+    // If switching from flexible to specific days, clear flexible first
+    let baseDays = formData.ltftDaysOff.filter((d) => d !== "flexible");
     let newDays: string[];
     if (checked) {
-      newDays = [...formData.ltftDaysOff, day];
+      newDays = [...baseDays, day];
     } else {
-      newDays = formData.ltftDaysOff.filter((d) => d !== day);
+      newDays = baseDays.filter((d) => d !== day);
     }
     setField("ltftDaysOff", newDays);
     const newFlex: LtftNightFlex[] = newDays.map((d) => {
@@ -90,9 +93,9 @@ export default function SurveyStep3() {
       e.wteOther = "Enter a value between 10 and 90";
     }
     if (isLtft && formData.ltftDaysOff.length === 0) {
-      e.ltftDays = "Select at least one day off";
+      e.ltftDays = "Select your day(s) off or choose 'No fixed day off'";
     }
-    if (isLtft && formData.ltftDaysOff.length > 0) {
+    if (isLtft && formData.ltftDaysOff.length > 0 && !formData.ltftDaysOff.includes("flexible")) {
       for (const f of formData.ltftNightFlexibility) {
         if (f.canStart === null) e[`flex_start_${f.day}`] = "Required";
         if (f.canEnd === null) e[`flex_end_${f.day}`] = "Required";
@@ -102,7 +105,20 @@ export default function SurveyStep3() {
     return Object.keys(e).length === 0;
   };
 
-  const handleNext = () => { if (validate()) ctx.nextStep(); };
+  const handleNext = async () => {
+    if (!validate()) {
+      setTimeout(() => {
+        const firstError = document.querySelector('[data-error="true"]');
+        if (firstError) {
+          firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+          document.querySelector('.overflow-y-auto')?.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      }, 50);
+      return;
+    }
+    await ctx.nextStep();
+  };
 
   const guidanceText = formData.wtePercent === 0
     ? "Select days off matching your WTE percentage"
@@ -126,7 +142,7 @@ export default function SurveyStep3() {
           </CardHeader>
           <CardContent className="px-4 sm:px-6 space-y-4">
             <SurveySection number={1} title="WTE" badge="high">
-              <div className="space-y-2">
+              <div className="space-y-2" data-error={errors.wteOther ? "true" : undefined}>
                 {WTE_OPTIONS.map((opt) => (
                   <label key={opt.value} className="flex items-center gap-2.5 cursor-pointer py-2.5 sm:py-3">
                     <input
@@ -185,23 +201,48 @@ export default function SurveyStep3() {
                   <p className="text-[10px] sm:text-xs text-muted-foreground">Select your LTFT non-working day(s). Consecutive days help with night block scheduling — please consider this when choosing.</p>
                   <div className="flex flex-wrap gap-2">
                     {DAYS.map((day) => (
-                      <label key={day} className={`flex items-center gap-1.5 rounded-lg border px-3 sm:px-4 py-2.5 sm:py-3 cursor-pointer transition-colors text-sm sm:text-base ${
-                        formData.ltftDaysOff.includes(day)
-                          ? "border-teal-300 bg-teal-50 text-teal-700 font-semibold"
-                          : "border-border text-card-foreground"
+                      <label key={day} className={`flex items-center gap-1.5 rounded-lg border px-3 sm:px-4 py-2.5 sm:py-3 transition-colors text-sm sm:text-base ${
+                        isFlexible
+                          ? "border-border text-muted-foreground opacity-50 cursor-not-allowed"
+                          : formData.ltftDaysOff.includes(day)
+                            ? "border-teal-300 bg-teal-50 text-teal-700 font-semibold cursor-pointer"
+                            : "border-border text-card-foreground cursor-pointer"
                       }`}>
                         <Checkbox
                           checked={formData.ltftDaysOff.includes(day)}
                           onCheckedChange={(v) => toggleDay(day, !!v)}
                           className="h-4 w-4"
+                          disabled={isFlexible}
                         />
                         {DAY_SHORT[day]}
                       </label>
                     ))}
                   </div>
+
+                  {/* No fixed day off option */}
+                  <label className={`flex items-center gap-2 rounded-lg border px-3 sm:px-4 py-2.5 sm:py-3 cursor-pointer transition-colors text-sm sm:text-base w-full mt-2 ${
+                    isFlexible
+                      ? "border-teal-300 bg-teal-50 text-teal-700 font-semibold"
+                      : "border-border text-card-foreground"
+                  }`}>
+                    <Checkbox
+                      checked={isFlexible}
+                      onCheckedChange={(v) => {
+                        if (v) {
+                          setField("ltftDaysOff", ["flexible"]);
+                          setField("ltftNightFlexibility", []);
+                        } else {
+                          setField("ltftDaysOff", []);
+                        }
+                      }}
+                      className="h-4 w-4"
+                    />
+                    No fixed day off — my non-working days vary each week
+                  </label>
+
                   <FieldError message={errors.ltftDays} />
 
-                  {formData.ltftDaysOff.length > 0 && formData.ltftDaysOff.length !== expected && (
+                  {formData.ltftDaysOff.length > 0 && !isFlexible && formData.ltftDaysOff.length !== expected && (
                     <InfoBox type="warn">
                       Expected {expected} day(s) off — please check.
                     </InfoBox>
@@ -210,7 +251,7 @@ export default function SurveyStep3() {
               </SurveySection>
             )}
 
-            {isLtft && formData.ltftDaysOff.length > 0 && (
+            {isLtft && formData.ltftDaysOff.length > 0 && !isFlexible && (
               <SurveySection number={3} title="Night Flexibility">
                 <div className="space-y-3">
                   <p className="text-[10px] sm:text-xs text-muted-foreground">Night blocks span 2–4 nights. Can the block start or end on your day off? Selecting yes helps with scheduling — please consider it.</p>

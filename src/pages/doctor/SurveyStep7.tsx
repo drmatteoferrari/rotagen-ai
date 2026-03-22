@@ -64,7 +64,17 @@ export default function SurveyStep7() {
   };
 
   const handleSubmit = async () => {
-    if (!validate()) return;
+    if (!validate()) {
+      setTimeout(() => {
+        const firstError = document.querySelector('[data-error="true"]');
+        if (firstError) {
+          firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+          document.querySelector('.overflow-y-auto')?.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      }, 50);
+      return;
+    }
     const success = await submitSurvey();
     if (success && isAdminMode) {
       toast.success("Survey updated successfully");
@@ -140,7 +150,11 @@ export default function SurveyStep7() {
                 >
                   <SummaryItem label="WTE" value={wteLabel} />
                   {formData.ltftDaysOff.length > 0 && (
-                    <SummaryItem label="Days Off" value={formData.ltftDaysOff.map(d => d.slice(0, 3)).join(", ")} />
+                    <SummaryItem label="Days Off" value={
+                      formData.ltftDaysOff.includes("flexible")
+                        ? "No fixed day off (flexible)"
+                        : formData.ltftDaysOff.map(d => d.slice(0, 3)).join(", ")
+                    } />
                   )}
                   {formData.ltftNightFlexibility.length > 0 && (
                     <div className="space-y-0.5">
@@ -288,7 +302,7 @@ export default function SurveyStep7() {
 
             {/* Confirmations */}
             <SurveySection number={2} title="Confirmation">
-              <div className="space-y-3">
+              <div className="space-y-3" data-error={Object.keys(errors).length > 0 ? "true" : undefined}>
                 <ConfirmCheck
                   checked={formData.confirmedAccurate}
                   onChange={(v) => setField("confirmedAccurate", v)}
