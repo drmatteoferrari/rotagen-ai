@@ -250,7 +250,7 @@ function formDataToDbRow(fd: SurveyFormData) {
     confirm_exemptions_understood: fd.confirmExemptionsUnderstood ?? false,
     confirm_fairness_understood: fd.confirmFairnessUnderstood ?? false,
     signature_name: fd.signatureName ?? '',
-    signature_date: fd.signatureDate ?? null,
+    signature_date: fd.signatureDate || null,
   };
 }
 
