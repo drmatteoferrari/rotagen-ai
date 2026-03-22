@@ -4,10 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 export function buildSurveyLink(surveyToken: string): string {
   const envUrl = import.meta.env.VITE_APP_URL as string | undefined;
   if (!envUrl) {
-    console.warn("WARNING: VITE_APP_URL is not set. Survey links will use window.location.origin. Set VITE_APP_URL in your .env before sending real invites.");
+    console.warn("WARNING: VITE_APP_URL is not set. Survey links will use window.location.origin. Set this variable before sending real invites.");
   }
-  // Prefer VITE_APP_URL, then fall back to the published domain, then window.location.origin
-  const base = envUrl || "https://rotagen-ai.lovable.app";
+  const base = envUrl ?? window.location.origin;
   return `${base}/doctor/survey?token=${surveyToken}`;
 }
 

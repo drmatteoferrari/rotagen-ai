@@ -2,14 +2,12 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "@/components/AdminLayout";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
 import { CalendarDays, ArrowRight, Info, AlertTriangle, CheckCircle } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useAdminSetup } from "@/contexts/AdminSetupContext";
-import { useRotaContext } from "@/contexts/RotaContext";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { DateRange } from "react-day-picker";
 
@@ -19,14 +17,11 @@ export default function RotaPeriodStep1() {
     rotaStartDate, rotaEndDate, setRotaStartDate, setRotaEndDate,
     setPeriodWorkingStateLoaded,
   } = useAdminSetup();
-  const { currentRotaConfigId } = useRotaContext();
 
   const [range, setRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
     from: rotaStartDate,
     to: rotaEndDate,
   });
-
-  const [surveyWarningShown, setSurveyWarningShown] = useState(false);
 
   // Responsive calendar months
   const [calendarMonths, setCalendarMonths] = useState(1);
@@ -65,35 +60,12 @@ export default function RotaPeriodStep1() {
 
     if (newStart !== prevStart || newEnd !== prevEnd) {
       setPeriodWorkingStateLoaded(false);
-
-      // Survey guardrail: warn if surveys exist and dates are changing
-      if (currentRotaConfigId && !surveyWarningShown && newRange.from && newRange.to) {
-        checkSurveyGuardrail();
-      }
     }
   };
 
-  const checkSurveyGuardrail = async () => {
-    if (!currentRotaConfigId) return;
-    try {
-      const { count } = await supabase
-        .from("doctor_survey_responses")
-        .select("id", { count: "exact", head: true })
-        .eq("rota_config_id", currentRotaConfigId)
-        .in("status", ["submitted", "in_progress"]);
-      if (count && count > 0) {
-        toast.warning("Note: Surveys already exist. Changing rota dates may invalidate existing leave requests.");
-        setSurveyWarningShown(true);
-      }
-    } catch {
-      // Non-blocking
-    }
-  };
-
-  // Inclusive duration: Aug 1 to Aug 7 = 7 days
   const durationInfo = (() => {
     if (!range.from || !range.to) return null;
-    const days = differenceInDays(range.to, range.from) + 1;
+    const days = differenceInDays(range.to, range.from);
     if (days <= 0) return { error: true, text: "End date must be after start date." };
     const weeks = (days / 7).toFixed(1);
     return { error: false, text: `${days} days · ${weeks} weeks` };
@@ -104,7 +76,7 @@ export default function RotaPeriodStep1() {
       toast.error("Please select both a start and end date.");
       return;
     }
-    if (differenceInDays(range.to, range.from) + 1 <= 0) {
+    if (differenceInDays(range.to, range.from) <= 0) {
       toast.error("End date must be after start date.");
       return;
     }
@@ -132,12 +104,15 @@ export default function RotaPeriodStep1() {
               <CalendarDays className="h-5 w-5 text-amber-600" />
               Rota Dates
             </CardTitle>
+            
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Hint text */}
             {calendarHint && (
               <p className="text-sm font-medium text-amber-600 text-center">{calendarHint}</p>
             )}
 
+            {/* Inline range calendar */}
             <div className="w-full overflow-x-hidden">
               <Calendar
                 mode="range"
@@ -149,6 +124,7 @@ export default function RotaPeriodStep1() {
               />
             </div>
 
+            {/* Duration pill */}
             {durationInfo && (
               <div className="flex justify-center">
                 <span className={cn(
