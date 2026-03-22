@@ -1,7 +1,7 @@
 import { Resend } from "https://esm.sh/resend@4.6.0";
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "https://rotagen-ai.lovable.app",
+  "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
@@ -41,7 +41,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    const approvalUrl = `https://rotagen-ai.lovable.app/approve?token=${approvalToken}`;
+    const appUrl = Deno.env.get("APP_URL") || "https://rotagen-ai.lovable.app";
+    const approvalUrl = `${appUrl}/approve?token=${approvalToken}`;
 
     const subject = `RotaGen — New Access Request: ${escHtml(fullName)}, ${escHtml(department)}, ${escHtml(hospital)}`;
 
