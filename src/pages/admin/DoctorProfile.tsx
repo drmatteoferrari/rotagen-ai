@@ -99,10 +99,17 @@ export default function DoctorProfile() {
   const [copiedLink, setCopiedLink] = useState(false);
   const [removePopoverOpen, setRemovePopoverOpen] = useState(false);
 
+  // Relational data state
+  const [unavailBlocks, setUnavailBlocks] = useState<any[]>([]);
+  const [ltftPats, setLtftPats] = useState<any[]>([]);
+  const [trainingReqs, setTrainingReqs] = useState<any[]>([]);
+  const [dualSpecs, setDualSpecs] = useState<any[]>([]);
+
   useEffect(() => {
     if (!doctorId) { setError(true); setLoading(false); return; }
+    if (!currentRotaConfigId) { setLoading(false); return; }
     loadAll();
-  }, [doctorId]);
+  }, [doctorId, currentRotaConfigId]);
 
   // Empty state: no rota config
   if (!currentRotaConfigId) {
@@ -115,12 +122,6 @@ export default function DoctorProfile() {
       </AdminLayout>
     );
   }
-
-  // Relational data state
-  const [unavailBlocks, setUnavailBlocks] = useState<any[]>([]);
-  const [ltftPats, setLtftPats] = useState<any[]>([]);
-  const [trainingReqs, setTrainingReqs] = useState<any[]>([]);
-  const [dualSpecs, setDualSpecs] = useState<any[]>([]);
 
   const loadAll = async () => {
     setLoading(true);
