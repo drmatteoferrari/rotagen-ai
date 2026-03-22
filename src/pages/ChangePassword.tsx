@@ -19,14 +19,6 @@ export default function ChangePassword() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ newPassword?: string; confirmPassword?: string }>({});
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const errs: typeof errors = {};
-    if (newPassword.length < 8) errs.newPassword = "Password must be at least 8 characters";
-    if (newPassword !== confirmPassword) errs.confirmPassword = "Passwords do not match";
-    setErrors(errs);
-    if (Object.keys(errs).length > 0) return;
-
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       // PASSWORD_RECOVERY: Supabase has exchanged the reset token for a session.
@@ -35,6 +27,13 @@ export default function ChangePassword() {
     return () => subscription.unsubscribe();
   }, []);
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const errs: typeof errors = {};
+    if (newPassword.length < 8) errs.newPassword = "Password must be at least 8 characters";
+    if (newPassword !== confirmPassword) errs.confirmPassword = "Passwords do not match";
+    setErrors(errs);
+    if (Object.keys(errs).length > 0) return;
 
     setLoading(true);
 
