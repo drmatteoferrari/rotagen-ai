@@ -1079,6 +1079,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      handle_survey_normalization: {
+        Args: { p_doctor_id: string; p_rota_config_id: string }
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
