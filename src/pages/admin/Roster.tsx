@@ -108,8 +108,8 @@ function ExpandedDoctorPanel({
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Competencies</p>
           <div className="flex flex-wrap gap-1.5">
             {(["iac", "iaoc", "icu", "transfer"] as const).map((key) => {
-              const achieved = cj[key]?.achieved as boolean | null | undefined;
-              const workingTowards = cj[key]?.workingTowards as boolean | null | undefined;
+              const achieved = flatKey(key, "achieved") ?? cj[key]?.achieved ?? null;
+              const workingTowards = flatKey(key, "working") ?? cj[key]?.workingTowards ?? null;
               const colour = achieved === true
                 ? "bg-emerald-100 text-emerald-700"
                 : workingTowards === true
