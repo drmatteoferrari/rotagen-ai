@@ -1392,7 +1392,7 @@ export default function Roster() {
                             </TooltipTrigger>
                             <TooltipContent>{doctor.survey_token ? "Open survey in new tab" : "No survey link"}</TooltipContent>
                           </Tooltip>
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate(`/admin/survey-override/${doctor.id}/1`)}>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate(`/admin/survey-override/${doctor.id}/1?from=/admin/roster`)}>
                             <Pencil className="h-4 w-4" />
                           </Button>
                           <Popover open={removeDialogId === doctor.id} onOpenChange={(open) => setRemoveDialogId(open ? doctor.id : null)}>
