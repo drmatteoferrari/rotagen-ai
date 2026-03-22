@@ -988,6 +988,7 @@ export default function DepartmentStep2() {
                         key={`${shift.id}-${Object.values(shift.applicableDays).join("")}-${shift.staffing.min}-${shift.staffing.target}-${shift.staffing.max ?? "x"}`}
                         shift={shift}
                         index={index}
+                        allShifts={shifts}
                         onSave={handleSaveCard}
                         onCancel={(original) => {
                           setShifts(prev => prev.map(s => s.id === original.id ? original : s));
