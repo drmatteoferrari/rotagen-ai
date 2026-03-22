@@ -568,7 +568,7 @@ function ExpandedCard({
           </Button>
           <Button
             className="min-h-[44px] bg-purple-600 text-white hover:bg-purple-700"
-            disabled={getShiftErrors(draft).length > 0}
+            disabled={getShiftErrors(draft, shifts).length > 0}
             onClick={() => onSave(draft)}
           >
             <Save className="mr-2 h-4 w-4" /> Save
