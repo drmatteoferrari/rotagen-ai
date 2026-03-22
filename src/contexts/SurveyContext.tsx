@@ -590,6 +590,8 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
 
     try {
       const now = new Date().toISOString();
+
+      // 1. Save the latest JSONB draft first (ensures RPC reads current data)
       const row = formDataToDbRow(fd);
       const { error: respErr } = await supabase
         .from("doctor_survey_responses")
@@ -598,8 +600,6 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
             doctor_id: doc.id,
             rota_config_id: doc.rotaConfigId,
             ...row,
-            status: "submitted",
-            submitted_at: now,
             last_saved_at: now,
             updated_at: now,
           } as any,
@@ -607,33 +607,17 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
         );
       if (respErr) throw respErr;
 
-      // Sync doctor name, email, grade on submission
-      const submitNameParts = fd.fullName.trim().split(/\s+/);
-      const submitFirst = submitNameParts[0] || "";
-      const submitLast = submitNameParts.slice(1).join(" ") || "";
-      const { error: docErr } = await supabase
-        .from("doctors")
-        .update({
-          survey_status: "submitted",
-          survey_submitted_at: now,
-          first_name: submitFirst,
-          last_name: submitLast,
-          email: fd.nhsEmail || undefined,
-          grade: fd.grade || undefined,
-        })
-        .eq("id", doc.id);
-      if (docErr) throw docErr;
-
-      // Normalize JSONB into relational tables (non-blocking)
-      try {
-        await supabase.functions.invoke("normalize-survey", {
-          body: { doctor_id: doc.id, rota_config_id: doc.rotaConfigId },
-        });
-      } catch (normErr) {
-        console.error("Survey normalization failed (non-blocking):", normErr);
+      // 2. Atomic normalization via Postgres RPC (BLOCKING — must succeed)
+      const { error: rpcErr } = await supabase.rpc('handle_survey_normalization', {
+        p_doctor_id: doc.id,
+        p_rota_config_id: doc.rotaConfigId,
+      });
+      if (rpcErr) {
+        console.error("Survey normalization RPC failed:", rpcErr);
+        throw new Error("Critical: Could not finalize scheduling data. Please try again or contact support.");
       }
 
-      // Send confirmation email (non-blocking)
+      // 3. Send confirmation email (non-blocking)
       try {
         const ri = rotaInfo;
         await supabase.functions.invoke("send-survey-confirmation", {
@@ -670,9 +654,9 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
       setSubmittedAt(now);
       setLoadState("submitted");
       return true;
-    } catch (err) {
+    } catch (err: any) {
       console.error("Survey submission failed:", err);
-      setSubmitError("Submission failed — please try again. If this persists, contact your coordinator.");
+      setSubmitError(err?.message || "Submission failed — please try again. If this persists, contact your coordinator.");
       return false;
     } finally {
       setSubmitting(false);
