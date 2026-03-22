@@ -431,7 +431,7 @@ export default function Roster() {
       if (doctor) {
         const { data } = await supabase
           .from("doctor_survey_responses")
-          .select("wte_percent, ltft_days_off, competencies_json, grade, nhs_email, phone_number")
+          .select("wte_percent, ltft_days_off, competencies_json, grade, nhs_email, phone_number, iac_achieved, iac_working, iac_remote, iaoc_achieved, iaoc_working, iaoc_remote, icu_achieved, icu_working, icu_remote, transfer_achieved, transfer_working, transfer_remote")
           .eq("doctor_id", doctorId)
           .eq("rota_config_id", doctor.rota_config_id)
           .maybeSingle();
