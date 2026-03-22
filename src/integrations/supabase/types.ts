@@ -155,6 +155,15 @@ export type Database = {
           exemption_details: string | null
           full_name: string | null
           grade: string | null
+          iac_achieved: boolean | null
+          iac_remote: boolean | null
+          iac_working: boolean | null
+          iaoc_achieved: boolean | null
+          iaoc_remote: boolean | null
+          iaoc_working: boolean | null
+          icu_achieved: boolean | null
+          icu_remote: boolean | null
+          icu_working: boolean | null
           id: string
           last_saved_at: string | null
           ltft_days_off: string[] | null
@@ -186,6 +195,9 @@ export type Database = {
           status: string | null
           study_leave: Json | null
           submitted_at: string | null
+          transfer_achieved: boolean | null
+          transfer_remote: boolean | null
+          transfer_working: boolean | null
           updated_at: string | null
           want_pain_sessions: boolean | null
           want_preop: boolean | null
@@ -219,6 +231,15 @@ export type Database = {
           exemption_details?: string | null
           full_name?: string | null
           grade?: string | null
+          iac_achieved?: boolean | null
+          iac_remote?: boolean | null
+          iac_working?: boolean | null
+          iaoc_achieved?: boolean | null
+          iaoc_remote?: boolean | null
+          iaoc_working?: boolean | null
+          icu_achieved?: boolean | null
+          icu_remote?: boolean | null
+          icu_working?: boolean | null
           id?: string
           last_saved_at?: string | null
           ltft_days_off?: string[] | null
@@ -250,6 +271,9 @@ export type Database = {
           status?: string | null
           study_leave?: Json | null
           submitted_at?: string | null
+          transfer_achieved?: boolean | null
+          transfer_remote?: boolean | null
+          transfer_working?: boolean | null
           updated_at?: string | null
           want_pain_sessions?: boolean | null
           want_preop?: boolean | null
@@ -283,6 +307,15 @@ export type Database = {
           exemption_details?: string | null
           full_name?: string | null
           grade?: string | null
+          iac_achieved?: boolean | null
+          iac_remote?: boolean | null
+          iac_working?: boolean | null
+          iaoc_achieved?: boolean | null
+          iaoc_remote?: boolean | null
+          iaoc_working?: boolean | null
+          icu_achieved?: boolean | null
+          icu_remote?: boolean | null
+          icu_working?: boolean | null
           id?: string
           last_saved_at?: string | null
           ltft_days_off?: string[] | null
@@ -314,6 +347,9 @@ export type Database = {
           status?: string | null
           study_leave?: Json | null
           submitted_at?: string | null
+          transfer_achieved?: boolean | null
+          transfer_remote?: boolean | null
+          transfer_working?: boolean | null
           updated_at?: string | null
           want_pain_sessions?: boolean | null
           want_preop?: boolean | null
@@ -389,6 +425,90 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "doctors_rota_config_id_fkey"
+            columns: ["rota_config_id"]
+            isOneToOne: false
+            referencedRelation: "rota_configs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dual_specialties: {
+        Row: {
+          created_at: string | null
+          doctor_id: string
+          id: string
+          rota_config_id: string
+          specialty_name: string
+        }
+        Insert: {
+          created_at?: string | null
+          doctor_id: string
+          id?: string
+          rota_config_id: string
+          specialty_name: string
+        }
+        Update: {
+          created_at?: string | null
+          doctor_id?: string
+          id?: string
+          rota_config_id?: string
+          specialty_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dual_specialties_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dual_specialties_rota_config_id_fkey"
+            columns: ["rota_config_id"]
+            isOneToOne: false
+            referencedRelation: "rota_configs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ltft_patterns: {
+        Row: {
+          can_end_nights: boolean | null
+          can_start_nights: boolean | null
+          day: Database["public"]["Enums"]["day_of_week"]
+          doctor_id: string
+          id: string
+          is_day_off: boolean
+          rota_config_id: string
+        }
+        Insert: {
+          can_end_nights?: boolean | null
+          can_start_nights?: boolean | null
+          day: Database["public"]["Enums"]["day_of_week"]
+          doctor_id: string
+          id?: string
+          is_day_off?: boolean
+          rota_config_id: string
+        }
+        Update: {
+          can_end_nights?: boolean | null
+          can_start_nights?: boolean | null
+          day?: Database["public"]["Enums"]["day_of_week"]
+          doctor_id?: string
+          id?: string
+          is_day_off?: boolean
+          rota_config_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ltft_patterns_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ltft_patterns_rota_config_id_fkey"
             columns: ["rota_config_id"]
             isOneToOne: false
             referencedRelation: "rota_configs"
@@ -727,6 +847,102 @@ export type Database = {
           },
         ]
       }
+      training_requests: {
+        Row: {
+          category: Database["public"]["Enums"]["request_category"]
+          created_at: string | null
+          doctor_id: string
+          id: string
+          name: string
+          notes: string | null
+          rota_config_id: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["request_category"]
+          created_at?: string | null
+          doctor_id: string
+          id?: string
+          name: string
+          notes?: string | null
+          rota_config_id: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["request_category"]
+          created_at?: string | null
+          doctor_id?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          rota_config_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_requests_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_requests_rota_config_id_fkey"
+            columns: ["rota_config_id"]
+            isOneToOne: false
+            referencedRelation: "rota_configs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      unavailability_blocks: {
+        Row: {
+          created_at: string | null
+          doctor_id: string
+          end_date: string
+          id: string
+          location: string | null
+          notes: string | null
+          reason: Database["public"]["Enums"]["unavailability_reason"]
+          rota_config_id: string
+          start_date: string
+        }
+        Insert: {
+          created_at?: string | null
+          doctor_id: string
+          end_date: string
+          id?: string
+          location?: string | null
+          notes?: string | null
+          reason: Database["public"]["Enums"]["unavailability_reason"]
+          rota_config_id: string
+          start_date: string
+        }
+        Update: {
+          created_at?: string | null
+          doctor_id?: string
+          end_date?: string
+          id?: string
+          location?: string | null
+          notes?: string | null
+          reason?: Database["public"]["Enums"]["unavailability_reason"]
+          rota_config_id?: string
+          start_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "unavailability_blocks_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unavailability_blocks_rota_config_id_fkey"
+            columns: ["rota_config_id"]
+            isOneToOne: false
+            referencedRelation: "rota_configs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
@@ -873,6 +1089,22 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "doctor"
+      day_of_week:
+        | "monday"
+        | "tuesday"
+        | "wednesday"
+        | "thursday"
+        | "friday"
+        | "saturday"
+        | "sunday"
+      request_category: "specialty" | "session" | "interest"
+      unavailability_reason:
+        | "annual"
+        | "study"
+        | "noc"
+        | "rotation"
+        | "parental"
+        | "other"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1001,6 +1233,24 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "doctor"],
+      day_of_week: [
+        "monday",
+        "tuesday",
+        "wednesday",
+        "thursday",
+        "friday",
+        "saturday",
+        "sunday",
+      ],
+      request_category: ["specialty", "session", "interest"],
+      unavailability_reason: [
+        "annual",
+        "study",
+        "noc",
+        "rotation",
+        "parental",
+        "other",
+      ],
     },
   },
 } as const
