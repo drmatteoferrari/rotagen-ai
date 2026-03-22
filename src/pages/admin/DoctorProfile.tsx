@@ -104,6 +104,12 @@ export default function DoctorProfile() {
     loadAll();
   }, [doctorId]);
 
+  // Relational data state
+  const [unavailBlocks, setUnavailBlocks] = useState<any[]>([]);
+  const [ltftPats, setLtftPats] = useState<any[]>([]);
+  const [trainingReqs, setTrainingReqs] = useState<any[]>([]);
+  const [dualSpecs, setDualSpecs] = useState<any[]>([]);
+
   const loadAll = async () => {
     setLoading(true);
     try {
@@ -121,16 +127,27 @@ export default function DoctorProfile() {
       setGrade(doc.grade ?? "");
       setIsActive(doc.is_active);
 
-      const { data: srv } = await supabase
-        .from("doctor_survey_responses")
-        .select("personal_email, phone_number, wte_percent, wte_other_value, al_entitlement, ltft_days_off, ltft_night_flexibility, annual_leave, study_leave, noc_dates, other_unavailability, competencies_json, exempt_from_nights, exempt_from_weekends, exempt_from_oncall, exemption_details, other_restrictions, additional_restrictions, parental_leave_expected, parental_leave_start, parental_leave_end, parental_leave_notes, specialties_requested, special_sessions, signoff_needs, dual_specialty, dual_specialty_types, additional_notes")
-        .eq("doctor_id", doctorId!)
-        .eq("rota_config_id", doc.rota_config_id)
-        .maybeSingle();
+      const [srvResult, blocksResult, ltftResult, reqsResult, dualsResult] = await Promise.all([
+        supabase
+          .from("doctor_survey_responses")
+          .select("personal_email, phone_number, wte_percent, wte_other_value, al_entitlement, ltft_days_off, ltft_night_flexibility, annual_leave, study_leave, noc_dates, other_unavailability, competencies_json, exempt_from_nights, exempt_from_weekends, exempt_from_oncall, exemption_details, other_restrictions, additional_restrictions, parental_leave_expected, parental_leave_start, parental_leave_end, parental_leave_notes, specialties_requested, special_sessions, signoff_needs, dual_specialty, dual_specialty_types, additional_notes, iac_achieved, iac_working, iac_remote, iaoc_achieved, iaoc_working, iaoc_remote, icu_achieved, icu_working, icu_remote, transfer_achieved, transfer_working, transfer_remote")
+          .eq("doctor_id", doctorId!)
+          .eq("rota_config_id", doc.rota_config_id)
+          .maybeSingle(),
+        supabase.from("unavailability_blocks").select("*").eq("doctor_id", doctorId!).eq("rota_config_id", doc.rota_config_id).order("start_date"),
+        supabase.from("ltft_patterns").select("*").eq("doctor_id", doctorId!).eq("rota_config_id", doc.rota_config_id),
+        supabase.from("training_requests").select("*").eq("doctor_id", doctorId!).eq("rota_config_id", doc.rota_config_id),
+        supabase.from("dual_specialties").select("*").eq("doctor_id", doctorId!).eq("rota_config_id", doc.rota_config_id),
+      ]);
 
+      const srv = srvResult.data;
       setSurvey(srv ?? null);
       setPersonalEmail(srv?.personal_email ?? "");
       setPhoneNumber(srv?.phone_number ?? "");
+      setUnavailBlocks(blocksResult.data ?? []);
+      setLtftPats(ltftResult.data ?? []);
+      setTrainingReqs(reqsResult.data ?? []);
+      setDualSpecs(dualsResult.data ?? []);
     } catch {
       setError(true);
     } finally {
@@ -532,19 +549,19 @@ export default function DoctorProfile() {
                     <dd>{survey.wte_percent != null && survey.wte_percent < 100 ? "Yes" : "No"}</dd>
                     <dt className="text-muted-foreground">AL entitlement</dt>
                     <dd>{survey.al_entitlement != null ? `${survey.al_entitlement} days` : "—"}</dd>
-                    {survey.ltft_days_off && survey.ltft_days_off.length > 0 && (
+                    {ltftPats.length > 0 && (
                       <>
                         <dt className="text-muted-foreground">Days off</dt>
-                        <dd>{[...survey.ltft_days_off].sort((a, b) => DAY_ORDER.indexOf(a) - DAY_ORDER.indexOf(b)).join(", ")}</dd>
+                        <dd>{ltftPats.filter(p => p.is_day_off).map(p => p.day).sort((a: string, b: string) => DAY_ORDER.indexOf(a.charAt(0).toUpperCase() + a.slice(1)) - DAY_ORDER.indexOf(b.charAt(0).toUpperCase() + b.slice(1))).join(", ")}</dd>
                       </>
                     )}
-                    {Array.isArray(survey.ltft_night_flexibility) && survey.ltft_night_flexibility.length > 0 && (
+                    {ltftPats.filter(p => p.is_day_off).length > 0 && (
                       <>
                         <dt className="text-muted-foreground">Night flexibility</dt>
                         <dd>
-                          {survey.ltft_night_flexibility.map((n: any, i: number) => (
+                          {ltftPats.filter(p => p.is_day_off).map((p: any, i: number) => (
                             <span key={i} className="block text-xs">
-                              {n.day}: start {n.canStart ? "✓" : "✗"} / end {n.canEnd ? "✓" : "✗"}
+                              {p.day}: start {p.can_start_nights ? "✓" : "✗"} / end {p.can_end_nights ? "✓" : "✗"}
                             </span>
                           ))}
                         </dd>
@@ -553,15 +570,17 @@ export default function DoctorProfile() {
                   </dl>
                 </div>
 
-                {/* B — Competencies */}
+                {/* B — Competencies (from flat bools, fallback to JSONB) */}
                 <div className="space-y-2 py-4">
                   <p className="text-sm font-semibold text-card-foreground">Competencies</p>
                   <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
                     {(["iac", "iaoc", "icu", "transfer"] as const).map((key) => {
+                      const flatKey = (k: string, suffix: string) => (survey as any)?.[`${k}_${suffix}`] as boolean | null | undefined;
                       const cj = survey.competencies_json ?? {};
-                      const achieved = cj[key]?.achieved as boolean | null;
-                      const workingTowards = cj[key]?.workingTowards as boolean | null;
-                      const remoteSupervision = cj[key]?.remoteSupervision as boolean | null;
+                      // Prefer flat bools, fallback to JSONB
+                      const achieved = flatKey(key, "achieved") ?? cj[key]?.achieved ?? null;
+                      const workingTowards = flatKey(key, "working") ?? cj[key]?.workingTowards ?? null;
+                      const remoteSupervision = flatKey(key, "remote") ?? cj[key]?.remoteSupervision ?? null;
                       const labels: Record<string, string> = { iac: "IAC", iaoc: "IAOC", icu: "ICU", transfer: "Transfer" };
                       let val = "—";
                       if (achieved === true) {
@@ -581,21 +600,32 @@ export default function DoctorProfile() {
                   </dl>
                 </div>
 
-                {/* C — Leave & Unavailability */}
+                {/* C — Leave & Unavailability (from relational tables) */}
                 <div className="space-y-2 py-4">
                   <p className="text-sm font-semibold text-card-foreground">Leave & Unavailability</p>
                   <div className="space-y-1.5 text-sm">
-                    <p><span className="text-muted-foreground">Annual leave:</span> {renderLeaveList(survey.annual_leave)}</p>
-                    <p><span className="text-muted-foreground">Study leave:</span> {renderLeaveList(survey.study_leave)}</p>
-                    <p><span className="text-muted-foreground">NOC dates:</span> {renderLeaveList(survey.noc_dates)}</p>
-                    <p><span className="text-muted-foreground">Rotations / other:</span> {renderLeaveList(survey.other_unavailability)}</p>
-                    <p>
-                      <span className="text-muted-foreground">Parental leave: </span>
-                      {survey.parental_leave_expected
-                        ? <span>{fmtRange(survey.parental_leave_start, survey.parental_leave_end)}{survey.parental_leave_notes ? ` — ${survey.parental_leave_notes}` : ""}</span>
-                        : <span className="text-muted-foreground">None</span>
-                      }
-                    </p>
+                    {(["annual", "study", "noc", "rotation", "parental"] as const).map((reason) => {
+                      const reasonBlocks = unavailBlocks.filter(b => b.reason === reason);
+                      const labels: Record<string, string> = { annual: "Annual leave", study: "Study leave", noc: "NOC dates", rotation: "Rotations / other", parental: "Parental leave" };
+                      return (
+                        <p key={reason}>
+                          <span className="text-muted-foreground">{labels[reason]}: </span>
+                          {reasonBlocks.length > 0 ? (
+                            <span>
+                              {reasonBlocks.map((b: any, i: number) => (
+                                <span key={i} className="block text-xs ml-2">
+                                  {fmtRange(b.start_date, b.end_date)}
+                                  {b.location ? ` (${b.location})` : ""}
+                                  {b.notes ? ` — ${b.notes}` : ""}
+                                </span>
+                              ))}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">None</span>
+                          )}
+                        </p>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -630,23 +660,39 @@ export default function DoctorProfile() {
                   </dl>
                 </div>
 
-                {/* E — Preferences & Sessions */}
+                {/* E — Preferences & Sessions (from relational tables) */}
                 <div className="space-y-2 py-4">
                   <p className="text-sm font-semibold text-card-foreground">Preferences & Sessions</p>
                   <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
                     <dt className="text-muted-foreground">Dual specialty</dt>
-                    <dd>{survey.dual_specialty ? `Yes${survey.dual_specialty_types?.length ? ` (${survey.dual_specialty_types.join(", ")})` : ""}` : "No"}</dd>
+                    <dd>{dualSpecs.length > 0 ? `Yes (${dualSpecs.map(d => d.specialty_name).join(", ")})` : survey.dual_specialty ? `Yes${survey.dual_specialty_types?.length ? ` (${survey.dual_specialty_types.join(", ")})` : ""}` : "No"}</dd>
                     <dt className="text-muted-foreground">Specialties</dt>
                     <dd>
-                      {Array.isArray(survey.specialties_requested) && survey.specialties_requested.length > 0
-                        ? survey.specialties_requested.map((s: any, i: number) => (
-                            <span key={i} className="block text-xs">{s.name}{s.notes ? ` — ${s.notes}` : ""}</span>
+                      {trainingReqs.filter(r => r.category === "specialty").length > 0
+                        ? trainingReqs.filter(r => r.category === "specialty").map((r: any, i: number) => (
+                            <span key={i} className="block text-xs">{r.name}{r.notes ? ` — ${r.notes}` : ""}</span>
                           ))
                         : <span className="text-muted-foreground">None</span>
                       }
                     </dd>
                     <dt className="text-muted-foreground">Special sessions</dt>
-                    <dd>{survey.special_sessions?.length ? survey.special_sessions.join(", ") : <span className="text-muted-foreground">—</span>}</dd>
+                    <dd>
+                      {trainingReqs.filter(r => r.category === "session").length > 0
+                        ? trainingReqs.filter(r => r.category === "session").map((r: any, i: number) => (
+                            <span key={i} className="block text-xs">{r.name}{r.notes ? ` — ${r.notes}` : ""}</span>
+                          ))
+                        : <span className="text-muted-foreground">—</span>
+                      }
+                    </dd>
+                    <dt className="text-muted-foreground">Other interests</dt>
+                    <dd>
+                      {trainingReqs.filter(r => r.category === "interest").length > 0
+                        ? trainingReqs.filter(r => r.category === "interest").map((r: any, i: number) => (
+                            <span key={i} className="block text-xs">{r.name}{r.notes ? ` — ${r.notes}` : ""}</span>
+                          ))
+                        : <span className="text-muted-foreground">—</span>
+                      }
+                    </dd>
                     <dt className="text-muted-foreground">Sign-off needs</dt>
                     <dd>{survey.signoff_needs || <span className="text-muted-foreground">—</span>}</dd>
                     <dt className="text-muted-foreground">Additional notes</dt>

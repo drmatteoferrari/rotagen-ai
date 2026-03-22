@@ -59,8 +59,11 @@ function ExpandedDoctorPanel({
     );
   }
 
-  const cj = surveyData?.competencies_json ?? {};
   const wte = surveyData?.wte_percent ?? null;
+
+  // Prefer flat competency bools, fallback to JSONB
+  const flatKey = (k: string, suffix: string) => surveyData?.[`${k}_${suffix}`] as boolean | null | undefined;
+  const cj = surveyData?.competencies_json ?? {};
   const ltftDays: string[] = surveyData?.ltft_days_off ?? [];
   const DAY_ORDER = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
   const sortedDays = [...ltftDays].sort((a, b) => DAY_ORDER.indexOf(a) - DAY_ORDER.indexOf(b));
@@ -105,8 +108,8 @@ function ExpandedDoctorPanel({
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Competencies</p>
           <div className="flex flex-wrap gap-1.5">
             {(["iac", "iaoc", "icu", "transfer"] as const).map((key) => {
-              const achieved = cj[key]?.achieved as boolean | null | undefined;
-              const workingTowards = cj[key]?.workingTowards as boolean | null | undefined;
+              const achieved = flatKey(key, "achieved") ?? cj[key]?.achieved ?? null;
+              const workingTowards = flatKey(key, "working") ?? cj[key]?.workingTowards ?? null;
               const colour = achieved === true
                 ? "bg-emerald-100 text-emerald-700"
                 : workingTowards === true
@@ -428,7 +431,7 @@ export default function Roster() {
       if (doctor) {
         const { data } = await supabase
           .from("doctor_survey_responses")
-          .select("wte_percent, ltft_days_off, competencies_json, grade, nhs_email, phone_number")
+          .select("wte_percent, ltft_days_off, competencies_json, grade, nhs_email, phone_number, iac_achieved, iac_working, iac_remote, iaoc_achieved, iaoc_working, iaoc_remote, icu_achieved, icu_working, icu_remote, transfer_achieved, transfer_working, transfer_remote")
           .eq("doctor_id", doctorId)
           .eq("rota_config_id", doctor.rota_config_id)
           .maybeSingle();
