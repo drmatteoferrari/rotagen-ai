@@ -1,35 +1,51 @@
 
-# Database Normalization — COMPLETED (v2: Postgres RPC)
 
-## What was done
+## Plan: Doctor Calendar Page + Route + Migration
 
-1. **Database migration (v1)**: Created 3 ENUMs (`unavailability_reason`, `day_of_week`, `request_category`), 4 new tables (`unavailability_blocks`, `ltft_patterns`, `training_requests`, `dual_specialties`), 12 flat competency boolean columns on `doctor_survey_responses`, RLS policies, and validation trigger.
+### Overview
+Build a new individual doctor calendar page (`/admin/doctor-calendar/:doctorId`) with day/week/month views, wire its route, create a DB migration for coordinator calendar overrides, and add supporting types.
 
-2. **Database migration (v2)**: Replaced Edge Function with `handle_survey_normalization` Postgres RPC (`SECURITY DEFINER`). This function runs inside a single Postgres transaction — all-or-nothing atomicity.
+### Changes
 
-3. **SurveyContext.tsx**: `submitSurvey()` saves JSONB draft, then calls `supabase.rpc('handle_survey_normalization')` as a **blocking** operation. If the RPC fails, submission is aborted and the user sees a descriptive error.
+**1. Database Migration**
+- Create `supabase/migrations/20250324000000_coordinator_calendar_overrides.sql`
+- Table with RLS policy scoped to coordinator ownership via `rota_configs`
 
-4. **Pre-rota engine refactored**: `preRotaGenerator.ts` reads from relational tables with JSONB fallback for un-normalized data.
+**2. Update `src/integrations/supabase/types.ts`**
+- Add `coordinator_calendar_overrides` entry (Row/Insert/Update/Relationships) inside the `Tables` object, after `coordinator_accounts`
 
-5. **Admin UI updated**: `DoctorProfile.tsx` fetches from all 4 relational tables. `Roster.tsx` reads flat competency bools with JSONB fallback.
+**3. New file: `src/lib/calendarOverrides.ts`**
+- `CalendarOverride` interface, `getTodayISO()` helper, `mapOverrideRow()` mapper
 
-6. **Edge Function deleted**: `supabase/functions/normalize-survey/` removed — replaced entirely by the Postgres RPC.
+**4. New file: `src/pages/admin/DoctorCalendarPage.tsx`**
+- Full page component with:
+  - Data loading from `pre_rota_results` + doctor lookup from `calendarData`
+  - Three views: MonthView (grid with week numbers, today highlight, BH/weekend styling, click-to-day), WeekView (column per day), DayView (event cards)
+  - Responsive: defaults to month on desktop, day on mobile
+  - Navigation: prev/next buttons, date picker, swipe gestures, keyboard arrows
+  - Error states for missing pre-rota, blocked status, unknown doctor
+  - Back button to `/admin/pre-rota-calendar`
 
-## Architecture
+**5. Wire route in `src/App.tsx`**
+- Import `DoctorCalendarPage`
+- Add `<Route path="/admin/doctor-calendar/:doctorId" element={<DoctorCalendarPage />} />` after the pre-rota-calendar route
 
-```text
-DRAFT (auto-save)                    SUBMIT
-─────────────────                    ──────
-doctor_survey_responses              Postgres RPC: handle_survey_normalization
-  ├─ JSONB cols (unchanged)    ──►   ├─ unavailability_blocks
-  ├─ flat competency bools           ├─ ltft_patterns
-  └─ scalar fields                   ├─ training_requests
-                                     └─ dual_specialties
-                                     + flatten competency bools
-                                     + set status='submitted'
-                                     + update doctors table
+### Technical Details
 
-All within a single Postgres transaction (atomic).
-```
+- `MonthView` uses `getMonthWeekRows()` for proper Mon-Sun grid (not `calendarData.weeks`)
+- Bank holidays sourced from `calendarData.bankHolidays` (no separate DB fetch)
+- `doctor.wte` displayed as-is with `%` suffix (not multiplied)
+- Navigation state (`currentDateISO`, `currentMonthKey`, `currentWeekIndex`) synced atomically via `navigateToDate()`
+- Keyboard/swipe handlers use `useRef` to avoid stale closures
+- Chips skip `AVAILABLE` and `BH` codes; colours defined in `CHIP_COLOURS` map
+- Week index lookup uses `w.startDate <= date <= w.endDate` range check
 
-JSONB columns remain for auto-save drafts. On final submit, the Postgres RPC atomically maps JSONB into relational tables. Pre-rota and admin code read relational tables first, falling back to JSONB for un-normalized data.
+### Files touched
+| File | Action |
+|------|--------|
+| `supabase/migrations/20250324000000_coordinator_calendar_overrides.sql` | Create |
+| `src/integrations/supabase/types.ts` | Add table type |
+| `src/lib/calendarOverrides.ts` | Create |
+| `src/pages/admin/DoctorCalendarPage.tsx` | Create |
+| `src/App.tsx` | Add import + route |
+
