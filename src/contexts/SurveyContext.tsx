@@ -381,8 +381,8 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
   const resolveToken = async (t: string) => {
     setLoadState("loading");
     try {
-      const { data: doctorRow, error } = await withRetry(() =>
-        supabase
+      const result = await withRetry(async () => {
+        const res = await supabase
           .from("doctors")
           .select(`
             id, first_name, last_name, email, grade, survey_status, rota_config_id, survey_submitted_at,
@@ -391,9 +391,11 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
             )
           `)
           .eq("survey_token", t)
-          .maybeSingle()
-          .then(res => { if (res.error) throw res.error; return res; })
-      );
+          .maybeSingle();
+        if (res.error) throw res.error;
+        return res;
+      });
+      const { data: doctorRow } = result;
       if (!doctorRow) {
         setErrorMessage("This link is invalid. Contact your coordinator for a new link.");
         setLoadState("error");
