@@ -316,6 +316,31 @@ function dbRowToFormData(draft: any, base: SurveyFormData): SurveyFormData {
   };
 }
 
+// === Retry helper for lock contention ===
+
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  retries = 3,
+  delayMs = 300
+): Promise<T> {
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      return await fn();
+    } catch (err: any) {
+      const isLockError =
+        err?.message?.includes("AbortError") ||
+        err?.message?.includes("Lock") ||
+        err?.name === "AbortError";
+      if (isLockError && attempt < retries - 1) {
+        await new Promise((resolve) => setTimeout(resolve, delayMs * (attempt + 1)));
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw new Error("Exceeded retry limit");
+}
+
 // === Provider ===
 
 export function SurveyProvider({ token, adminMode = false, children }: { token: string | null; adminMode?: boolean; children: ReactNode }) {
