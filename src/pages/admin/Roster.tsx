@@ -411,11 +411,9 @@ export default function Roster() {
   // ─── Toggle expand and lazy-load survey data ───
   const toggleExpand = async (doctorId: string) => {
     const isCurrentlyExpanded = expandedIds.has(doctorId);
+    const alreadyCached = surveyCache.hasOwnProperty(doctorId);
 
-    if (!isCurrentlyExpanded && !surveyCache[doctorId]) {
-      setSurveyLoading((prev) => ({ ...prev, [doctorId]: true }));
-    }
-
+    // First: open the panel (expand) or close it
     setExpandedIds((prev) => {
       const next = new Set(prev);
       if (next.has(doctorId)) {
@@ -426,7 +424,9 @@ export default function Roster() {
       return next;
     });
 
-    if (!isCurrentlyExpanded && !surveyCache[doctorId]) {
+    // Only fetch if opening and not yet cached
+    if (!isCurrentlyExpanded && !alreadyCached) {
+      setSurveyLoading((prev) => ({ ...prev, [doctorId]: true }));
       const doctor = [...doctors, ...inactiveDoctors].find((d) => d.id === doctorId);
       if (doctor) {
         const { data } = await supabase
@@ -436,6 +436,8 @@ export default function Roster() {
           .eq("rota_config_id", doctor.rota_config_id)
           .maybeSingle();
         setSurveyCache((prev) => ({ ...prev, [doctorId]: data ?? null }));
+      } else {
+        setSurveyCache((prev) => ({ ...prev, [doctorId]: null }));
       }
       setSurveyLoading((prev) => ({ ...prev, [doctorId]: false }));
     }
