@@ -171,7 +171,7 @@ const DEFAULT_FORM_DATA: SurveyFormData = {
 };
 
 type LoadState = "loading" | "error" | "submitted" | "ready";
-type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
+type SaveStatus = "idle" | "saving" | "saved" | "error";
 
 interface SurveyContextType {
   loadState: LoadState;
@@ -207,9 +207,17 @@ const SurveyContext = createContext<SurveyContextType | null>(null);
 function formDataToDbRow(fd: SurveyFormData) {
   const competencies_json = {
     iac: { achieved: fd.iacAchieved, workingTowards: fd.iacWorkingTowards, remoteSupervision: fd.iacRemoteSupervision },
-    iaoc: { achieved: fd.iaocAchieved, workingTowards: fd.iaocWorkingTowards, remoteSupervision: fd.iaocRemoteSupervision },
+    iaoc: {
+      achieved: fd.iaocAchieved,
+      workingTowards: fd.iaocWorkingTowards,
+      remoteSupervision: fd.iaocRemoteSupervision,
+    },
     icu: { achieved: fd.icuAchieved, workingTowards: fd.icuWorkingTowards, remoteSupervision: fd.icuRemoteSupervision },
-    transfer: { achieved: fd.transferAchieved, workingTowards: fd.transferWorkingTowards, remoteSupervision: fd.transferRemoteSupervision },
+    transfer: {
+      achieved: fd.transferAchieved,
+      workingTowards: fd.transferWorkingTowards,
+      remoteSupervision: fd.transferRemoteSupervision,
+    },
   };
 
   return {
@@ -242,7 +250,7 @@ function formDataToDbRow(fd: SurveyFormData) {
     specific_days_off: fd.specificDaysOff,
     exemption_details: fd.exemptionDetails,
     specialties_requested: fd.specialtiesRequested as any,
-    special_sessions: fd.specialSessions.map((s) => s.notes ? `${s.name}: ${s.notes}` : s.name),
+    special_sessions: fd.specialSessions.map((s) => (s.notes ? `${s.name}: ${s.notes}` : s.name)),
     other_interests: fd.otherInterests as any,
     signoff_needs: fd.signoffNeeds,
     additional_notes: fd.additionalNotes,
@@ -250,7 +258,7 @@ function formDataToDbRow(fd: SurveyFormData) {
     confirm_algorithm_understood: fd.confirmAlgorithmUnderstood ?? false,
     confirm_exemptions_understood: fd.confirmExemptionsUnderstood ?? false,
     confirm_fairness_understood: fd.confirmFairnessUnderstood ?? false,
-    signature_name: fd.signatureName ?? '',
+    signature_name: fd.signatureName ?? "",
     signature_date: fd.signatureDate || null,
   };
 }
@@ -300,8 +308,8 @@ function dbRowToFormData(draft: any, base: SurveyFormData): SurveyFormData {
     exemptionDetails: draft.exemption_details || "",
     specialtiesRequested: draft.specialties_requested || [],
     specialSessions: (draft.special_sessions ?? []).map((s: string) => {
-      const colonIdx = s.indexOf(': ');
-      if (colonIdx === -1) return { name: s, notes: '' };
+      const colonIdx = s.indexOf(": ");
+      if (colonIdx === -1) return { name: s, notes: "" };
       return { name: s.slice(0, colonIdx), notes: s.slice(colonIdx + 2) };
     }),
     otherInterests: draft.other_interests || [],
@@ -311,39 +319,22 @@ function dbRowToFormData(draft: any, base: SurveyFormData): SurveyFormData {
     confirmAlgorithmUnderstood: draft.confirm_algorithm_understood ?? false,
     confirmExemptionsUnderstood: draft.confirm_exemptions_understood ?? false,
     confirmFairnessUnderstood: draft.confirm_fairness_understood ?? false,
-    signatureName: draft.signature_name ?? '',
-    signatureDate: draft.signature_date ?? '',
+    signatureName: draft.signature_name ?? "",
+    signatureDate: draft.signature_date ?? "",
   };
-}
-
-// === Retry helper for lock contention ===
-
-async function withRetry<T>(
-  fn: () => Promise<T>,
-  retries = 3,
-  delayMs = 300
-): Promise<T> {
-  for (let attempt = 0; attempt < retries; attempt++) {
-    try {
-      return await fn();
-    } catch (err: any) {
-      const isLockError =
-        err?.message?.includes("AbortError") ||
-        err?.message?.includes("Lock") ||
-        err?.name === "AbortError";
-      if (isLockError && attempt < retries - 1) {
-        await new Promise((resolve) => setTimeout(resolve, delayMs * (attempt + 1)));
-        continue;
-      }
-      throw err;
-    }
-  }
-  throw new Error("Exceeded retry limit");
 }
 
 // === Provider ===
 
-export function SurveyProvider({ token, adminMode = false, children }: { token: string | null; adminMode?: boolean; children: ReactNode }) {
+export function SurveyProvider({
+  token,
+  adminMode = false,
+  children,
+}: {
+  token: string | null;
+  adminMode?: boolean;
+  children: ReactNode;
+}) {
   const [loadState, setLoadState] = useState<LoadState>("loading");
   const [errorMessage, setErrorMessage] = useState("");
   const [doctor, setDoctor] = useState<SurveyDoctorInfo | null>(null);
@@ -354,48 +345,42 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
   const [submitError, setSubmitError] = useState("");
   const [draftSavedAt, setDraftSavedAt] = useState<Date | null>(null);
   const [submittedAt, setSubmittedAt] = useState<string | null>(null);
-  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [returnedFromEdit, setReturnedFromEdit] = useState(false);
-  const saveStatusRef = useRef<SaveStatus>('idle');
+  const saveStatusRef = useRef<SaveStatus>("idle");
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const formDataRef = useRef(formData);
   const doctorRef = useRef(doctor);
   formDataRef.current = formData;
   doctorRef.current = doctor;
 
-  // Token resolution — wait for auth to settle to avoid GoTrue lock contention
+  // Token resolution
   useEffect(() => {
     if (!token) {
       setErrorMessage("This link is invalid. Contact your coordinator for a new link.");
       setLoadState("error");
       return;
     }
-    supabase.auth.getSession().then(() => {
-      resolveToken(token);
-    }).catch(() => {
-      // If auth init fails entirely, proceed anyway — the DB query uses the anon key
-      resolveToken(token);
-    });
+    resolveToken(token);
   }, [token]);
 
   const resolveToken = async (t: string) => {
     setLoadState("loading");
     try {
-      const result = await withRetry(async () => {
-        const res = await supabase
-          .from("doctors")
-          .select(`
-            id, first_name, last_name, email, grade, survey_status, rota_config_id, survey_submitted_at,
-            rota_configs!doctors_rota_config_id_fkey (
-              rota_start_date, rota_end_date, rota_duration_weeks, department_name, trust_name, survey_deadline, owned_by
-            )
-          `)
-          .eq("survey_token", t)
-          .maybeSingle();
-        if (res.error) throw res.error;
-        return res;
-      });
-      const { data: doctorRow } = result;
+      const { data: doctorRow, error } = await supabase
+        .from("doctors")
+        .select(
+          `
+          id, first_name, last_name, email, grade, survey_status, rota_config_id, survey_submitted_at,
+          rota_configs!doctors_rota_config_id_fkey (
+            rota_start_date, rota_end_date, rota_duration_weeks, department_name, trust_name, survey_deadline, owned_by
+          )
+        `,
+        )
+        .eq("survey_token", t)
+        .maybeSingle();
+
+      if (error) throw error;
       if (!doctorRow) {
         setErrorMessage("This link is invalid. Contact your coordinator for a new link.");
         setLoadState("error");
@@ -514,28 +499,26 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
     if (!doc) return true; // nothing to save — do not block navigation
     const fd = formDataRef.current;
 
-    if (saveStatusRef.current === 'error') {
-      setSaveStatus('idle');
-      saveStatusRef.current = 'idle';
+    if (saveStatusRef.current === "error") {
+      setSaveStatus("idle");
+      saveStatusRef.current = "idle";
     }
 
-    setSaveStatus('saving');
-    saveStatusRef.current = 'saving';
+    setSaveStatus("saving");
+    saveStatusRef.current = "saving";
     try {
       // PRIMARY SAVE — doctor_survey_responses
       const row = formDataToDbRow(fd);
-      const { error } = await supabase
-        .from("doctor_survey_responses")
-        .upsert(
-          {
-            doctor_id: doc.id,
-            rota_config_id: doc.rotaConfigId,
-            ...row,
-            last_saved_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          } as any,
-          { onConflict: "doctor_id,rota_config_id" }
-        );
+      const { error } = await supabase.from("doctor_survey_responses").upsert(
+        {
+          doctor_id: doc.id,
+          rota_config_id: doc.rotaConfigId,
+          ...row,
+          last_saved_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        } as any,
+        { onConflict: "doctor_id,rota_config_id" },
+      );
       if (error) {
         console.error("saveDraft upsert error:", error.message, error.code);
         throw error;
@@ -561,20 +544,20 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
       }
 
       setDraftSavedAt(new Date());
-      setSaveStatus('saved');
-      saveStatusRef.current = 'saved';
+      setSaveStatus("saved");
+      saveStatusRef.current = "saved";
       setTimeout(() => {
-        setSaveStatus('idle');
-        saveStatusRef.current = 'idle';
+        setSaveStatus("idle");
+        saveStatusRef.current = "idle";
       }, 2000);
       return true;
     } catch (err) {
       console.error("Auto-save failed:", err);
-      setSaveStatus('error');
-      saveStatusRef.current = 'error';
+      setSaveStatus("error");
+      saveStatusRef.current = "error";
       setTimeout(() => {
-        setSaveStatus('idle');
-        saveStatusRef.current = 'idle';
+        setSaveStatus("idle");
+        saveStatusRef.current = "idle";
       }, 4000);
       return false;
     }
@@ -585,15 +568,21 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
     autoSaveTimer.current = setTimeout(() => saveDraft(), 1500);
   }, [saveDraft]);
 
-  const setField = useCallback(<K extends keyof SurveyFormData>(key: K, value: SurveyFormData[K]) => {
-    setFormData((prev) => ({ ...prev, [key]: value }));
-    scheduleAutoSave();
-  }, [scheduleAutoSave]);
+  const setField = useCallback(
+    <K extends keyof SurveyFormData>(key: K, value: SurveyFormData[K]) => {
+      setFormData((prev) => ({ ...prev, [key]: value }));
+      scheduleAutoSave();
+    },
+    [scheduleAutoSave],
+  );
 
-  const setFields = useCallback((partial: Partial<SurveyFormData>) => {
-    setFormData((prev) => ({ ...prev, ...partial }));
-    scheduleAutoSave();
-  }, [scheduleAutoSave]);
+  const setFields = useCallback(
+    (partial: Partial<SurveyFormData>) => {
+      setFormData((prev) => ({ ...prev, ...partial }));
+      scheduleAutoSave();
+    },
+    [scheduleAutoSave],
+  );
 
   const setStep = useCallback((n: number) => {
     setCurrentStep(Math.max(1, Math.min(7, n)));
@@ -627,23 +616,21 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
 
       // 1. Save the latest JSONB draft first (ensures RPC reads current data)
       const row = formDataToDbRow(fd);
-      const { error: respErr } = await supabase
-        .from("doctor_survey_responses")
-        .upsert(
-          {
-            doctor_id: doc.id,
-            rota_config_id: doc.rotaConfigId,
-            ...row,
-            last_saved_at: now,
-            updated_at: now,
-          } as any,
-          { onConflict: "doctor_id,rota_config_id" }
-        );
+      const { error: respErr } = await supabase.from("doctor_survey_responses").upsert(
+        {
+          doctor_id: doc.id,
+          rota_config_id: doc.rotaConfigId,
+          ...row,
+          last_saved_at: now,
+          updated_at: now,
+        } as any,
+        { onConflict: "doctor_id,rota_config_id" },
+      );
       if (respErr) throw respErr;
 
       // 2. Atomic normalization via Postgres RPC (BLOCKING — must succeed)
       try {
-        const { error: rpcErr } = await supabase.rpc('handle_survey_normalization', {
+        const { error: rpcErr } = await supabase.rpc("handle_survey_normalization", {
           p_doctor_id: doc.id,
           p_rota_config_id: doc.rotaConfigId,
           p_signature_name: fd.signatureName || null,
@@ -651,13 +638,17 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
         });
         if (rpcErr) {
           console.error("Survey normalization RPC failed:", rpcErr);
-          toast.error("Submission Failed: Your scheduling data could not be saved. Please check your connection and try again.");
+          toast.error(
+            "Submission Failed: Your scheduling data could not be saved. Please check your connection and try again.",
+          );
           setSubmitting(false);
           return false;
         }
       } catch (rpcCatchErr) {
         console.error("Survey normalization RPC exception:", rpcCatchErr);
-        toast.error("Submission Failed: Your scheduling data could not be saved. Please check your connection and try again.");
+        toast.error(
+          "Submission Failed: Your scheduling data could not be saved. Please check your connection and try again.",
+        );
         setSubmitting(false);
         return false;
       }
@@ -675,21 +666,14 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
             rotaStartDate: ri?.startDate || "TBC",
             rotaEndDate: ri?.endDate || "TBC",
             surveyDeadline: ri?.surveyDeadline || "TBC",
-            workingPattern: fd.wtePercent === 100
-              ? "Full-time (100%)"
-              : `${fd.wtePercent === 0 ? fd.wteOtherValue : fd.wtePercent}% LTFT${fd.ltftDaysOff.length ? ` (${fd.ltftDaysOff.join(", ")} off)` : ""}`,
-            annualLeaveSummary: fd.annualLeave.length
-              ? `${fd.annualLeave.length} period(s)`
-              : "None entered",
-            studyLeaveSummary: fd.studyLeave.length
-              ? `${fd.studyLeave.length} period(s)`
-              : "None entered",
-            nocSummary: fd.nocDates.length
-              ? `${fd.nocDates.length} date(s)/period(s)`
-              : "None",
-            parentalLeave: fd.parentalLeaveExpected
-              ? `${fd.parentalLeaveStart} to ${fd.parentalLeaveEnd}`
-              : "None",
+            workingPattern:
+              fd.wtePercent === 100
+                ? "Full-time (100%)"
+                : `${fd.wtePercent === 0 ? fd.wteOtherValue : fd.wtePercent}% LTFT${fd.ltftDaysOff.length ? ` (${fd.ltftDaysOff.join(", ")} off)` : ""}`,
+            annualLeaveSummary: fd.annualLeave.length ? `${fd.annualLeave.length} period(s)` : "None entered",
+            studyLeaveSummary: fd.studyLeave.length ? `${fd.studyLeave.length} period(s)` : "None entered",
+            nocSummary: fd.nocDates.length ? `${fd.nocDates.length} date(s)/period(s)` : "None",
+            parentalLeave: fd.parentalLeaveExpected ? `${fd.parentalLeaveStart} to ${fd.parentalLeaveEnd}` : "None",
           },
         });
       } catch (emailErr) {
@@ -701,7 +685,9 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
       return true;
     } catch (err: any) {
       console.error("Survey submission failed:", err);
-      setSubmitError(err?.message || "Submission failed — please try again. If this persists, contact your coordinator.");
+      setSubmitError(
+        err?.message || "Submission failed — please try again. If this persists, contact your coordinator.",
+      );
       return false;
     } finally {
       setSubmitting(false);
@@ -711,11 +697,30 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
   return (
     <SurveyContext.Provider
       value={{
-        loadState, errorMessage, doctor, rotaInfo, formData, currentStep,
-        setField, setFields, setStep, nextStep, prevStep, goToStep,
-        submitSurvey, saveDraft, submitting, submitError, draftSavedAt, submittedAt,
-        setSubmittedAt, setLoadState, saveStatus, isAdminMode: adminMode,
-        returnedFromEdit, setReturnedFromEdit,
+        loadState,
+        errorMessage,
+        doctor,
+        rotaInfo,
+        formData,
+        currentStep,
+        setField,
+        setFields,
+        setStep,
+        nextStep,
+        prevStep,
+        goToStep,
+        submitSurvey,
+        saveDraft,
+        submitting,
+        submitError,
+        draftSavedAt,
+        submittedAt,
+        setSubmittedAt,
+        setLoadState,
+        saveStatus,
+        isAdminMode: adminMode,
+        returnedFromEdit,
+        setReturnedFromEdit,
       }}
     >
       {children}
