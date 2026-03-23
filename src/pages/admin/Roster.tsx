@@ -1531,7 +1531,7 @@ export default function Roster() {
                           type="button"
                           onClick={async () => {
                             const isCurrentlyExpanded = inactiveExpandedIds.has(doctor.id);
-                            if (!isCurrentlyExpanded && !surveyCache[doctor.id]) {
+                            if (!isCurrentlyExpanded && !Object.prototype.hasOwnProperty.call(surveyCache, doctor.id)) {
                               setSurveyLoading((prev) => ({ ...prev, [doctor.id]: true }));
                               const found = [...doctors, ...inactiveDoctors].find((d) => d.id === doctor.id);
                               if (found) {
