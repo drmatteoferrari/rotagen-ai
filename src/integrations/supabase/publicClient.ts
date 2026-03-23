@@ -15,3 +15,4 @@ export const supabasePublic = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KE
     storageKey: 'sb-public-survey-auth',
   }
 });
+
