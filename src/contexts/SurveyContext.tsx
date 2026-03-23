@@ -381,18 +381,19 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
   const resolveToken = async (t: string) => {
     setLoadState("loading");
     try {
-      const { data: doctorRow, error } = await supabase
-        .from("doctors")
-        .select(`
-          id, first_name, last_name, email, grade, survey_status, rota_config_id, survey_submitted_at,
-          rota_configs!doctors_rota_config_id_fkey (
-            rota_start_date, rota_end_date, rota_duration_weeks, department_name, trust_name, survey_deadline, owned_by
-          )
-        `)
-        .eq("survey_token", t)
-        .maybeSingle();
-
-      if (error) throw error;
+      const { data: doctorRow, error } = await withRetry(() =>
+        supabase
+          .from("doctors")
+          .select(`
+            id, first_name, last_name, email, grade, survey_status, rota_config_id, survey_submitted_at,
+            rota_configs!doctors_rota_config_id_fkey (
+              rota_start_date, rota_end_date, rota_duration_weeks, department_name, trust_name, survey_deadline, owned_by
+            )
+          `)
+          .eq("survey_token", t)
+          .maybeSingle()
+          .then(res => { if (res.error) throw res.error; return res; })
+      );
       if (!doctorRow) {
         setErrorMessage("This link is invalid. Contact your coordinator for a new link.");
         setLoadState("error");
