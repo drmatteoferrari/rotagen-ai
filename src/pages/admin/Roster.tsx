@@ -1556,23 +1556,44 @@ export default function Roster() {
                           type="button"
                           onClick={async () => {
                             const isCurrentlyExpanded = inactiveExpandedIds.has(doctor.id);
-                            if (!isCurrentlyExpanded && !Object.prototype.hasOwnProperty.call(surveyCache, doctor.id)) {
-                              setSurveyLoading((prev) => ({ ...prev, [doctor.id]: true }));
-                              const found = [...doctors, ...inactiveDoctors].find((d) => d.id === doctor.id);
-                              if (found) {
-                                const { data } = await supabase
-                                  .from("doctor_survey_responses")
-                                  .select("wte_percent, ltft_days_off, competencies_json, grade, nhs_email, phone_number")
-                                  .eq("doctor_id", doctor.id)
-                                  .eq("rota_config_id", found.rota_config_id)
-                                  .maybeSingle();
-                                setSurveyCache((prev) => ({ ...prev, [doctor.id]: data ?? null }));
-                              }
-                              setSurveyLoading((prev) => ({ ...prev, [doctor.id]: false }));
+
+                            if (isCurrentlyExpanded) {
+                              setInactiveExpandedIds((prev) => {
+                                const next = new Set(prev);
+                                next.delete(doctor.id);
+                                return next;
+                              });
+                              return;
                             }
+
+                            const alreadyCached = Object.prototype.hasOwnProperty.call(surveyCache, doctor.id);
+
+                            if (alreadyCached) {
+                              setInactiveExpandedIds((prev) => {
+                                const next = new Set(prev);
+                                next.add(doctor.id);
+                                return next;
+                              });
+                              return;
+                            }
+
+                            setSurveyLoading((prev) => ({ ...prev, [doctor.id]: true }));
+                            const found = [...doctors, ...inactiveDoctors].find((d) => d.id === doctor.id);
+                            if (found) {
+                              const { data } = await supabase
+                                .from("doctor_survey_responses")
+                                .select("wte_percent, ltft_days_off, competencies_json, grade, nhs_email, phone_number, iac_achieved, iac_working, iac_remote, iaoc_achieved, iaoc_working, iaoc_remote, icu_achieved, icu_working, icu_remote, transfer_achieved, transfer_working, transfer_remote")
+                                .eq("doctor_id", doctor.id)
+                                .eq("rota_config_id", found.rota_config_id)
+                                .maybeSingle();
+                              setSurveyCache((prev) => ({ ...prev, [doctor.id]: data ?? null }));
+                            } else {
+                              setSurveyCache((prev) => ({ ...prev, [doctor.id]: null }));
+                            }
+                            setSurveyLoading((prev) => ({ ...prev, [doctor.id]: false }));
                             setInactiveExpandedIds((prev) => {
                               const next = new Set(prev);
-                              if (next.has(doctor.id)) { next.delete(doctor.id); } else { next.add(doctor.id); }
+                              next.add(doctor.id);
                               return next;
                             });
                           }}
