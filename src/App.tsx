@@ -101,6 +101,7 @@ const App = () => (
             <Route path="/admin/roster" element={<Roster />} />
             <Route path="/admin/pre-rota" element={<PreRotaPage />} />
             <Route path="/admin/pre-rota-calendar" element={<PreRotaCalendarPage />} />
+            <Route path="/admin/doctor-calendar/:doctorId" element={<DoctorCalendarPage />} />
             <Route path="/admin/pre-rota-targets" element={<PreRotaTargetsPage />} />
             <Route path="/admin/survey-override/:doctorId/:step" element={<SurveyOverride />} />
             <Route path="/admin/doctor/:doctorId" element={<DoctorProfile />} />
