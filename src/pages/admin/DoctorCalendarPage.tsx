@@ -435,7 +435,7 @@ export default function DoctorCalendarPage() {
     const inRota = currentDateISO >= calendarData!.rotaStartDate && currentDateISO <= calendarData!.rotaEndDate
     const cell = doctor!.availability[currentDateISO]
     const codes = cell
-      ? [cell.primary, cell.secondary].filter((c): c is string => !!c && !SKIP_CODES.has(c))
+      ? ([cell.primary, cell.secondary] as (string | null)[]).filter((c): c is string => !!c && !SKIP_CODES.has(c))
       : []
 
     return (
