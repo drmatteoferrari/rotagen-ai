@@ -127,6 +127,75 @@ export type Database = {
         }
         Relationships: []
       }
+      coordinator_calendar_overrides: {
+        Row: {
+          action: string
+          created_at: string
+          created_by: string
+          doctor_id: string
+          end_date: string
+          event_type: string
+          id: string
+          note: string | null
+          original_end_date: string | null
+          original_event_type: string | null
+          original_start_date: string | null
+          recurrence: string
+          recurrence_dates: string[] | null
+          rota_config_id: string
+          start_date: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          created_by: string
+          doctor_id: string
+          end_date: string
+          event_type: string
+          id?: string
+          note?: string | null
+          original_end_date?: string | null
+          original_event_type?: string | null
+          original_start_date?: string | null
+          recurrence?: string
+          recurrence_dates?: string[] | null
+          rota_config_id: string
+          start_date: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          created_by?: string
+          doctor_id?: string
+          end_date?: string
+          event_type?: string
+          id?: string
+          note?: string | null
+          original_end_date?: string | null
+          original_event_type?: string | null
+          original_start_date?: string | null
+          recurrence?: string
+          recurrence_dates?: string[] | null
+          rota_config_id?: string
+          start_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coordinator_calendar_overrides_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coordinator_calendar_overrides_rota_config_id_fkey"
+            columns: ["rota_config_id"]
+            isOneToOne: false
+            referencedRelation: "rota_configs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       doctor_survey_responses: {
         Row: {
           additional_notes: string | null

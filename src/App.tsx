@@ -32,6 +32,7 @@ import SurveyOverride from "./pages/admin/SurveyOverride";
 import Audit from "./pages/Audit";
 import Signup from "./pages/Signup";
 import PreRotaCalendarPage from "./pages/admin/PreRotaCalendarPage";
+import DoctorCalendarPage from "./pages/admin/DoctorCalendarPage";
 import PreRotaTargetsPage from "./pages/admin/PreRotaTargetsPage";
 import PreRotaPage from "./pages/admin/PreRotaPage";
 import SetupPage from "./pages/admin/SetupPage";
@@ -100,6 +101,7 @@ const App = () => (
             <Route path="/admin/roster" element={<Roster />} />
             <Route path="/admin/pre-rota" element={<PreRotaPage />} />
             <Route path="/admin/pre-rota-calendar" element={<PreRotaCalendarPage />} />
+            <Route path="/admin/doctor-calendar/:doctorId" element={<DoctorCalendarPage />} />
             <Route path="/admin/pre-rota-targets" element={<PreRotaTargetsPage />} />
             <Route path="/admin/survey-override/:doctorId/:step" element={<SurveyOverride />} />
             <Route path="/admin/doctor/:doctorId" element={<DoctorProfile />} />
