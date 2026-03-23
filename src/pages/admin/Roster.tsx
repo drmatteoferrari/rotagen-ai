@@ -57,6 +57,20 @@ function ExpandedDoctorPanel({
         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
       </div>
     );
+   }
+
+  if (!surveyData) {
+    return (
+      <div className="space-y-2">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+          <span className="text-muted-foreground">Grade</span>
+          <span className="font-medium">{doctor.grade || "—"}</span>
+          <span className="text-muted-foreground">Email</span>
+          <span className="font-medium truncate">{doctor.email || "—"}</span>
+        </div>
+        <p className="text-xs text-muted-foreground italic">Survey not yet started — no preference data available.</p>
+      </div>
+    );
   }
 
   const wte = surveyData?.wte_percent ?? null;
@@ -1531,7 +1545,7 @@ export default function Roster() {
                           type="button"
                           onClick={async () => {
                             const isCurrentlyExpanded = inactiveExpandedIds.has(doctor.id);
-                            if (!isCurrentlyExpanded && !surveyCache[doctor.id]) {
+                            if (!isCurrentlyExpanded && !Object.prototype.hasOwnProperty.call(surveyCache, doctor.id)) {
                               setSurveyLoading((prev) => ({ ...prev, [doctor.id]: true }));
                               const found = [...doctors, ...inactiveDoctors].find((d) => d.id === doctor.id);
                               if (found) {
