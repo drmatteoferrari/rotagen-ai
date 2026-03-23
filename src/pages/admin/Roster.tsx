@@ -88,6 +88,11 @@ function ExpandedDoctorPanel({
         )}
       </div>
 
+      {/* No survey data message */}
+      {!surveyData && (
+        <p className="text-sm text-muted-foreground italic">Survey not yet started — no preference data available.</p>
+      )}
+
       {/* Working pattern — only if survey data exists */}
       {surveyData && (
         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
