@@ -32,6 +32,7 @@ import SurveyOverride from "./pages/admin/SurveyOverride";
 import Audit from "./pages/Audit";
 import Signup from "./pages/Signup";
 import PreRotaCalendarPage from "./pages/admin/PreRotaCalendarPage";
+import DoctorCalendarPage from "./pages/admin/DoctorCalendarPage";
 import PreRotaTargetsPage from "./pages/admin/PreRotaTargetsPage";
 import PreRotaPage from "./pages/admin/PreRotaPage";
 import SetupPage from "./pages/admin/SetupPage";
