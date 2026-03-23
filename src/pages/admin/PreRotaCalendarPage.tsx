@@ -440,11 +440,11 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
     URL.revokeObjectURL(url);
   }, [calendarData, targetsData]);
 
-  const handleTouchStart = (e: { touches: { clientX: number; clientY: number }[] }) => {
+  const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
   };
-  const handleTouchEnd = (e: { changedTouches: { clientX: number; clientY: number }[] }) => {
+  const handleTouchEnd = (e: React.TouchEvent) => {
     const dx = e.changedTouches[0].clientX - touchStartX.current;
     const dy = Math.abs(e.changedTouches[0].clientY - touchStartY.current);
     if (Math.abs(dx) < 50 || Math.abs(dx) < dy) return;
