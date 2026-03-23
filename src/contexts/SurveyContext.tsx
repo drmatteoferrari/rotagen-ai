@@ -363,14 +363,19 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
   formDataRef.current = formData;
   doctorRef.current = doctor;
 
-  // Token resolution
+  // Token resolution — wait for auth to settle to avoid GoTrue lock contention
   useEffect(() => {
     if (!token) {
       setErrorMessage("This link is invalid. Contact your coordinator for a new link.");
       setLoadState("error");
       return;
     }
-    resolveToken(token);
+    supabase.auth.getSession().then(() => {
+      resolveToken(token);
+    }).catch(() => {
+      // If auth init fails entirely, proceed anyway — the DB query uses the anon key
+      resolveToken(token);
+    });
   }, [token]);
 
   const resolveToken = async (t: string) => {
