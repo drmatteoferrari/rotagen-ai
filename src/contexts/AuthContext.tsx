@@ -63,64 +63,74 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session?.user) {
-          const email = session.user.email ?? "";
-          const meta = session.user.user_metadata ?? {};
+      (event, session) => {
+        // Defer all async Supabase calls outside the GoTrue lock context.
+        // onAuthStateChange fires while the GoTrue Web Lock is held — awaiting
+        // Supabase queries inside it without deferral causes lock contention.
+        setTimeout(async () => {
+          if ((event === "SIGNED_IN" || event === "INITIAL_SESSION") && session?.user) {
+            const email = session.user.email ?? "";
+            const meta = session.user.user_metadata ?? {};
+            const isMaster = email === MASTER_EMAIL;
 
-          // Check if user is the master admin or has an approved registration
-          const isMaster = email === MASTER_EMAIL;
-          if (!isMaster) {
-            // Check registration_requests first
-            const { data: regApproved } = await (supabase
-              .from("registration_requests" as any)
-              .select("status")
-              .eq("email", email)
-              .maybeSingle() as any);
+            if (!isMaster) {
+              // Use .limit(1) array queries — never throws on multiple rows.
+              // A coordinator may have multiple registration_requests rows
+              // (e.g. submitted access more than once) — this is valid and expected.
+              // We only need to know if at least one approved row exists.
+              const { data: regRows } = await (supabase
+                .from("registration_requests" as any)
+                .select("id")
+                .eq("email", email)
+                .eq("status", "approved")
+                .limit(1) as any);
 
-            // Also check coordinator_accounts as fallback
-            const { data: coordAccount } = await (supabase
-              .from("coordinator_accounts" as any)
-              .select("status")
-              .eq("email", email)
-              .maybeSingle() as any);
+              const { data: coordRows } = await (supabase
+                .from("coordinator_accounts" as any)
+                .select("id")
+                .eq("email", email)
+                .eq("status", "active")
+                .limit(1) as any);
 
-            const isApproved =
-              regApproved?.status === "approved" ||
-              coordAccount?.status === "active";
+              const isApproved =
+                (regRows?.length ?? 0) > 0 ||
+                (coordRows?.length ?? 0) > 0;
 
-            if (!isApproved) {
-              await supabase.auth.signOut();
-              toast.error("Access denied. You are not authorised.");
-              setAuthLoading(false);
-              return;
+              if (!isApproved) {
+                await supabase.auth.signOut();
+                toast.error("Access denied. You are not authorised.");
+                setAuthLoading(false);
+                return;
+              }
             }
+
+            const displayName = meta.full_name ?? email;
+            const username = meta.username ?? email.split("@")[0];
+
+            setUser({
+              id: session.user.id,
+              username,
+              email,
+              role: "coordinator",
+              displayName,
+              mustChangePassword: meta.must_change_password ?? false,
+            });
+
+            loadAccountSettings(session.user.id).then(setAccountSettings);
+            restoreForUser(session.user.id);
           }
 
-          const displayName = meta.full_name ?? email;
-          const username = meta.username ?? email.split("@")[0];
+          if (event === "SIGNED_OUT") {
+            localStorage.removeItem("currentRotaConfigId");
+            setUser(null);
+            setAccountSettings(DEFAULT_ACCOUNT_SETTINGS);
+            clearSession();
+          }
 
-          setUser({
-            id: session.user.id,
-            username,
-            email,
-            role: "coordinator",
-            displayName,
-            mustChangePassword: meta.must_change_password ?? false,
-          });
-          // Load settings and restore rota context in background
-          loadAccountSettings(session.user.id).then(setAccountSettings);
-          restoreForUser(session.user.id);
-        }
-        if (event === "SIGNED_OUT") {
-          localStorage.removeItem("currentRotaConfigId");
-          setUser(null);
-          setAccountSettings(DEFAULT_ACCOUNT_SETTINGS);
-          clearSession();
-        }
-        if (event === "INITIAL_SESSION") {
-          setAuthLoading(false);
-        }
+          if (event === "INITIAL_SESSION") {
+            setAuthLoading(false);
+          }
+        }, 0);
       }
     );
     return () => subscription.unsubscribe();
