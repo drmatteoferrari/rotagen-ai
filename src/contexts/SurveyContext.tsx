@@ -316,6 +316,31 @@ function dbRowToFormData(draft: any, base: SurveyFormData): SurveyFormData {
   };
 }
 
+// === Retry helper for lock contention ===
+
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  retries = 3,
+  delayMs = 300
+): Promise<T> {
+  for (let attempt = 0; attempt < retries; attempt++) {
+    try {
+      return await fn();
+    } catch (err: any) {
+      const isLockError =
+        err?.message?.includes("AbortError") ||
+        err?.message?.includes("Lock") ||
+        err?.name === "AbortError";
+      if (isLockError && attempt < retries - 1) {
+        await new Promise((resolve) => setTimeout(resolve, delayMs * (attempt + 1)));
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw new Error("Exceeded retry limit");
+}
+
 // === Provider ===
 
 export function SurveyProvider({ token, adminMode = false, children }: { token: string | null; adminMode?: boolean; children: ReactNode }) {
@@ -338,31 +363,39 @@ export function SurveyProvider({ token, adminMode = false, children }: { token: 
   formDataRef.current = formData;
   doctorRef.current = doctor;
 
-  // Token resolution
+  // Token resolution — wait for auth to settle to avoid GoTrue lock contention
   useEffect(() => {
     if (!token) {
       setErrorMessage("This link is invalid. Contact your coordinator for a new link.");
       setLoadState("error");
       return;
     }
-    resolveToken(token);
+    supabase.auth.getSession().then(() => {
+      resolveToken(token);
+    }).catch(() => {
+      // If auth init fails entirely, proceed anyway — the DB query uses the anon key
+      resolveToken(token);
+    });
   }, [token]);
 
   const resolveToken = async (t: string) => {
     setLoadState("loading");
     try {
-      const { data: doctorRow, error } = await supabase
-        .from("doctors")
-        .select(`
-          id, first_name, last_name, email, grade, survey_status, rota_config_id, survey_submitted_at,
-          rota_configs!doctors_rota_config_id_fkey (
-            rota_start_date, rota_end_date, rota_duration_weeks, department_name, trust_name, survey_deadline, owned_by
-          )
-        `)
-        .eq("survey_token", t)
-        .maybeSingle();
-
-      if (error) throw error;
+      const result = await withRetry(async () => {
+        const res = await supabase
+          .from("doctors")
+          .select(`
+            id, first_name, last_name, email, grade, survey_status, rota_config_id, survey_submitted_at,
+            rota_configs!doctors_rota_config_id_fkey (
+              rota_start_date, rota_end_date, rota_duration_weeks, department_name, trust_name, survey_deadline, owned_by
+            )
+          `)
+          .eq("survey_token", t)
+          .maybeSingle();
+        if (res.error) throw res.error;
+        return res;
+      });
+      const { data: doctorRow } = result;
       if (!doctorRow) {
         setErrorMessage("This link is invalid. Contact your coordinator for a new link.");
         setLoadState("error");
