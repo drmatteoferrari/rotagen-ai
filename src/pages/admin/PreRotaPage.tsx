@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
   CalendarDays, Target, AlertTriangle, CheckCircle,
-  XCircle, Info, RefreshCw, Loader2, ArrowLeft, RotateCcw,
+  XCircle, Info, RefreshCw, Loader2, ArrowLeft, RotateCcw, BarChart3,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
