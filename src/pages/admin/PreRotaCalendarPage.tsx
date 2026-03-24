@@ -443,6 +443,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
       const allDatesFlat = mergedCd.weeks.flatMap(w => w.dates);
       const initialDayIdx = allDatesFlat.indexOf(initialDate);
       setCurrentDayIndex(initialDayIdx >= 0 ? initialDayIdx : 0);
+      setCurrentMonthKey(initialDate.slice(0, 7))
 
       // Compute eligibility
       if (mergedCd?.doctors && mergedCd?.weeks) {
