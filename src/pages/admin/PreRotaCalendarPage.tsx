@@ -410,6 +410,13 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
         setEligibility(elig);
       }
 
+      // Load coordinator overrides for all doctors in this rota
+      const { data: overrideRows } = await supabase
+        .from('coordinator_calendar_overrides')
+        .select('*')
+        .eq('rota_config_id', rotaConfigId)
+      setOverrides((overrideRows ?? []).map(mapOverrideRow));
+
       } catch (err) {
         console.error('Failed to load calendar data:', err);
         setLoadError('Failed to load data. Please go back and try again.');
