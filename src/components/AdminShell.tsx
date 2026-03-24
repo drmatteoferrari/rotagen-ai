@@ -116,7 +116,7 @@ function AdminShellInner() {
         </main>
 
         {/* Bottom Nav */}
-        <nav className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-border bg-card py-2 shadow-[0_-2px_10px_hsl(var(--foreground)/0.05)]">
+        <nav className="shrink-0 w-full flex items-center justify-around border-t border-border bg-card py-2 shadow-[0_-2px_10px_hsl(var(--foreground)/0.05)]">
           {navItems.map((item) => {
             const isActive = location.pathname.startsWith(item.url.replace(/\/step-\d+$/, ""));
             return (
