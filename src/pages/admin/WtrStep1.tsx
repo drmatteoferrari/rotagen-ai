@@ -113,12 +113,14 @@ export default function WtrStep1() {
           </CardContent>
         </Card>
 
-        <div className="flex justify-end">
-          <Button size="lg" onClick={() => navigate("/admin/wtr/step-2")} className="bg-red-600 hover:bg-red-700">
-            Continue
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        </div>
+        <StepNavBar
+          right={
+            <Button size="lg" onClick={() => navigate("/admin/wtr/step-2")} className="bg-red-600 hover:bg-red-700">
+              Continue
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          }
+        />
       </div>
     </AdminLayout>
   );

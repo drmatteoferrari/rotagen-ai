@@ -174,14 +174,18 @@ export default function WtrStep5() {
           </CardContent>
         </Card>
 
-        <div className="flex justify-between">
-          <Button variant="outline" size="lg" onClick={() => navigate("/admin/wtr/step-4")}>
-            <ArrowLeft className="mr-2 h-4 w-4" />Back
-          </Button>
-          <Button size="lg" disabled={saving} onClick={handleSave} className="bg-red-600 hover:bg-red-700">
-            <CheckCircle className="mr-2 h-4 w-4" />{saving ? "Saving…" : "Save WTR Settings"}
-          </Button>
-        </div>
+        <StepNavBar
+          left={
+            <Button variant="outline" size="lg" onClick={() => navigate("/admin/wtr/step-4")}>
+              <ArrowLeft className="mr-2 h-4 w-4" />Back
+            </Button>
+          }
+          right={
+            <Button size="lg" disabled={saving} onClick={handleSave} className="bg-red-600 hover:bg-red-700">
+              <CheckCircle className="mr-2 h-4 w-4" />{saving ? "Saving…" : "Save WTR Settings"}
+            </Button>
+          }
+        />
       </div>
     </AdminLayout>
   );

@@ -717,17 +717,20 @@ export default function DepartmentStep3() {
               </div>
             </div>
 
-            {/* NAVIGATION FOOTER */}
-            <div className="flex items-center justify-between pt-2 pb-6">
-              <Button variant="outline" size="lg" className="min-h-[44px]" onClick={() => navigate('/admin/department/step-2')}>
-                <ArrowLeft className="mr-1 h-4 w-4" /> Back
-              </Button>
-              <Button size="lg" className="min-h-[44px]" disabled={!canSave} onClick={handleSave}>
-                {saving
-                  ? <><Loader2 className="mr-1 h-4 w-4 animate-spin" />Saving…</>
-                  : <><ArrowRight className="mr-1 h-4 w-4" />Save &amp; continue</>}
-              </Button>
-            </div>
+            <StepNavBar
+              left={
+                <Button variant="outline" size="lg" className="min-h-[44px]" onClick={() => navigate('/admin/department/step-2')}>
+                  <ArrowLeft className="mr-1 h-4 w-4" /> Back
+                </Button>
+              }
+              right={
+                <Button size="lg" className="min-h-[44px]" disabled={!canSave} onClick={handleSave}>
+                  {saving
+                    ? <><Loader2 className="mr-1 h-4 w-4 animate-spin" />Saving…</>
+                    : <><ArrowRight className="mr-1 h-4 w-4" />Save &amp; continue</>}
+                </Button>
+              }
+            />
           </>
         )}
       </div>
