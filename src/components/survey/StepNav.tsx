@@ -12,7 +12,7 @@ interface StepNavProps {
 
 export function StepNav({ onBack, onNext, backLabel = "Back", nextLabel = "Continue", nextDisabled = false, isSubmit = false }: StepNavProps) {
   return (
-    <div className="sticky bottom-0 bg-card border-t border-border px-4 py-3 z-20 w-full">
+    <div className="fixed bottom-0 left-0 right-0 z-40 bg-card border-t border-border px-4 py-3">
       <div className="flex items-center justify-between gap-3">
         <div>
           {onBack && (
