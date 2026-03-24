@@ -33,7 +33,7 @@ function getInitials(displayName: string): string {
 }
 
 function AdminShellInner() {
-  const { title, subtitle, accentColor } = useAdminShell();
+  const { title, subtitle, accentColor, pageIcon } = useAdminShell();
   const bgColorMap: Record<string, string> = {
     blue:   '#eff6ff',
     red:    '#fff5f5',
