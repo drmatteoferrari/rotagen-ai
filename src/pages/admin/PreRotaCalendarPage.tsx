@@ -315,6 +315,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
   const [loadError, setLoadError] = useState<string | null>(null);
   const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
   const [currentDayIndex, setCurrentDayIndex] = useState(0);
+  const [currentMonthKey, setCurrentMonthKey] = useState('')
   const [deptName, setDeptName] = useState('');
   const [hospitalName, setHospitalName] = useState('');
   const [showBreakdown, setShowBreakdown] = useState(false);
