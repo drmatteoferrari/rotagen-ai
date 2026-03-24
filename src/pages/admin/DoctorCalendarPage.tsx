@@ -442,7 +442,7 @@ export default function DoctorCalendarPage() {
                           </span>
                         )}
                         <div className="flex flex-wrap gap-0.5 justify-center">
-                          {cell && renderChips(cell.primary, cell.secondary, true)}
+                          {renderMergedChips(mergedCell, true)}
                         </div>
                       </div>
                     </td>
