@@ -92,6 +92,61 @@ function fmtFull(iso: string): string {
   })
 }
 
+// ─── Override indicator ───────────────────────────────────────
+function OverrideDot() {
+  return (
+    <span style={{
+      display: 'inline-block', width: 6, height: 6, borderRadius: '50%',
+      background: '#ea580c', marginLeft: 2, flexShrink: 0,
+    }} />
+  )
+}
+
+function renderMergedChips(cell: MergedCell | undefined, compact: boolean): JSX.Element[] {
+  if (!cell) return []
+  const result: JSX.Element[] = []
+
+  if (cell.isDeleted && cell.deletedCode) {
+    result.push(
+      <span
+        key="deleted"
+        className="inline-block rounded-full px-1.5 py-0.5 text-[10px] font-medium leading-none"
+        style={{ backgroundColor: '#d1d5db', color: '#6b7280', textDecoration: 'line-through' }}
+      >
+        {compact ? cell.deletedCode : (EVENT_LABELS[cell.deletedCode] ?? cell.deletedCode)}
+      </span>
+    )
+    return result
+  }
+
+  if (cell.primary && !SKIP_CODES.has(cell.primary)) {
+    result.push(
+      <span
+        key={cell.primary}
+        className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium leading-none text-white"
+        style={{ backgroundColor: CHIP_COLOURS[cell.primary] ?? 'hsl(var(--muted-foreground))' }}
+      >
+        {compact ? cell.primary : (EVENT_LABELS[cell.primary] ?? cell.primary)}
+        {(cell.overrideAction === 'add' || cell.overrideAction === 'modify') && <OverrideDot />}
+      </span>
+    )
+  }
+
+  if (cell.secondary && !SKIP_CODES.has(cell.secondary)) {
+    result.push(
+      <span
+        key={cell.secondary}
+        className="inline-block rounded-full px-1.5 py-0.5 text-[10px] font-medium leading-none text-white"
+        style={{ backgroundColor: CHIP_COLOURS[cell.secondary] ?? 'hsl(var(--muted-foreground))' }}
+      >
+        {compact ? cell.secondary : (EVENT_LABELS[cell.secondary] ?? cell.secondary)}
+      </span>
+    )
+  }
+
+  return result
+}
+
 // ─── Chip renderer ────────────────────────────────────────────
 function renderChips(
   primary: string,
