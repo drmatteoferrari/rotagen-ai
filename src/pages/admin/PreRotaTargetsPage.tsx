@@ -9,7 +9,7 @@ import { useRotaContext } from "@/contexts/RotaContext";
 import type { CalendarData, TargetsData, DoctorTargets } from "@/lib/preRotaTypes";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Download, Loader2, AlertTriangle, BarChart3 } from "lucide-react";
+import { ArrowLeft, Download, Loader2, AlertTriangle, BarChart3, Target } from "lucide-react";
 // ✅ Section 5 complete (imports — useRotaContext replaces sessionStorage)
 
 const displayContractedHours = (doctor: DoctorTargets, wtrMaxHoursPerWeek: number): number => {
