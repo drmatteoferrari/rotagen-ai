@@ -319,6 +319,18 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
   const [hospitalName, setHospitalName] = useState('');
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [overrides, setOverrides] = useState<CalendarOverride[]>([]);
+  const [selectedCell, setSelectedCell] = useState<{ doctorId: string; date: string } | null>(null)
+  const [panelOpen, setPanelOpen] = useState(false)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [modalSaving, setModalSaving] = useState(false)
+  const [modalPrefill, setModalPrefill] = useState<{
+    eventType: string; startDate: string; endDate: string;
+    note: string; overrideId: string; originalEventType: string | null
+  } | null>(null)
+  const [modalCopyFrom, setModalCopyFrom] = useState<{
+    eventType: string; startDate: string; endDate: string
+  } | null>(null)
+  const [modalInitialDate, setModalInitialDate] = useState<string | null>(null)
   const dateInputRef = useRef<HTMLInputElement>(null);
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
