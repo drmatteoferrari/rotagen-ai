@@ -198,6 +198,9 @@ function AdminShellInner() {
             >
               {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
             </button>
+            <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${iconBgMap[accentColor] || 'bg-blue-100'}`}>
+              <PageIcon className={`h-4 w-4 ${iconColorMap[accentColor] || 'text-blue-600'}`} />
+            </div>
             <div>
               <h1 className="text-lg font-semibold text-card-foreground">{title}</h1>
               {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}

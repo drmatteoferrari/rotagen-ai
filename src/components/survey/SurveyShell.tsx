@@ -40,7 +40,7 @@ export function SurveyShell({ children }: SurveyShellProps) {
   const step = ctx?.currentStep || 1;
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col h-full">
       {/* Header — fixed at top, shrink-0 */}
       <div className="shrink-0 bg-white border-b border-border px-4 sm:px-6 py-3 sm:py-4 z-10">
         <div className="flex items-center justify-between">

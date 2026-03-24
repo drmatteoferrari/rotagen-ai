@@ -67,7 +67,7 @@ function OverrideInner({ fromPath, doctorName }: { fromPath: string; doctorName:
           Admin Override — {doctorName}
         </span>
       </div>
-      <div className="flex-1 overflow-y-auto flex flex-col">
+      <div className="flex-1 flex flex-col overflow-hidden">
         <SurveyShell>
           <StepComponent />
         </SurveyShell>
