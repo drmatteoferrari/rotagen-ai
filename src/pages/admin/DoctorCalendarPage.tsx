@@ -470,7 +470,7 @@ export default function DoctorCalendarPage() {
   )
 
   if (errorMsg || !calendarData || !doctor) return (
-    <AdminLayout title="Doctor Calendar">
+    <AdminLayout title="Doctor Calendar" pageIcon={CalendarDays}>
       <div className="flex items-center justify-center py-20">
         <div className="text-center space-y-3">
           <AlertTriangle className="h-8 w-8 text-destructive mx-auto" />
