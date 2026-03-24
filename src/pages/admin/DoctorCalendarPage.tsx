@@ -343,7 +343,92 @@ export default function DoctorCalendarPage() {
     dx < 0 ? navRef.current.goNext() : navRef.current.goPrev()
   }
 
-  useEffect(() => {
+  const reloadOverrides = async () => {
+    if (!currentRotaConfigId || !doctorId) return
+    const { data } = await supabase
+      .from('coordinator_calendar_overrides')
+      .select('*')
+      .eq('rota_config_id', currentRotaConfigId)
+      .eq('doctor_id', doctorId)
+    setOverrides((data ?? []).map(mapOverrideRow))
+  }
+
+  const handleSaveOverride = async (payload: {
+    eventType: string; startDate: string; endDate: string;
+    note: string; overrideId: string | null; originalEventType: string | null
+  }) => {
+    setModalSaving(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user || !currentRotaConfigId || !doctorId) { setModalSaving(false); return }
+
+      if (payload.overrideId) {
+        await supabase.from('coordinator_calendar_overrides').delete().eq('id', payload.overrideId)
+        await supabase.from('coordinator_calendar_overrides').insert({
+          rota_config_id: currentRotaConfigId, doctor_id: doctorId,
+          event_type: payload.eventType, start_date: payload.startDate, end_date: payload.endDate,
+          action: 'modify', original_event_type: payload.originalEventType,
+          note: payload.note || null, created_by: user.id,
+        })
+      } else {
+        await supabase.from('coordinator_calendar_overrides').insert({
+          rota_config_id: currentRotaConfigId, doctor_id: doctorId,
+          event_type: payload.eventType, start_date: payload.startDate, end_date: payload.endDate,
+          action: 'add', note: payload.note || null, created_by: user.id,
+        })
+      }
+      await reloadOverrides()
+      setModalOpen(false); setModalPrefill(null); setModalCopyFrom(null); setModalInitialDate(null)
+      setPanelOpen(false); setSelectedDate(null)
+    } catch (err) {
+      console.error('Failed to save override:', err)
+    } finally {
+      setModalSaving(false)
+    }
+  }
+
+  const handleDeleteOverride = async (override: CalendarOverride) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user || !currentRotaConfigId || !doctorId) return
+      await supabase.from('coordinator_calendar_overrides').delete().eq('id', override.id)
+      await reloadOverrides()
+      setPanelOpen(false); setSelectedDate(null)
+    } catch (err) {
+      console.error('Failed to delete override:', err)
+    }
+  }
+
+  const handleRemoveSurveyEvent = async (date: string) => {
+    if (!calendarData) return
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user || !currentRotaConfigId || !doctorId) return
+      const cellCode = mergedAvailability[date]?.primary ?? 'AVAILABLE'
+      if (cellCode === 'AVAILABLE') return
+      await supabase.from('coordinator_calendar_overrides').insert({
+        rota_config_id: currentRotaConfigId, doctor_id: doctorId,
+        event_type: cellCode, start_date: date, end_date: date,
+        action: 'delete', original_event_type: cellCode,
+        original_start_date: date, original_end_date: date,
+        note: null, created_by: user.id,
+      })
+      await reloadOverrides()
+      setPanelOpen(false); setSelectedDate(null)
+    } catch (err) {
+      console.error('Failed to remove survey event:', err)
+    }
+  }
+
+  const handleCellTap = (date: string) => {
+    if (selectedDate === date && panelOpen) {
+      setPanelOpen(false); setSelectedDate(null)
+    } else {
+      setSelectedDate(date); setPanelOpen(true); setModalOpen(false)
+    }
+  }
+
+
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft') navRef.current.goPrev()
       if (e.key === 'ArrowRight') navRef.current.goNext()
