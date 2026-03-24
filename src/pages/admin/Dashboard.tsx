@@ -8,7 +8,7 @@ import { differenceInCalendarWeeks, format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import {
-  CalendarDays, ChevronRight, Building2, Users, Info,
+  CalendarDays, ChevronRight, Building2, Users, Info, LayoutDashboard,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
