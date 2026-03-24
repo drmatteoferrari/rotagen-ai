@@ -1237,6 +1237,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                   setModalInitialDate(selectedCell.date); setModalOpen(true)
                 }}
                 onRemoveSurveyEvent={handleRemoveSurveyEvent}
+                onGoToDate={() => { navigate(`/admin/doctor-calendar/${selectedCell!.doctorId}`) }}
                 onClose={() => { setPanelOpen(false); setSelectedCell(null) }}
               />
               {modalOpen && (

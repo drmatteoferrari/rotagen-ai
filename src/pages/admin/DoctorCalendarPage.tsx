@@ -773,6 +773,7 @@ export default function DoctorCalendarPage() {
               setModalInitialDate(selectedDate); setModalOpen(true)
             }}
             onRemoveSurveyEvent={() => handleRemoveSurveyEvent(selectedDate)}
+            onGoToDate={() => { navigateToDate(selectedDate); setViewMode('day'); setPanelOpen(false); setSelectedDate(null) }}
             onClose={() => { setPanelOpen(false); setSelectedDate(null) }}
           />
         )}
