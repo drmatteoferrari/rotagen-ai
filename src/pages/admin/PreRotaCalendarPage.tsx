@@ -509,7 +509,93 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
     dx < 0 ? navRef.current.goNext() : navRef.current.goPrev();
   };
 
-  const allDates = useMemo(() => calendarData?.weeks.flatMap(w => w.dates) ?? [], [calendarData]);
+  const reloadOverrides = async () => {
+    if (!rotaConfigId) return
+    const { data } = await supabase
+      .from('coordinator_calendar_overrides')
+      .select('*')
+      .eq('rota_config_id', rotaConfigId)
+    setOverrides((data ?? []).map(mapOverrideRow))
+  }
+
+  const handleSaveOverride = async (payload: {
+    eventType: string; startDate: string; endDate: string;
+    note: string; overrideId: string | null; originalEventType: string | null
+  }) => {
+    if (!selectedCell || !rotaConfigId) return
+    setModalSaving(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { setModalSaving(false); return }
+
+      if (payload.overrideId) {
+        await supabase.from('coordinator_calendar_overrides').delete().eq('id', payload.overrideId)
+        await supabase.from('coordinator_calendar_overrides').insert({
+          rota_config_id: rotaConfigId, doctor_id: selectedCell.doctorId,
+          event_type: payload.eventType, start_date: payload.startDate, end_date: payload.endDate,
+          action: 'modify', original_event_type: payload.originalEventType,
+          note: payload.note || null, created_by: user.id,
+        })
+      } else {
+        await supabase.from('coordinator_calendar_overrides').insert({
+          rota_config_id: rotaConfigId, doctor_id: selectedCell.doctorId,
+          event_type: payload.eventType, start_date: payload.startDate, end_date: payload.endDate,
+          action: 'add', note: payload.note || null, created_by: user.id,
+        })
+      }
+      await reloadOverrides()
+      setModalOpen(false); setModalPrefill(null); setModalCopyFrom(null); setModalInitialDate(null)
+      setPanelOpen(false); setSelectedCell(null)
+    } catch (err) {
+      console.error('Failed to save override:', err)
+    } finally {
+      setModalSaving(false)
+    }
+  }
+
+  const handleDeleteOverride = async (override: CalendarOverride) => {
+    if (!rotaConfigId || !selectedCell) return
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      await supabase.from('coordinator_calendar_overrides').delete().eq('id', override.id)
+      await reloadOverrides()
+      setPanelOpen(false); setSelectedCell(null)
+    } catch (err) {
+      console.error('Failed to delete override:', err)
+    }
+  }
+
+  const handleRemoveSurveyEvent = async () => {
+    if (!selectedCell || !calendarData || !rotaConfigId) return
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const cellCode = mergedAvailabilityByDoctor[selectedCell.doctorId]?.[selectedCell.date]?.primary ?? 'AVAILABLE'
+      if (cellCode === 'AVAILABLE') return
+      await supabase.from('coordinator_calendar_overrides').insert({
+        rota_config_id: rotaConfigId, doctor_id: selectedCell.doctorId,
+        event_type: cellCode, start_date: selectedCell.date, end_date: selectedCell.date,
+        action: 'delete', original_event_type: cellCode,
+        original_start_date: selectedCell.date, original_end_date: selectedCell.date,
+        note: null, created_by: user.id,
+      })
+      await reloadOverrides()
+      setPanelOpen(false); setSelectedCell(null)
+    } catch (err) {
+      console.error('Failed to remove survey event:', err)
+    }
+  }
+
+  const handleCellTap = (doctorId: string, date: string) => {
+    if (selectedCell?.doctorId === doctorId && selectedCell?.date === date && panelOpen) {
+      setPanelOpen(false); setSelectedCell(null)
+    } else {
+      setSelectedCell({ doctorId, date }); setPanelOpen(true); setModalOpen(false)
+    }
+  }
+
+
   const maxMinDoctors = useMemo(() => Math.max(...shiftTypes.map(s => s.min_doctors), 1), [shiftTypes]);
 
   const mergedAvailabilityByDoctor = useMemo<Record<string, Record<string, MergedCell>>>(() => {
