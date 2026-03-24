@@ -189,6 +189,14 @@ export default function DoctorCalendarPage() {
           w => w.startDate <= initialDate && initialDate <= w.endDate
         )
         setCurrentWeekIndex(wIdx >= 0 ? wIdx : 0)
+
+        // Load coordinator overrides
+        const { data: overrideRows } = await supabase
+          .from('coordinator_calendar_overrides')
+          .select('*')
+          .eq('rota_config_id', currentRotaConfigId)
+          .eq('doctor_id', doctorId)
+        setOverrides((overrideRows ?? []).map(mapOverrideRow))
       } catch (err) {
         console.error('DoctorCalendarPage load error:', err)
         setErrorMsg('Failed to load data. Please go back and try again.')

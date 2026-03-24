@@ -280,6 +280,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
   const [deptName, setDeptName] = useState('');
   const [hospitalName, setHospitalName] = useState('');
   const [showBreakdown, setShowBreakdown] = useState(false);
+  const [overrides, setOverrides] = useState<CalendarOverride[]>([]);
   const dateInputRef = useRef<HTMLInputElement>(null);
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
