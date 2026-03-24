@@ -458,16 +458,19 @@ export default function RotaPeriodStep2() {
           </CardContent>
         </Card>
 
-        {/* Navigation */}
-        <div className="flex justify-between">
-          <Button variant="outline" size="lg" onClick={() => navigate("/admin/rota-period/step-1")}>
-            <ArrowLeft className="mr-2 h-4 w-4" />Back
-          </Button>
-          <Button size="lg" disabled={saving} onClick={handleSave} className="bg-amber-600 hover:bg-amber-700">
-            {saving ? "Saving…" : "Save & Continue"}
-            {!saving && <ArrowRight className="ml-2 h-4 w-4" />}
-          </Button>
-        </div>
+        <StepNavBar
+          left={
+            <Button variant="outline" size="lg" onClick={() => navigate("/admin/rota-period/step-1")}>
+              <ArrowLeft className="mr-2 h-4 w-4" />Back
+            </Button>
+          }
+          right={
+            <Button size="lg" disabled={saving} onClick={handleSave} className="bg-amber-600 hover:bg-amber-700">
+              {saving ? "Saving…" : "Save & Continue"}
+              {!saving && <ArrowRight className="ml-2 h-4 w-4" />}
+            </Button>
+          }
+        />
       </div>
     </AdminLayout>
   );

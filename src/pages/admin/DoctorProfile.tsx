@@ -320,7 +320,7 @@ export default function DoctorProfile() {
   }
 
   return (
-    <AdminLayout title="Doctor Profile" subtitle={`${doctor.first_name} ${doctor.last_name}`} accentColor="blue">
+    <AdminLayout title="Doctor Profile" subtitle={`${doctor.first_name} ${doctor.last_name}`} accentColor="blue" pageIcon={User}>
       <div className="mx-auto max-w-3xl space-y-6">
 
         {/* Back + status header */}

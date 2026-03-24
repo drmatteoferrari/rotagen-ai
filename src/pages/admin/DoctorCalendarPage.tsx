@@ -692,7 +692,7 @@ export default function DoctorCalendarPage() {
 
   // ─── Main render ───────────────────────────────────────────
   return (
-    <AdminLayout title="Doctor Calendar" accentColor="teal">
+    <AdminLayout title="Doctor Calendar" accentColor="teal" pageIcon={CalendarDays}>
       <div
         className="space-y-4"
         onTouchStart={handleTouchStart}

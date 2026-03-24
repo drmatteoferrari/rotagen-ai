@@ -165,7 +165,7 @@ export default function PreRotaPage() {
   }, [changesPanelOpen, currentRotaConfigId])
 
   return (
-    <AdminLayout title="Pre-Rota" subtitle="Calendar, targets and data validation" accentColor="blue">
+    <AdminLayout title="Pre-Rota" subtitle="Calendar, targets and data validation" accentColor="blue" pageIcon={BarChart3}>
       <div className="mx-auto max-w-3xl space-y-5 animate-fadeSlideUp">
         {/* Back link + re-generate */}
         <div className="flex items-center justify-between">

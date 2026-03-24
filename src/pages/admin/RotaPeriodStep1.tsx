@@ -144,12 +144,14 @@ export default function RotaPeriodStep1() {
           </CardContent>
         </Card>
 
-        <div className="flex justify-end">
-          <Button size="lg" onClick={handleContinue} className="bg-amber-600 hover:bg-amber-700">
-            Continue
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        </div>
+        <StepNavBar
+          right={
+            <Button size="lg" onClick={handleContinue} className="bg-amber-600 hover:bg-amber-700">
+              Continue
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          }
+        />
       </div>
     </AdminLayout>
   );

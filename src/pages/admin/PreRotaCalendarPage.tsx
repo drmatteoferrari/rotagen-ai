@@ -709,7 +709,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
 
   const Wrapper = embedded
     ? ({ children }: { children: React.ReactNode }) => <>{children}</>
-    : ({ children }: { children: React.ReactNode }) => <AdminLayout title="Availability Calendar" accentColor="blue">{children}</AdminLayout>;
+    : ({ children }: { children: React.ReactNode }) => <AdminLayout title="Availability Calendar" accentColor="blue" pageIcon={CalendarRange}>{children}</AdminLayout>;
 
   if (loading) {
     return (
