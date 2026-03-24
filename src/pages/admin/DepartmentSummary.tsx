@@ -188,21 +188,6 @@ export default function DepartmentSummary() {
           </div>
         )}
 
-        {isPostSubmit ? (
-          <StepNavBar
-            left={<Button variant="outline" size="lg" onClick={() => { setShowResetConfirm(true); setShowEditConfirm(false); }}>Reset</Button>}
-            right={<Button variant="outline" size="lg" onClick={() => { setShowEditConfirm(true); setShowResetConfirm(false); }}>Edit</Button>}
-          />
-        ) : (
-          <StepNavBar
-            left={<Button variant="outline" size="lg" onClick={() => navigate("/admin/department/step-3")}>Back</Button>}
-            right={
-              <Button size="lg" disabled={saving} onClick={handleConfirmSave}>
-                {saving ? <><Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />Saving…</> : "Confirm & Save"}
-              </Button>
-            }
-          />
-        )}
       </div>
     </AdminLayout>
   );

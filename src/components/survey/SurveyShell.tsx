@@ -1,7 +1,8 @@
 import { ReactNode, useEffect, useState } from "react";
 import { format, parseISO } from "date-fns";
 import { useSurveyContext } from "@/contexts/SurveyContext";
-import { Stethoscope } from "lucide-react";
+import { Stethoscope, ArrowLeft, ArrowRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface SurveyShellProps {
   children: ReactNode;

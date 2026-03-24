@@ -200,7 +200,5 @@ export default function SurveyStep1() {
           </CardContent>
         </Card>
       </div>
-      <StepNav onNext={handleNext} />
-    </>
   );
 }

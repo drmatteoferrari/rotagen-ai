@@ -139,7 +139,5 @@ export default function SurveyStep2() {
           </CardContent>
         </Card>
       </div>
-      <StepNav onBack={() => ctx.prevStep()} onNext={handleNext} />
-    </>
   );
 }

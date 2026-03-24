@@ -217,21 +217,6 @@ export default function RotaPeriodSummary() {
           </div>
         )}
 
-        {isPostSubmit ? (
-          <StepNavBar
-            left={<Button variant="outline" size="lg" onClick={() => { setShowResetConfirm(true); setShowEditConfirm(false); }}>Reset</Button>}
-            right={<Button variant="outline" size="lg" onClick={() => { setShowEditConfirm(true); setShowResetConfirm(false); }}>Edit</Button>}
-          />
-        ) : (
-          <StepNavBar
-            left={<Button variant="outline" size="lg" onClick={() => navigate("/admin/rota-period/step-2")}>Back</Button>}
-            right={
-              <Button size="lg" disabled={saving} onClick={handleConfirmSave} className="bg-amber-600 hover:bg-amber-700">
-                {saving ? <><Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />Saving…</> : "Confirm & Save"}
-              </Button>
-            }
-          />
-        )}
       </div>
     </AdminLayout>
   );

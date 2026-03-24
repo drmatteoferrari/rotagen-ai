@@ -8,14 +8,33 @@ interface AdminLayoutProps {
   subtitle?: string;
   accentColor?: 'blue' | 'red' | 'yellow' | 'purple' | 'teal' | 'pink' | 'green';
   pageIcon?: LucideIcon;
+  navBar?: ReactNode;
 }
 
-export function AdminLayout({ children, title, subtitle, accentColor = 'blue', pageIcon }: AdminLayoutProps) {
+export function AdminLayout({ children, title, subtitle, accentColor = 'blue', pageIcon, navBar }: AdminLayoutProps) {
   const { setPageInfo } = useAdminShell();
 
   useLayoutEffect(() => {
     setPageInfo(title, subtitle, accentColor, pageIcon);
   }, [title, subtitle, accentColor, pageIcon, setPageInfo]);
 
-  return <>{children}</>;
+  if (navBar) {
+    // Step pages: full-height flex column — content scrolls, nav bar pinned at bottom
+    return (
+      <div className="flex flex-col h-full min-h-0">
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6">
+          {children}
+        </div>
+        {navBar}
+      </div>
+    );
+  }
+
+  // Non-step pages (Dashboard, Roster, Setup etc): scrollable with padding.
+  // pb-20 on mobile preserves clearance above the fixed bottom dashboard nav.
+  return (
+    <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6">
+      {children}
+    </div>
+  );
 }

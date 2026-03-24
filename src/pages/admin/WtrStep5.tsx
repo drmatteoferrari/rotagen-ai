@@ -248,25 +248,6 @@ export default function WtrStep5() {
           </div>
         )}
 
-        {isPostSubmit ? (
-          <StepNavBar
-            left={<Button variant="outline" size="lg" onClick={() => { setShowResetConfirm(true); setShowEditConfirm(false); }}>Reset</Button>}
-            right={<Button variant="outline" size="lg" onClick={() => { setShowEditConfirm(true); setShowResetConfirm(false); }}>Edit</Button>}
-          />
-        ) : (
-          <StepNavBar
-            left={
-              <Button variant="outline" size="lg" onClick={() => navigate("/admin/wtr/step-4")}>
-                <ArrowLeft className="mr-2 h-4 w-4" />Back
-              </Button>
-            }
-            right={
-              <Button size="lg" disabled={saving} onClick={handleSave} className="bg-red-600 hover:bg-red-700">
-                <CheckCircle className="mr-2 h-4 w-4" />{saving ? "Saving…" : "Save WTR Settings"}
-              </Button>
-            }
-          />
-        )}
       </div>
     </AdminLayout>
   );

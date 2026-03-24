@@ -732,18 +732,6 @@ export default function DepartmentStep3() {
               </div>
             </div>
 
-            <StepNavBar
-              left={
-                <Button variant="outline" size="lg" className="min-h-[44px]" onClick={() => navigate('/admin/department/step-2')}>
-                  <ArrowLeft className="mr-1 h-4 w-4" /> Back
-                </Button>
-              }
-              right={
-                <Button size="lg" className="min-h-[44px]" disabled={!canSave} onClick={() => navigate('/admin/department/summary?mode=pre-submit')}>
-                  <ArrowRight className="mr-1 h-4 w-4" />Review &amp; Save
-                </Button>
-              }
-            />
           </>
         )}
       </div>

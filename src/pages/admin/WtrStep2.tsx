@@ -142,19 +142,6 @@ export default function WtrStep2() {
           </CardContent>
         </Card>
 
-        <StepNavBar
-          left={
-            <Button variant="outline" size="lg" onClick={() => navigate("/admin/wtr/step-1")}>
-              <ArrowLeft className="mr-2 h-4 w-4" />Back
-            </Button>
-          }
-          right={
-            <Button size="lg" onClick={() => navigate("/admin/wtr/step-3")} className="bg-red-600 hover:bg-red-700">
-              Continue
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          }
-        />
       </div>
     </AdminLayout>
   );
