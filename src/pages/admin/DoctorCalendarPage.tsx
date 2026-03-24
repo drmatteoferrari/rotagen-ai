@@ -637,10 +637,10 @@ export default function DoctorCalendarPage() {
           <p className="text-base font-semibold text-foreground">{fmtFull(currentDateISO)}</p>
           {inRota && (
             <button
-              onClick={() => handleCellTap(currentDateISO)}
+              onClick={() => { setPanelOpen(false); setSelectedDate(null); setModalPrefill(null); setModalCopyFrom(null); setModalInitialDate(currentDateISO); setModalOpen(true) }}
               style={{ fontSize: 11, fontWeight: 600, color: '#2563eb', background: '#eff6ff', border: '1px solid #dbeafe', borderRadius: 6, padding: '3px 10px', cursor: 'pointer' }}
             >
-              + Override
+              + Add event
             </button>
           )}
         </div>
