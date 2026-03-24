@@ -136,15 +136,19 @@ export default function DepartmentStep1New() {
           </CardContent>
         </Card>
 
-        <div className="flex justify-between">
-          <Button variant="outline" size="lg" onClick={() => navigate("/admin/setup")}>
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back
-          </Button>
-          <Button size="lg" onClick={handleSaveAndContinue} disabled={saving || loading} className="bg-purple-600 hover:bg-purple-700 text-white">
-            {saving ? "Saving…" : "Continue"}
-            {!saving && <ArrowRight className="ml-2 h-4 w-4" />}
-          </Button>
-        </div>
+        <StepNavBar
+          left={
+            <Button variant="outline" size="lg" onClick={() => navigate("/admin/setup")}>
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back
+            </Button>
+          }
+          right={
+            <Button size="lg" onClick={handleSaveAndContinue} disabled={saving || loading} className="bg-purple-600 hover:bg-purple-700 text-white">
+              {saving ? "Saving…" : "Continue"}
+              {!saving && <ArrowRight className="ml-2 h-4 w-4" />}
+            </Button>
+          }
+        />
       </div>
     </AdminLayout>
   );

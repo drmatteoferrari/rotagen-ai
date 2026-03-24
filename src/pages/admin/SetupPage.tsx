@@ -100,7 +100,7 @@ export default function SetupPage() {
   const stepsComplete = [isDepartmentComplete, isWtrComplete, isPeriodComplete, surveysDone].filter(Boolean).length;
 
   return (
-    <AdminLayout title="Rota Setup" subtitle="Complete each step, then generate your rota." accentColor="blue">
+    <AdminLayout title="Rota Setup" subtitle="Complete all steps to generate" accentColor="blue" pageIcon={Wand2}>
       <div className="mx-auto max-w-3xl space-y-4 animate-fadeSlideUp">
 
         {/* Minimal progress bar */}
