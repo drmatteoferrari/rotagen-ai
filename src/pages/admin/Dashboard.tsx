@@ -78,7 +78,7 @@ export default function Dashboard() {
     return (
       <>
       {showOnboarding && <OnboardingModal onClose={() => setShowOnboarding(false)} />}
-      <AdminLayout title="Dashboard" subtitle="Overview of your rota" accentColor="blue">
+      <AdminLayout title="Dashboard" subtitle="Your active rota" accentColor="blue" pageIcon={LayoutDashboard}>
         <div className="mx-auto max-w-7xl space-y-4 animate-fadeSlideUp">
           {/* Pre-allocation note */}
           <div className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2.5">
