@@ -97,10 +97,37 @@ export function SurveyShell({ children }: SurveyShellProps) {
         </div>
       )}
 
-      {/* Content + StepNav wrapper */}
-      <div className="flex-1 flex flex-col">
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto flex flex-col">
         {children}
       </div>
+
+      {/* Nav bar — shrink-0 sibling, always visible, never scrolls */}
+      {ctx && ctx.loadState === "ready" && ctx.currentStep < 7 && (
+        <div className="shrink-0 border-t border-border bg-card px-4 py-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              {ctx.currentStep > 1 && (
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={() => ctx.prevStep()}
+                  className="h-11 px-5 cursor-pointer border-teal-200 text-teal-700 hover:bg-teal-50 hover:border-teal-300 active:bg-teal-100 transition-colors"
+                >
+                  <ArrowLeft className="h-4 w-4 mr-2" /> Back
+                </Button>
+              )}
+            </div>
+            <Button
+              size="lg"
+              onClick={() => ctx.nextStep()}
+              className="h-11 px-6 cursor-pointer bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white transition-colors"
+            >
+              Continue <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
