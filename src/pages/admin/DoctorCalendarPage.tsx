@@ -428,7 +428,7 @@ export default function DoctorCalendarPage() {
     }
   }
 
-
+  useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft') navRef.current.goPrev()
       if (e.key === 'ArrowRight') navRef.current.goNext()
