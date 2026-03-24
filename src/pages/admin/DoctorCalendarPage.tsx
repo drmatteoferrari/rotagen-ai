@@ -132,6 +132,7 @@ export default function DoctorCalendarPage() {
   const [currentDateISO, setCurrentDateISO] = useState('')
   const [currentWeekIndex, setCurrentWeekIndex] = useState(0)
   const [currentMonthKey, setCurrentMonthKey] = useState('')
+  const [overrides, setOverrides] = useState<CalendarOverride[]>([])
 
   const touchStartX = useRef(0)
   const touchStartY = useRef(0)
