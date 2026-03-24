@@ -11,6 +11,8 @@ import {
   ChevronLeft, ChevronRight, Download, ArrowLeft, Loader2, AlertTriangle, ChevronDown,
 } from "lucide-react";
 import { getTodayISO, mapOverrideRow, mergeOverridesIntoAvailability, type CalendarOverride, type MergedCell } from "@/lib/calendarOverrides";
+import { EventDetailPanel } from '@/components/calendar/EventDetailPanel'
+import { AddEventModal } from '@/components/calendar/AddEventModal'
 
 const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
