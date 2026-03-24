@@ -68,7 +68,8 @@ export function SurveyShell({ children }: SurveyShellProps) {
 
       {/* Rota period banner */}
       {ctx?.rotaInfo?.startDate && ctx?.rotaInfo?.endDate && (
-        <div className="shrink-0 bg-card border-b border-border px-4 sm:px-6 py-2 text-xs text-muted-foreground flex flex-wrap gap-x-4 gap-y-1">
+        <div className="shrink-0 bg-card border-b border-border py-2 text-xs text-muted-foreground">
+          <div className="mx-auto max-w-2xl w-full px-4 sm:px-6 flex flex-wrap gap-x-4 gap-y-1">
           <span>📅 Rota period: {fmtDate(ctx.rotaInfo.startDate)} – {fmtDate(ctx.rotaInfo.endDate)}{ctx.rotaInfo.durationWeeks ? ` (${ctx.rotaInfo.durationWeeks} weeks)` : ""}</span>
           {ctx.rotaInfo.surveyDeadline && <span>Survey deadline: {fmtDate(ctx.rotaInfo.surveyDeadline)}</span>}
         </div>
