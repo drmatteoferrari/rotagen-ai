@@ -934,12 +934,9 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                     {currentWeek.dates.map(date => {
                       const mergedCell = mergedAvailabilityByDoctor[doctor.doctorId]?.[date]
                       const primary = mergedCell?.primary ?? 'AVAILABLE'
-                      const isWknd = new Date(date + 'T00:00:00').getDay() === 0 || new Date(date + 'T00:00:00').getDay() === 6;
-                      const isBH = bankHolidays.has(date);
                       const isLtftDay = getLtftDaysOff(doctor).includes(getDayNameFromISO(date));
-                      const isNoc = primary === 'NOC';
-                      const badgeEvents = (['AL', 'SL', 'ROT', 'PL'] as const).filter(e => primary === e);
                       const bg = getMergedCellBackground(mergedCell, isLtftDay);
+                      const isSelected = selectedCell?.doctorId === doctor.doctorId && selectedCell?.date === date;
                       return (
                         <td key={date} onClick={() => handleCellTap(doctor.doctorId, date)} style={{
                           background: bg,
@@ -947,48 +944,11 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                           textAlign: 'center',
                           minHeight: 52, height: 1, verticalAlign: 'middle',
                           padding: 0, cursor: 'pointer',
-                          outline: selectedCell?.doctorId === doctor.doctorId && selectedCell?.date === date
-                            ? '2px solid #2563eb' : 'none',
+                          outline: isSelected ? '2px solid #2563eb' : 'none',
                           outlineOffset: -2,
-                        }>
+                        }}>
                           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '4px 2px' }}>
-                            {mergedCell?.isDeleted && mergedCell.deletedCode ? (
-                              <span style={{
-                                background: '#d1d5db', color: '#6b7280',
-                                fontSize: 10, fontWeight: 700,
-                                padding: '2px 7px', borderRadius: 5,
-                                textDecoration: 'line-through',
-                              }}>{mergedCell.deletedCode}</span>
-                            ) : (
-                              <>
-                                {badgeEvents.map(event => (
-                                  <span key={event} style={{ display: 'inline-flex', alignItems: 'center' }}>
-                                    <LeaveBadge type={event} />
-                                    {(mergedCell?.overrideAction === 'add' || mergedCell?.overrideAction === 'modify') && <RotaOverrideDot />}
-                                  </span>
-                                ))}
-                                {isNoc && (
-                                  <span style={{ display: 'inline-flex', alignItems: 'center' }}>
-                                    <span style={{
-                                      background: '#ec4899', color: '#fff',
-                                      fontSize: 10, fontWeight: 700,
-                                      padding: '2px 7px', borderRadius: 5,
-                                      letterSpacing: '0.04em', lineHeight: 1.4,
-                                    }}>NOC</span>
-                                    {(mergedCell?.overrideAction === 'add' || mergedCell?.overrideAction === 'modify') && <RotaOverrideDot />}
-                                  </span>
-                                )}
-                                {isLtftDay && (
-                                  <span style={{
-                                    background: 'rgba(253,230,138,0.7)', color: '#92400e',
-                                    border: '1px solid #fde68a',
-                                    fontSize: 9, fontWeight: 600,
-                                    padding: '1px 5px', borderRadius: 4,
-                                    letterSpacing: '0.03em',
-                                  }}>LTFT</span>
-                                )}
-                              </>
-                            )}
+                            <WeekCellContent mergedCell={mergedCell} isLtftDay={isLtftDay} primary={primary} />
                           </div>
                         </td>
                       );
