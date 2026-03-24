@@ -119,7 +119,7 @@ export function EventDetailPanel({
   )
 }
 
-function btn(bg: string, color: string, border: string): React.CSSProperties {
+function btn(bg: string, color: string, border: string) {
   return {
     display: 'inline-flex', alignItems: 'center', gap: 4,
     fontSize: 12, fontWeight: 500, padding: '5px 10px',

@@ -108,7 +108,7 @@ export function AddEventModal({
           </div>
           <div style={{ flex: 1 }}>
             <p style={{ fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 4 }}>End date</p>
-            <input type="date" value={endDate} min={rotaStartDate} max={rotaEndDate}
+            <input type="date" value={endDate} min={startDate || rotaStartDate} max={rotaEndDate}
               onChange={e => setEndDate(e.target.value)}
               style={{ width: '100%', padding: '7px 10px', fontSize: 13, border: '1px solid #e2e8f0', borderRadius: 6, background: '#fff', boxSizing: 'border-box' }} />
           </div>
