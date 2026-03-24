@@ -157,9 +157,29 @@ export default function WtrStep5() {
     { label: "If rest not met: max hrs", value: `${oncallIfRestNotMetMaxHours}h`, compliant: oncallIfRestNotMetMaxHours <= 5 },
   ];
 
+  const navBarContent = isPostSubmit ? (
+    <StepNavBar
+      left={<Button variant="outline" size="lg" onClick={() => { setShowResetConfirm(true); setShowEditConfirm(false); }}>Reset</Button>}
+      right={<Button variant="outline" size="lg" onClick={() => { setShowEditConfirm(true); setShowResetConfirm(false); }}>Edit</Button>}
+    />
+  ) : (
+    <StepNavBar
+      left={
+        <Button variant="outline" size="lg" onClick={() => navigate("/admin/wtr/step-4")}>
+          <ArrowLeft className="mr-2 h-4 w-4" />Back
+        </Button>
+      }
+      right={
+        <Button size="lg" disabled={saving} onClick={handleSave} className="bg-red-600 hover:bg-red-700">
+          <CheckCircle className="mr-2 h-4 w-4" />{saving ? "Saving…" : "Save WTR Settings"}
+        </Button>
+      }
+    />
+  );
+
   return (
-    <AdminLayout title="Working Time Regulations" subtitle="Step 5 of 5 — Review & save" accentColor="red" pageIcon={ClipboardCheck}>
-      <div className="mx-auto max-w-3xl space-y-6 animate-fadeSlideUp pb-36 md:pb-6">
+    <AdminLayout title="Working Time Regulations" subtitle="Step 5 of 5 — Review & save" accentColor="red" pageIcon={ClipboardCheck} navBar={navBarContent}>
+      <div className="mx-auto max-w-3xl space-y-6 animate-fadeSlideUp">
         {isPostSubmit && (
           <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-700">
             <CheckCircle className="h-4 w-4 shrink-0" />
