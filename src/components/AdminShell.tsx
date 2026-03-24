@@ -86,8 +86,8 @@ function AdminShellInner() {
         {/* Header */}
         <header className="flex h-14 items-center justify-between border-b border-border bg-card px-4 shrink-0">
           <div className="flex items-center gap-2 min-w-0 flex-1">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary">
-              <Stethoscope className="h-3.5 w-3.5 text-primary-foreground" />
+            <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${iconBgMap[accentColor] || 'bg-blue-100'}`}>
+              <PageIcon className={`h-3.5 w-3.5 ${iconColorMap[accentColor] || 'text-blue-600'}`} />
             </div>
             <div className="min-w-0">
               <h1 className="text-sm font-semibold text-card-foreground leading-tight truncate">{title}</h1>
