@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useSurveyContext } from "@/contexts/SurveyContext";
-import { StepNav } from "@/components/survey/StepNav";
+
 import { SurveySection } from "@/components/survey/SurveySection";
 import { FieldError } from "@/components/survey/FieldError";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
