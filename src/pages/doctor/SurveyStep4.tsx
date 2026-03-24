@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useSurveyContext, type LeaveEntry, type RotationEntry } from "@/contexts/SurveyContext";
-import { StepNav } from "@/components/survey/StepNav";
+
 import { SurveySection } from "@/components/survey/SurveySection";
 import { FieldError } from "@/components/survey/FieldError";
 import { InfoBox } from "@/components/survey/InfoBox";
