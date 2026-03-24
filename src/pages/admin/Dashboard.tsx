@@ -8,7 +8,7 @@ import { differenceInCalendarWeeks, format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import {
-  CalendarDays, ChevronRight, Building2, Users, Info,
+  CalendarDays, ChevronRight, Building2, Users, Info, LayoutDashboard,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -58,7 +58,7 @@ export default function Dashboard() {
     return (
       <>
         {showOnboarding && <OnboardingModal onClose={() => setShowOnboarding(false)} />}
-        <AdminLayout title="Dashboard" subtitle="Overview of your rota" accentColor="blue">
+        <AdminLayout title="Dashboard" subtitle="Your active rota" accentColor="blue" pageIcon={LayoutDashboard}>
           <div className="mx-auto max-w-3xl space-y-4">
             <Skeleton className="h-24 w-full rounded-xl" />
             <Skeleton className="h-48 w-full rounded-xl" />
@@ -78,7 +78,7 @@ export default function Dashboard() {
     return (
       <>
       {showOnboarding && <OnboardingModal onClose={() => setShowOnboarding(false)} />}
-      <AdminLayout title="Dashboard" subtitle="Overview of your rota" accentColor="blue">
+      <AdminLayout title="Dashboard" subtitle="Your active rota" accentColor="blue" pageIcon={LayoutDashboard}>
         <div className="mx-auto max-w-7xl space-y-4 animate-fadeSlideUp">
           {/* Pre-allocation note */}
           <div className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2.5">
@@ -129,7 +129,7 @@ export default function Dashboard() {
   return (
     <>
     {showOnboarding && <OnboardingModal onClose={() => setShowOnboarding(false)} />}
-    <AdminLayout title="Dashboard" subtitle="Overview of your rota" accentColor="blue">
+    <AdminLayout title="Dashboard" subtitle="Your active rota" accentColor="blue" pageIcon={LayoutDashboard}>
       <div className="mx-auto max-w-3xl space-y-4 animate-fadeSlideUp">
 
         {/* Rota period badge */}

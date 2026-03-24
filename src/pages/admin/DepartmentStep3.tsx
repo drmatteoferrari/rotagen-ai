@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "@/components/AdminLayout";
+import { StepNavBar } from "@/components/StepNavBar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
   Info, AlertTriangle, ArrowLeft, ArrowRight,
-  RotateCcw, Loader2, CheckCircle2, ChevronDown, ChevronUp,
+  RotateCcw, Loader2, CheckCircle2, ChevronDown, ChevronUp, Building2,
 } from "lucide-react";
 import {
   useDepartmentSetup, getShiftColor, type ShiftType,
@@ -529,8 +530,8 @@ export default function DepartmentStep3() {
 
   /* ─── JSX ─── */
   return (
-    <AdminLayout title="Department Setup" subtitle="Step 3 of 3 — Shift hour distribution" accentColor="purple">
-      <div className="mx-auto max-w-3xl space-y-6 animate-fadeSlideUp">
+    <AdminLayout title="Department Setup" subtitle="Step 3 of 3 — Hours" accentColor="purple" pageIcon={Building2}>
+      <div className="mx-auto max-w-3xl space-y-6 animate-fadeSlideUp pb-36 md:pb-6">
         {loading ? (
           <div className="flex items-center justify-center gap-2 py-20 text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin" />
@@ -716,17 +717,20 @@ export default function DepartmentStep3() {
               </div>
             </div>
 
-            {/* NAVIGATION FOOTER */}
-            <div className="flex items-center justify-between pt-2 pb-6">
-              <Button variant="outline" size="lg" className="min-h-[44px]" onClick={() => navigate('/admin/department/step-2')}>
-                <ArrowLeft className="mr-1 h-4 w-4" /> Back
-              </Button>
-              <Button size="lg" className="min-h-[44px]" disabled={!canSave} onClick={handleSave}>
-                {saving
-                  ? <><Loader2 className="mr-1 h-4 w-4 animate-spin" />Saving…</>
-                  : <><ArrowRight className="mr-1 h-4 w-4" />Save &amp; continue</>}
-              </Button>
-            </div>
+            <StepNavBar
+              left={
+                <Button variant="outline" size="lg" className="min-h-[44px]" onClick={() => navigate('/admin/department/step-2')}>
+                  <ArrowLeft className="mr-1 h-4 w-4" /> Back
+                </Button>
+              }
+              right={
+                <Button size="lg" className="min-h-[44px]" disabled={!canSave} onClick={handleSave}>
+                  {saving
+                    ? <><Loader2 className="mr-1 h-4 w-4 animate-spin" />Saving…</>
+                    : <><ArrowRight className="mr-1 h-4 w-4" />Save &amp; continue</>}
+                </Button>
+              }
+            />
           </>
         )}
       </div>

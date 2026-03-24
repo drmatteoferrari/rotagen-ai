@@ -1131,7 +1131,7 @@ export default function Roster() {
   };
 
   return (
-    <AdminLayout title="Team Roster" subtitle="Manage doctors and track survey completion" accentColor="blue">
+    <AdminLayout title="Team Roster" subtitle="Manage doctors" accentColor="blue" pageIcon={Users}>
       <div className="mx-auto max-w-3xl space-y-4 animate-fadeSlideUp">
 
         {/* No config banner */}

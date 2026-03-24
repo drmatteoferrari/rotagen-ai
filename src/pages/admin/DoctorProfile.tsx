@@ -298,7 +298,7 @@ export default function DoctorProfile() {
 
   if (loading) {
     return (
-      <AdminLayout title="Doctor Profile" accentColor="blue">
+      <AdminLayout title="Doctor Profile" accentColor="blue" pageIcon={User}>
         <div className="flex items-center justify-center py-20">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
@@ -308,7 +308,7 @@ export default function DoctorProfile() {
 
   if (error || !doctor) {
     return (
-      <AdminLayout title="Doctor Profile" accentColor="blue">
+      <AdminLayout title="Doctor Profile" accentColor="blue" pageIcon={User}>
         <div className="mx-auto max-w-3xl space-y-4 py-10 text-center">
           <p className="text-muted-foreground">Doctor not found.</p>
           <Button variant="outline" onClick={() => navigate("/admin/roster")}>
@@ -320,7 +320,7 @@ export default function DoctorProfile() {
   }
 
   return (
-    <AdminLayout title="Doctor Profile" subtitle={`${doctor.first_name} ${doctor.last_name}`} accentColor="blue">
+    <AdminLayout title="Doctor Profile" subtitle={`${doctor.first_name} ${doctor.last_name}`} accentColor="blue" pageIcon={User}>
       <div className="mx-auto max-w-3xl space-y-6">
 
         {/* Back + status header */}

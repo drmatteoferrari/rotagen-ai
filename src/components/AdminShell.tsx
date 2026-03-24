@@ -33,7 +33,7 @@ function getInitials(displayName: string): string {
 }
 
 function AdminShellInner() {
-  const { title, subtitle, accentColor } = useAdminShell();
+  const { title, subtitle, accentColor, pageIcon } = useAdminShell();
   const bgColorMap: Record<string, string> = {
     blue:   '#eff6ff',
     red:    '#fff5f5',
@@ -44,7 +44,27 @@ function AdminShellInner() {
     green:  '#f0fdf4',
   };
   const bgColor = bgColorMap[accentColor] || '#eff6ff';
-  
+
+  const iconBgMap: Record<string, string> = {
+    blue:   'bg-blue-100',
+    red:    'bg-red-100',
+    yellow: 'bg-amber-100',
+    purple: 'bg-purple-100',
+    teal:   'bg-teal-100',
+    pink:   'bg-pink-100',
+    green:  'bg-green-100',
+  };
+  const iconColorMap: Record<string, string> = {
+    blue:   'text-blue-600',
+    red:    'text-red-600',
+    yellow: 'text-amber-600',
+    purple: 'text-purple-600',
+    teal:   'text-teal-600',
+    pink:   'text-pink-600',
+    green:  'text-green-600',
+  };
+  const PageIcon = pageIcon;
+
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -62,12 +82,12 @@ function AdminShellInner() {
   // Mobile and tablet both use bottom nav bar layout
   if (isMobile || isTablet) {
     return (
-      <div style={{ backgroundColor: bgColor }} className="flex min-h-screen w-full flex-col">
+      <div style={{ backgroundColor: bgColor }} className="flex h-dvh w-full flex-col overflow-hidden">
         {/* Header */}
         <header className="flex h-14 items-center justify-between border-b border-border bg-card px-4 shrink-0">
           <div className="flex items-center gap-2 min-w-0 flex-1">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary">
-              <Stethoscope className="h-3.5 w-3.5 text-primary-foreground" />
+            <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${iconBgMap[accentColor] || 'bg-blue-100'}`}>
+              <PageIcon className={`h-3.5 w-3.5 ${iconColorMap[accentColor] || 'text-blue-600'}`} />
             </div>
             <div className="min-w-0">
               <h1 className="text-sm font-semibold text-card-foreground leading-tight truncate">{title}</h1>
@@ -118,7 +138,7 @@ function AdminShellInner() {
   }
 
   return (
-    <div style={{ backgroundColor: bgColor }} className="flex min-h-screen w-full">
+    <div style={{ backgroundColor: bgColor }} className="flex h-dvh w-full overflow-hidden">
       {/* Sidebar */}
       <aside
         className={cn(
@@ -178,6 +198,9 @@ function AdminShellInner() {
             >
               {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
             </button>
+            <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${iconBgMap[accentColor] || 'bg-blue-100'}`}>
+              <PageIcon className={`h-4 w-4 ${iconColorMap[accentColor] || 'text-blue-600'}`} />
+            </div>
             <div>
               <h1 className="text-lg font-semibold text-card-foreground">{title}</h1>
               {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}

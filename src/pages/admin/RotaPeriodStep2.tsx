@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "@/components/AdminLayout";
+import { StepNavBar } from "@/components/StepNavBar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
-import { CalendarCheck, CalendarIcon, Plus, Trash2, ArrowLeft, ArrowRight, Save, Info, RotateCcw } from "lucide-react";
+import { CalendarCheck, CalendarIcon, Plus, Trash2, ArrowLeft, ArrowRight, Save, Info, RotateCcw, CalendarDays } from "lucide-react";
 import { format, isWithinInterval, differenceInDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useAdminSetup, type BankHolidayEntry, type BhShiftRule } from "@/contexts/AdminSetupContext";
@@ -241,8 +242,8 @@ export default function RotaPeriodStep2() {
   const activeHolidayCount = rotaBankHolidays.filter(h => h.isActive).length;
 
   return (
-    <AdminLayout title="Rota Period" subtitle="Step 2 of 2 — Bank Holidays" accentColor="yellow">
-      <div className="mx-auto max-w-3xl space-y-6 animate-fadeSlideUp">
+    <AdminLayout title="Rota Period" subtitle="Step 2 of 2 — Bank holidays" accentColor="yellow" pageIcon={CalendarDays}>
+      <div className="mx-auto max-w-3xl space-y-6 animate-fadeSlideUp pb-36 md:pb-6">
         {/* Info banner */}
         <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-700">
           <Info className="h-4 w-4 shrink-0 text-amber-600" />
@@ -457,16 +458,19 @@ export default function RotaPeriodStep2() {
           </CardContent>
         </Card>
 
-        {/* Navigation */}
-        <div className="flex justify-between">
-          <Button variant="outline" size="lg" onClick={() => navigate("/admin/rota-period/step-1")}>
-            <ArrowLeft className="mr-2 h-4 w-4" />Back
-          </Button>
-          <Button size="lg" disabled={saving} onClick={handleSave} className="bg-amber-600 hover:bg-amber-700">
-            {saving ? "Saving…" : "Save & Continue"}
-            {!saving && <ArrowRight className="ml-2 h-4 w-4" />}
-          </Button>
-        </div>
+        <StepNavBar
+          left={
+            <Button variant="outline" size="lg" onClick={() => navigate("/admin/rota-period/step-1")}>
+              <ArrowLeft className="mr-2 h-4 w-4" />Back
+            </Button>
+          }
+          right={
+            <Button size="lg" disabled={saving} onClick={handleSave} className="bg-amber-600 hover:bg-amber-700">
+              {saving ? "Saving…" : "Save & Continue"}
+              {!saving && <ArrowRight className="ml-2 h-4 w-4" />}
+            </Button>
+          }
+        />
       </div>
     </AdminLayout>
   );

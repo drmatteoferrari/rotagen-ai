@@ -6,7 +6,7 @@ interface DoctorLayoutProps {
 
 export function DoctorLayout({ children }: DoctorLayoutProps) {
   return (
-    <div className="min-h-screen bg-teal-50 flex flex-col">
+    <div className="h-dvh bg-teal-50 flex flex-col overflow-hidden">
       <div className="w-full flex-1 flex flex-col mx-auto max-w-2xl">
         {children}
       </div>

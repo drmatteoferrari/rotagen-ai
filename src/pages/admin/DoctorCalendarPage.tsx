@@ -6,7 +6,7 @@ import { useRotaContext } from '@/contexts/RotaContext'
 import { useIsMobile, useIsTablet } from '@/hooks/use-mobile'
 import { getTodayISO, mapOverrideRow, mergeOverridesIntoAvailability, type CalendarOverride, type MergedCell } from '@/lib/calendarOverrides'
 import type { CalendarData, CalendarDoctor } from '@/lib/preRotaTypes'
-import { ChevronLeft, ChevronRight, Loader2, AlertTriangle, ArrowLeft } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Loader2, AlertTriangle, ArrowLeft, CalendarDays } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { EventDetailPanel } from '@/components/calendar/EventDetailPanel'
 import { AddEventModal } from '@/components/calendar/AddEventModal'
@@ -461,7 +461,7 @@ export default function DoctorCalendarPage() {
 
   // ─── Loading / error ───────────────────────────────────────
   if (loading) return (
-    <AdminLayout title="Doctor Calendar">
+    <AdminLayout title="Doctor Calendar" pageIcon={CalendarDays}>
       <div className="flex items-center justify-center py-20 gap-2 text-muted-foreground">
         <Loader2 className="h-5 w-5 animate-spin" />
         <span>Loading…</span>
@@ -470,7 +470,7 @@ export default function DoctorCalendarPage() {
   )
 
   if (errorMsg || !calendarData || !doctor) return (
-    <AdminLayout title="Doctor Calendar">
+    <AdminLayout title="Doctor Calendar" pageIcon={CalendarDays}>
       <div className="flex items-center justify-center py-20">
         <div className="text-center space-y-3">
           <AlertTriangle className="h-8 w-8 text-destructive mx-auto" />
@@ -692,7 +692,7 @@ export default function DoctorCalendarPage() {
 
   // ─── Main render ───────────────────────────────────────────
   return (
-    <AdminLayout title="Doctor Calendar" accentColor="teal">
+    <AdminLayout title="Doctor Calendar" accentColor="teal" pageIcon={CalendarDays}>
       <div
         className="space-y-4"
         onTouchStart={handleTouchStart}

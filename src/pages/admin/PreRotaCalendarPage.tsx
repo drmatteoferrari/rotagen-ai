@@ -8,7 +8,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useRotaContext } from "@/contexts/RotaContext";
 import { Button } from "@/components/ui/button";
 import {
-  ChevronLeft, ChevronRight, Download, ArrowLeft, Loader2, AlertTriangle, ChevronDown,
+  ChevronLeft, ChevronRight, Download, ArrowLeft, Loader2, AlertTriangle, ChevronDown, CalendarRange,
 } from "lucide-react";
 import { getTodayISO, mapOverrideRow, mergeOverridesIntoAvailability, type CalendarOverride, type MergedCell } from "@/lib/calendarOverrides";
 import { EventDetailPanel } from '@/components/calendar/EventDetailPanel'
@@ -709,7 +709,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
 
   const Wrapper = embedded
     ? ({ children }: { children: React.ReactNode }) => <>{children}</>
-    : ({ children }: { children: React.ReactNode }) => <AdminLayout title="Availability Calendar" accentColor="blue">{children}</AdminLayout>;
+    : ({ children }: { children: React.ReactNode }) => <AdminLayout title="Availability Calendar" accentColor="blue" pageIcon={CalendarRange}>{children}</AdminLayout>;
 
   if (loading) {
     return (

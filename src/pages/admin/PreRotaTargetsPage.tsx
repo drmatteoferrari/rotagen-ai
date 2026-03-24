@@ -9,7 +9,7 @@ import { useRotaContext } from "@/contexts/RotaContext";
 import type { CalendarData, TargetsData, DoctorTargets } from "@/lib/preRotaTypes";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Download, Loader2, AlertTriangle, BarChart3 } from "lucide-react";
+import { ArrowLeft, Download, Loader2, AlertTriangle, BarChart3, Target } from "lucide-react";
 // ✅ Section 5 complete (imports — useRotaContext replaces sessionStorage)
 
 const displayContractedHours = (doctor: DoctorTargets, wtrMaxHoursPerWeek: number): number => {
@@ -102,7 +102,7 @@ export default function PreRotaTargetsPage() {
 
   if (loading) {
     return (
-      <AdminLayout title="Shift Hour Targets" accentColor="blue">
+      <AdminLayout title="Shift Hour Targets" accentColor="blue" pageIcon={Target}>
         <div className="flex items-center justify-center min-h-[300px]">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           <span className="ml-2 text-sm text-muted-foreground">Loading targets…</span>
@@ -113,7 +113,7 @@ export default function PreRotaTargetsPage() {
 
   if (loadError || errorMsg || !targetsData) {
     return (
-      <AdminLayout title="Shift Hour Targets" accentColor="blue">
+      <AdminLayout title="Shift Hour Targets" accentColor="blue" pageIcon={Target}>
         <div className="mx-auto max-w-lg mt-12">
           <div className="rounded-xl border border-border bg-card p-6 text-center space-y-4">
             <AlertTriangle className="h-8 w-8 text-amber-500 mx-auto" />
@@ -130,7 +130,7 @@ export default function PreRotaTargetsPage() {
   const { doctors, shiftTypes, wtrMaxHoursPerWeek, hardWeeklyCap } = targetsData;
 
   return (
-    <AdminLayout title="Shift Hour Targets" subtitle={`${deptName}${deptName && hospitalName ? ' · ' : ''}${hospitalName}`} accentColor="blue">
+    <AdminLayout title="Shift Hour Targets" subtitle={`${deptName}${deptName && hospitalName ? ' · ' : ''}${hospitalName}`} accentColor="blue" pageIcon={Target}>
       <div className="space-y-4 animate-fadeSlideUp">
         {/* Header bar */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">

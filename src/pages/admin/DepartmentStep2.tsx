@@ -1,12 +1,13 @@
 import { useState, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "@/components/AdminLayout";
+import { StepNavBar } from "@/components/StepNavBar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Pencil, Clock, Save, X, Info, AlertTriangle, ArrowLeft, ArrowRight, CalendarDays, ChevronRight, Loader2 } from "lucide-react";
+import { Plus, Trash2, Pencil, Clock, Save, X, Info, AlertTriangle, ArrowLeft, ArrowRight, CalendarDays, ChevronRight, Loader2, Building2 } from "lucide-react";
 import {
   useDepartmentSetup, detectBadges, mergedBadges,
   generateAbbreviation, getShiftColor,
@@ -852,14 +853,14 @@ export default function DepartmentStep2() {
   };
 
   return (
-    <AdminLayout title="Department Setup" subtitle="Step 2 of 3 — Design your week" accentColor="purple">
+    <AdminLayout title="Department Setup" subtitle="Step 2 of 3 — Shift design" accentColor="purple" pageIcon={Building2}>
       <DndContext
         sensors={sensors}
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
-        <div className="mx-auto max-w-3xl space-y-6 animate-fadeSlideUp" onClick={() => { if (activeChipId && !draggedShiftId) setActiveChipId(null); }}>
+        <div className="mx-auto max-w-3xl space-y-6 animate-fadeSlideUp pb-36 md:pb-6" onClick={() => { if (activeChipId && !draggedShiftId) setActiveChipId(null); }}>
 
           {/* Merged Calendar + Palette Card */}
           <Card>
@@ -1097,14 +1098,18 @@ export default function DepartmentStep2() {
             </CardContent>
           </Card>
 
-          <div className="flex flex-row justify-between gap-3">
-            <Button variant="outline" size="lg" className="min-h-[44px]" onClick={() => navigate("/admin/department/step-1")}>
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back
-            </Button>
-            <Button size="lg" className="min-h-[44px] bg-purple-600 text-white hover:bg-purple-700" disabled={!canSavePage} onClick={handleSaveAndContinue}>
-              {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving…</> : <>Continue <ChevronRight className="ml-2 h-4 w-4" /></>}
-            </Button>
-          </div>
+          <StepNavBar
+            left={
+              <Button variant="outline" size="lg" className="min-h-[44px]" onClick={() => navigate("/admin/department/step-1")}>
+                <ArrowLeft className="mr-2 h-4 w-4" /> Back
+              </Button>
+            }
+            right={
+              <Button size="lg" className="min-h-[44px] bg-purple-600 text-white hover:bg-purple-700" disabled={!canSavePage} onClick={handleSaveAndContinue}>
+                {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving…</> : <>Continue <ChevronRight className="ml-2 h-4 w-4" /></>}
+              </Button>
+            }
+          />
         </div>
 
         <DragOverlay>

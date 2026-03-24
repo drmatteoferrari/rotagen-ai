@@ -1,10 +1,11 @@
 import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "@/components/AdminLayout";
+import { StepNavBar } from "@/components/StepNavBar";
 import { useAdminSetup } from "@/contexts/AdminSetupContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, ArrowRight, CheckCircle, AlertTriangle, ClipboardCheck, Minus, Plus } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle, AlertTriangle, ClipboardCheck, Minus, Plus, ClipboardList } from "lucide-react";
 
 function MaxWarning({ value, max, label }: { value: number; max: number; label: string }) {
   if (value <= max) return (
@@ -85,8 +86,8 @@ export default function WtrStep4() {
   } = useAdminSetup();
 
   return (
-    <AdminLayout title="Working Time Regulations" subtitle="Step 4 of 5 — Non-Resident On-Call" accentColor="red">
-      <div className="mx-auto max-w-3xl space-y-6 animate-fadeSlideUp">
+    <AdminLayout title="Working Time Regulations" subtitle="Step 4 of 5 — On-call" accentColor="red" pageIcon={ClipboardList}>
+      <div className="mx-auto max-w-3xl space-y-6 animate-fadeSlideUp pb-36 md:pb-6">
         {/* Amber scope banner */}
         <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-700">
           <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
@@ -265,16 +266,19 @@ export default function WtrStep4() {
           </CardContent>
         </Card>
 
-        {/* Footer */}
-        <div className="flex justify-between">
-          <Button variant="outline" size="lg" onClick={() => navigate("/admin/wtr/step-3")}>
-            <ArrowLeft className="mr-2 h-4 w-4" />Back
-          </Button>
-          <Button size="lg" onClick={() => navigate("/admin/wtr/step-5")} className="bg-red-600 hover:bg-red-700">
-            Continue
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        </div>
+        <StepNavBar
+          left={
+            <Button variant="outline" size="lg" onClick={() => navigate("/admin/wtr/step-3")}>
+              <ArrowLeft className="mr-2 h-4 w-4" />Back
+            </Button>
+          }
+          right={
+            <Button size="lg" onClick={() => navigate("/admin/wtr/step-5")} className="bg-red-600 hover:bg-red-700">
+              Continue
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          }
+        />
       </div>
     </AdminLayout>
   );

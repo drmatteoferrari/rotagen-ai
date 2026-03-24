@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
   CalendarDays, Target, AlertTriangle, CheckCircle,
-  XCircle, Info, RefreshCw, Loader2, ArrowLeft, RotateCcw,
+  XCircle, Info, RefreshCw, Loader2, ArrowLeft, RotateCcw, BarChart3,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -165,7 +165,7 @@ export default function PreRotaPage() {
   }, [changesPanelOpen, currentRotaConfigId])
 
   return (
-    <AdminLayout title="Pre-Rota" subtitle="Calendar, targets and data validation" accentColor="blue">
+    <AdminLayout title="Pre-Rota" subtitle="Calendar, targets and data validation" accentColor="blue" pageIcon={BarChart3}>
       <div className="mx-auto max-w-3xl space-y-5 animate-fadeSlideUp">
         {/* Back link + re-generate */}
         <div className="flex items-center justify-between">

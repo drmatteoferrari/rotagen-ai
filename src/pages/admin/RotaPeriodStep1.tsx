@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "@/components/AdminLayout";
+import { StepNavBar } from "@/components/StepNavBar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
@@ -90,8 +91,8 @@ export default function RotaPeriodStep1() {
     : null;
 
   return (
-    <AdminLayout title="Rota Period" subtitle="Step 1 of 2 — Select the rota dates" accentColor="yellow">
-      <div className="mx-auto max-w-3xl space-y-3 sm:space-y-6 animate-fadeSlideUp">
+    <AdminLayout title="Rota Period" subtitle="Step 1 of 2 — Dates" accentColor="yellow" pageIcon={CalendarDays}>
+      <div className="mx-auto max-w-3xl space-y-3 sm:space-y-6 animate-fadeSlideUp pb-36 md:pb-6">
         {/* Info banner */}
         <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-700">
           <Info className="h-4 w-4 shrink-0 text-amber-600" />
@@ -143,12 +144,14 @@ export default function RotaPeriodStep1() {
           </CardContent>
         </Card>
 
-        <div className="flex justify-end">
-          <Button size="lg" onClick={handleContinue} className="bg-amber-600 hover:bg-amber-700">
-            Continue
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        </div>
+        <StepNavBar
+          right={
+            <Button size="lg" onClick={handleContinue} className="bg-amber-600 hover:bg-amber-700">
+              Continue
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          }
+        />
       </div>
     </AdminLayout>
   );
