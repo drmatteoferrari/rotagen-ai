@@ -44,7 +44,27 @@ function AdminShellInner() {
     green:  '#f0fdf4',
   };
   const bgColor = bgColorMap[accentColor] || '#eff6ff';
-  
+
+  const iconBgMap: Record<string, string> = {
+    blue:   'bg-blue-100',
+    red:    'bg-red-100',
+    yellow: 'bg-amber-100',
+    purple: 'bg-purple-100',
+    teal:   'bg-teal-100',
+    pink:   'bg-pink-100',
+    green:  'bg-green-100',
+  };
+  const iconColorMap: Record<string, string> = {
+    blue:   'text-blue-600',
+    red:    'text-red-600',
+    yellow: 'text-amber-600',
+    purple: 'text-purple-600',
+    teal:   'text-teal-600',
+    pink:   'text-pink-600',
+    green:  'text-green-600',
+  };
+  const PageIcon = pageIcon;
+
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
