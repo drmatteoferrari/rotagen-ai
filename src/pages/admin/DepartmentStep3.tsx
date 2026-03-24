@@ -530,8 +530,8 @@ export default function DepartmentStep3() {
 
   /* ─── JSX ─── */
   return (
-    <AdminLayout title="Department Setup" subtitle="Step 3 of 3 — Shift hour distribution" accentColor="purple">
-      <div className="mx-auto max-w-3xl space-y-6 animate-fadeSlideUp">
+    <AdminLayout title="Department Setup" subtitle="Step 3 of 3 — Hours" accentColor="purple" pageIcon={Building2}>
+      <div className="mx-auto max-w-3xl space-y-6 animate-fadeSlideUp pb-36 md:pb-6">
         {loading ? (
           <div className="flex items-center justify-center gap-2 py-20 text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin" />
