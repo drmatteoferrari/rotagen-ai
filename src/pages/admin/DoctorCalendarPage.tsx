@@ -283,6 +283,16 @@ export default function DoctorCalendarPage() {
     return () => window.removeEventListener('keydown', handler)
   }, [])
 
+  const mergedAvailability = useMemo<Record<string, MergedCell>>(() => {
+    if (!doctor || !calendarData) return {}
+    return mergeOverridesIntoAvailability(
+      doctor.availability,
+      overrides,
+      calendarData.rotaStartDate,
+      calendarData.rotaEndDate
+    )
+  }, [doctor, overrides, calendarData])
+
   // ─── Loading / error ───────────────────────────────────────
   if (loading) return (
     <AdminLayout title="Doctor Calendar">
@@ -327,16 +337,6 @@ export default function DoctorCalendarPage() {
     : viewMode === 'week'
     ? currentWeekIndex >= calendarData.weeks.length - 1
     : currentDateISO >= calendarData.rotaEndDate
-
-  const mergedAvailability = useMemo<Record<string, MergedCell>>(() => {
-    if (!doctor || !calendarData) return {}
-    return mergeOverridesIntoAvailability(
-      doctor.availability,
-      overrides,
-      calendarData.rotaStartDate,
-      calendarData.rotaEndDate
-    )
-  }, [doctor, overrides, calendarData])
 
   // ─── Sub-components ────────────────────────────────────────
   function MonthView() {
