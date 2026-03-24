@@ -853,7 +853,22 @@ export default function DepartmentStep2() {
   };
 
   return (
-    <AdminLayout title="Department Setup" subtitle="Step 2 of 3 — Shift design" accentColor="purple" pageIcon={Building2}>
+    <AdminLayout title="Department Setup" subtitle="Step 2 of 3 — Shift design" accentColor="purple" pageIcon={Building2}
+      navBar={
+        <StepNavBar
+          left={
+            <Button variant="outline" size="lg" className="min-h-[44px]" onClick={() => navigate("/admin/department/step-1")}>
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back
+            </Button>
+          }
+          right={
+            <Button size="lg" className="min-h-[44px] bg-purple-600 text-white hover:bg-purple-700" disabled={!canSavePage} onClick={handleSaveAndContinue}>
+              {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving…</> : <>Continue <ChevronRight className="ml-2 h-4 w-4" /></>}
+            </Button>
+          }
+        />
+      }
+    >
       <DndContext
         sensors={sensors}
         onDragStart={handleDragStart}
