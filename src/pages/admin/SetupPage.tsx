@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import {
   CheckCircle, Target, Users, Lock,
   Building2, Loader2, ClipboardList, CalendarDays,
-  RefreshCw, Play, AlertTriangle, XCircle, Pencil, RotateCcw,
+  RefreshCw, Play, AlertTriangle, XCircle, Pencil, RotateCcw, Wand2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { generatePreRota } from "@/lib/preRotaGenerator";
