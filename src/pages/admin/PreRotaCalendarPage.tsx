@@ -462,6 +462,21 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
   const allDates = useMemo(() => calendarData?.weeks.flatMap(w => w.dates) ?? [], [calendarData]);
   const maxMinDoctors = useMemo(() => Math.max(...shiftTypes.map(s => s.min_doctors), 1), [shiftTypes]);
 
+  const mergedAvailabilityByDoctor = useMemo<Record<string, Record<string, MergedCell>>>(() => {
+    if (!calendarData) return {}
+    const result: Record<string, Record<string, MergedCell>> = {}
+    for (const doctor of calendarData.doctors) {
+      const doctorOverrides = overrides.filter(o => o.doctorId === doctor.doctorId)
+      result[doctor.doctorId] = mergeOverridesIntoAvailability(
+        doctor.availability,
+        doctorOverrides,
+        calendarData.rotaStartDate,
+        calendarData.rotaEndDate
+      )
+    }
+    return result
+  }, [calendarData, overrides])
+
   const Wrapper = embedded
     ? ({ children }: { children: React.ReactNode }) => <>{children}</>
     : ({ children }: { children: React.ReactNode }) => <AdminLayout title="Availability Calendar" accentColor="blue">{children}</AdminLayout>;

@@ -328,6 +328,16 @@ export default function DoctorCalendarPage() {
     ? currentWeekIndex >= calendarData.weeks.length - 1
     : currentDateISO >= calendarData.rotaEndDate
 
+  const mergedAvailability = useMemo<Record<string, MergedCell>>(() => {
+    if (!doctor || !calendarData) return {}
+    return mergeOverridesIntoAvailability(
+      doctor.availability,
+      overrides,
+      calendarData.rotaStartDate,
+      calendarData.rotaEndDate
+    )
+  }, [doctor, overrides, calendarData])
+
   // ─── Sub-components ────────────────────────────────────────
   function MonthView() {
     const rows = getMonthWeekRows(currentMonthKey)
