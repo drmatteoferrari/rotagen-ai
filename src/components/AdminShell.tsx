@@ -138,7 +138,7 @@ function AdminShellInner() {
   }
 
   return (
-    <div style={{ backgroundColor: bgColor }} className="flex min-h-screen w-full">
+    <div style={{ backgroundColor: bgColor }} className="flex h-dvh w-full overflow-hidden">
       {/* Sidebar */}
       <aside
         className={cn(
