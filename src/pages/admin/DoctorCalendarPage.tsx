@@ -8,6 +8,8 @@ import { getTodayISO, mapOverrideRow, mergeOverridesIntoAvailability, type Calen
 import type { CalendarData, CalendarDoctor } from '@/lib/preRotaTypes'
 import { ChevronLeft, ChevronRight, Loader2, AlertTriangle, ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { EventDetailPanel } from '@/components/calendar/EventDetailPanel'
+import { AddEventModal } from '@/components/calendar/AddEventModal'
 
 // ─── Constants ────────────────────────────────────────────────
 const CHIP_COLOURS: Record<string, string> = {
@@ -188,6 +190,18 @@ export default function DoctorCalendarPage() {
   const [currentWeekIndex, setCurrentWeekIndex] = useState(0)
   const [currentMonthKey, setCurrentMonthKey] = useState('')
   const [overrides, setOverrides] = useState<CalendarOverride[]>([])
+  const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const [panelOpen, setPanelOpen] = useState(false)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [modalSaving, setModalSaving] = useState(false)
+  const [modalPrefill, setModalPrefill] = useState<{
+    eventType: string; startDate: string; endDate: string;
+    note: string; overrideId: string; originalEventType: string | null
+  } | null>(null)
+  const [modalCopyFrom, setModalCopyFrom] = useState<{
+    eventType: string; startDate: string; endDate: string
+  } | null>(null)
+  const [modalInitialDate, setModalInitialDate] = useState<string | null>(null)
 
   const touchStartX = useRef(0)
   const touchStartY = useRef(0)
@@ -329,6 +343,91 @@ export default function DoctorCalendarPage() {
     dx < 0 ? navRef.current.goNext() : navRef.current.goPrev()
   }
 
+  const reloadOverrides = async () => {
+    if (!currentRotaConfigId || !doctorId) return
+    const { data } = await supabase
+      .from('coordinator_calendar_overrides')
+      .select('*')
+      .eq('rota_config_id', currentRotaConfigId)
+      .eq('doctor_id', doctorId)
+    setOverrides((data ?? []).map(mapOverrideRow))
+  }
+
+  const handleSaveOverride = async (payload: {
+    eventType: string; startDate: string; endDate: string;
+    note: string; overrideId: string | null; originalEventType: string | null
+  }) => {
+    setModalSaving(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user || !currentRotaConfigId || !doctorId) { setModalSaving(false); return }
+
+      if (payload.overrideId) {
+        await supabase.from('coordinator_calendar_overrides').delete().eq('id', payload.overrideId)
+        await supabase.from('coordinator_calendar_overrides').insert({
+          rota_config_id: currentRotaConfigId, doctor_id: doctorId,
+          event_type: payload.eventType, start_date: payload.startDate, end_date: payload.endDate,
+          action: 'modify', original_event_type: payload.originalEventType,
+          note: payload.note || null, created_by: user.id,
+        })
+      } else {
+        await supabase.from('coordinator_calendar_overrides').insert({
+          rota_config_id: currentRotaConfigId, doctor_id: doctorId,
+          event_type: payload.eventType, start_date: payload.startDate, end_date: payload.endDate,
+          action: 'add', note: payload.note || null, created_by: user.id,
+        })
+      }
+      await reloadOverrides()
+      setModalOpen(false); setModalPrefill(null); setModalCopyFrom(null); setModalInitialDate(null)
+      setPanelOpen(false); setSelectedDate(null)
+    } catch (err) {
+      console.error('Failed to save override:', err)
+    } finally {
+      setModalSaving(false)
+    }
+  }
+
+  const handleDeleteOverride = async (override: CalendarOverride) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user || !currentRotaConfigId || !doctorId) return
+      await supabase.from('coordinator_calendar_overrides').delete().eq('id', override.id)
+      await reloadOverrides()
+      setPanelOpen(false); setSelectedDate(null)
+    } catch (err) {
+      console.error('Failed to delete override:', err)
+    }
+  }
+
+  const handleRemoveSurveyEvent = async (date: string) => {
+    if (!calendarData) return
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user || !currentRotaConfigId || !doctorId) return
+      const cellCode = mergedAvailability[date]?.primary ?? 'AVAILABLE'
+      if (cellCode === 'AVAILABLE') return
+      await supabase.from('coordinator_calendar_overrides').insert({
+        rota_config_id: currentRotaConfigId, doctor_id: doctorId,
+        event_type: cellCode, start_date: date, end_date: date,
+        action: 'delete', original_event_type: cellCode,
+        original_start_date: date, original_end_date: date,
+        note: null, created_by: user.id,
+      })
+      await reloadOverrides()
+      setPanelOpen(false); setSelectedDate(null)
+    } catch (err) {
+      console.error('Failed to remove survey event:', err)
+    }
+  }
+
+  const handleCellTap = (date: string) => {
+    if (selectedDate === date && panelOpen) {
+      setPanelOpen(false); setSelectedDate(null)
+    } else {
+      setSelectedDate(date); setPanelOpen(true); setModalOpen(false)
+    }
+  }
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft') navRef.current.goPrev()
@@ -420,7 +519,6 @@ export default function DoctorCalendarPage() {
                   const isBH = inRota && bankHolidaySet.has(date)
                   const dow = isoToUTCDate(date).getUTCDay()
                   const isWeekend = dow === 0 || dow === 6
-                   const cell = inRota ? doctor!.availability[date] : null
                    const mergedCell = inRota ? mergedAvailability[date] : undefined
                   const cellOpacity = !inRota ? 0.2 : !inMonth ? 0.45 : 1
 
@@ -492,7 +590,13 @@ export default function DoctorCalendarPage() {
                 const mergedCell = mergedAvailability[date]
                 const compact = isMobile || isTablet
                 return (
-                  <td key={date} className="p-2 align-top border-b border-r border-border/30 min-h-[80px]">
+                  <td key={date} onClick={() => handleCellTap(date)}
+                    className="p-2 align-top border-b border-r border-border/30 min-h-[80px] cursor-pointer"
+                    style={{
+                      outline: selectedDate === date ? '2px solid #2563eb' : 'none',
+                      outlineOffset: -2,
+                    }}
+                  >
                     <div className="flex flex-col gap-1">
                       {renderMergedChips(mergedCell, compact)}
                     </div>
@@ -517,7 +621,17 @@ export default function DoctorCalendarPage() {
 
     return (
       <div className="space-y-4 py-2">
-        <p className="text-base font-semibold text-foreground">{fmtFull(currentDateISO)}</p>
+        <div className="flex items-center justify-between">
+          <p className="text-base font-semibold text-foreground">{fmtFull(currentDateISO)}</p>
+          {inRota && (
+            <button
+              onClick={() => handleCellTap(currentDateISO)}
+              style={{ fontSize: 11, fontWeight: 600, color: '#2563eb', background: '#eff6ff', border: '1px solid #dbeafe', borderRadius: 6, padding: '3px 10px', cursor: 'pointer' }}
+            >
+              + Override
+            </button>
+          )}
+        </div>
         {!inRota && (
           <p className="text-sm text-muted-foreground italic">This date is outside the rota period.</p>
         )}
@@ -621,6 +735,48 @@ export default function DoctorCalendarPage() {
         {viewMode === 'month' && <MonthView />}
         {viewMode === 'week' && <WeekView />}
         {viewMode === 'day' && <DayView />}
+
+        {panelOpen && selectedDate && calendarData && doctor && (
+          <EventDetailPanel
+            mergedCell={mergedAvailability[selectedDate] ?? { primary: 'AVAILABLE', secondary: null, label: '', overrideId: null, overrideAction: null, isDeleted: false, deletedCode: null }}
+            date={selectedDate}
+            doctorName={doctor.doctorName}
+            overrides={overrides}
+            onEdit={override => {
+              setModalPrefill({
+                eventType: override.eventType, startDate: override.startDate,
+                endDate: override.endDate, note: override.note ?? '',
+                overrideId: override.id, originalEventType: override.originalEventType,
+              })
+              setModalCopyFrom(null); setModalInitialDate(null); setModalOpen(true)
+            }}
+            onDelete={handleDeleteOverride}
+            onCopy={override => {
+              setModalCopyFrom({ eventType: override.eventType, startDate: override.startDate, endDate: override.endDate })
+              setModalPrefill(null); setModalInitialDate(null); setModalOpen(true)
+            }}
+            onAddNew={() => {
+              setModalPrefill(null); setModalCopyFrom(null)
+              setModalInitialDate(selectedDate); setModalOpen(true)
+            }}
+            onRemoveSurveyEvent={() => handleRemoveSurveyEvent(selectedDate)}
+            onClose={() => { setPanelOpen(false); setSelectedDate(null) }}
+          />
+        )}
+
+        {modalOpen && calendarData && doctor && (
+          <AddEventModal
+            prefill={modalPrefill ?? undefined}
+            copyFrom={modalCopyFrom ?? undefined}
+            initialDate={modalInitialDate ?? undefined}
+            doctorName={doctor.doctorName}
+            rotaStartDate={calendarData.rotaStartDate}
+            rotaEndDate={calendarData.rotaEndDate}
+            saving={modalSaving}
+            onSave={handleSaveOverride}
+            onClose={() => { setModalOpen(false); setModalPrefill(null); setModalCopyFrom(null); setModalInitialDate(null) }}
+          />
+        )}
       </div>
     </AdminLayout>
   )

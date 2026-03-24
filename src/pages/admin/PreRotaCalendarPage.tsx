@@ -11,6 +11,8 @@ import {
   ChevronLeft, ChevronRight, Download, ArrowLeft, Loader2, AlertTriangle, ChevronDown,
 } from "lucide-react";
 import { getTodayISO, mapOverrideRow, mergeOverridesIntoAvailability, type CalendarOverride, type MergedCell } from "@/lib/calendarOverrides";
+import { EventDetailPanel } from '@/components/calendar/EventDetailPanel'
+import { AddEventModal } from '@/components/calendar/AddEventModal'
 
 const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
@@ -317,6 +319,18 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
   const [hospitalName, setHospitalName] = useState('');
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [overrides, setOverrides] = useState<CalendarOverride[]>([]);
+  const [selectedCell, setSelectedCell] = useState<{ doctorId: string; date: string } | null>(null)
+  const [panelOpen, setPanelOpen] = useState(false)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [modalSaving, setModalSaving] = useState(false)
+  const [modalPrefill, setModalPrefill] = useState<{
+    eventType: string; startDate: string; endDate: string;
+    note: string; overrideId: string; originalEventType: string | null
+  } | null>(null)
+  const [modalCopyFrom, setModalCopyFrom] = useState<{
+    eventType: string; startDate: string; endDate: string
+  } | null>(null)
+  const [modalInitialDate, setModalInitialDate] = useState<string | null>(null)
   const dateInputRef = useRef<HTMLInputElement>(null);
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
@@ -494,6 +508,93 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
     if (Math.abs(dx) < 50 || Math.abs(dx) < dy) return;
     dx < 0 ? navRef.current.goNext() : navRef.current.goPrev();
   };
+
+  const reloadOverrides = async () => {
+    if (!rotaConfigId) return
+    const { data } = await supabase
+      .from('coordinator_calendar_overrides')
+      .select('*')
+      .eq('rota_config_id', rotaConfigId)
+    setOverrides((data ?? []).map(mapOverrideRow))
+  }
+
+  const handleSaveOverride = async (payload: {
+    eventType: string; startDate: string; endDate: string;
+    note: string; overrideId: string | null; originalEventType: string | null
+  }) => {
+    if (!selectedCell || !rotaConfigId) return
+    setModalSaving(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { setModalSaving(false); return }
+
+      if (payload.overrideId) {
+        await supabase.from('coordinator_calendar_overrides').delete().eq('id', payload.overrideId)
+        await supabase.from('coordinator_calendar_overrides').insert({
+          rota_config_id: rotaConfigId, doctor_id: selectedCell.doctorId,
+          event_type: payload.eventType, start_date: payload.startDate, end_date: payload.endDate,
+          action: 'modify', original_event_type: payload.originalEventType,
+          note: payload.note || null, created_by: user.id,
+        })
+      } else {
+        await supabase.from('coordinator_calendar_overrides').insert({
+          rota_config_id: rotaConfigId, doctor_id: selectedCell.doctorId,
+          event_type: payload.eventType, start_date: payload.startDate, end_date: payload.endDate,
+          action: 'add', note: payload.note || null, created_by: user.id,
+        })
+      }
+      await reloadOverrides()
+      setModalOpen(false); setModalPrefill(null); setModalCopyFrom(null); setModalInitialDate(null)
+      setPanelOpen(false); setSelectedCell(null)
+    } catch (err) {
+      console.error('Failed to save override:', err)
+    } finally {
+      setModalSaving(false)
+    }
+  }
+
+  const handleDeleteOverride = async (override: CalendarOverride) => {
+    if (!rotaConfigId || !selectedCell) return
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      await supabase.from('coordinator_calendar_overrides').delete().eq('id', override.id)
+      await reloadOverrides()
+      setPanelOpen(false); setSelectedCell(null)
+    } catch (err) {
+      console.error('Failed to delete override:', err)
+    }
+  }
+
+  const handleRemoveSurveyEvent = async () => {
+    if (!selectedCell || !calendarData || !rotaConfigId) return
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const cellCode = mergedAvailabilityByDoctor[selectedCell.doctorId]?.[selectedCell.date]?.primary ?? 'AVAILABLE'
+      if (cellCode === 'AVAILABLE') return
+      await supabase.from('coordinator_calendar_overrides').insert({
+        rota_config_id: rotaConfigId, doctor_id: selectedCell.doctorId,
+        event_type: cellCode, start_date: selectedCell.date, end_date: selectedCell.date,
+        action: 'delete', original_event_type: cellCode,
+        original_start_date: selectedCell.date, original_end_date: selectedCell.date,
+        note: null, created_by: user.id,
+      })
+      await reloadOverrides()
+      setPanelOpen(false); setSelectedCell(null)
+    } catch (err) {
+      console.error('Failed to remove survey event:', err)
+    }
+  }
+
+  const handleCellTap = (doctorId: string, date: string) => {
+    if (selectedCell?.doctorId === doctorId && selectedCell?.date === date && panelOpen) {
+      setPanelOpen(false); setSelectedCell(null)
+    } else {
+      setSelectedCell({ doctorId, date }); setPanelOpen(true); setModalOpen(false)
+    }
+  }
+
 
   const allDates = useMemo(() => calendarData?.weeks.flatMap(w => w.dates) ?? [], [calendarData]);
   const maxMinDoctors = useMemo(() => Math.max(...shiftTypes.map(s => s.min_doctors), 1), [shiftTypes]);
@@ -740,13 +841,16 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                       const badgeEvents = (['AL', 'SL', 'ROT', 'PL'] as const).filter(e => primary === e);
                       const bg = getMergedCellBackground(mergedCell, isLtftDay);
                       return (
-                        <td key={date} style={{
+                        <td key={date} onClick={() => handleCellTap(doctor.doctorId, date)} style={{
                           background: bg,
                           borderBottom: '1px solid #f1f5f9', borderLeft: '1px solid #e2e8f0',
                           textAlign: 'center',
                           minHeight: 52, height: 1, verticalAlign: 'middle',
-                          padding: 0,
-                        }}>
+                          padding: 0, cursor: 'pointer',
+                          outline: selectedCell?.doctorId === doctor.doctorId && selectedCell?.date === date
+                            ? '2px solid #2563eb' : 'none',
+                          outlineOffset: -2,
+                        }>
                           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '4px 2px' }}>
                             {mergedCell?.isDeleted && mergedCell.deletedCode ? (
                               <span style={{
@@ -923,13 +1027,17 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                 const cellBg = getMergedCellBackground(mergedCell, isLtftDay);
                 const isUnavailable = ['AL', 'SL', 'ROT', 'PL'].includes(primary);
                 return (
-                  <div key={doctor.doctorId} style={{
+                  <div key={doctor.doctorId} onClick={() => handleCellTap(doctor.doctorId, currentDate)} style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     padding: '4px 8px',
-                    background: cellBg,
+                    background: selectedCell?.doctorId === doctor.doctorId && selectedCell?.date === currentDate
+                      ? '#eff6ff' : cellBg,
                     borderBottom: idx < doctors.length - 1 ? '1px solid #f1f5f9' : 'none',
                     opacity: isUnavailable ? 0.6 : 1,
-                    minHeight: 30,
+                    minHeight: 30, cursor: 'pointer',
+                    outline: selectedCell?.doctorId === doctor.doctorId && selectedCell?.date === currentDate
+                      ? '2px solid #2563eb' : 'none',
+                    outlineOffset: -1,
                   }}>
                     <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
                       <span
@@ -1031,7 +1139,55 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
           </div>
         )}
 
-        {/* ── MONTH PLACEHOLDER ── */}
+        {panelOpen && selectedCell && calendarData && (() => {
+          const selDoctor = calendarData.doctors.find(d => d.doctorId === selectedCell.doctorId)
+          const mergedCell = mergedAvailabilityByDoctor[selectedCell.doctorId]?.[selectedCell.date]
+          if (!selDoctor || !mergedCell) return null
+          return (
+            <>
+              <EventDetailPanel
+                mergedCell={mergedCell}
+                date={selectedCell.date}
+                doctorName={selDoctor.doctorName}
+                overrides={overrides.filter(o => o.doctorId === selectedCell.doctorId)}
+                onEdit={override => {
+                  setModalPrefill({
+                    eventType: override.eventType, startDate: override.startDate,
+                    endDate: override.endDate, note: override.note ?? '',
+                    overrideId: override.id, originalEventType: override.originalEventType,
+                  })
+                  setModalCopyFrom(null); setModalInitialDate(null); setModalOpen(true)
+                }}
+                onDelete={handleDeleteOverride}
+                onCopy={override => {
+                  setModalCopyFrom({ eventType: override.eventType, startDate: override.startDate, endDate: override.endDate })
+                  setModalPrefill(null); setModalInitialDate(null); setModalOpen(true)
+                }}
+                onAddNew={() => {
+                  setModalPrefill(null); setModalCopyFrom(null)
+                  setModalInitialDate(selectedCell.date); setModalOpen(true)
+                }}
+                onRemoveSurveyEvent={handleRemoveSurveyEvent}
+                onClose={() => { setPanelOpen(false); setSelectedCell(null) }}
+              />
+              {modalOpen && (
+                <AddEventModal
+                  prefill={modalPrefill ?? undefined}
+                  copyFrom={modalCopyFrom ?? undefined}
+                  initialDate={modalInitialDate ?? undefined}
+                  doctorName={selDoctor.doctorName}
+                  rotaStartDate={calendarData.rotaStartDate}
+                  rotaEndDate={calendarData.rotaEndDate}
+                  saving={modalSaving}
+                  onSave={handleSaveOverride}
+                  onClose={() => { setModalOpen(false); setModalPrefill(null); setModalCopyFrom(null); setModalInitialDate(null) }}
+                />
+              )}
+            </>
+          )
+        })()}
+
+
         {viewMode === 'month' && (
           <div style={{
             padding: 40, textAlign: 'center',
