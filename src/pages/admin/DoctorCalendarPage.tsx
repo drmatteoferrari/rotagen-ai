@@ -8,6 +8,8 @@ import { getTodayISO, mapOverrideRow, mergeOverridesIntoAvailability, type Calen
 import type { CalendarData, CalendarDoctor } from '@/lib/preRotaTypes'
 import { ChevronLeft, ChevronRight, Loader2, AlertTriangle, ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { EventDetailPanel } from '@/components/calendar/EventDetailPanel'
+import { AddEventModal } from '@/components/calendar/AddEventModal'
 
 // ─── Constants ────────────────────────────────────────────────
 const CHIP_COLOURS: Record<string, string> = {
