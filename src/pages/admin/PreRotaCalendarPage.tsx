@@ -1027,13 +1027,17 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                 const cellBg = getMergedCellBackground(mergedCell, isLtftDay);
                 const isUnavailable = ['AL', 'SL', 'ROT', 'PL'].includes(primary);
                 return (
-                  <div key={doctor.doctorId} style={{
+                  <div key={doctor.doctorId} onClick={() => handleCellTap(doctor.doctorId, currentDate)} style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     padding: '4px 8px',
-                    background: cellBg,
+                    background: selectedCell?.doctorId === doctor.doctorId && selectedCell?.date === currentDate
+                      ? '#eff6ff' : cellBg,
                     borderBottom: idx < doctors.length - 1 ? '1px solid #f1f5f9' : 'none',
                     opacity: isUnavailable ? 0.6 : 1,
-                    minHeight: 30,
+                    minHeight: 30, cursor: 'pointer',
+                    outline: selectedCell?.doctorId === doctor.doctorId && selectedCell?.date === currentDate
+                      ? '2px solid #2563eb' : 'none',
+                    outlineOffset: -1,
                   }}>
                     <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
                       <span
