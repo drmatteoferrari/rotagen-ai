@@ -113,7 +113,7 @@ export default function PreRotaTargetsPage() {
 
   if (loadError || errorMsg || !targetsData) {
     return (
-      <AdminLayout title="Shift Hour Targets" accentColor="blue">
+      <AdminLayout title="Shift Hour Targets" accentColor="blue" pageIcon={Target}>
         <div className="mx-auto max-w-lg mt-12">
           <div className="rounded-xl border border-border bg-card p-6 text-center space-y-4">
             <AlertTriangle className="h-8 w-8 text-amber-500 mx-auto" />
