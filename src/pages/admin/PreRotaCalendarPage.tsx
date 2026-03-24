@@ -666,7 +666,11 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
   const dayLabel = currentDate
     ? new Date(currentDate + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
     : '';
-  const navLabel = viewMode === 'week' ? weekLabel : viewMode === 'day' ? dayLabel : 'Month view';
+  const MONTH_NAMES_LONG = ['January','February','March','April','May','June','July','August','September','October','November','December']
+  const monthLabel = currentMonthKey
+    ? `${MONTH_NAMES_LONG[Number(currentMonthKey.split('-')[1]) - 1]} ${currentMonthKey.split('-')[0]}`
+    : 'Month view'
+  const navLabel = viewMode === 'week' ? weekLabel : viewMode === 'day' ? dayLabel : monthLabel
 
   const prevDisabled = viewMode === 'week'
     ? currentWeekIndex === 0
