@@ -621,7 +621,17 @@ export default function DoctorCalendarPage() {
 
     return (
       <div className="space-y-4 py-2">
-        <p className="text-base font-semibold text-foreground">{fmtFull(currentDateISO)}</p>
+        <div className="flex items-center justify-between">
+          <p className="text-base font-semibold text-foreground">{fmtFull(currentDateISO)}</p>
+          {inRota && (
+            <button
+              onClick={() => handleCellTap(currentDateISO)}
+              style={{ fontSize: 11, fontWeight: 600, color: '#2563eb', background: '#eff6ff', border: '1px solid #dbeafe', borderRadius: 6, padding: '3px 10px', cursor: 'pointer' }}
+            >
+              + Override
+            </button>
+          )}
+        </div>
         {!inRota && (
           <p className="text-sm text-muted-foreground italic">This date is outside the rota period.</p>
         )}
