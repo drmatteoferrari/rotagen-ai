@@ -530,8 +530,23 @@ export default function DepartmentStep3() {
 
   /* ─── JSX ─── */
   return (
-    <AdminLayout title="Department Setup" subtitle="Step 3 of 3 — Hours" accentColor="purple" pageIcon={Building2}>
-      <div className="mx-auto max-w-3xl space-y-6 animate-fadeSlideUp pb-36 md:pb-6">
+    <AdminLayout title="Department Setup" subtitle="Step 3 of 3 — Hours" accentColor="purple" pageIcon={Building2}
+      navBar={
+        <StepNavBar
+          left={
+            <Button variant="outline" size="lg" className="min-h-[44px]" onClick={() => navigate('/admin/department/step-2')}>
+              <ArrowLeft className="mr-1 h-4 w-4" /> Back
+            </Button>
+          }
+          right={
+            <Button size="lg" className="min-h-[44px]" disabled={!canSave} onClick={() => navigate('/admin/department/summary?mode=pre-submit')}>
+              <ArrowRight className="mr-1 h-4 w-4" />Review &amp; Save
+            </Button>
+          }
+        />
+      }
+    >
+      <div className="mx-auto max-w-3xl space-y-6 animate-fadeSlideUp">
         {loading ? (
           <div className="flex items-center justify-center gap-2 py-20 text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin" />
