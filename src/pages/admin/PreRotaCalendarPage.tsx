@@ -901,10 +901,10 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
             {/* Doctor list */}
             <div style={{ border: '1px solid #e2e8f0', borderRadius: 8, overflow: 'hidden' }}>
               {doctors.map((doctor, idx) => {
-                const cell = doctor.availability[currentDate];
-                const primary = cell?.primary ?? 'AVAILABLE';
+                const mergedCell = mergedAvailabilityByDoctor[doctor.doctorId]?.[currentDate]
+                const primary = mergedCell?.isDeleted ? 'AVAILABLE' : (mergedCell?.primary ?? 'AVAILABLE')
                 const isLtftDay = getLtftDaysOff(doctor).includes(getDayNameFromISO(currentDate));
-                const cellBg = getCellBackground(doctor, currentDate, isBHDay, isWkndDay);
+                const cellBg = getMergedCellBackground(mergedCell, isLtftDay);
                 const isUnavailable = ['AL', 'SL', 'ROT', 'PL'].includes(primary);
                 return (
                   <div key={doctor.doctorId} style={{
@@ -925,12 +925,22 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                       <span style={{ fontSize: 10, color: '#94a3b8' }}>{doctor.grade} · {doctor.wte}%</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0, marginLeft: 4 }}>
-                      {primary === 'AL' && <span style={{ background: '#16a34a', color: '#fff', fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4 }}>AL</span>}
-                      {primary === 'SL' && <span style={{ background: '#2563eb', color: '#fff', fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4 }}>SL</span>}
-                      {primary === 'ROT' && <span style={{ background: '#c2410c', color: '#fff', fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4 }}>ROT</span>}
-                      {primary === 'PL' && <span style={{ background: '#7c3aed', color: '#fff', fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4 }}>PL</span>}
-                      {primary === 'NOC' && <span style={{ background: '#ec4899', color: '#fff', fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4 }}>NOC</span>}
-                      {isLtftDay && <span style={{ background: 'rgba(253,230,138,0.7)', color: '#92400e', border: '1px solid #fde68a', fontSize: 8, fontWeight: 600, padding: '1px 4px', borderRadius: 3 }}>LTFT</span>}
+                      {mergedCell?.isDeleted && mergedCell.deletedCode ? (
+                        <span style={{
+                          background: '#d1d5db', color: '#6b7280',
+                          fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4,
+                          textDecoration: 'line-through',
+                        }}>{mergedCell.deletedCode}</span>
+                      ) : (
+                        <>
+                          {primary === 'AL' && <span style={{ display: 'inline-flex', alignItems: 'center' }}><span style={{ background: '#16a34a', color: '#fff', fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4 }}>AL</span>{(mergedCell?.overrideAction === 'add' || mergedCell?.overrideAction === 'modify') && <RotaOverrideDot />}</span>}
+                          {primary === 'SL' && <span style={{ display: 'inline-flex', alignItems: 'center' }}><span style={{ background: '#2563eb', color: '#fff', fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4 }}>SL</span>{(mergedCell?.overrideAction === 'add' || mergedCell?.overrideAction === 'modify') && <RotaOverrideDot />}</span>}
+                          {primary === 'ROT' && <span style={{ display: 'inline-flex', alignItems: 'center' }}><span style={{ background: '#c2410c', color: '#fff', fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4 }}>ROT</span>{(mergedCell?.overrideAction === 'add' || mergedCell?.overrideAction === 'modify') && <RotaOverrideDot />}</span>}
+                          {primary === 'PL' && <span style={{ display: 'inline-flex', alignItems: 'center' }}><span style={{ background: '#7c3aed', color: '#fff', fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4 }}>PL</span>{(mergedCell?.overrideAction === 'add' || mergedCell?.overrideAction === 'modify') && <RotaOverrideDot />}</span>}
+                          {primary === 'NOC' && <span style={{ display: 'inline-flex', alignItems: 'center' }}><span style={{ background: '#ec4899', color: '#fff', fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4 }}>NOC</span>{(mergedCell?.overrideAction === 'add' || mergedCell?.overrideAction === 'modify') && <RotaOverrideDot />}</span>}
+                          {isLtftDay && <span style={{ background: 'rgba(253,230,138,0.7)', color: '#92400e', border: '1px solid #fde68a', fontSize: 8, fontWeight: 600, padding: '1px 4px', borderRadius: 3 }}>LTFT</span>}
+                        </>
+                      )}
                     </div>
                   </div>
                 );
