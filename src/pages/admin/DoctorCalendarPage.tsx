@@ -461,7 +461,7 @@ export default function DoctorCalendarPage() {
 
   // ─── Loading / error ───────────────────────────────────────
   if (loading) return (
-    <AdminLayout title="Doctor Calendar">
+    <AdminLayout title="Doctor Calendar" pageIcon={CalendarDays}>
       <div className="flex items-center justify-center py-20 gap-2 text-muted-foreground">
         <Loader2 className="h-5 w-5 animate-spin" />
         <span>Loading…</span>
