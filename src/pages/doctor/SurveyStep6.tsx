@@ -1,5 +1,5 @@
 import { useSurveyContext, type SpecialtyEntry } from "@/contexts/SurveyContext";
-import { StepNav } from "@/components/survey/StepNav";
+
 import { SurveySection } from "@/components/survey/SurveySection";
 import { InfoBox } from "@/components/survey/InfoBox";
 import { Input } from "@/components/ui/input";
