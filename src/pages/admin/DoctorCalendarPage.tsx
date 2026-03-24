@@ -190,6 +190,18 @@ export default function DoctorCalendarPage() {
   const [currentWeekIndex, setCurrentWeekIndex] = useState(0)
   const [currentMonthKey, setCurrentMonthKey] = useState('')
   const [overrides, setOverrides] = useState<CalendarOverride[]>([])
+  const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  const [panelOpen, setPanelOpen] = useState(false)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [modalSaving, setModalSaving] = useState(false)
+  const [modalPrefill, setModalPrefill] = useState<{
+    eventType: string; startDate: string; endDate: string;
+    note: string; overrideId: string; originalEventType: string | null
+  } | null>(null)
+  const [modalCopyFrom, setModalCopyFrom] = useState<{
+    eventType: string; startDate: string; endDate: string
+  } | null>(null)
+  const [modalInitialDate, setModalInitialDate] = useState<string | null>(null)
 
   const touchStartX = useRef(0)
   const touchStartY = useRef(0)
