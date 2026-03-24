@@ -303,7 +303,7 @@ function WeekCellContent({ mergedCell, isLtftDay, primary }: {
   );
 }
 
-
+function getMergedCellBackground(mergedCell: MergedCell | undefined, isLtftDay: boolean): string {
   if (!mergedCell) return '#ffffff'
   const primary = mergedCell.isDeleted ? 'AVAILABLE' : mergedCell.primary
   if (primary === 'ROT') return '#ffedd5'
