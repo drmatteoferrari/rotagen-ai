@@ -254,7 +254,56 @@ function RotaOverrideDot() {
   );
 }
 
-function getMergedCellBackground(mergedCell: MergedCell | undefined, isLtftDay: boolean): string {
+function WeekCellContent({ mergedCell, isLtftDay, primary }: {
+  mergedCell: MergedCell | undefined; isLtftDay: boolean; primary: string;
+}) {
+  const isNoc = primary === 'NOC';
+  const hasOverrideDot = mergedCell?.overrideAction === 'add' || mergedCell?.overrideAction === 'modify';
+
+  if (mergedCell?.isDeleted && mergedCell.deletedCode) {
+    return (
+      <span style={{
+        background: '#d1d5db', color: '#6b7280',
+        fontSize: 10, fontWeight: 700,
+        padding: '2px 7px', borderRadius: 5,
+        textDecoration: 'line-through',
+      }}>{mergedCell.deletedCode}</span>
+    );
+  }
+
+  return (
+    <>
+      {(['AL', 'SL', 'ROT', 'PL'] as const).filter(e => primary === e).map(event => (
+        <span key={event} style={{ display: 'inline-flex', alignItems: 'center' }}>
+          <LeaveBadge type={event} />
+          {hasOverrideDot && <RotaOverrideDot />}
+        </span>
+      ))}
+      {isNoc && (
+        <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+          <span style={{
+            background: '#ec4899', color: '#fff',
+            fontSize: 10, fontWeight: 700,
+            padding: '2px 7px', borderRadius: 5,
+            letterSpacing: '0.04em', lineHeight: 1.4,
+          }}>NOC</span>
+          {hasOverrideDot && <RotaOverrideDot />}
+        </span>
+      )}
+      {isLtftDay && (
+        <span style={{
+          background: 'rgba(253,230,138,0.7)', color: '#92400e',
+          border: '1px solid #fde68a',
+          fontSize: 9, fontWeight: 600,
+          padding: '1px 5px', borderRadius: 4,
+          letterSpacing: '0.03em',
+        }}>LTFT</span>
+      )}
+    </>
+  );
+}
+
+
   if (!mergedCell) return '#ffffff'
   const primary = mergedCell.isDeleted ? 'AVAILABLE' : mergedCell.primary
   if (primary === 'ROT') return '#ffedd5'
