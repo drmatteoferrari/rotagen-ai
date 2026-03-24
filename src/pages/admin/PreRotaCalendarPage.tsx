@@ -407,6 +407,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
     eventType: string; startDate: string; endDate: string
   } | null>(null)
   const [modalInitialDate, setModalInitialDate] = useState<string | null>(null)
+  const lastTapRef = useRef<{ doctorId: string; date: string; time: number } | null>(null)
   const dateInputRef = useRef<HTMLInputElement>(null);
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
