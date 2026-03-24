@@ -202,6 +202,7 @@ export default function DoctorCalendarPage() {
     eventType: string; startDate: string; endDate: string
   } | null>(null)
   const [modalInitialDate, setModalInitialDate] = useState<string | null>(null)
+  const lastTapRef = useRef<{ date: string; time: number } | null>(null)
 
   const touchStartX = useRef(0)
   const touchStartY = useRef(0)
