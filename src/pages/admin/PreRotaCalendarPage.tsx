@@ -8,7 +8,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useRotaContext } from "@/contexts/RotaContext";
 import { Button } from "@/components/ui/button";
 import {
-  ChevronLeft, ChevronRight, Download, ArrowLeft, Loader2, AlertTriangle, ChevronDown,
+  ChevronLeft, ChevronRight, Download, ArrowLeft, Loader2, AlertTriangle, ChevronDown, CalendarRange,
 } from "lucide-react";
 import { getTodayISO, mapOverrideRow, mergeOverridesIntoAvailability, type CalendarOverride, type MergedCell } from "@/lib/calendarOverrides";
 import { EventDetailPanel } from '@/components/calendar/EventDetailPanel'
