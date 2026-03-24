@@ -490,6 +490,12 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
+  useEffect(() => {
+    if (panelOpen && panelRef.current) {
+      panelRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    }
+  }, [panelOpen])
+
   const handleDownload = useCallback(() => {
     if (!calendarData || !targetsData) return;
     const blob = generatePreRotaExcel(calendarData, targetsData);
