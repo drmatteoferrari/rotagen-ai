@@ -123,19 +123,9 @@ export default function SetupPage() {
             <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2">Department & Rules</p>
             <div className="rounded-xl border border-border bg-card p-3 shadow-sm space-y-1">
 
-              {/* Department — mobile collapsed */}
-              {isSectionCollapsed('department', isDepartmentComplete) && (
-                <div className="flex items-center gap-3 rounded-lg px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors md:hidden" onClick={() => toggleSection('department')}>
-                  <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <span className="text-xs font-medium text-muted-foreground">1.</span>
-                  <span className="flex-1 text-sm font-medium text-foreground">Department</span>
-                  <span className="text-xs font-semibold text-emerald-600">Complete</span>
-                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-                </div>
-              )}
               {/* Department — full row */}
               <div
-                className={`flex items-center gap-3 rounded-lg px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors ${isSectionCollapsed('department', isDepartmentComplete) ? 'hidden md:flex' : 'flex'}`}
+                className="flex items-center gap-3 rounded-lg px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors"
                 onClick={() => navigate(isDepartmentComplete ? "/admin/department/summary?mode=post-submit" : "/admin/department/step-1")}
               >
                 <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
