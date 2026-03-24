@@ -676,12 +676,12 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
     ? currentWeekIndex === 0
     : viewMode === 'day'
     ? currentDayIndex === 0
-    : false;
+    : !currentMonthKey || currentMonthKey <= (calendarData?.rotaStartDate.slice(0, 7) ?? '')
   const nextDisabled = viewMode === 'week'
     ? currentWeekIndex >= weeks.length - 1
     : viewMode === 'day'
     ? currentDayIndex >= allDates.length - 1
-    : false;
+    : !currentMonthKey || currentMonthKey >= (calendarData?.rotaEndDate.slice(0, 7) ?? '')
 
   const goPrev = () => {
     if (viewMode === 'week') setCurrentWeekIndex(i => Math.max(0, i - 1));
