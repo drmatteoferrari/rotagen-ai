@@ -242,8 +242,24 @@ export default function RotaPeriodStep2() {
   const activeHolidayCount = rotaBankHolidays.filter(h => h.isActive).length;
 
   return (
-    <AdminLayout title="Rota Period" subtitle="Step 2 of 2 — Bank holidays" accentColor="yellow" pageIcon={CalendarDays}>
-      <div className="mx-auto max-w-3xl space-y-6 animate-fadeSlideUp pb-36 md:pb-6">
+    <AdminLayout title="Rota Period" subtitle="Step 2 of 2 — Bank holidays" accentColor="yellow" pageIcon={CalendarDays}
+      navBar={
+        <StepNavBar
+          left={
+            <Button variant="outline" size="lg" onClick={() => navigate("/admin/rota-period/step-1")}>
+              <ArrowLeft className="mr-2 h-4 w-4" />Back
+            </Button>
+          }
+          right={
+            <Button size="lg" disabled={saving} onClick={() => navigate('/admin/rota-period/summary?mode=pre-submit')} className="bg-amber-600 hover:bg-amber-700">
+              Review &amp; Save
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          }
+        />
+      }
+    >
+      <div className="mx-auto max-w-3xl space-y-6 animate-fadeSlideUp">
         {/* Info banner */}
         <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-700">
           <Info className="h-4 w-4 shrink-0 text-amber-600" />
