@@ -590,7 +590,13 @@ export default function DoctorCalendarPage() {
                 const mergedCell = mergedAvailability[date]
                 const compact = isMobile || isTablet
                 return (
-                  <td key={date} className="p-2 align-top border-b border-r border-border/30 min-h-[80px]">
+                  <td key={date} onClick={() => handleCellTap(date)}
+                    className="p-2 align-top border-b border-r border-border/30 min-h-[80px] cursor-pointer"
+                    style={{
+                      outline: selectedDate === date ? '2px solid #2563eb' : 'none',
+                      outlineOffset: -2,
+                    }}
+                  >
                     <div className="flex flex-col gap-1">
                       {renderMergedChips(mergedCell, compact)}
                     </div>
