@@ -489,12 +489,12 @@ export default function DoctorCalendarPage() {
           <tbody>
             <tr>
               {week.dates.map(date => {
-                const cell = doctor!.availability[date]
+                const mergedCell = mergedAvailability[date]
                 const compact = isMobile || isTablet
                 return (
                   <td key={date} className="p-2 align-top border-b border-r border-border/30 min-h-[80px]">
                     <div className="flex flex-col gap-1">
-                      {cell && renderChips(cell.primary, cell.secondary, compact)}
+                      {renderMergedChips(mergedCell, compact)}
                     </div>
                   </td>
                 )
