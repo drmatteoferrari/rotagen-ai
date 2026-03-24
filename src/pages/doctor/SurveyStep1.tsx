@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSurveyContext } from "@/contexts/SurveyContext";
-import { StepNav } from "@/components/survey/StepNav";
+
 import { SurveySection } from "@/components/survey/SurveySection";
 import { FieldError } from "@/components/survey/FieldError";
 import { Input } from "@/components/ui/input";
