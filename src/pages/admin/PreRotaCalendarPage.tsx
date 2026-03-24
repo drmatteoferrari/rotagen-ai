@@ -225,6 +225,26 @@ function CalendarLegend() {
   );
 }
 
+// ── Override helpers ──────────────────────────────────────────
+
+function RotaOverrideDot() {
+  return (
+    <span style={{
+      display: 'inline-block', width: 6, height: 6, borderRadius: '50%',
+      background: '#ea580c', marginLeft: 2, flexShrink: 0,
+    }} />
+  );
+}
+
+function getMergedCellBackground(mergedCell: MergedCell | undefined, isLtftDay: boolean): string {
+  if (!mergedCell) return '#ffffff'
+  const primary = mergedCell.isDeleted ? 'AVAILABLE' : mergedCell.primary
+  if (primary === 'ROT') return '#ffedd5'
+  if (primary === 'PL') return '#ede9fe'
+  if (isLtftDay) return '#fef9c3'
+  return '#ffffff'
+}
+
 // ── View Toggle ───────────────────────────────────────────────
 
 function ViewToggle({
