@@ -1,37 +1,58 @@
 
 
-## Plan: Six targeted fixes across four files
+## Plan: Five targeted improvements across five files
 
 ### Changes
 
-**1. `src/lib/preRotaCalendar.ts` — UTC date arithmetic fix**
-- Replace `dateRange` function (lines 11-20) to use `Date.UTC` and `setUTCDate`/`getUTCDate` instead of local time methods
-- Replace week-building block (lines 64-85) to use `Date.UTC`, `getUTCDay`, `setUTCDate` for Monday alignment and iteration
+**1. `src/lib/calendarOverrides.ts` — UTC fix for `rangeInclusive`**
+- Replace lines 54-63: use `Date.UTC` parsing and `setUTCDate`/`getUTCDate` instead of local time methods, matching the fix already applied to `preRotaCalendar.ts`
 
-**2. `src/components/calendar/EventDetailPanel.tsx` — Remove `React.CSSProperties` type**
-- Line 122: Change `function btn(...): React.CSSProperties {` to `function btn(...) {` (React is not imported in this file — this is likely causing the cascading build failure)
+**2. `src/components/calendar/EventDetailPanel.tsx` — Full rewrite**
+- Replace entire file with new compact design:
+  - New prop: `onGoToDate: () => void`
+  - Row-based action buttons instead of inline flex chips
+  - New icons: `Plus`, `RotateCcw`, `ArrowRight` (replacing `Minus`)
+  - Deleted events show "Restore event" (green) instead of "Remove this override"
+  - "Go to day view" button always visible
+  - UTC-safe date formatting with `timeZone: 'UTC'`
+  - `row()` helper replaces `btn()` helper
 
-**3. `src/components/calendar/AddEventModal.tsx` — End date min constraint**
-- Line 111: Change `min={rotaStartDate}` to `min={startDate || rotaStartDate}` on the end date input
+**3. `src/pages/admin/DoctorCalendarPage.tsx` — Five sub-changes:**
+- **3.1** Add `onGoToDate` prop to EventDetailPanel call (navigates to day view for selected date, closes panel)
+- **3.2** Add `lastTapRef` after `modalInitialDate` state (line ~204)
+- **3.3** Replace `handleCellTap` with double-tap detection (≤350ms → day view navigation)
+- **3.4** Replace DayView "+ Override" button with "+ Add event" that opens AddEventModal directly
+- **3.5** Make day view event cards clickable via `handleCellTap`
 
-**4. `src/pages/admin/PreRotaCalendarPage.tsx` — Four sub-changes:**
-- **4.1** Add `panelRef` after `navRef` (line ~340), add scroll-into-view effect after keyboard effect (line ~488)
-- **4.2** Wrap EventDetailPanel IIFE return in `<div ref={panelRef}>` instead of `<>` fragment (lines 1147/1186)
-- **4.3** Add `currentMonthKey` state (after line 317), initialise it in data load (after line 443), update `goPrev`/`goNext`/`prevDisabled`/`nextDisabled`/`navLabel` to handle month mode
-- **4.4** Add month grid helpers (`MONTH_DAY_ABBR`, `MONTH_EVENT_COLOURS`, `buildMonthGrid`) above `ViewToggle` (before line 268)
-- **4.5** Replace month view placeholder (lines 1191-1199) with full month grid table (desktop/tablet) or "needs more space" message (mobile)
+**4. `src/pages/admin/PreRotaCalendarPage.tsx` — Three sub-changes:**
+- **4.1** Add `onGoToDate` prop to EventDetailPanel call (navigates to doctor's calendar page)
+- **4.2** Add `lastTapRef` after `modalInitialDate` state (line ~409)
+- **4.3** Replace `handleCellTap` with double-tap detection (≤350ms → navigate to doctor calendar)
+
+**5. `src/pages/admin/PreRotaPage.tsx` — Coordinator Changes audit panel:**
+- Add `RotateCcw` to lucide imports
+- Add state: `changesPanelOpen`, `overrides`, `doctorNames`, `overridesLoading`, `revertingId`, `revertAllConfirm`, `revertOneConfirm`
+- Add `loadOverrides` (fetches overrides + doctor names), `handleRevertOne` (deletes single override), `handleRevertAll` (deletes all for rota config)
+- Add `useEffect` to lazy-load overrides when panel opens
+- Add collapsible "Coordinator Changes (N changes)" panel in JSX after the Data Validation panel (line ~289), with:
+  - Colour-coded action badges (green=add, blue=modify, grey=delete)
+  - Per-row revert with two-step confirm
+  - "Revert all" with two-step confirm
+  - Empty state message
 
 ### Technical notes
-- The `React.CSSProperties` fix on EventDetailPanel is the probable root cause of the build error — esbuild fails to parse/transform this reference, and the error cascades to make PreRotaCalendarPage appear broken at line 893
-- Month view grid uses `buildMonthGrid` to create a Mon-aligned 7-column date array for any given `YYYY-MM` key
-- Month grid supports cell tapping (reuses `handleCellTap`), doctor name links, override dots, deleted strikethroughs, and LTFT indicators
-- UTC fix in preRotaCalendar.ts prevents timezone-dependent date shifts near DST boundaries
+- The `rangeInclusive` UTC fix prevents override date ranges from shifting by ±1 day near DST boundaries
+- Double-tap uses a ref to track last tap time+target — no timer cleanup needed
+- EventDetailPanel's new `onGoToDate` prop enables navigation from both pages with different behavior (day view vs doctor calendar)
+- PreRotaPage audit panel lazy-loads data only when opened, fetches doctor names for display
+- All revert operations use hard delete on `coordinator_calendar_overrides` rows
 
 ### Files touched
 | File | Action |
 |------|--------|
-| `src/lib/preRotaCalendar.ts` | Edit dateRange + week builder |
-| `src/components/calendar/EventDetailPanel.tsx` | Fix btn return type |
-| `src/components/calendar/AddEventModal.tsx` | Fix end date min |
-| `src/pages/admin/PreRotaCalendarPage.tsx` | Add panelRef, month state, month view, scroll effect |
+| `src/lib/calendarOverrides.ts` | Edit rangeInclusive |
+| `src/components/calendar/EventDetailPanel.tsx` | Full rewrite |
+| `src/pages/admin/DoctorCalendarPage.tsx` | Add onGoToDate, double-tap, day view tweaks |
+| `src/pages/admin/PreRotaCalendarPage.tsx` | Add onGoToDate, double-tap |
+| `src/pages/admin/PreRotaPage.tsx` | Add coordinator changes audit panel |
 
