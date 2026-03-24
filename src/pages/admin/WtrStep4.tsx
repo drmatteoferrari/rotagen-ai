@@ -1,10 +1,11 @@
 import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "@/components/AdminLayout";
 import { StepNavBar } from "@/components/StepNavBar";
+import { useAdminSetup } from "@/contexts/AdminSetupContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, ArrowRight, CheckCircle, AlertTriangle, ClipboardCheck, Minus, Plus } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle, AlertTriangle, ClipboardCheck, Minus, Plus, ClipboardList } from "lucide-react";
 
 function MaxWarning({ value, max, label }: { value: number; max: number; label: string }) {
   if (value <= max) return (
