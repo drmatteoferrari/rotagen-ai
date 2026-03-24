@@ -519,7 +519,6 @@ export default function DoctorCalendarPage() {
                   const isBH = inRota && bankHolidaySet.has(date)
                   const dow = isoToUTCDate(date).getUTCDay()
                   const isWeekend = dow === 0 || dow === 6
-                   const cell = inRota ? doctor!.availability[date] : null
                    const mergedCell = inRota ? mergedAvailability[date] : undefined
                   const cellOpacity = !inRota ? 0.2 : !inMonth ? 0.45 : 1
 
