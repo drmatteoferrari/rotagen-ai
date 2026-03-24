@@ -108,8 +108,8 @@
 }
 
 body, #root {
-  background-color: #dbeafe; /* matches your default blue-100 */
-  min-height: 100vh;
+  background-color: #ffffff;
+  min-height: 100dvh;
 }
 
 @keyframes fadeSlideUp {

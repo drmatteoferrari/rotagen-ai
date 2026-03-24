@@ -42,27 +42,28 @@ export function SurveyShell({ children }: SurveyShellProps) {
   return (
     <div className="flex flex-col h-full">
       {/* Header — fixed at top, shrink-0 */}
-      <div className="shrink-0 bg-white border-b border-border px-4 sm:px-6 py-3 sm:py-4 z-10">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-teal-600">
-              <Stethoscope className="h-4 w-4 text-white" />
+      <div className="shrink-0 bg-white border-b border-border py-3 sm:py-4 z-10">
+        <div className="mx-auto max-w-2xl w-full px-4 sm:px-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-teal-600">
+                <Stethoscope className="h-4 w-4 text-white" />
+              </div>
+              <div>
+                <h1 className="text-sm font-semibold text-card-foreground leading-tight">Doctor Survey</h1>
+                <p className="text-[11px] text-muted-foreground">{STEP_SUBTITLES[step]}</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-sm font-semibold text-card-foreground leading-tight">Doctor Survey</h1>
-              <p className="text-[11px] text-muted-foreground">{STEP_SUBTITLES[step]}</p>
+            <div className="text-xs font-medium bg-teal-50 text-teal-700 border border-teal-200 rounded-full px-3 py-1">
+              {step} / {TOTAL_STEPS}
             </div>
           </div>
-          <div className="text-xs font-medium bg-teal-50 text-teal-700 border border-teal-200 rounded-full px-3 py-1">
-            {step} / {TOTAL_STEPS}
+          <div className="mt-2 h-1.5 bg-muted rounded-full overflow-hidden">
+            <div
+              className="h-full bg-teal-600 rounded-full transition-all duration-500 ease-out"
+              style={{ width: `${progress}%` }}
+            />
           </div>
-        </div>
-        <div className="mt-2 h-1.5 bg-muted rounded-full overflow-hidden">
-          <div
-            className="h-full bg-teal-600 rounded-full transition-all duration-500 ease-out"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
         </div>
       </div>
 
@@ -70,8 +71,9 @@ export function SurveyShell({ children }: SurveyShellProps) {
       {ctx?.rotaInfo?.startDate && ctx?.rotaInfo?.endDate && (
         <div className="shrink-0 bg-card border-b border-border py-2 text-xs text-muted-foreground">
           <div className="mx-auto max-w-2xl w-full px-4 sm:px-6 flex flex-wrap gap-x-4 gap-y-1">
-          <span>📅 Rota period: {fmtDate(ctx.rotaInfo.startDate)} – {fmtDate(ctx.rotaInfo.endDate)}{ctx.rotaInfo.durationWeeks ? ` (${ctx.rotaInfo.durationWeeks} weeks)` : ""}</span>
-          {ctx.rotaInfo.surveyDeadline && <span>Survey deadline: {fmtDate(ctx.rotaInfo.surveyDeadline)}</span>}
+            <span>📅 Rota period: {fmtDate(ctx.rotaInfo.startDate)} – {fmtDate(ctx.rotaInfo.endDate)}{ctx.rotaInfo.durationWeeks ? ` (${ctx.rotaInfo.durationWeeks} weeks)` : ""}</span>
+            {ctx.rotaInfo.surveyDeadline && <span>Survey deadline: {fmtDate(ctx.rotaInfo.surveyDeadline)}</span>}
+          </div>
         </div>
       )}
 
