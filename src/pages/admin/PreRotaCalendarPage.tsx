@@ -686,10 +686,22 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
   const goPrev = () => {
     if (viewMode === 'week') setCurrentWeekIndex(i => Math.max(0, i - 1));
     else if (viewMode === 'day') setCurrentDayIndex(i => Math.max(0, i - 1));
+    else if (viewMode === 'month' && currentMonthKey) {
+      const [y, m] = currentMonthKey.split('-').map(Number)
+      const d = new Date(Date.UTC(y, m - 2, 1))
+      const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`
+      if (calendarData && key >= calendarData.rotaStartDate.slice(0, 7)) setCurrentMonthKey(key)
+    }
   };
   const goNext = () => {
     if (viewMode === 'week') setCurrentWeekIndex(i => Math.min(weeks.length - 1, i + 1));
     else if (viewMode === 'day') setCurrentDayIndex(i => Math.min(allDates.length - 1, i + 1));
+    else if (viewMode === 'month' && currentMonthKey) {
+      const [y, m] = currentMonthKey.split('-').map(Number)
+      const d = new Date(Date.UTC(y, m, 1))
+      const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`
+      if (calendarData && key <= calendarData.rotaEndDate.slice(0, 7)) setCurrentMonthKey(key)
+    }
   };
 
   // Keep navRef current every render so keyboard/swipe handlers never go stale
