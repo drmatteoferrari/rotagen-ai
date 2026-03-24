@@ -841,13 +841,16 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                       const badgeEvents = (['AL', 'SL', 'ROT', 'PL'] as const).filter(e => primary === e);
                       const bg = getMergedCellBackground(mergedCell, isLtftDay);
                       return (
-                        <td key={date} style={{
+                        <td key={date} onClick={() => handleCellTap(doctor.doctorId, date)} style={{
                           background: bg,
                           borderBottom: '1px solid #f1f5f9', borderLeft: '1px solid #e2e8f0',
                           textAlign: 'center',
                           minHeight: 52, height: 1, verticalAlign: 'middle',
-                          padding: 0,
-                        }}>
+                          padding: 0, cursor: 'pointer',
+                          outline: selectedCell?.doctorId === doctor.doctorId && selectedCell?.date === date
+                            ? '2px solid #2563eb' : 'none',
+                          outlineOffset: -2,
+                        }>
                           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '4px 2px' }}>
                             {mergedCell?.isDeleted && mergedCell.deletedCode ? (
                               <span style={{
