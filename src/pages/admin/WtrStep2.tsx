@@ -87,8 +87,8 @@ export default function WtrStep2() {
   ];
 
   return (
-    <AdminLayout title="Working Time Regulations" subtitle="Step 2 of 5 — Consecutive Limits" accentColor="red">
-      <div className="mx-auto max-w-3xl space-y-6 animate-fadeSlideUp">
+    <AdminLayout title="Working Time Regulations" subtitle="Step 2 of 5 — Limits" accentColor="red" pageIcon={ClipboardList}>
+      <div className="mx-auto max-w-3xl space-y-6 animate-fadeSlideUp pb-36 md:pb-6">
         <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700">
           <Info className="h-4 w-4 shrink-0 text-red-600" />
           Set limits for consecutive work patterns.
