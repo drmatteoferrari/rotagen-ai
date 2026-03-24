@@ -53,11 +53,13 @@ export interface MergedCell {
 
 function rangeInclusive(start: string, end: string): string[] {
   const result: string[] = []
-  const cur = new Date(start + 'T00:00:00')
-  const endD = new Date(end + 'T00:00:00')
+  const [sy, sm, sd] = start.split('-').map(Number)
+  const [ey, em, ed] = end.split('-').map(Number)
+  const cur = new Date(Date.UTC(sy, sm - 1, sd))
+  const endD = new Date(Date.UTC(ey, em - 1, ed))
   while (cur <= endD) {
     result.push(cur.toISOString().split('T')[0])
-    cur.setDate(cur.getDate() + 1)
+    cur.setUTCDate(cur.getUTCDate() + 1)
   }
   return result
 }

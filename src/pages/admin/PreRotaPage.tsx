@@ -5,7 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
   CalendarDays, Target, AlertTriangle, CheckCircle,
-  XCircle, Info, RefreshCw, Loader2, ArrowLeft,
+  XCircle, Info, RefreshCw, Loader2, ArrowLeft, RotateCcw,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,6 +22,16 @@ export default function PreRotaPage() {
   const [preRotaError, setPreRotaError] = useState<string | null>(null);
   const [isStale, setIsStale] = useState(false);
   const [issuesPanelOpen, setIssuesPanelOpen] = useState(false);
+  const [changesPanelOpen, setChangesPanelOpen] = useState(false)
+  const [overrides, setOverrides] = useState<Array<{
+    id: string; doctor_id: string; event_type: string; action: string
+    start_date: string; end_date: string; note: string | null; created_at: string
+  }>>([])
+  const [doctorNames, setDoctorNames] = useState<Record<string, string>>({})
+  const [overridesLoading, setOverridesLoading] = useState(false)
+  const [revertingId, setRevertingId] = useState<string | null>(null)
+  const [revertAllConfirm, setRevertAllConfirm] = useState(false)
+  const [revertOneConfirm, setRevertOneConfirm] = useState<string | null>(null)
 
   // Load existing pre-rota
   useEffect(() => {
@@ -103,6 +113,56 @@ export default function PreRotaPage() {
     setIsStale(false);
     setIssuesPanelOpen(result.validationIssues.length > 0);
   };
+
+  const loadOverrides = async () => {
+    if (!currentRotaConfigId) return
+    setOverridesLoading(true)
+    try {
+      const { data } = await supabase
+        .from('coordinator_calendar_overrides')
+        .select('id, doctor_id, event_type, action, start_date, end_date, note, created_at')
+        .eq('rota_config_id', currentRotaConfigId)
+        .order('created_at', { ascending: false })
+      const rows = (data ?? []) as Array<{
+        id: string; doctor_id: string; event_type: string; action: string
+        start_date: string; end_date: string; note: string | null; created_at: string
+      }>
+      setOverrides(rows)
+      const uniqueIds = [...new Set(rows.map(r => r.doctor_id))]
+      if (uniqueIds.length > 0) {
+        const { data: docs } = await supabase
+          .from('doctors')
+          .select('id, first_name, last_name')
+          .in('id', uniqueIds)
+        const names: Record<string, string> = {}
+        for (const d of (docs ?? [])) {
+          names[d.id] = `Dr ${d.first_name} ${d.last_name}`
+        }
+        setDoctorNames(names)
+      }
+    } finally {
+      setOverridesLoading(false)
+    }
+  }
+
+  const handleRevertOne = async (id: string) => {
+    setRevertingId(id)
+    await supabase.from('coordinator_calendar_overrides').delete().eq('id', id)
+    setRevertOneConfirm(null)
+    setRevertingId(null)
+    await loadOverrides()
+  }
+
+  const handleRevertAll = async () => {
+    if (!currentRotaConfigId) return
+    await supabase.from('coordinator_calendar_overrides').delete().eq('rota_config_id', currentRotaConfigId)
+    setRevertAllConfirm(false)
+    setOverrides([])
+  }
+
+  useEffect(() => {
+    if (changesPanelOpen) loadOverrides()
+  }, [changesPanelOpen, currentRotaConfigId])
 
   return (
     <AdminLayout title="Pre-Rota" subtitle="Calendar, targets and data validation" accentColor="blue">
@@ -282,6 +342,104 @@ export default function PreRotaPage() {
 
                 {preRotaResult.validationIssues.length === 0 && (
                   <p className="text-xs text-muted-foreground">No issues found.</p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Coordinator Changes panel */}
+        {preRotaResult && (
+          <div className="rounded-lg border border-border bg-white overflow-hidden">
+            <button
+              onClick={() => setChangesPanelOpen(o => !o)}
+              className="w-full flex items-center justify-between px-4 py-3 bg-muted/50 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+            >
+              Coordinator Changes ({overrides.length} change{overrides.length !== 1 ? 's' : ''})
+              <span className="text-muted-foreground">{changesPanelOpen ? '▲' : '▼'}</span>
+            </button>
+
+            {changesPanelOpen && (
+              <div className="px-4 py-3 space-y-3">
+                {overridesLoading ? (
+                  <div className="flex items-center gap-2 py-4 justify-center">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /> <span className="text-xs text-muted-foreground">Loading changes…</span>
+                  </div>
+                ) : overrides.length === 0 ? (
+                  <p className="text-xs text-muted-foreground py-2">No coordinator changes have been made.</p>
+                ) : (
+                  <>
+                    {revertAllConfirm ? (
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="text-foreground">Revert all {overrides.length} changes? This cannot be undone.</span>
+                        <button onClick={handleRevertAll} className="text-xs font-semibold text-red-600 border border-red-200 rounded px-2 py-0.5 bg-white hover:bg-red-50">Confirm</button>
+                        <button onClick={() => setRevertAllConfirm(false)} className="text-xs text-muted-foreground hover:text-foreground px-2 py-1">Cancel</button>
+                      </div>
+                    ) : (
+                      <div className="flex justify-end">
+                        <button
+                          onClick={() => setRevertAllConfirm(true)}
+                          className="text-xs font-medium text-red-600 hover:text-red-700 flex items-center gap-1.5 border border-red-200 rounded px-3 py-1.5 bg-white hover:bg-red-50 transition-colors"
+                        >
+                          <RotateCcw className="h-3 w-3" /> Revert all
+                        </button>
+                      </div>
+                    )}
+
+                    <div className="space-y-2">
+                      {overrides.map(ov => {
+                        const actionColor = ov.action === 'add' ? '#16a34a' : ov.action === 'modify' ? '#2563eb' : '#9ca3af'
+                        const actionLabel = ov.action === 'add' ? 'Added' : ov.action === 'modify' ? 'Modified' : 'Removed'
+                        const dateLabel = ov.start_date === ov.end_date
+                          ? new Date(ov.start_date + 'T00:00:00Z').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' })
+                          : `${new Date(ov.start_date + 'T00:00:00Z').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', timeZone: 'UTC' })} – ${new Date(ov.end_date + 'T00:00:00Z').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' })}`
+                        return (
+                          <div key={ov.id} className="flex items-start justify-between gap-3 py-2 border-b border-border/50 last:border-0">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span
+                                  className="inline-block text-[10px] font-bold text-white rounded px-1.5 py-0.5"
+                                  style={{ background: actionColor }}
+                                >
+                                  {actionLabel}
+                                </span>
+                                <span className="text-xs font-semibold text-foreground">{ov.event_type}</span>
+                                <span className="text-xs text-muted-foreground">{doctorNames[ov.doctor_id] ?? 'Doctor'}</span>
+                                <span className="text-xs text-muted-foreground">{dateLabel}</span>
+                              </div>
+                              {ov.note && <p className="text-[10px] text-muted-foreground mt-0.5 italic">"{ov.note}"</p>}
+                              <p className="text-[10px] text-muted-foreground/60 mt-0.5">
+                                {new Date(ov.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })} at{' '}
+                                {new Date(ov.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                            </div>
+                            <div className="flex-shrink-0">
+                              {revertOneConfirm === ov.id ? (
+                                <div className="flex items-center gap-1">
+                                  <span className="text-[10px] text-foreground">Confirm?</span>
+                                  <button
+                                    onClick={() => handleRevertOne(ov.id)}
+                                    disabled={revertingId === ov.id}
+                                    className="text-[10px] font-semibold text-red-600 border border-red-200 rounded px-2 py-0.5 bg-white hover:bg-red-50 disabled:opacity-50"
+                                  >
+                                    {revertingId === ov.id ? '…' : 'Yes'}
+                                  </button>
+                                  <button onClick={() => setRevertOneConfirm(null)} className="text-[10px] text-muted-foreground hover:text-foreground">No</button>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={() => setRevertOneConfirm(ov.id)}
+                                  className="text-[10px] font-medium text-muted-foreground hover:text-red-600 flex items-center gap-1 border border-border rounded px-2 py-1 hover:border-red-200 transition-colors"
+                                >
+                                  <RotateCcw className="h-2.5 w-2.5" /> Revert
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </>
                 )}
               </div>
             )}

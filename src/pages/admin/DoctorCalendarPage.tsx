@@ -202,6 +202,7 @@ export default function DoctorCalendarPage() {
     eventType: string; startDate: string; endDate: string
   } | null>(null)
   const [modalInitialDate, setModalInitialDate] = useState<string | null>(null)
+  const lastTapRef = useRef<{ date: string; time: number } | null>(null)
 
   const touchStartX = useRef(0)
   const touchStartY = useRef(0)
@@ -421,6 +422,17 @@ export default function DoctorCalendarPage() {
   }
 
   const handleCellTap = (date: string) => {
+    const now = Date.now()
+    const last = lastTapRef.current
+    if (last && last.date === date && now - last.time < 350) {
+      lastTapRef.current = null
+      navigateToDate(date)
+      setViewMode('day')
+      setPanelOpen(false)
+      setSelectedDate(null)
+      return
+    }
+    lastTapRef.current = { date, time: now }
     if (selectedDate === date && panelOpen) {
       setPanelOpen(false); setSelectedDate(null)
     } else {
@@ -625,10 +637,10 @@ export default function DoctorCalendarPage() {
           <p className="text-base font-semibold text-foreground">{fmtFull(currentDateISO)}</p>
           {inRota && (
             <button
-              onClick={() => handleCellTap(currentDateISO)}
+              onClick={() => { setPanelOpen(false); setSelectedDate(null); setModalPrefill(null); setModalCopyFrom(null); setModalInitialDate(currentDateISO); setModalOpen(true) }}
               style={{ fontSize: 11, fontWeight: 600, color: '#2563eb', background: '#eff6ff', border: '1px solid #dbeafe', borderRadius: 6, padding: '3px 10px', cursor: 'pointer' }}
             >
-              + Override
+              + Add event
             </button>
           )}
         </div>
@@ -657,7 +669,8 @@ export default function DoctorCalendarPage() {
         {inRota && !showDeleted && codes.map(code => (
           <div
             key={code}
-            className="rounded-lg border border-border bg-card p-3"
+            onClick={() => handleCellTap(currentDateISO)}
+            className="rounded-lg border border-border bg-card p-3 cursor-pointer hover:bg-muted/30 transition-colors"
             style={{ borderLeft: `4px solid ${CHIP_COLOURS[code] ?? 'hsl(var(--muted-foreground))'}` }}
           >
             <div className="flex items-center gap-2">
@@ -760,6 +773,7 @@ export default function DoctorCalendarPage() {
               setModalInitialDate(selectedDate); setModalOpen(true)
             }}
             onRemoveSurveyEvent={() => handleRemoveSurveyEvent(selectedDate)}
+            onGoToDate={() => { navigateToDate(selectedDate); setViewMode('day'); setPanelOpen(false); setSelectedDate(null) }}
             onClose={() => { setPanelOpen(false); setSelectedDate(null) }}
           />
         )}
