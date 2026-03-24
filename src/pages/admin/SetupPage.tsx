@@ -169,19 +169,9 @@ export default function SetupPage() {
             <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2">Dates & Preferences</p>
             <div className="rounded-xl border border-border bg-card p-3 shadow-sm space-y-1">
 
-              {/* Rota Period — mobile collapsed */}
-              {isSectionCollapsed('period', isPeriodComplete) && (
-                <div className="flex items-center gap-3 rounded-lg px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors md:hidden" onClick={() => toggleSection('period')}>
-                  <CalendarDays className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <span className="text-xs font-medium text-muted-foreground">3.</span>
-                  <span className="flex-1 text-sm font-medium text-foreground">Rota Period</span>
-                  <span className="text-xs font-semibold text-emerald-600">Complete</span>
-                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-                </div>
-              )}
               {/* Rota Period — full row */}
               <div
-                className={`flex items-center gap-3 rounded-lg px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors ${isSectionCollapsed('period', isPeriodComplete) ? 'hidden md:flex' : 'flex'}`}
+                className="flex items-center gap-3 rounded-lg px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors"
                 onClick={() => navigate(isPeriodComplete ? "/admin/rota-period/summary?mode=post-submit" : "/admin/rota-period/step-1")}
               >
                 <CalendarDays className="h-4 w-4 text-muted-foreground shrink-0" />
