@@ -1240,13 +1240,88 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
 
 
         {viewMode === 'month' && (
-          <div style={{
-            padding: 40, textAlign: 'center',
-            border: '1px solid #e2e8f0', borderRadius: 8,
-            background: '#f8fafc', color: '#64748b', fontSize: 14,
-          }}>
-            Month view coming soon.
-          </div>
+          isMobile ? (
+            <div style={{ padding: '32px 24px', textAlign: 'center', border: '1px solid #e2e8f0', borderRadius: 8, background: '#f8fafc' }}>
+              <div style={{ fontSize: 28, marginBottom: 8 }}>🖥️</div>
+              <p style={{ fontWeight: 600, color: '#374151', marginBottom: 4, fontSize: 14 }}>Month view needs more space</p>
+              <p style={{ color: '#64748b', fontSize: 13 }}>Switch to desktop or tablet to see the full monthly overview.</p>
+            </div>
+          ) : calendarData && currentMonthKey ? (() => {
+            const gridDates = buildMonthGrid(currentMonthKey)
+            return (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', minWidth: 600 }}>
+                  <thead>
+                    <tr>
+                      <th style={{ position: 'sticky', left: 0, zIndex: 10, background: '#f8fafc', width: 110, minWidth: 90, padding: '6px 8px', fontSize: 11, fontWeight: 600, color: '#64748b', borderBottom: '2px solid #e2e8f0', borderRight: '1px solid #e2e8f0', textAlign: 'left' }}>
+                        Doctor
+                      </th>
+                      {gridDates.map((date, idx) => {
+                        const inRota = date >= calendarData.rotaStartDate && date <= calendarData.rotaEndDate
+                        const inMonth = date.startsWith(currentMonthKey)
+                        const d = new Date(date + 'T00:00:00Z')
+                        const dow = d.getUTCDay()
+                        const isWknd = dow === 0 || dow === 6
+                        const isBH = bankHolidays.has(date)
+                        const isToday = date === todayISO
+                        const hdrBg = isToday ? '#dbeafe' : isBH ? '#fecaca' : isWknd ? '#e5e7eb' : '#f8fafc'
+                        const hdrColor = !inRota || !inMonth ? '#d1d5db' : isToday ? '#1d4ed8' : isBH ? '#b91c1c' : isWknd ? '#9ca3af' : '#374151'
+                        return (
+                          <th key={`h${idx}`} style={{ padding: '3px 1px', textAlign: 'center', fontSize: 9, fontWeight: 500, color: hdrColor, background: hdrBg, borderBottom: '2px solid #e2e8f0', borderLeft: '1px solid #e2e8f0', minWidth: 24, opacity: !inRota || !inMonth ? 0.35 : 1 }}>
+                            <div>{MONTH_DAY_ABBR[(dow + 6) % 7]}</div>
+                            <div style={{ fontWeight: isToday ? 700 : 400 }}>{d.getUTCDate()}</div>
+                          </th>
+                        )
+                      })}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {doctors.map(doctor => (
+                      <tr key={doctor.doctorId} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td
+                          onClick={() => navigate(`/admin/doctor-calendar/${doctor.doctorId}`)}
+                          style={{ position: 'sticky', left: 0, zIndex: 5, background: '#fff', padding: '3px 6px', fontSize: 10, fontWeight: 600, color: '#2563eb', cursor: 'pointer', borderRight: '1px solid #e2e8f0', borderBottom: '1px solid #f1f5f9', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 110 }}
+                          title={doctor.doctorName}
+                        >
+                          {doctor.doctorName.replace('Dr ', '')} →
+                        </td>
+                        {gridDates.map((date, idx) => {
+                          const inRota = date >= calendarData.rotaStartDate && date <= calendarData.rotaEndDate
+                          const inMonth = date.startsWith(currentMonthKey)
+                          const mergedCell = inRota ? mergedAvailabilityByDoctor[doctor.doctorId]?.[date] : undefined
+                          const primary = mergedCell?.isDeleted ? 'AVAILABLE' : (mergedCell?.primary ?? 'AVAILABLE')
+                          const isLtftDay = getLtftDaysOff(doctor).includes(getDayNameFromISO(date))
+                          const bg = inRota ? getMergedCellBackground(mergedCell, isLtftDay) : '#fff'
+                          const hasOverride = !!mergedCell?.overrideId
+                          const isSelected = selectedCell?.doctorId === doctor.doctorId && selectedCell?.date === date
+                          return (
+                            <td
+                              key={`${doctor.doctorId}-${idx}`}
+                              onClick={() => { if (inRota && inMonth) handleCellTap(doctor.doctorId, date) }}
+                              style={{ background: bg, borderLeft: '1px solid #e2e8f0', borderBottom: '1px solid #f1f5f9', textAlign: 'center', padding: '1px', minWidth: 24, height: 28, opacity: !inRota || !inMonth ? 0.15 : 1, cursor: inRota && inMonth ? 'pointer' : 'default', outline: isSelected ? '2px solid #2563eb' : 'none', outlineOffset: -2 }}
+                            >
+                              {inRota && inMonth && (
+                                mergedCell?.isDeleted && mergedCell.deletedCode ? (
+                                  <span style={{ fontSize: 7, fontWeight: 700, color: '#9ca3af', textDecoration: 'line-through', display: 'block' }}>{mergedCell.deletedCode}</span>
+                                ) : primary !== 'AVAILABLE' && primary !== 'BH' ? (
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
+                                    <span style={{ fontSize: 7, fontWeight: 700, color: '#fff', background: MONTH_EVENT_COLOURS[primary] ?? '#6b7280', borderRadius: 2, padding: '1px 2px' }}>{primary}</span>
+                                    {hasOverride && <span style={{ width: 3, height: 3, borderRadius: '50%', background: '#ea580c', display: 'inline-block' }} />}
+                                  </span>
+                                ) : isLtftDay ? (
+                                  <span style={{ fontSize: 7, color: '#92400e', fontWeight: 700 }}>L</span>
+                                ) : null
+                              )}
+                            </td>
+                          )
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )
+          })() : null
         )}
 
         {/* Full legend — always shown */}

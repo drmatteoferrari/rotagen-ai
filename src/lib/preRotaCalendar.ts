@@ -63,27 +63,28 @@ export function buildCalendarData(inputs: CalendarBuilderInputs): CalendarData {
 
   // Build weeks (Mon–Sun, clipped to rota period)
   const weeks = []
-  const firstDate = new Date(rotaStartDate + 'T00:00:00')
-  const dow = firstDate.getDay()
+  const [fY, fM, fD] = rotaStartDate.split('-').map(Number)
+  const firstDate = new Date(Date.UTC(fY, fM - 1, fD))
+  const dow = firstDate.getUTCDay()
   const weekStartDate = new Date(firstDate)
-  weekStartDate.setDate(weekStartDate.getDate() - ((dow + 6) % 7)) // align to Monday
+  weekStartDate.setUTCDate(firstDate.getUTCDate() - ((dow + 6) % 7)) // align to Monday
 
   for (let w = 0; w < rotaWeeks + 2; w++) {
     const wEnd = new Date(weekStartDate)
-    wEnd.setDate(weekStartDate.getDate() + 6)
-    const dates = dateRange(
-      weekStartDate.toISOString().split('T')[0],
-      wEnd.toISOString().split('T')[0]
-    ).filter(d => d >= rotaStartDate && d <= rotaEndDate)
+    wEnd.setUTCDate(weekStartDate.getUTCDate() + 6)
+    const wStartISO = weekStartDate.toISOString().split('T')[0]
+    const wEndISO = wEnd.toISOString().split('T')[0]
+    const dates = dateRange(wStartISO, wEndISO)
+      .filter(d => d >= rotaStartDate && d <= rotaEndDate)
     if (dates.length > 0) {
       weeks.push({
         weekNumber: weeks.length + 1,
-        startDate: weekStartDate.toISOString().split('T')[0],
-        endDate: wEnd.toISOString().split('T')[0],
+        startDate: wStartISO,
+        endDate: wEndISO,
         dates,
       })
     }
-    weekStartDate.setDate(weekStartDate.getDate() + 7)
+    weekStartDate.setUTCDate(weekStartDate.getUTCDate() + 7)
   }
 
   // Build per-doctor availability
