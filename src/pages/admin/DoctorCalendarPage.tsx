@@ -422,6 +422,17 @@ export default function DoctorCalendarPage() {
   }
 
   const handleCellTap = (date: string) => {
+    const now = Date.now()
+    const last = lastTapRef.current
+    if (last && last.date === date && now - last.time < 350) {
+      lastTapRef.current = null
+      navigateToDate(date)
+      setViewMode('day')
+      setPanelOpen(false)
+      setSelectedDate(null)
+      return
+    }
+    lastTapRef.current = { date, time: now }
     if (selectedDate === date && panelOpen) {
       setPanelOpen(false); setSelectedDate(null)
     } else {
