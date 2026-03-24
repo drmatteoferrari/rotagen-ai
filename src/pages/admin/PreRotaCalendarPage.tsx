@@ -711,14 +711,14 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                       )}
                     </td>
                     {currentWeek.dates.map(date => {
-                      const cell = doctor.availability[date];
-                      const primary = cell?.primary ?? 'AVAILABLE';
+                      const mergedCell = mergedAvailabilityByDoctor[doctor.doctorId]?.[date]
+                      const primary = mergedCell?.primary ?? 'AVAILABLE'
                       const isWknd = new Date(date + 'T00:00:00').getDay() === 0 || new Date(date + 'T00:00:00').getDay() === 6;
                       const isBH = bankHolidays.has(date);
                       const isLtftDay = getLtftDaysOff(doctor).includes(getDayNameFromISO(date));
                       const isNoc = primary === 'NOC';
                       const badgeEvents = (['AL', 'SL', 'ROT', 'PL'] as const).filter(e => primary === e);
-                      const bg = getCellBackground(doctor, date, isBH, isWknd);
+                      const bg = getMergedCellBackground(mergedCell, isLtftDay);
                       return (
                         <td key={date} style={{
                           background: bg,
@@ -728,23 +728,42 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                           padding: 0,
                         }}>
                           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '4px 2px' }}>
-                            {badgeEvents.map(event => <LeaveBadge key={event} type={event} />)}
-                            {isNoc && (
+                            {mergedCell?.isDeleted && mergedCell.deletedCode ? (
                               <span style={{
-                                background: '#ec4899', color: '#fff',
+                                background: '#d1d5db', color: '#6b7280',
                                 fontSize: 10, fontWeight: 700,
                                 padding: '2px 7px', borderRadius: 5,
-                                letterSpacing: '0.04em', lineHeight: 1.4,
-                              }}>NOC</span>
-                            )}
-                            {isLtftDay && (
-                              <span style={{
-                                background: 'rgba(253,230,138,0.7)', color: '#92400e',
-                                border: '1px solid #fde68a',
-                                fontSize: 9, fontWeight: 600,
-                                padding: '1px 5px', borderRadius: 4,
-                                letterSpacing: '0.03em',
-                              }}>LTFT</span>
+                                textDecoration: 'line-through',
+                              }}>{mergedCell.deletedCode}</span>
+                            ) : (
+                              <>
+                                {badgeEvents.map(event => (
+                                  <span key={event} style={{ display: 'inline-flex', alignItems: 'center' }}>
+                                    <LeaveBadge type={event} />
+                                    {(mergedCell?.overrideAction === 'add' || mergedCell?.overrideAction === 'modify') && <RotaOverrideDot />}
+                                  </span>
+                                ))}
+                                {isNoc && (
+                                  <span style={{ display: 'inline-flex', alignItems: 'center' }}>
+                                    <span style={{
+                                      background: '#ec4899', color: '#fff',
+                                      fontSize: 10, fontWeight: 700,
+                                      padding: '2px 7px', borderRadius: 5,
+                                      letterSpacing: '0.04em', lineHeight: 1.4,
+                                    }}>NOC</span>
+                                    {(mergedCell?.overrideAction === 'add' || mergedCell?.overrideAction === 'modify') && <RotaOverrideDot />}
+                                  </span>
+                                )}
+                                {isLtftDay && (
+                                  <span style={{
+                                    background: 'rgba(253,230,138,0.7)', color: '#92400e',
+                                    border: '1px solid #fde68a',
+                                    fontSize: 9, fontWeight: 600,
+                                    padding: '1px 5px', borderRadius: 4,
+                                    letterSpacing: '0.03em',
+                                  }}>LTFT</span>
+                                )}
+                              </>
                             )}
                           </div>
                         </td>

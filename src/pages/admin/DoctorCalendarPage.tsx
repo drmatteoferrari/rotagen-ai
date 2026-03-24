@@ -508,9 +508,11 @@ export default function DoctorCalendarPage() {
 
   function DayView() {
     const inRota = currentDateISO >= calendarData!.rotaStartDate && currentDateISO <= calendarData!.rotaEndDate
-    const cell = doctor!.availability[currentDateISO]
-    const codes = cell
-      ? ([cell.primary, cell.secondary] as (string | null)[]).filter((c): c is string => !!c && !SKIP_CODES.has(c))
+    const mergedCell = mergedAvailability[currentDateISO]
+    const showDeleted = mergedCell?.isDeleted && !!mergedCell?.deletedCode
+    const codes = (!mergedCell?.isDeleted && mergedCell)
+      ? ([mergedCell.primary, mergedCell.secondary] as (string | null)[])
+          .filter((c): c is string => !!c && !SKIP_CODES.has(c))
       : []
 
     return (
@@ -519,10 +521,26 @@ export default function DoctorCalendarPage() {
         {!inRota && (
           <p className="text-sm text-muted-foreground italic">This date is outside the rota period.</p>
         )}
-        {inRota && codes.length === 0 && (
+        {inRota && showDeleted && (
+          <div
+            className="rounded-lg border border-border bg-card p-3"
+            style={{ borderLeft: `4px solid #d1d5db` }}
+          >
+            <div className="flex items-center gap-2">
+              <span
+                className="inline-block rounded-full px-2 py-0.5 text-xs font-medium"
+                style={{ backgroundColor: '#d1d5db', color: '#6b7280', textDecoration: 'line-through' }}
+              >
+                {EVENT_LABELS[mergedCell!.deletedCode!] ?? mergedCell!.deletedCode}
+              </span>
+              <span className="text-xs text-muted-foreground">Removed by coordinator</span>
+            </div>
+          </div>
+        )}
+        {inRota && !showDeleted && codes.length === 0 && (
           <p className="text-sm text-muted-foreground italic">No events — available</p>
         )}
-        {inRota && codes.map(code => (
+        {inRota && !showDeleted && codes.map(code => (
           <div
             key={code}
             className="rounded-lg border border-border bg-card p-3"
@@ -535,6 +553,9 @@ export default function DoctorCalendarPage() {
               >
                 {EVENT_LABELS[code] ?? code}
               </span>
+              {(mergedCell?.overrideAction === 'add' || mergedCell?.overrideAction === 'modify') && (
+                <span className="text-xs text-orange-600 font-medium">● Coordinator override</span>
+              )}
             </div>
           </div>
         ))}
