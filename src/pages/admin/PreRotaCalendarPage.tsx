@@ -1139,7 +1139,55 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
           </div>
         )}
 
-        {/* ── MONTH PLACEHOLDER ── */}
+        {panelOpen && selectedCell && calendarData && (() => {
+          const selDoctor = calendarData.doctors.find(d => d.doctorId === selectedCell.doctorId)
+          const mergedCell = mergedAvailabilityByDoctor[selectedCell.doctorId]?.[selectedCell.date]
+          if (!selDoctor || !mergedCell) return null
+          return (
+            <>
+              <EventDetailPanel
+                mergedCell={mergedCell}
+                date={selectedCell.date}
+                doctorName={selDoctor.doctorName}
+                overrides={overrides.filter(o => o.doctorId === selectedCell.doctorId)}
+                onEdit={override => {
+                  setModalPrefill({
+                    eventType: override.eventType, startDate: override.startDate,
+                    endDate: override.endDate, note: override.note ?? '',
+                    overrideId: override.id, originalEventType: override.originalEventType,
+                  })
+                  setModalCopyFrom(null); setModalInitialDate(null); setModalOpen(true)
+                }}
+                onDelete={handleDeleteOverride}
+                onCopy={override => {
+                  setModalCopyFrom({ eventType: override.eventType, startDate: override.startDate, endDate: override.endDate })
+                  setModalPrefill(null); setModalInitialDate(null); setModalOpen(true)
+                }}
+                onAddNew={() => {
+                  setModalPrefill(null); setModalCopyFrom(null)
+                  setModalInitialDate(selectedCell.date); setModalOpen(true)
+                }}
+                onRemoveSurveyEvent={handleRemoveSurveyEvent}
+                onClose={() => { setPanelOpen(false); setSelectedCell(null) }}
+              />
+              {modalOpen && (
+                <AddEventModal
+                  prefill={modalPrefill ?? undefined}
+                  copyFrom={modalCopyFrom ?? undefined}
+                  initialDate={modalInitialDate ?? undefined}
+                  doctorName={selDoctor.doctorName}
+                  rotaStartDate={calendarData.rotaStartDate}
+                  rotaEndDate={calendarData.rotaEndDate}
+                  saving={modalSaving}
+                  onSave={handleSaveOverride}
+                  onClose={() => { setModalOpen(false); setModalPrefill(null); setModalCopyFrom(null); setModalInitialDate(null) }}
+                />
+              )}
+            </>
+          )
+        })()}
+
+
         {viewMode === 'month' && (
           <div style={{
             padding: 40, textAlign: 'center',
