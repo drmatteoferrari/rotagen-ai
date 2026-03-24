@@ -27,7 +27,7 @@ export default function DepartmentSummary() {
   const [saving, setSaving] = useState(false);
   const [showEditConfirm, setShowEditConfirm] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
-  const [displayShifts, setDisplayShifts] = useState(shifts);
+  const [displayShifts, setDisplayShifts] = useState<any[]>(shifts);
 
   useEffect(() => {
     if (!isPostSubmit || !currentRotaConfigId) return;
