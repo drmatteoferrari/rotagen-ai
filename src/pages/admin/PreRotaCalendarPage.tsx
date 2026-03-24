@@ -673,6 +673,14 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
   }
 
   const handleCellTap = (doctorId: string, date: string) => {
+    const now = Date.now()
+    const last = lastTapRef.current
+    if (last && last.doctorId === doctorId && last.date === date && now - last.time < 350) {
+      lastTapRef.current = null
+      navigate(`/admin/doctor-calendar/${doctorId}`)
+      return
+    }
+    lastTapRef.current = { doctorId, date, time: now }
     if (selectedCell?.doctorId === doctorId && selectedCell?.date === date && panelOpen) {
       setPanelOpen(false); setSelectedCell(null)
     } else {
