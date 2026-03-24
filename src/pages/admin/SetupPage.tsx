@@ -142,19 +142,9 @@ export default function SetupPage() {
                 </button>
               </div>
 
-              {/* WTR — mobile collapsed */}
-              {isSectionCollapsed('wtr', isWtrComplete) && (
-                <div className="flex items-center gap-3 rounded-lg px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors md:hidden" onClick={() => toggleSection('wtr')}>
-                  <ClipboardList className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <span className="text-xs font-medium text-muted-foreground">2.</span>
-                  <span className="flex-1 text-sm font-medium text-foreground">Contract Rules (WTR)</span>
-                  <span className="text-xs font-semibold text-emerald-600">Complete</span>
-                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-                </div>
-              )}
               {/* WTR — full row */}
               <div
-                className={`flex items-center gap-3 rounded-lg px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors ${isSectionCollapsed('wtr', isWtrComplete) ? 'hidden md:flex' : 'flex'}`}
+                className="flex items-center gap-3 rounded-lg px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors"
                 onClick={() => navigate(isWtrComplete ? "/admin/wtr/summary?mode=post-submit" : "/admin/wtr/step-1")}
               >
                 <ClipboardList className="h-4 w-4 text-muted-foreground shrink-0" />
