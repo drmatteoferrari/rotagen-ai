@@ -1,59 +1,37 @@
 
 
-## Plan: Add tap interaction, EventDetailPanel, AddEventModal, and DB writes
+## Plan: Six targeted fixes across four files
 
-### Overview
-Add cell tap interaction to both calendar pages, opening an EventDetailPanel for viewing override details and an AddEventModal for creating/editing/copying overrides. Two new components created, two existing pages updated.
+### Changes
 
-### Files
+**1. `src/lib/preRotaCalendar.ts` — UTC date arithmetic fix**
+- Replace `dateRange` function (lines 11-20) to use `Date.UTC` and `setUTCDate`/`getUTCDate` instead of local time methods
+- Replace week-building block (lines 64-85) to use `Date.UTC`, `getUTCDay`, `setUTCDate` for Monday alignment and iteration
 
-**1. Create `src/components/calendar/EventDetailPanel.tsx`**
-- Displays merged cell details: event label, doctor name, formatted date, source (coordinator override vs doctor survey)
-- For coordinator overrides: Edit, Copy, Delete buttons; shows "Changed from X → Y" for modifications, note, created date
-- For survey events: "Add override" and "Remove event" buttons
-- For available cells: "Add event" button
-- For deleted cells: "Remove this override" button
-- Close button in header
+**2. `src/components/calendar/EventDetailPanel.tsx` — Remove `React.CSSProperties` type**
+- Line 122: Change `function btn(...): React.CSSProperties {` to `function btn(...) {` (React is not imported in this file — this is likely causing the cascading build failure)
 
-**2. Create `src/components/calendar/AddEventModal.tsx`**
-- Fixed bottom sheet modal (max-width 480px, backdrop click to close)
-- Event type pill selector (AL/SL/NOC/ROT/PL)
-- Start/end date inputs with validation (required, end ≥ start, within rota period)
-- Optional note field
-- Supports three modes via props: new add (dates pre-filled), edit (all pre-filled), copy (type pre-filled, dates blank)
-- Saving state disables button, shows "Saving…"
+**3. `src/components/calendar/AddEventModal.tsx` — End date min constraint**
+- Line 111: Change `min={rotaStartDate}` to `min={startDate || rotaStartDate}` on the end date input
 
-**3. Update `src/pages/admin/DoctorCalendarPage.tsx`**
-- Import EventDetailPanel and AddEventModal
-- Add interaction state: selectedDate, panelOpen, modalOpen, modalSaving, modalPrefill, modalCopyFrom, modalInitialDate
-- Add write helpers: `reloadOverrides`, `handleSaveOverride` (insert for add, delete+insert for edit), `handleDeleteOverride` (hard delete), `handleRemoveSurveyEvent` (insert action:'delete'), `handleCellTap` (toggle panel)
-- Remove dead `cell` variable from MonthView (line 423)
-- WeekView: add onClick + blue outline to data cells
-- DayView: add "+ Override" button next to date heading
-- Render panel and modal after view content, before closing div
+**4. `src/pages/admin/PreRotaCalendarPage.tsx` — Four sub-changes:**
+- **4.1** Add `panelRef` after `navRef` (line ~340), add scroll-into-view effect after keyboard effect (line ~488)
+- **4.2** Wrap EventDetailPanel IIFE return in `<div ref={panelRef}>` instead of `<>` fragment (lines 1147/1186)
+- **4.3** Add `currentMonthKey` state (after line 317), initialise it in data load (after line 443), update `goPrev`/`goNext`/`prevDisabled`/`nextDisabled`/`navLabel` to handle month mode
+- **4.4** Add month grid helpers (`MONTH_DAY_ABBR`, `MONTH_EVENT_COLOURS`, `buildMonthGrid`) above `ViewToggle` (before line 268)
+- **4.5** Replace month view placeholder (lines 1191-1199) with full month grid table (desktop/tablet) or "needs more space" message (mobile)
 
-**4. Update `src/pages/admin/PreRotaCalendarPage.tsx`**
-- Import EventDetailPanel and AddEventModal
-- Add interaction state: selectedCell (doctorId+date), panelOpen, modalOpen, modalSaving, modalPrefill, modalCopyFrom, modalInitialDate
-- Add write helpers: same pattern as DoctorCalendarPage but with selectedCell.doctorId, rotaConfigId
-- Week view: add onClick + blue outline to doctor data cells (line ~743)
-- Day view: add onClick + blue outline/highlight to doctor rows (line ~926)
-- Render panel and modal after day view block, before month placeholder
-
-### Technical details
-- All DB writes use `supabase.auth.getUser()` for `created_by`
-- Edit = hard delete old row + insert new with action:'modify'
-- Delete coordinator override = hard delete
-- Remove survey event = insert action:'delete' (soft delete, preserves audit trail)
-- `reloadOverrides()` called after every write to refresh merged availability
-- Panel and modal close + selection clears after every successful write
-- MonthView in DoctorCalendarPage still navigates to day view on tap (no panel)
+### Technical notes
+- The `React.CSSProperties` fix on EventDetailPanel is the probable root cause of the build error — esbuild fails to parse/transform this reference, and the error cascades to make PreRotaCalendarPage appear broken at line 893
+- Month view grid uses `buildMonthGrid` to create a Mon-aligned 7-column date array for any given `YYYY-MM` key
+- Month grid supports cell tapping (reuses `handleCellTap`), doctor name links, override dots, deleted strikethroughs, and LTFT indicators
+- UTC fix in preRotaCalendar.ts prevents timezone-dependent date shifts near DST boundaries
 
 ### Files touched
 | File | Action |
 |------|--------|
-| `src/components/calendar/EventDetailPanel.tsx` | Create |
-| `src/components/calendar/AddEventModal.tsx` | Create |
-| `src/pages/admin/DoctorCalendarPage.tsx` | Edit |
-| `src/pages/admin/PreRotaCalendarPage.tsx` | Edit |
+| `src/lib/preRotaCalendar.ts` | Edit dateRange + week builder |
+| `src/components/calendar/EventDetailPanel.tsx` | Fix btn return type |
+| `src/components/calendar/AddEventModal.tsx` | Fix end date min |
+| `src/pages/admin/PreRotaCalendarPage.tsx` | Add panelRef, month state, month view, scroll effect |
 
