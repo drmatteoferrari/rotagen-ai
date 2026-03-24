@@ -10,11 +10,13 @@ const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'frid
 
 function dateRange(start: string, end: string): string[] {
   const dates: string[] = []
-  const cur = new Date(start + 'T00:00:00')
-  const endDt = new Date(end + 'T00:00:00')
+  const [sy, sm, sd] = start.split('-').map(Number)
+  const [ey, em, ed] = end.split('-').map(Number)
+  const cur = new Date(Date.UTC(sy, sm - 1, sd))
+  const endDt = new Date(Date.UTC(ey, em - 1, ed))
   while (cur <= endDt) {
     dates.push(cur.toISOString().split('T')[0])
-    cur.setDate(cur.getDate() + 1)
+    cur.setUTCDate(cur.getUTCDate() + 1)
   }
   return dates
 }
