@@ -63,6 +63,7 @@ export function SurveyShell({ children }: SurveyShellProps) {
             style={{ width: `${progress}%` }}
           />
         </div>
+        </div>
       </div>
 
       {/* Rota period banner */}
