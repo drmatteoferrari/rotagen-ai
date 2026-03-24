@@ -859,7 +859,7 @@ export default function DepartmentStep2() {
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
-        <div className="mx-auto max-w-3xl space-y-6 animate-fadeSlideUp" onClick={() => { if (activeChipId && !draggedShiftId) setActiveChipId(null); }}>
+        <div className="mx-auto max-w-3xl space-y-6 animate-fadeSlideUp pb-36 md:pb-6" onClick={() => { if (activeChipId && !draggedShiftId) setActiveChipId(null); }}>
 
           {/* Merged Calendar + Palette Card */}
           <Card>
