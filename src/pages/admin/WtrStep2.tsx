@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "@/components/AdminLayout";
-import { useAdminSetup } from "@/contexts/AdminSetupContext";
+import { StepNavBar } from "@/components/StepNavBar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ArrowLeft, ArrowRight, Minus, Plus, Layers, CheckCircle, AlertTriangle, Info } from "lucide-react";
