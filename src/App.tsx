@@ -36,6 +36,8 @@ import DoctorCalendarPage from "./pages/admin/DoctorCalendarPage";
 import PreRotaTargetsPage from "./pages/admin/PreRotaTargetsPage";
 import PreRotaPage from "./pages/admin/PreRotaPage";
 import SetupPage from "./pages/admin/SetupPage";
+import DepartmentSummary from "./pages/admin/DepartmentSummary";
+import RotaPeriodSummary from "./pages/admin/RotaPeriodSummary";
 import DoctorProfile from "./pages/admin/DoctorProfile";
 import Privacy from "./pages/Privacy";
 import LandingPage from "./pages/LandingPage";
@@ -104,6 +106,9 @@ const App = () => (
             <Route path="/admin/doctor-calendar/:doctorId" element={<DoctorCalendarPage />} />
             <Route path="/admin/pre-rota-targets" element={<PreRotaTargetsPage />} />
             <Route path="/admin/survey-override/:doctorId/:step" element={<SurveyOverride />} />
+            <Route path="/admin/department/summary" element={<DepartmentSummary />} />
+            <Route path="/admin/rota-period/summary" element={<RotaPeriodSummary />} />
+            <Route path="/admin/wtr/summary" element={<WtrStep5 />} />
             <Route path="/admin/doctor/:doctorId" element={<DoctorProfile />} />
           </Route>
           {/* Doctor survey — token-based, no auth required */}

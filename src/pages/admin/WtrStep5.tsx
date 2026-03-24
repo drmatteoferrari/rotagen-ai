@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { AdminLayout } from "@/components/AdminLayout";
 import { StepNavBar } from "@/components/StepNavBar";
 import { useAdminSetup } from "@/contexts/AdminSetupContext";
@@ -8,8 +8,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle, AlertTriangle, ClipboardCheck, ArrowLeft } from "lucide-react";
+import { CheckCircle, AlertTriangle, ClipboardCheck, ArrowLeft, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { format } from "date-fns";
 
 export default function WtrStep5() {
   const navigate = useNavigate();
@@ -17,8 +18,15 @@ export default function WtrStep5() {
   const { user } = useAuth();
   const [saving, setSaving] = useState(false);
 
+  const [searchParams] = useSearchParams();
+  const isPostSubmit = searchParams.get("mode") === "post-submit";
+  const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [showEditConfirm, setShowEditConfirm] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+
   const {
     setWtrComplete,
+    resetWtr,
     maxAvgWeekly, maxIn7Days, maxShiftLengthH,
     maxConsecDays, maxConsecLong, maxLongEveningConsec, maxConsecNights,
     restPostNights, restPostBlock, restAfterLongEveningH, restAfter7, minInterShiftRestH,
@@ -29,6 +37,14 @@ export default function WtrStep5() {
     oncallContinuousRestStart, oncallContinuousRestEnd,
     oncallIfRestNotMetMaxHours, oncallNoConsecExceptWknd, oncallNoSimultaneousShift,
   } = useAdminSetup();
+
+  useEffect(() => {
+    if (!isPostSubmit || !currentRotaConfigId) return;
+    supabase.from('wtr_settings').select('updated_at').eq('rota_config_id', currentRotaConfigId).maybeSingle()
+      .then(({ data }) => {
+        if (data?.updated_at) setSavedAt(format(new Date(data.updated_at), "dd MMM yyyy 'at' HH:mm"));
+      });
+  }, [isPostSubmit, currentRotaConfigId]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -109,7 +125,7 @@ export default function WtrStep5() {
         toast.success("✓ WTR settings saved");
       }
       setWtrComplete(true);
-      navigate("/admin/dashboard");
+      navigate("/admin/setup");
     } catch (err: any) {
       console.error("WTR save failed:", err);
       toast.error("Save failed — please try again");
@@ -144,10 +160,19 @@ export default function WtrStep5() {
   return (
     <AdminLayout title="Working Time Regulations" subtitle="Step 5 of 5 — Review & save" accentColor="red" pageIcon={ClipboardCheck}>
       <div className="mx-auto max-w-3xl space-y-6 animate-fadeSlideUp pb-36 md:pb-6">
-        <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700">
-          <ClipboardCheck className="h-4 w-4 shrink-0 text-red-600" />
-          Review your configuration before saving.
-        </div>
+        {isPostSubmit && (
+          <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-700">
+            <CheckCircle className="h-4 w-4 shrink-0" />
+            WTR settings saved{savedAt ? ` · ${savedAt}` : ''}
+          </div>
+        )}
+
+        {!isPostSubmit && (
+          <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700">
+            <ClipboardCheck className="h-4 w-4 shrink-0 text-red-600" />
+            Review your configuration before saving.
+          </div>
+        )}
 
         <Card>
           <CardHeader>
@@ -174,18 +199,54 @@ export default function WtrStep5() {
           </CardContent>
         </Card>
 
-        <StepNavBar
-          left={
-            <Button variant="outline" size="lg" onClick={() => navigate("/admin/wtr/step-4")}>
-              <ArrowLeft className="mr-2 h-4 w-4" />Back
-            </Button>
-          }
-          right={
-            <Button size="lg" disabled={saving} onClick={handleSave} className="bg-red-600 hover:bg-red-700">
-              <CheckCircle className="mr-2 h-4 w-4" />{saving ? "Saving…" : "Save WTR Settings"}
-            </Button>
-          }
-        />
+        {isPostSubmit && showEditConfirm && (
+          <div className="rounded-lg border border-amber-300 bg-amber-50 p-4">
+            <p className="text-sm text-amber-800 mb-3">Editing WTR settings may affect a rota already in progress. Continue?</p>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => setShowEditConfirm(false)}>Cancel</Button>
+              <Button size="sm" className="bg-amber-600 hover:bg-amber-700" onClick={() => navigate('/admin/wtr/step-1')}>Continue to Edit</Button>
+            </div>
+          </div>
+        )}
+        {isPostSubmit && showResetConfirm && (
+          <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4">
+            <p className="text-sm text-destructive mb-3">This will reset all WTR settings to defaults.</p>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={() => setShowResetConfirm(false)}>Cancel</Button>
+              <Button variant="destructive" size="sm" disabled={saving} onClick={async () => {
+                setSaving(true);
+                try {
+                  if (currentRotaConfigId) await supabase.from('wtr_settings').delete().eq('rota_config_id', currentRotaConfigId);
+                  resetWtr();
+                  toast.success('WTR settings reset');
+                  navigate('/admin/wtr/step-1');
+                } catch { toast.error('Reset failed'); } finally { setSaving(false); }
+              }}>
+                {saving ? "Resetting…" : "Reset"}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {isPostSubmit ? (
+          <StepNavBar
+            left={<Button variant="outline" size="lg" onClick={() => { setShowResetConfirm(true); setShowEditConfirm(false); }}>Reset</Button>}
+            right={<Button variant="outline" size="lg" onClick={() => { setShowEditConfirm(true); setShowResetConfirm(false); }}>Edit</Button>}
+          />
+        ) : (
+          <StepNavBar
+            left={
+              <Button variant="outline" size="lg" onClick={() => navigate("/admin/wtr/step-4")}>
+                <ArrowLeft className="mr-2 h-4 w-4" />Back
+              </Button>
+            }
+            right={
+              <Button size="lg" disabled={saving} onClick={handleSave} className="bg-red-600 hover:bg-red-700">
+                <CheckCircle className="mr-2 h-4 w-4" />{saving ? "Saving…" : "Save WTR Settings"}
+              </Button>
+            }
+          />
+        )}
       </div>
     </AdminLayout>
   );

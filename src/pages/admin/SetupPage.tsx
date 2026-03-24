@@ -8,6 +8,7 @@ import {
   CheckCircle, Target, Users, Lock,
   Building2, Loader2, ClipboardList, CalendarDays,
   RefreshCw, Play, AlertTriangle, XCircle, Pencil, RotateCcw, Wand2,
+  ChevronDown, ChevronUp,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { generatePreRota } from "@/lib/preRotaGenerator";
@@ -39,6 +40,10 @@ export default function SetupPage() {
   const [finalLoading, setFinalLoading] = useState(false);
   const [showFinalChecklist, setShowFinalChecklist] = useState(false);
   const [resetModalOpen, setResetModalOpen] = useState(false);
+
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+  const toggleSection = (key: string) => setCollapsedSections(prev => ({ ...prev, [key]: !prev[key] }));
+  const isSectionCollapsed = (key: string, done: boolean) => done && (collapsedSections[key] ?? true);
 
   const handleGeneratePreRota = async () => {
     if (!currentRotaConfigId) return;
@@ -114,77 +119,119 @@ export default function SetupPage() {
           <span className="text-xs text-muted-foreground font-medium whitespace-nowrap">{stepsComplete}/4</span>
         </div>
 
-        {/* Setup card */}
-        <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+        {/* Two-column layout */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-          {/* Section A — Department & Rules */}
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2">Department & Rules</p>
-          <div className="space-y-1">
-            {/* Department */}
-            <div
-              className="flex items-center gap-3 rounded-lg px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors"
-              onClick={() => navigate("/admin/department/step-1")}
-            >
-              <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
-              <span className="flex-1 text-sm font-medium text-foreground">Department</span>
-              <span style={{ fontSize: 12, fontWeight: 600, color: getStepColor(isDepartmentComplete) }}>
-                {isDepartmentComplete ? 'Complete' : 'Not started'}
-              </span>
-              <button
-                onClick={(e) => { e.stopPropagation(); navigate("/admin/department/step-1"); }}
-                className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          {/* LEFT — Department & Rules */}
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2">Department & Rules</p>
+            <div className="rounded-xl border border-border bg-card p-3 shadow-sm space-y-1">
+
+              {/* Department — mobile collapsed */}
+              {isSectionCollapsed('department', isDepartmentComplete) && (
+                <div className="flex items-center gap-3 rounded-lg px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors md:hidden" onClick={() => toggleSection('department')}>
+                  <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <span className="text-xs font-medium text-muted-foreground">1.</span>
+                  <span className="flex-1 text-sm font-medium text-foreground">Department</span>
+                  <span className="text-xs font-semibold text-emerald-600">Complete</span>
+                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                </div>
+              )}
+              {/* Department — full row */}
+              <div
+                className={`flex items-center gap-3 rounded-lg px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors ${isSectionCollapsed('department', isDepartmentComplete) ? 'hidden md:flex' : 'flex'}`}
+                onClick={() => navigate(isDepartmentComplete ? "/admin/department/summary?mode=post-submit" : "/admin/department/step-1")}
               >
-                <Pencil className="h-3.5 w-3.5" />
-              </button>
-            </div>
-            {/* Contract Rules (WTR) */}
-            <div
-              className="flex items-center gap-3 rounded-lg px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors"
-              onClick={() => navigate("/admin/wtr/step-1")}
-            >
-              <ClipboardList className="h-4 w-4 text-muted-foreground shrink-0" />
-              <span className="flex-1 text-sm font-medium text-foreground">Contract Rules (WTR)</span>
-              <span style={{ fontSize: 12, fontWeight: 600, color: getStepColor(isWtrComplete) }}>
-                {isWtrComplete ? 'Complete' : 'Not started'}
-              </span>
-              <button
-                onClick={(e) => { e.stopPropagation(); navigate("/admin/wtr/step-1"); }}
-                className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="text-xs font-medium text-muted-foreground">1.</span>
+                <span className="flex-1 text-sm font-medium text-foreground">Department</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: getStepColor(isDepartmentComplete) }}>
+                  {isDepartmentComplete ? 'Complete' : 'Not started'}
+                </span>
+                <button
+                  onClick={(e) => { e.stopPropagation(); navigate("/admin/department/step-1"); }}
+                  className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+              </div>
+
+              {/* WTR — mobile collapsed */}
+              {isSectionCollapsed('wtr', isWtrComplete) && (
+                <div className="flex items-center gap-3 rounded-lg px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors md:hidden" onClick={() => toggleSection('wtr')}>
+                  <ClipboardList className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <span className="text-xs font-medium text-muted-foreground">2.</span>
+                  <span className="flex-1 text-sm font-medium text-foreground">Contract Rules (WTR)</span>
+                  <span className="text-xs font-semibold text-emerald-600">Complete</span>
+                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                </div>
+              )}
+              {/* WTR — full row */}
+              <div
+                className={`flex items-center gap-3 rounded-lg px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors ${isSectionCollapsed('wtr', isWtrComplete) ? 'hidden md:flex' : 'flex'}`}
+                onClick={() => navigate(isWtrComplete ? "/admin/wtr/summary?mode=post-submit" : "/admin/wtr/step-1")}
               >
-                <Pencil className="h-3.5 w-3.5" />
-              </button>
+                <ClipboardList className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="text-xs font-medium text-muted-foreground">2.</span>
+                <span className="flex-1 text-sm font-medium text-foreground">Contract Rules (WTR)</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: getStepColor(isWtrComplete) }}>
+                  {isWtrComplete ? 'Complete' : 'Not started'}
+                </span>
+                <button
+                  onClick={(e) => { e.stopPropagation(); navigate("/admin/wtr/step-1"); }}
+                  className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+              </div>
+
             </div>
           </div>
 
-          {/* Divider */}
-          <div className="my-3 border-t border-border" />
+          {/* RIGHT — Dates & Preferences */}
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2">Dates & Preferences</p>
+            <div className="rounded-xl border border-border bg-card p-3 shadow-sm space-y-1">
 
-          {/* Section B — Dates & Preferences */}
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-2">Dates & Preferences</p>
-          <div className="space-y-1">
-            {/* Rota Period */}
-            <div
-              className="flex items-center gap-3 rounded-lg px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors"
-              onClick={() => navigate("/admin/rota-period/step-1")}
-            >
-              <CalendarDays className="h-4 w-4 text-muted-foreground shrink-0" />
-              <span className="flex-1 text-sm font-medium text-foreground">Rota Period</span>
-              <span style={{ fontSize: 12, fontWeight: 600, color: getStepColor(isPeriodComplete) }}>
-                {isPeriodComplete ? 'Complete' : 'Not started'}
-              </span>
-            </div>
-            {/* Doctor Surveys */}
-            <div
-              className="flex items-center gap-3 rounded-lg px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors"
-              onClick={() => navigate("/admin/roster")}
-            >
-              <Users className="h-4 w-4 text-muted-foreground shrink-0" />
-              <span className="flex-1 text-sm font-medium text-foreground">Doctor Surveys</span>
-              <span style={{ fontSize: 12, fontWeight: 600, color: surveyStatus.color }}>
-                {surveyStatus.text}
-              </span>
+              {/* Rota Period — mobile collapsed */}
+              {isSectionCollapsed('period', isPeriodComplete) && (
+                <div className="flex items-center gap-3 rounded-lg px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors md:hidden" onClick={() => toggleSection('period')}>
+                  <CalendarDays className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <span className="text-xs font-medium text-muted-foreground">3.</span>
+                  <span className="flex-1 text-sm font-medium text-foreground">Rota Period</span>
+                  <span className="text-xs font-semibold text-emerald-600">Complete</span>
+                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                </div>
+              )}
+              {/* Rota Period — full row */}
+              <div
+                className={`flex items-center gap-3 rounded-lg px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors ${isSectionCollapsed('period', isPeriodComplete) ? 'hidden md:flex' : 'flex'}`}
+                onClick={() => navigate(isPeriodComplete ? "/admin/rota-period/summary?mode=post-submit" : "/admin/rota-period/step-1")}
+              >
+                <CalendarDays className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="text-xs font-medium text-muted-foreground">3.</span>
+                <span className="flex-1 text-sm font-medium text-foreground">Rota Period</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: getStepColor(isPeriodComplete) }}>
+                  {isPeriodComplete ? 'Complete' : 'Not started'}
+                </span>
+              </div>
+
+              {/* Doctor Surveys — never collapsed */}
+              <div
+                className="flex items-center gap-3 rounded-lg px-3 py-2 cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => navigate("/admin/roster")}
+              >
+                <Users className="h-4 w-4 text-muted-foreground shrink-0" />
+                <span className="text-xs font-medium text-muted-foreground">4.</span>
+                <span className="flex-1 text-sm font-medium text-foreground">Doctor Surveys</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: surveyStatus.color }}>
+                  {surveyStatus.text}
+                </span>
+              </div>
+
             </div>
           </div>
+
         </div>
 
         {/* Generate separator */}

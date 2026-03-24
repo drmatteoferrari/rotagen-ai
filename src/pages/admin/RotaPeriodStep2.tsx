@@ -465,9 +465,9 @@ export default function RotaPeriodStep2() {
             </Button>
           }
           right={
-            <Button size="lg" disabled={saving} onClick={handleSave} className="bg-amber-600 hover:bg-amber-700">
-              {saving ? "Saving…" : "Save & Continue"}
-              {!saving && <ArrowRight className="ml-2 h-4 w-4" />}
+            <Button size="lg" disabled={saving} onClick={() => navigate('/admin/rota-period/summary?mode=pre-submit')} className="bg-amber-600 hover:bg-amber-700">
+              Review &amp; Save
+              <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           }
         />
