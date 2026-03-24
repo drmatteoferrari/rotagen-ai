@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Pencil, Clock, Save, X, Info, AlertTriangle, ArrowLeft, ArrowRight, CalendarDays, ChevronRight, Loader2 } from "lucide-react";
+import { Plus, Trash2, Pencil, Clock, Save, X, Info, AlertTriangle, ArrowLeft, ArrowRight, CalendarDays, ChevronRight, Loader2, Building2 } from "lucide-react";
 import {
   useDepartmentSetup, detectBadges, mergedBadges,
   generateAbbreviation, getShiftColor,
