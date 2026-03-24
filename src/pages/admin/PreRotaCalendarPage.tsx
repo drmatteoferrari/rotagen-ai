@@ -1195,7 +1195,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
           const mergedCell = mergedAvailabilityByDoctor[selectedCell.doctorId]?.[selectedCell.date]
           if (!selDoctor || !mergedCell) return null
           return (
-            <>
+            <div ref={panelRef}>
               <EventDetailPanel
                 mergedCell={mergedCell}
                 date={selectedCell.date}
@@ -1234,7 +1234,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                   onClose={() => { setModalOpen(false); setModalPrefill(null); setModalCopyFrom(null); setModalInitialDate(null) }}
                 />
               )}
-            </>
+            </div>
           )
         })()}
 
