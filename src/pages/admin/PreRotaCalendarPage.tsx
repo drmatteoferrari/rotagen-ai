@@ -217,6 +217,22 @@ function CalendarLegend() {
       <LegendBadgeItem bg="#ec4899" label="NOC" text="Not On-Call" />
       <div style={{ width: 1, height: 16, background: '#e2e8f0', margin: '0 2px' }} />
       <LegendFusedItem badgeBg="#92400e" label="LTFT" cellBg="#fef9c3" cellBorder="#fde68a" text="LTFT day off" />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+        <span style={{
+          display: 'inline-flex', alignItems: 'center', gap: 2,
+        }}>
+          <span style={{
+            background: '#2563eb', color: '#fff',
+            fontSize: 9, fontWeight: 700,
+            padding: '1px 4px', borderRadius: 3,
+          }}>SL</span>
+          <span style={{
+            display: 'inline-block', width: 6, height: 6, borderRadius: '50%',
+            background: '#ea580c',
+          }} />
+        </span>
+        <span style={{ fontSize: 12, color: '#374151' }}>Coordinator override</span>
+      </div>
       <LegendSwatchItem color="#dbeafe" border="#bfdbfe" text="Today" />
       <LegendSwatchItem color="#fecaca" border="#fca5a5" text="Bank Holiday (header)" />
       <LegendSwatchItem color="#e5e7eb" border="#d1d5db" text="Weekend (header)" />
