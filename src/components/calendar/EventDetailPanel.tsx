@@ -1,4 +1,4 @@
-import { X, Pencil, Trash2, Copy, Minus } from 'lucide-react'
+import { X, Plus, Pencil, Copy, Trash2, RotateCcw, ArrowRight } from 'lucide-react'
 import type { MergedCell, CalendarOverride } from '@/lib/calendarOverrides'
 
 const EVENT_LABELS: Record<string, string> = {
@@ -22,12 +22,13 @@ interface EventDetailPanelProps {
   onCopy: (override: CalendarOverride) => void
   onAddNew: () => void
   onRemoveSurveyEvent: () => void
+  onGoToDate: () => void
   onClose: () => void
 }
 
 export function EventDetailPanel({
   mergedCell, date, doctorName, overrides,
-  onEdit, onDelete, onCopy, onAddNew, onRemoveSurveyEvent, onClose,
+  onEdit, onDelete, onCopy, onAddNew, onRemoveSurveyEvent, onGoToDate, onClose,
 }: EventDetailPanelProps) {
   const override = mergedCell.overrideId
     ? overrides.find(o => o.id === mergedCell.overrideId) ?? null
@@ -35,95 +36,119 @@ export function EventDetailPanel({
 
   const isDeleted = mergedCell.isDeleted
   const displayCode = isDeleted ? mergedCell.deletedCode : mergedCell.primary
-  const displayLabel = displayCode ? (EVENT_LABELS[displayCode] ?? displayCode) : '—'
+  const displayLabel = displayCode ? (EVENT_LABELS[displayCode] ?? displayCode) : null
   const isSurveyEvent = !override && !isDeleted && !!displayCode && displayCode !== 'AVAILABLE'
   const isAvailable = !override && !isDeleted && (!displayCode || displayCode === 'AVAILABLE')
+  const isCoordOverride = !!override && !isDeleted
 
   const fmtDate = (iso: string) =>
-    new Date(iso + 'T00:00:00').toLocaleDateString('en-GB', {
-      weekday: 'short', day: '2-digit', month: 'short', year: 'numeric',
+    new Date(iso + 'T00:00:00Z').toLocaleDateString('en-GB', {
+      weekday: 'short', day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC',
     })
 
   return (
     <div style={{
       border: '1px solid #e2e8f0', borderRadius: 10, background: '#fff',
-      padding: 16, marginTop: 8,
+      padding: 0, marginTop: 8, overflow: 'hidden',
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <span style={{ fontSize: 14, fontWeight: 700, color: '#1e293b' }}>
-          {isDeleted ? `Removed: ${displayLabel}` : isAvailable ? 'Available' : displayLabel}
-        </span>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+      {/* Header */}
+      <div style={{
+        display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
+        padding: '12px 14px 10px', background: '#f8fafc',
+        borderBottom: '1px solid #f1f5f9',
+      }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <p style={{ fontSize: 14, fontWeight: 700, color: '#1e293b', margin: 0 }}>
+            {isDeleted
+              ? <span style={{ textDecoration: 'line-through', color: '#9ca3af' }}>{displayLabel ?? 'Event'}</span>
+              : isAvailable
+              ? <span>Available</span>
+              : <span>{displayLabel ?? 'Event'}</span>
+            }
+          </p>
+          <p style={{ fontSize: 11, color: '#64748b', margin: '2px 0 0' }}>
+            {doctorName} · {fmtDate(date)}
+          </p>
+          {override && (
+            <p style={{ fontSize: 10, color: '#94a3b8', margin: '3px 0 0' }}>
+              {ACTION_LABELS[override.action] ?? override.action}
+              {override.action === 'modify' && override.originalEventType && (
+                <> — changed from{' '}
+                  <span style={{ textDecoration: 'line-through' }}>
+                    {EVENT_LABELS[override.originalEventType] ?? override.originalEventType}
+                  </span>
+                </>
+              )}
+              {override.note && <> · "{override.note}"</>}
+            </p>
+          )}
+        </div>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, marginTop: -2 }}>
           <X className="h-4 w-4 text-muted-foreground" />
         </button>
       </div>
 
-      <div style={{ fontSize: 12, color: '#475569', marginBottom: 12, lineHeight: 1.6 }}>
-        <p>Doctor: {doctorName}</p>
-        <p>Date: {fmtDate(date)}</p>
-        {override ? (
-          <>
-            <p>Source: {ACTION_LABELS[override.action] ?? override.action}</p>
-            {override.action === 'modify' && override.originalEventType && (
-              <p style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-                Changed from:{' '}
-                <span style={{ textDecoration: 'line-through', color: '#9ca3af' }}>
-                  {EVENT_LABELS[override.originalEventType] ?? override.originalEventType}
-                </span>
-                {' → '}{EVENT_LABELS[override.eventType] ?? override.eventType}
-              </p>
-            )}
-            {override.note && <p>Note: {override.note}</p>}
-            <p style={{ color: '#94a3b8', fontSize: 11 }}>
-              Created:{' '}
-              {new Date(override.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-            </p>
-          </>
-        ) : (
-          <p>Source: Doctor survey</p>
-        )}
-      </div>
+      {/* Divider */}
+      <div style={{ height: 1, background: '#e2e8f0' }} />
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-        {override && !isDeleted && (
-          <>
-            <button onClick={() => onEdit(override)} style={btn('#fff', '#374151', '#e2e8f0')}>
-              <Pencil className="h-3 w-3" /> Edit
-            </button>
-            <button onClick={() => onCopy(override)} style={btn('#fff', '#374151', '#e2e8f0')}>
-              <Copy className="h-3 w-3" /> Copy
-            </button>
-            <button onClick={() => onDelete(override)} style={btn('#fef2f2', '#dc2626', '#fee2e2')}>
-              <Trash2 className="h-3 w-3" /> Delete
-            </button>
-          </>
-        )}
-        {isSurveyEvent && (
-          <>
-            <button onClick={onAddNew} style={btn('#fff', '#374151', '#e2e8f0')}>+ Add override</button>
-            <button onClick={onRemoveSurveyEvent} style={btn('#fef2f2', '#dc2626', '#fee2e2')}>
-              <Minus className="h-3 w-3" /> Remove event
-            </button>
-          </>
-        )}
+      {/* Action buttons */}
+      <div style={{
+        display: 'flex', flexDirection: 'column', gap: 4, padding: '10px 14px 12px',
+      }}>
+
         {isAvailable && (
-          <button onClick={onAddNew} style={btn('#fff', '#374151', '#e2e8f0')}>+ Add event</button>
-        )}
-        {isDeleted && override && (
-          <button onClick={() => onDelete(override)} style={btn('#fef2f2', '#dc2626', '#fee2e2')}>
-            <Trash2 className="h-3 w-3" /> Remove this override
+          <button onClick={onAddNew} style={row('#eff6ff', '#2563eb', '#bfdbfe')}>
+            <Plus className="h-3.5 w-3.5" /> Add event
           </button>
         )}
+
+        {isSurveyEvent && (
+          <>
+            <button onClick={onAddNew} style={row('#eff6ff', '#2563eb', '#bfdbfe')}>
+              <Plus className="h-3.5 w-3.5" /> Add event
+            </button>
+            <button onClick={onRemoveSurveyEvent} style={row('#fef2f2', '#dc2626', '#fecaca')}>
+              <Trash2 className="h-3.5 w-3.5" /> Remove event
+            </button>
+          </>
+        )}
+
+        {isCoordOverride && (
+          <>
+            <button onClick={() => onEdit(override!)} style={row('#fff', '#374151', '#e2e8f0')}>
+              <Pencil className="h-3.5 w-3.5" /> Edit event
+            </button>
+            <button onClick={() => onCopy(override!)} style={row('#fff', '#374151', '#e2e8f0')}>
+              <Copy className="h-3.5 w-3.5" /> Copy event
+            </button>
+            <button onClick={() => onDelete(override!)} style={row('#fef2f2', '#dc2626', '#fecaca')}>
+              <Trash2 className="h-3.5 w-3.5" /> Remove event
+            </button>
+          </>
+        )}
+
+        {isDeleted && override && (
+          <button onClick={() => onDelete(override)} style={row('#f0fdf4', '#16a34a', '#bbf7d0')}>
+            <RotateCcw className="h-3.5 w-3.5" /> Restore event
+          </button>
+        )}
+
+        <button onClick={onGoToDate} style={row('#fff', '#374151', '#e2e8f0')}>
+          <ArrowRight className="h-3.5 w-3.5" /> Go to day view
+        </button>
+
       </div>
     </div>
   )
 }
 
-function btn(bg: string, color: string, border: string) {
+function row(bg: string, color: string, borderColor: string) {
   return {
-    display: 'inline-flex', alignItems: 'center', gap: 4,
-    fontSize: 12, fontWeight: 500, padding: '5px 10px',
-    borderRadius: 6, border: `1px solid ${border}`,
-    background: bg, color, cursor: 'pointer',
+    display: 'flex' as const, alignItems: 'center' as const, gap: 8,
+    width: '100%', textAlign: 'left' as const,
+    padding: '7px 10px', borderRadius: 6,
+    background: bg, color,
+    border: `1px solid ${borderColor}`,
+    cursor: 'pointer', fontSize: 12, fontWeight: 500,
   }
 }
