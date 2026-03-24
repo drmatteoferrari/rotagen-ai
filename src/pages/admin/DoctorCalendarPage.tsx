@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { AdminLayout } from '@/components/AdminLayout'
 import { supabase } from '@/integrations/supabase/client'
 import { useRotaContext } from '@/contexts/RotaContext'
 import { useIsMobile, useIsTablet } from '@/hooks/use-mobile'
-import { getTodayISO } from '@/lib/calendarOverrides'
+import { getTodayISO, mapOverrideRow, mergeOverridesIntoAvailability, type CalendarOverride, type MergedCell } from '@/lib/calendarOverrides'
 import type { CalendarData, CalendarDoctor } from '@/lib/preRotaTypes'
 import { ChevronLeft, ChevronRight, Loader2, AlertTriangle, ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -92,6 +92,61 @@ function fmtFull(iso: string): string {
   })
 }
 
+// ─── Override indicator ───────────────────────────────────────
+function OverrideDot() {
+  return (
+    <span style={{
+      display: 'inline-block', width: 6, height: 6, borderRadius: '50%',
+      background: '#ea580c', marginLeft: 2, flexShrink: 0,
+    }} />
+  )
+}
+
+function renderMergedChips(cell: MergedCell | undefined, compact: boolean): JSX.Element[] {
+  if (!cell) return []
+  const result: JSX.Element[] = []
+
+  if (cell.isDeleted && cell.deletedCode) {
+    result.push(
+      <span
+        key="deleted"
+        className="inline-block rounded-full px-1.5 py-0.5 text-[10px] font-medium leading-none"
+        style={{ backgroundColor: '#d1d5db', color: '#6b7280', textDecoration: 'line-through' }}
+      >
+        {compact ? cell.deletedCode : (EVENT_LABELS[cell.deletedCode] ?? cell.deletedCode)}
+      </span>
+    )
+    return result
+  }
+
+  if (cell.primary && !SKIP_CODES.has(cell.primary)) {
+    result.push(
+      <span
+        key={cell.primary}
+        className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium leading-none text-white"
+        style={{ backgroundColor: CHIP_COLOURS[cell.primary] ?? 'hsl(var(--muted-foreground))' }}
+      >
+        {compact ? cell.primary : (EVENT_LABELS[cell.primary] ?? cell.primary)}
+        {(cell.overrideAction === 'add' || cell.overrideAction === 'modify') && <OverrideDot />}
+      </span>
+    )
+  }
+
+  if (cell.secondary && !SKIP_CODES.has(cell.secondary)) {
+    result.push(
+      <span
+        key={cell.secondary}
+        className="inline-block rounded-full px-1.5 py-0.5 text-[10px] font-medium leading-none text-white"
+        style={{ backgroundColor: CHIP_COLOURS[cell.secondary] ?? 'hsl(var(--muted-foreground))' }}
+      >
+        {compact ? cell.secondary : (EVENT_LABELS[cell.secondary] ?? cell.secondary)}
+      </span>
+    )
+  }
+
+  return result
+}
+
 // ─── Chip renderer ────────────────────────────────────────────
 function renderChips(
   primary: string,
@@ -132,6 +187,7 @@ export default function DoctorCalendarPage() {
   const [currentDateISO, setCurrentDateISO] = useState('')
   const [currentWeekIndex, setCurrentWeekIndex] = useState(0)
   const [currentMonthKey, setCurrentMonthKey] = useState('')
+  const [overrides, setOverrides] = useState<CalendarOverride[]>([])
 
   const touchStartX = useRef(0)
   const touchStartY = useRef(0)
@@ -188,6 +244,14 @@ export default function DoctorCalendarPage() {
           w => w.startDate <= initialDate && initialDate <= w.endDate
         )
         setCurrentWeekIndex(wIdx >= 0 ? wIdx : 0)
+
+        // Load coordinator overrides
+        const { data: overrideRows } = await supabase
+          .from('coordinator_calendar_overrides')
+          .select('*')
+          .eq('rota_config_id', currentRotaConfigId)
+          .eq('doctor_id', doctorId)
+        setOverrides((overrideRows ?? []).map(mapOverrideRow))
       } catch (err) {
         console.error('DoctorCalendarPage load error:', err)
         setErrorMsg('Failed to load data. Please go back and try again.')
@@ -274,6 +338,16 @@ export default function DoctorCalendarPage() {
     return () => window.removeEventListener('keydown', handler)
   }, [])
 
+  const mergedAvailability = useMemo<Record<string, MergedCell>>(() => {
+    if (!doctor || !calendarData) return {}
+    return mergeOverridesIntoAvailability(
+      doctor.availability,
+      overrides,
+      calendarData.rotaStartDate,
+      calendarData.rotaEndDate
+    )
+  }, [doctor, overrides, calendarData])
+
   // ─── Loading / error ───────────────────────────────────────
   if (loading) return (
     <AdminLayout title="Doctor Calendar">
@@ -346,7 +420,8 @@ export default function DoctorCalendarPage() {
                   const isBH = inRota && bankHolidaySet.has(date)
                   const dow = isoToUTCDate(date).getUTCDay()
                   const isWeekend = dow === 0 || dow === 6
-                  const cell = inRota ? doctor!.availability[date] : null
+                   const cell = inRota ? doctor!.availability[date] : null
+                   const mergedCell = inRota ? mergedAvailability[date] : undefined
                   const cellOpacity = !inRota ? 0.2 : !inMonth ? 0.45 : 1
 
                   return (
@@ -367,7 +442,7 @@ export default function DoctorCalendarPage() {
                           </span>
                         )}
                         <div className="flex flex-wrap gap-0.5 justify-center">
-                          {cell && renderChips(cell.primary, cell.secondary, true)}
+                          {renderMergedChips(mergedCell, true)}
                         </div>
                       </div>
                     </td>
@@ -414,12 +489,12 @@ export default function DoctorCalendarPage() {
           <tbody>
             <tr>
               {week.dates.map(date => {
-                const cell = doctor!.availability[date]
+                const mergedCell = mergedAvailability[date]
                 const compact = isMobile || isTablet
                 return (
                   <td key={date} className="p-2 align-top border-b border-r border-border/30 min-h-[80px]">
                     <div className="flex flex-col gap-1">
-                      {cell && renderChips(cell.primary, cell.secondary, compact)}
+                      {renderMergedChips(mergedCell, compact)}
                     </div>
                   </td>
                 )
@@ -433,9 +508,11 @@ export default function DoctorCalendarPage() {
 
   function DayView() {
     const inRota = currentDateISO >= calendarData!.rotaStartDate && currentDateISO <= calendarData!.rotaEndDate
-    const cell = doctor!.availability[currentDateISO]
-    const codes = cell
-      ? ([cell.primary, cell.secondary] as (string | null)[]).filter((c): c is string => !!c && !SKIP_CODES.has(c))
+    const mergedCell = mergedAvailability[currentDateISO]
+    const showDeleted = mergedCell?.isDeleted && !!mergedCell?.deletedCode
+    const codes = (!mergedCell?.isDeleted && mergedCell)
+      ? ([mergedCell.primary, mergedCell.secondary] as (string | null)[])
+          .filter((c): c is string => !!c && !SKIP_CODES.has(c))
       : []
 
     return (
@@ -444,10 +521,26 @@ export default function DoctorCalendarPage() {
         {!inRota && (
           <p className="text-sm text-muted-foreground italic">This date is outside the rota period.</p>
         )}
-        {inRota && codes.length === 0 && (
+        {inRota && showDeleted && (
+          <div
+            className="rounded-lg border border-border bg-card p-3"
+            style={{ borderLeft: `4px solid #d1d5db` }}
+          >
+            <div className="flex items-center gap-2">
+              <span
+                className="inline-block rounded-full px-2 py-0.5 text-xs font-medium"
+                style={{ backgroundColor: '#d1d5db', color: '#6b7280', textDecoration: 'line-through' }}
+              >
+                {EVENT_LABELS[mergedCell!.deletedCode!] ?? mergedCell!.deletedCode}
+              </span>
+              <span className="text-xs text-muted-foreground">Removed by coordinator</span>
+            </div>
+          </div>
+        )}
+        {inRota && !showDeleted && codes.length === 0 && (
           <p className="text-sm text-muted-foreground italic">No events — available</p>
         )}
-        {inRota && codes.map(code => (
+        {inRota && !showDeleted && codes.map(code => (
           <div
             key={code}
             className="rounded-lg border border-border bg-card p-3"
@@ -460,6 +553,9 @@ export default function DoctorCalendarPage() {
               >
                 {EVENT_LABELS[code] ?? code}
               </span>
+              {(mergedCell?.overrideAction === 'add' || mergedCell?.overrideAction === 'modify') && (
+                <span className="text-xs text-orange-600 font-medium">● Coordinator override</span>
+              )}
             </div>
           </div>
         ))}
