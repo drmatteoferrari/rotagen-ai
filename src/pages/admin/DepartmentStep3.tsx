@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
   Info, AlertTriangle, ArrowLeft, ArrowRight,
-  RotateCcw, Loader2, CheckCircle2, ChevronDown, ChevronUp,
+  RotateCcw, Loader2, CheckCircle2, ChevronDown, ChevronUp, Building2,
 } from "lucide-react";
 import {
   useDepartmentSetup, getShiftColor, type ShiftType,
