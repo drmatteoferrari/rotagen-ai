@@ -579,12 +579,16 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
     const d = new Date(currentDate + 'T00:00:00');
     return d.getDay() === 0 || d.getDay() === 6;
   })();
-  const totalAvailable = doctors.filter(doc =>
-    !['AL', 'SL', 'ROT', 'PL', 'NOC'].includes(doc.availability[currentDate]?.primary ?? 'AVAILABLE')
-  ).length;
-  const nocOnlyCount = doctors.filter(doc =>
-    (doc.availability[currentDate]?.primary ?? 'AVAILABLE') === 'NOC'
-  ).length;
+  const totalAvailable = doctors.filter(doc => {
+    const mc = mergedAvailabilityByDoctor[doc.doctorId]?.[currentDate]
+    const p = mc?.isDeleted ? 'AVAILABLE' : (mc?.primary ?? 'AVAILABLE')
+    return !['AL', 'SL', 'ROT', 'PL', 'NOC'].includes(p)
+  }).length
+  const nocOnlyCount = doctors.filter(doc => {
+    const mc = mergedAvailabilityByDoctor[doc.doctorId]?.[currentDate]
+    const p = mc?.isDeleted ? 'AVAILABLE' : (mc?.primary ?? 'AVAILABLE')
+    return p === 'NOC'
+  }).length
   const isDayToday = currentDate === todayISO;
   const dayHeaderBg = isDayToday ? '#dbeafe' : isBHDay ? '#fee2e2' : isWkndDay ? '#f3f4f6' : '#f8fafc';
   const dayHeaderTextColor = isDayToday ? '#1d4ed8' : getColumnHeaderTextColor(isBHDay, isWkndDay);
