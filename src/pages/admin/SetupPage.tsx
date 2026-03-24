@@ -40,9 +40,6 @@ export default function SetupPage() {
   const [showFinalChecklist, setShowFinalChecklist] = useState(false);
   const [resetModalOpen, setResetModalOpen] = useState(false);
 
-  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
-  const toggleSection = (key: string) => setCollapsedSections(prev => ({ ...prev, [key]: !prev[key] }));
-  const isSectionCollapsed = (key: string, done: boolean) => done && (collapsedSections[key] ?? true);
 
   const handleGeneratePreRota = async () => {
     if (!currentRotaConfigId) return;
