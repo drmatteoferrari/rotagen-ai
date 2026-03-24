@@ -132,9 +132,25 @@ export default function RotaPeriodSummary() {
 
   const activeBankHolidays = rotaBankHolidays.filter(h => h.isActive);
 
+  const navBarContent = isPostSubmit ? (
+    <StepNavBar
+      left={<Button variant="outline" size="lg" onClick={() => { setShowResetConfirm(true); setShowEditConfirm(false); }}>Reset</Button>}
+      right={<Button variant="outline" size="lg" onClick={() => { setShowEditConfirm(true); setShowResetConfirm(false); }}>Edit</Button>}
+    />
+  ) : (
+    <StepNavBar
+      left={<Button variant="outline" size="lg" onClick={() => navigate("/admin/rota-period/step-2")}>Back</Button>}
+      right={
+        <Button size="lg" disabled={saving} onClick={handleConfirmSave} className="bg-amber-600 hover:bg-amber-700">
+          {saving ? <><Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />Saving…</> : "Confirm & Save"}
+        </Button>
+      }
+    />
+  );
+
   return (
-    <AdminLayout title="Rota Period" subtitle={isPostSubmit ? "Summary" : "Review & save"} accentColor="yellow" pageIcon={CalendarDays}>
-      <div className="mx-auto max-w-3xl space-y-4 animate-fadeSlideUp pb-36 md:pb-6">
+    <AdminLayout title="Rota Period" subtitle={isPostSubmit ? "Summary" : "Review & save"} accentColor="yellow" pageIcon={CalendarDays} navBar={navBarContent}>
+      <div className="mx-auto max-w-3xl space-y-4 animate-fadeSlideUp">
 
         {isPostSubmit ? (
           <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-700">
@@ -201,21 +217,6 @@ export default function RotaPeriodSummary() {
           </div>
         )}
 
-        {isPostSubmit ? (
-          <StepNavBar
-            left={<Button variant="outline" size="lg" onClick={() => { setShowResetConfirm(true); setShowEditConfirm(false); }}>Reset</Button>}
-            right={<Button variant="outline" size="lg" onClick={() => { setShowEditConfirm(true); setShowResetConfirm(false); }}>Edit</Button>}
-          />
-        ) : (
-          <StepNavBar
-            left={<Button variant="outline" size="lg" onClick={() => navigate("/admin/rota-period/step-2")}>Back</Button>}
-            right={
-              <Button size="lg" disabled={saving} onClick={handleConfirmSave} className="bg-amber-600 hover:bg-amber-700">
-                {saving ? <><Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />Saving…</> : "Confirm & Save"}
-              </Button>
-            }
-          />
-        )}
       </div>
     </AdminLayout>
   );

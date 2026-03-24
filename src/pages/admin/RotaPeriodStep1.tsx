@@ -91,8 +91,19 @@ export default function RotaPeriodStep1() {
     : null;
 
   return (
-    <AdminLayout title="Rota Period" subtitle="Step 1 of 2 — Dates" accentColor="yellow" pageIcon={CalendarDays}>
-      <div className="mx-auto max-w-3xl space-y-3 sm:space-y-6 animate-fadeSlideUp pb-36 md:pb-6">
+    <AdminLayout title="Rota Period" subtitle="Step 1 of 2 — Dates" accentColor="yellow" pageIcon={CalendarDays}
+      navBar={
+        <StepNavBar
+          right={
+            <Button size="lg" onClick={handleContinue} className="bg-amber-600 hover:bg-amber-700">
+              Continue
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          }
+        />
+      }
+    >
+      <div className="mx-auto max-w-3xl space-y-3 sm:space-y-6 animate-fadeSlideUp">
         {/* Info banner */}
         <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-700">
           <Info className="h-4 w-4 shrink-0 text-amber-600" />
@@ -144,14 +155,6 @@ export default function RotaPeriodStep1() {
           </CardContent>
         </Card>
 
-        <StepNavBar
-          right={
-            <Button size="lg" onClick={handleContinue} className="bg-amber-600 hover:bg-amber-700">
-              Continue
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          }
-        />
       </div>
     </AdminLayout>
   );

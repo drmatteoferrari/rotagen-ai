@@ -1,5 +1,5 @@
 import { useSurveyContext, type SpecialtyEntry } from "@/contexts/SurveyContext";
-import { StepNav } from "@/components/survey/StepNav";
+
 import { SurveySection } from "@/components/survey/SurveySection";
 import { InfoBox } from "@/components/survey/InfoBox";
 import { Input } from "@/components/ui/input";
@@ -85,8 +85,7 @@ export default function SurveyStep6() {
   };
 
   return (
-    <>
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6 pb-24 space-y-4 sm:space-y-6">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 pb-6 space-y-4 sm:space-y-6">
         <Card className="bg-white shadow-sm">
           <CardHeader className="px-4 sm:px-6 py-4 sm:py-5">
             <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
@@ -193,7 +192,5 @@ export default function SurveyStep6() {
           </CardContent>
         </Card>
       </div>
-      <StepNav onBack={() => ctx.prevStep()} onNext={handleNext} />
-    </>
   );
 }

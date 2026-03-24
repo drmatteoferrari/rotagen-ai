@@ -87,8 +87,24 @@ export default function WtrStep2() {
   ];
 
   return (
-    <AdminLayout title="Working Time Regulations" subtitle="Step 2 of 5 — Limits" accentColor="red" pageIcon={ClipboardList}>
-      <div className="mx-auto max-w-3xl space-y-6 animate-fadeSlideUp pb-36 md:pb-6">
+    <AdminLayout title="Working Time Regulations" subtitle="Step 2 of 5 — Limits" accentColor="red" pageIcon={ClipboardList}
+      navBar={
+        <StepNavBar
+          left={
+            <Button variant="outline" size="lg" onClick={() => navigate("/admin/wtr/step-1")}>
+              <ArrowLeft className="mr-2 h-4 w-4" />Back
+            </Button>
+          }
+          right={
+            <Button size="lg" onClick={() => navigate("/admin/wtr/step-3")} className="bg-red-600 hover:bg-red-700">
+              Continue
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          }
+        />
+      }
+    >
+      <div className="mx-auto max-w-3xl space-y-6 animate-fadeSlideUp">
         <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700">
           <Info className="h-4 w-4 shrink-0 text-red-600" />
           Set limits for consecutive work patterns.
@@ -126,19 +142,6 @@ export default function WtrStep2() {
           </CardContent>
         </Card>
 
-        <StepNavBar
-          left={
-            <Button variant="outline" size="lg" onClick={() => navigate("/admin/wtr/step-1")}>
-              <ArrowLeft className="mr-2 h-4 w-4" />Back
-            </Button>
-          }
-          right={
-            <Button size="lg" onClick={() => navigate("/admin/wtr/step-3")} className="bg-red-600 hover:bg-red-700">
-              Continue
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          }
-        />
       </div>
     </AdminLayout>
   );

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSurveyContext } from "@/contexts/SurveyContext";
-import { StepNav } from "@/components/survey/StepNav";
+
 import { SurveySection } from "@/components/survey/SurveySection";
 import { FieldError } from "@/components/survey/FieldError";
 import { Input } from "@/components/ui/input";
@@ -71,8 +71,7 @@ export default function SurveyStep1() {
   };
 
   return (
-    <>
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6 pb-24 space-y-4 sm:space-y-6">
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 pb-6 space-y-4 sm:space-y-6">
         {/* Info banner */}
         <div className="flex items-start gap-2 rounded-lg border border-teal-200 bg-teal-50 px-4 py-3 text-sm font-medium text-teal-700">
           <Info className="h-4 w-4 sm:h-5 sm:w-5 shrink-0 mt-0.5 text-teal-600" />
@@ -201,7 +200,5 @@ export default function SurveyStep1() {
           </CardContent>
         </Card>
       </div>
-      <StepNav onNext={handleNext} />
-    </>
   );
 }

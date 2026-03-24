@@ -78,8 +78,24 @@ export default function DepartmentStep1New() {
   const bothFilled = deptName.trim().length > 0 && trustName.trim().length > 0;
 
   return (
-    <AdminLayout title="Department Setup" subtitle="Step 1 of 3 — Department" accentColor="purple" pageIcon={Building2}>
-      <div className="mx-auto max-w-3xl space-y-6 animate-fadeSlideUp pb-36 md:pb-6">
+    <AdminLayout title="Department Setup" subtitle="Step 1 of 3 — Department" accentColor="purple" pageIcon={Building2}
+      navBar={
+        <StepNavBar
+          left={
+            <Button variant="outline" size="lg" onClick={() => navigate("/admin/setup")}>
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back
+            </Button>
+          }
+          right={
+            <Button size="lg" onClick={handleSaveAndContinue} disabled={saving || loading} className="bg-purple-600 hover:bg-purple-700 text-white">
+              {saving ? "Saving…" : "Continue"}
+              {!saving && <ArrowRight className="ml-2 h-4 w-4" />}
+            </Button>
+          }
+        />
+      }
+    >
+      <div className="mx-auto max-w-3xl space-y-6 animate-fadeSlideUp">
         {/* Info banner */}
         <div className="flex items-center gap-2 rounded-lg border border-purple-200 bg-purple-50 px-4 py-2.5 text-sm font-medium text-purple-700">
           <Info className="h-4 w-4 shrink-0 text-purple-600" />
@@ -136,19 +152,6 @@ export default function DepartmentStep1New() {
           </CardContent>
         </Card>
 
-        <StepNavBar
-          left={
-            <Button variant="outline" size="lg" onClick={() => navigate("/admin/setup")}>
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back
-            </Button>
-          }
-          right={
-            <Button size="lg" onClick={handleSaveAndContinue} disabled={saving || loading} className="bg-purple-600 hover:bg-purple-700 text-white">
-              {saving ? "Saving…" : "Continue"}
-              {!saving && <ArrowRight className="ml-2 h-4 w-4" />}
-            </Button>
-          }
-        />
       </div>
     </AdminLayout>
   );

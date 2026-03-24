@@ -111,7 +111,7 @@ function AdminShellInner() {
         </header>
 
         {/* Content */}
-        <main className="flex-1 overflow-y-auto p-4 pb-20">
+        <main className="flex-1 overflow-hidden flex flex-col">
           <Outlet />
         </main>
 
@@ -227,7 +227,7 @@ function AdminShellInner() {
             </div>
           )}
         </header>
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-hidden flex flex-col">
           <Outlet />
         </main>
       </div>
