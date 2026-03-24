@@ -1,48 +1,59 @@
 
 
-## Plan: Add override loading and visual rendering to both calendar pages
+## Plan: Add tap interaction, EventDetailPanel, AddEventModal, and DB writes
 
 ### Overview
-Load `coordinator_calendar_overrides` from the database and merge them into doctor availability for visual display on both the DoctorCalendarPage and PreRotaCalendarPage. Read-only — no interaction, no DB writes. Three files touched.
+Add cell tap interaction to both calendar pages, opening an EventDetailPanel for viewing override details and an AddEventModal for creating/editing/copying overrides. Two new components created, two existing pages updated.
 
-### Changes
+### Files
 
-**1. Append to `src/lib/calendarOverrides.ts`**
-- Add `MergedCell` interface with override metadata fields (`overrideId`, `overrideAction`, `isDeleted`, `deletedCode`)
-- Add `rangeInclusive` helper, `expandOverrideDates` function (handles none/weekly/monthly/custom recurrence)
-- Add `mergeOverridesIntoAvailability` function that wraps raw availability into `MergedCell` records, then applies overrides oldest-first (add/modify/delete)
+**1. Create `src/components/calendar/EventDetailPanel.tsx`**
+- Displays merged cell details: event label, doctor name, formatted date, source (coordinator override vs doctor survey)
+- For coordinator overrides: Edit, Copy, Delete buttons; shows "Changed from X → Y" for modifications, note, created date
+- For survey events: "Add override" and "Remove event" buttons
+- For available cells: "Add event" button
+- For deleted cells: "Remove this override" button
+- Close button in header
 
-**2. Update `src/pages/admin/DoctorCalendarPage.tsx`**
-- Add `useMemo` to React import
-- Expand calendarOverrides import to include `mapOverrideRow`, `mergeOverridesIntoAvailability`, `CalendarOverride`, `MergedCell`
-- Add `overrides` state, load from `coordinator_calendar_overrides` in data load effect (after `setCurrentWeekIndex`)
-- Add `mergedAvailability` useMemo that merges doctor availability with overrides
-- Add `OverrideDot` component (orange 6px circle) and `renderMergedChips` helper (handles deleted=grey strikethrough, add/modify=orange dot)
-- MonthView: replace `cell` lookup with `mergedAvailability[date]`, use `renderMergedChips`
-- WeekView: replace `cell` with `mergedCell` from `mergedAvailability`, use `renderMergedChips`
-- DayView: replace `cell` with `mergedCell`, show "Removed by coordinator" card for deleted overrides, show "● Coordinator override" label for add/modify
+**2. Create `src/components/calendar/AddEventModal.tsx`**
+- Fixed bottom sheet modal (max-width 480px, backdrop click to close)
+- Event type pill selector (AL/SL/NOC/ROT/PL)
+- Start/end date inputs with validation (required, end ≥ start, within rota period)
+- Optional note field
+- Supports three modes via props: new add (dates pre-filled), edit (all pre-filled), copy (type pre-filled, dates blank)
+- Saving state disables button, shows "Saving…"
 
-**3. Update `src/pages/admin/PreRotaCalendarPage.tsx`**
-- Expand calendarOverrides import
-- Add `overrides` state, load all overrides for the rota in data load effect (after eligibility block)
-- Add `mergedAvailabilityByDoctor` useMemo that builds per-doctor merged availability
-- Add `RotaOverrideDot` and `getMergedCellBackground` helper functions outside component
-- Week view: replace `cell`/`primary`/`bg` with merged versions; render deleted as grey strikethrough chip, add/modify badges with orange dot
-- Day view: same merged cell logic for doctor list badges
-- Update `totalAvailable` and `nocOnlyCount` to use merged data
-- Add coordinator override legend entry in `CalendarLegend` (after LTFT, before Today swatch)
+**3. Update `src/pages/admin/DoctorCalendarPage.tsx`**
+- Import EventDetailPanel and AddEventModal
+- Add interaction state: selectedDate, panelOpen, modalOpen, modalSaving, modalPrefill, modalCopyFrom, modalInitialDate
+- Add write helpers: `reloadOverrides`, `handleSaveOverride` (insert for add, delete+insert for edit), `handleDeleteOverride` (hard delete), `handleRemoveSurveyEvent` (insert action:'delete'), `handleCellTap` (toggle panel)
+- Remove dead `cell` variable from MonthView (line 423)
+- WeekView: add onClick + blue outline to data cells
+- DayView: add "+ Override" button next to date heading
+- Render panel and modal after view content, before closing div
+
+**4. Update `src/pages/admin/PreRotaCalendarPage.tsx`**
+- Import EventDetailPanel and AddEventModal
+- Add interaction state: selectedCell (doctorId+date), panelOpen, modalOpen, modalSaving, modalPrefill, modalCopyFrom, modalInitialDate
+- Add write helpers: same pattern as DoctorCalendarPage but with selectedCell.doctorId, rotaConfigId
+- Week view: add onClick + blue outline to doctor data cells (line ~743)
+- Day view: add onClick + blue outline/highlight to doctor rows (line ~926)
+- Render panel and modal after day view block, before month placeholder
 
 ### Technical details
-- Override expansion handles all recurrence types (none=date range, weekly=repeat every 7 days, monthly=repeat every month, custom=explicit dates)
-- Merge is oldest-first so newest override wins on conflict
-- Eligibility computation remains unchanged — still reads from base `doctor.availability` (intentional: eligibility reflects survey data, not coordinator overrides)
-- `getMergedCellBackground` replaces `getCellBackground` calls in week/day views only
-- No DB writes, no new migrations, no changes to any other file
+- All DB writes use `supabase.auth.getUser()` for `created_by`
+- Edit = hard delete old row + insert new with action:'modify'
+- Delete coordinator override = hard delete
+- Remove survey event = insert action:'delete' (soft delete, preserves audit trail)
+- `reloadOverrides()` called after every write to refresh merged availability
+- Panel and modal close + selection clears after every successful write
+- MonthView in DoctorCalendarPage still navigates to day view on tap (no panel)
 
 ### Files touched
 | File | Action |
 |------|--------|
-| `src/lib/calendarOverrides.ts` | Append ~120 lines |
-| `src/pages/admin/DoctorCalendarPage.tsx` | Edit imports, state, data load, views |
-| `src/pages/admin/PreRotaCalendarPage.tsx` | Edit imports, state, data load, views, legend |
+| `src/components/calendar/EventDetailPanel.tsx` | Create |
+| `src/components/calendar/AddEventModal.tsx` | Create |
+| `src/pages/admin/DoctorCalendarPage.tsx` | Edit |
+| `src/pages/admin/PreRotaCalendarPage.tsx` | Edit |
 
