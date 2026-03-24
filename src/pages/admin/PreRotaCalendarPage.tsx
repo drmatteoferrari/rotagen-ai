@@ -596,6 +596,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
   }
 
 
+  const allDates = useMemo(() => calendarData?.weeks.flatMap(w => w.dates) ?? [], [calendarData]);
   const maxMinDoctors = useMemo(() => Math.max(...shiftTypes.map(s => s.min_doctors), 1), [shiftTypes]);
 
   const mergedAvailabilityByDoctor = useMemo<Record<string, Record<string, MergedCell>>>(() => {
