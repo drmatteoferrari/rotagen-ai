@@ -669,7 +669,8 @@ export default function DoctorCalendarPage() {
         {inRota && !showDeleted && codes.map(code => (
           <div
             key={code}
-            className="rounded-lg border border-border bg-card p-3"
+            onClick={() => handleCellTap(currentDateISO)}
+            className="rounded-lg border border-border bg-card p-3 cursor-pointer hover:bg-muted/30 transition-colors"
             style={{ borderLeft: `4px solid ${CHIP_COLOURS[code] ?? 'hsl(var(--muted-foreground))'}` }}
           >
             <div className="flex items-center gap-2">
