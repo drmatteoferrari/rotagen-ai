@@ -735,6 +735,48 @@ export default function DoctorCalendarPage() {
         {viewMode === 'month' && <MonthView />}
         {viewMode === 'week' && <WeekView />}
         {viewMode === 'day' && <DayView />}
+
+        {panelOpen && selectedDate && calendarData && doctor && (
+          <EventDetailPanel
+            mergedCell={mergedAvailability[selectedDate] ?? { primary: 'AVAILABLE', secondary: null, label: '', overrideId: null, overrideAction: null, isDeleted: false, deletedCode: null }}
+            date={selectedDate}
+            doctorName={doctor.doctorName}
+            overrides={overrides}
+            onEdit={override => {
+              setModalPrefill({
+                eventType: override.eventType, startDate: override.startDate,
+                endDate: override.endDate, note: override.note ?? '',
+                overrideId: override.id, originalEventType: override.originalEventType,
+              })
+              setModalCopyFrom(null); setModalInitialDate(null); setModalOpen(true)
+            }}
+            onDelete={handleDeleteOverride}
+            onCopy={override => {
+              setModalCopyFrom({ eventType: override.eventType, startDate: override.startDate, endDate: override.endDate })
+              setModalPrefill(null); setModalInitialDate(null); setModalOpen(true)
+            }}
+            onAddNew={() => {
+              setModalPrefill(null); setModalCopyFrom(null)
+              setModalInitialDate(selectedDate); setModalOpen(true)
+            }}
+            onRemoveSurveyEvent={() => handleRemoveSurveyEvent(selectedDate)}
+            onClose={() => { setPanelOpen(false); setSelectedDate(null) }}
+          />
+        )}
+
+        {modalOpen && calendarData && doctor && (
+          <AddEventModal
+            prefill={modalPrefill ?? undefined}
+            copyFrom={modalCopyFrom ?? undefined}
+            initialDate={modalInitialDate ?? undefined}
+            doctorName={doctor.doctorName}
+            rotaStartDate={calendarData.rotaStartDate}
+            rotaEndDate={calendarData.rotaEndDate}
+            saving={modalSaving}
+            onSave={handleSaveOverride}
+            onClose={() => { setModalOpen(false); setModalPrefill(null); setModalCopyFrom(null); setModalInitialDate(null) }}
+          />
+        )}
       </div>
     </AdminLayout>
   )
