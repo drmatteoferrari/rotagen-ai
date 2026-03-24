@@ -263,6 +263,32 @@ function getMergedCellBackground(mergedCell: MergedCell | undefined, isLtftDay: 
   return '#ffffff'
 }
 
+const MONTH_DAY_ABBR = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
+const MONTH_EVENT_COLOURS: Record<string, string> = {
+  AL: '#16a34a', SL: '#2563eb', NOC: '#ec4899',
+  ROT: '#c2410c', PL: '#7c3aed', LTFT: '#92400e',
+}
+
+function buildMonthGrid(yearMonth: string): string[] {
+  const [y, m] = yearMonth.split('-').map(Number)
+  const firstDay = new Date(Date.UTC(y, m - 1, 1))
+  const lastDay = new Date(Date.UTC(y, m, 0))
+  const dow = firstDay.getUTCDay()
+  const monday = new Date(firstDay)
+  monday.setUTCDate(firstDay.getUTCDate() - ((dow + 6) % 7))
+  const lastStr = lastDay.toISOString().split('T')[0]
+  const dates: string[] = []
+  const cur = new Date(monday)
+  while (cur.toISOString().split('T')[0] <= lastStr) {
+    for (let i = 0; i < 7; i++) {
+      dates.push(cur.toISOString().split('T')[0])
+      cur.setUTCDate(cur.getUTCDate() + 1)
+    }
+  }
+  return dates
+}
+
 // ── View Toggle ───────────────────────────────────────────────
 
 function ViewToggle({
