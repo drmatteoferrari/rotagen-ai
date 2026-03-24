@@ -102,7 +102,7 @@ export default function PreRotaTargetsPage() {
 
   if (loading) {
     return (
-      <AdminLayout title="Shift Hour Targets" accentColor="blue">
+      <AdminLayout title="Shift Hour Targets" accentColor="blue" pageIcon={Target}>
         <div className="flex items-center justify-center min-h-[300px]">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           <span className="ml-2 text-sm text-muted-foreground">Loading targets…</span>
