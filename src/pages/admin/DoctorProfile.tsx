@@ -308,7 +308,7 @@ export default function DoctorProfile() {
 
   if (error || !doctor) {
     return (
-      <AdminLayout title="Doctor Profile" accentColor="blue">
+      <AdminLayout title="Doctor Profile" accentColor="blue" pageIcon={User}>
         <div className="mx-auto max-w-3xl space-y-4 py-10 text-center">
           <p className="text-muted-foreground">Doctor not found.</p>
           <Button variant="outline" onClick={() => navigate("/admin/roster")}>
