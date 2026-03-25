@@ -39,6 +39,7 @@ import SetupPage from "./pages/admin/SetupPage";
 import DepartmentSummary from "./pages/admin/DepartmentSummary";
 import RotaPeriodSummary from "./pages/admin/RotaPeriodSummary";
 import DoctorProfile from "./pages/admin/DoctorProfile";
+import Feedback from "./pages/Feedback";
 import Privacy from "./pages/Privacy";
 import LandingPage from "./pages/LandingPage";
 import Pricing from "./pages/Pricing";
