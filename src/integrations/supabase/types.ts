@@ -785,6 +785,61 @@ export type Database = {
         }
         Relationships: []
       }
+      resolved_availability: {
+        Row: {
+          date: string
+          doctor_id: string
+          id: string
+          override_id: string | null
+          rebuilt_at: string
+          rota_config_id: string
+          source: string
+          status: string
+        }
+        Insert: {
+          date: string
+          doctor_id: string
+          id?: string
+          override_id?: string | null
+          rebuilt_at?: string
+          rota_config_id: string
+          source: string
+          status: string
+        }
+        Update: {
+          date?: string
+          doctor_id?: string
+          id?: string
+          override_id?: string | null
+          rebuilt_at?: string
+          rota_config_id?: string
+          source?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resolved_availability_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "doctors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "resolved_availability_override_id_fkey"
+            columns: ["override_id"]
+            isOneToOne: false
+            referencedRelation: "coordinator_calendar_overrides"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "resolved_availability_rota_config_id_fkey"
+            columns: ["rota_config_id"]
+            isOneToOne: false
+            referencedRelation: "rota_configs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rota_configs: {
         Row: {
           bh_same_as_weekend: boolean | null
