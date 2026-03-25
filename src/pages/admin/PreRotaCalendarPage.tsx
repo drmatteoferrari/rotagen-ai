@@ -644,12 +644,15 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
 
   const handleDeleteOverride = async (override: CalendarOverride) => {
     if (!rotaConfigId || !selectedCell) return
+    const doctorId = selectedCell.doctorId
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
       await supabase.from('coordinator_calendar_overrides').delete().eq('id', override.id)
       await reloadOverrides()
       setPanelOpen(false); setSelectedCell(null)
+      refreshResolvedAvailabilityForDoctor(rotaConfigId, doctorId)
+        .catch(err => console.error('refreshResolvedAvailability failed:', err))
     } catch (err) {
       console.error('Failed to delete override:', err)
     }
