@@ -1,6 +1,6 @@
 import { useEffect, useState, type MutableRefObject } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { BarChart3, Check, Mail, ShieldCheck, Wand2 } from "lucide-react";
+import { BarChart3, Check, Mail, ShieldCheck, Star, Wand2 } from "lucide-react";
 import { useScrollReveal } from "@/lib/useScrollReveal";
 
 const trustSignals = ["No payment details", "No IT procurement", "Live within a week"];
@@ -111,7 +111,11 @@ export default function LandingPage() {
               </button>
             </div>
             <button type="button" onClick={() => navigate("/feedback")}
-              className="hidden md:block text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+              className="hidden md:flex items-center gap-1.5 text-sm font-medium transition-colors hover:opacity-80"
+              style={{ color: '#16A34A' }}>
+              <span className="flex h-5 w-5 items-center justify-center rounded-md bg-green-100">
+                <Star className="h-3 w-3 text-green-600" />
+              </span>
               Give feedback
             </button>
             <button
@@ -144,8 +148,27 @@ export default function LandingPage() {
               <h1 className="mx-auto mt-6 max-w-4xl text-4xl font-extrabold leading-tight tracking-tight text-foreground md:text-5xl lg:text-6xl">
                 <span className="block">Your doctors' preferences.</span>
                 <span className="block">Your department's rules.</span>
-                <span className="block shimmer-text">One compliant rota, automatically.</span>
+              <span className="block shimmer-text">One compliant rota, automatically.</span>
               </h1>
+
+              <div className="mx-auto mt-6 max-w-md">
+                <div className="rounded-xl p-[2px] feedback-shimmer-card">
+                  <div className="rounded-[10px] bg-white px-5 py-4 text-center">
+                    <p className="text-xs font-semibold text-muted-foreground mb-2">
+                      Already using RotaGen?
+                    </p>
+                    <button type="button" onClick={() => navigate("/feedback")}
+                      className="inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90"
+                      style={{ backgroundColor: '#16A34A' }}>
+                      <span className="flex h-5 w-5 items-center justify-center rounded-md bg-white/20">
+                        <Star className="h-3 w-3" />
+                      </span>
+                      Give us your feedback
+                    </button>
+                    <p className="mt-2 text-[11px] text-muted-foreground">Takes 2 minutes · Shapes what we build next</p>
+                  </div>
+                </div>
+              </div>
 
               <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-muted-foreground md:text-lg">
                 RotaGen is an AI-powered rota scheduler built for NHS anaesthetic departments. It collects your doctors' preferences, applies your department's rules, and generates a fully allocated rota in minutes — not days.
@@ -311,14 +334,6 @@ export default function LandingPage() {
               <button type="button" onClick={() => navigate("/pricing")} className="mt-4 text-sm font-medium text-primary hover:underline">
                 Full pricing details →
               </button>
-              <div className="mt-4 border-t border-border pt-4">
-                <p className="text-sm text-muted-foreground mb-2">Already using RotaGen?</p>
-                <button type="button" onClick={() => navigate("/feedback")}
-                  style={{ borderColor: '#34E0A1', color: '#34E0A1' }}
-                  className="w-full rounded-md border-2 bg-transparent px-6 py-2.5 text-sm font-semibold transition-all hover:opacity-80">
-                  ⭐ Give us your feedback
-                </button>
-              </div>
             </div>
           </div>
         </section>

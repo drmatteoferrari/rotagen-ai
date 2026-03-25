@@ -59,8 +59,10 @@ export type Database = {
           rating_ui: number
           responder_email: string | null
           responder_name: string | null
+          responder_phone: string | null
           responder_trust: string | null
           rota_creators: string[] | null
+          rota_creators_other: string | null
         }
         Insert: {
           bugs?: string | null
@@ -79,8 +81,10 @@ export type Database = {
           rating_ui: number
           responder_email?: string | null
           responder_name?: string | null
+          responder_phone?: string | null
           responder_trust?: string | null
           rota_creators?: string[] | null
+          rota_creators_other?: string | null
         }
         Update: {
           bugs?: string | null
@@ -99,8 +103,10 @@ export type Database = {
           rating_ui?: number
           responder_email?: string | null
           responder_name?: string | null
+          responder_phone?: string | null
           responder_trust?: string | null
           rota_creators?: string[] | null
+          rota_creators_other?: string | null
         }
         Relationships: []
       }

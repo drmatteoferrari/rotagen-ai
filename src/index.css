@@ -183,3 +183,15 @@ body, #root {
   background-clip: text;
   animation: shimmer 3s linear infinite;
 }
+
+@keyframes shimmer-feedback-border {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.feedback-shimmer-card {
+  background: linear-gradient(270deg, #16A34A, #4ade80, #86efac, #16A34A);
+  background-size: 400% 400%;
+  animation: shimmer-feedback-border 3s ease infinite;
+}
