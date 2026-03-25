@@ -237,7 +237,6 @@ export async function generatePreRota(
         id: d.id, firstName: d.firstName, lastName: d.lastName,
         grade: d.grade, wte: d.wte,
       })),
-      }),
       calendarDoctors: calendarData.doctors,
     })
 
