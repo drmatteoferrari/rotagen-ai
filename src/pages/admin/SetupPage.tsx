@@ -330,7 +330,11 @@ export default function SetupPage() {
         {/* Feedback link */}
         <div className="flex justify-center pb-2">
           <button type="button" onClick={() => navigate("/feedback")}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2">
+            className="inline-flex items-center gap-1.5 text-xs font-medium transition-colors hover:opacity-80"
+            style={{ color: '#16A34A' }}>
+            <span className="flex h-5 w-5 items-center justify-center rounded-md bg-green-100">
+              <Star className="h-3 w-3 text-green-600" />
+            </span>
             Give feedback on RotaGen
           </button>
         </div>
