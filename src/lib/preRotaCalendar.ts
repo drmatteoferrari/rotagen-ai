@@ -2,8 +2,13 @@
 
 import type { CalendarData, CalendarDoctor, CalendarCell, CellCode } from './preRotaTypes'
 
-// Priority: higher index = wins when multiple events on same date
-const CELL_PRIORITY: CellCode[] = ['AVAILABLE', 'LTFT', 'BH', 'NOC', 'PL', 'ROT', 'SL', 'AL']
+// Priority: higher index wins as primary when multiple events fall on the same date.
+// BH=7 — bank holiday beats all leave types. A BH on an AL, SL, PL, or ROT day wins.
+// PL=6, ROT=5 — full absence, but lose to BH.
+// SL=4 beats AL=3 — when both on same weekday, SL wins for auditing clarity.
+// NOC=2 — scheduling preference only, never treated as absence.
+// LTFT=1, AVAILABLE=0 — lowest priority.
+const CELL_PRIORITY: CellCode[] = ['AVAILABLE', 'LTFT', 'NOC', 'AL', 'SL', 'ROT', 'PL', 'BH']
 const priorityOf = (code: CellCode) => CELL_PRIORITY.indexOf(code)
 
 const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']

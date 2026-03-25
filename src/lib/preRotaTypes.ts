@@ -52,6 +52,14 @@ export interface CalendarData {
 
 // ─── Targets ──────────────────────────────────────────────────
 
+export interface LeaveSummary {
+  alSlBhDays: number
+  plRotDays: number
+  alSlBhHoursDeducted: number
+  plRotHoursDeducted: number
+  availableHours: number
+}
+
 export interface DoctorShiftTarget {
   shiftTypeId: string
   shiftName: string
@@ -66,10 +74,11 @@ export interface DoctorTargets {
   doctorName: string
   grade: string
   wte: number
-  contractedHoursPerWeek: number   // = wtr maxHoursPerWeek
-  hardWeeklyCap: number            // = wtr maxHoursPer168h
+  contractedHoursPerWeek: number
+  hardWeeklyCap: number
   weekendCap: number
   totalMaxHours: number
+  leaveSummary: LeaveSummary
   shiftTargets: DoctorShiftTarget[]
 }
 
