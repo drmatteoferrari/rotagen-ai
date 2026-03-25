@@ -52,6 +52,14 @@ export interface CalendarData {
 
 // ─── Targets ──────────────────────────────────────────────────
 
+export interface LeaveSummary {
+  alSlBhDays: number
+  plRotDays: number
+  alSlBhHoursDeducted: number
+  plRotHoursDeducted: number
+  availableHours: number
+}
+
 export interface DoctorShiftTarget {
   shiftTypeId: string
   shiftName: string
