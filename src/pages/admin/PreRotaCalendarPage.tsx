@@ -13,6 +13,7 @@ import {
 import { getTodayISO, mapOverrideRow, mergeOverridesIntoAvailability, type CalendarOverride, type MergedCell } from "@/lib/calendarOverrides";
 import { EventDetailPanel } from '@/components/calendar/EventDetailPanel'
 import { AddEventModal } from '@/components/calendar/AddEventModal'
+import { refreshResolvedAvailabilityForDoctor } from '@/lib/resolvedAvailability'
 
 const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
