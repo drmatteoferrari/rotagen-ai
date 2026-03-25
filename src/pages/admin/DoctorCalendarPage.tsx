@@ -398,6 +398,8 @@ export default function DoctorCalendarPage() {
       await supabase.from('coordinator_calendar_overrides').delete().eq('id', override.id)
       await reloadOverrides()
       setPanelOpen(false); setSelectedDate(null)
+      refreshResolvedAvailabilityForDoctor(currentRotaConfigId!, doctorId!)
+        .catch(err => console.error('refreshResolvedAvailability failed:', err))
     } catch (err) {
       console.error('Failed to delete override:', err)
     }
