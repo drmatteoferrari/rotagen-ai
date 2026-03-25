@@ -1,9 +1,9 @@
 import { useEffect, useState, type MutableRefObject } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { BarChart3, Check, Mail, ShieldCheck, Star, Wand2 } from "lucide-react";
+import { BarChart3, Mail, ShieldCheck, Star, Wand2 } from "lucide-react";
 import { useScrollReveal } from "@/lib/useScrollReveal";
 
-const trustSignals = ["No payment details", "No IT procurement", "Live within a week"];
+
 
 const featureCards = [
   {
@@ -140,33 +140,56 @@ export default function LandingPage() {
         <section id="hero" className="flex min-h-screen items-center bg-blue-100 px-6 py-16">
           <div className="mx-auto w-full max-w-6xl">
             <div className="animate-in slide-in-from-bottom-4 fade-in duration-500 text-center">
-              <div className="inline-flex items-center gap-2 rounded-full bg-green-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-green-700">
-                <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                Early Access — Free
-              </div>
-
-              <h1 className="mx-auto mt-6 max-w-4xl text-4xl font-extrabold leading-tight tracking-tight text-foreground md:text-5xl lg:text-6xl">
+              <h1 className="mx-auto max-w-4xl text-4xl font-extrabold leading-tight tracking-tight text-foreground md:text-5xl lg:text-6xl">
                 <span className="block">Your doctors' preferences.</span>
                 <span className="block">Your department's rules.</span>
               <span className="block shimmer-text">One compliant rota, automatically.</span>
               </h1>
 
-              <div className="mx-auto mt-6 max-w-md">
-                <div className="rounded-xl p-[2px] feedback-shimmer-card">
-                  <div className="rounded-[10px] bg-white px-5 py-4 text-center">
-                    <p className="text-xs font-semibold text-muted-foreground mb-2">
-                      Already using RotaGen?
-                    </p>
-                    <button type="button" onClick={() => navigate("/feedback")}
-                      className="inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90"
-                      style={{ backgroundColor: '#16A34A' }}>
-                      <span className="flex h-5 w-5 items-center justify-center rounded-md bg-white/20">
-                        <Star className="h-3 w-3" />
-                      </span>
-                      Give us your feedback
-                    </button>
-                    <p className="mt-2 text-[11px] text-muted-foreground">Takes 2 minutes · Shapes what we build next</p>
+              <div ref={pricingRef} className="scroll-reveal-scale mx-auto mt-8 max-w-md rounded-2xl border-2 border-primary/20 bg-card p-8 text-center shadow-lg">
+                {/* Early Access badge — shimmer outline only, white/green-100 fill inside */}
+                <div className="inline-block rounded-full p-[2px] pricing-badge-shimmer">
+                  <div className="inline-flex items-center gap-2 rounded-full bg-green-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-green-700">
+                    <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                    Early Access — Free
                   </div>
+                </div>
+
+                <h3 className="mt-5 text-2xl font-bold text-foreground">Free for founding departments</h3>
+                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                  We're onboarding a small group of anaesthetic departments to test RotaGen. No cost, no commitment — just your honest feedback.
+                </p>
+
+                {/* Request early access — solid primary blue, no shimmer */}
+                <button
+                  type="button"
+                  onClick={() => navigate("/register")}
+                  className="mt-6 w-full rounded-md bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-all hover:scale-[1.02] hover:bg-primary/90 active:scale-[0.98]"
+                >
+                  Request early access →
+                </button>
+
+                {/* Full pricing details — shimmer outline only, solid blue fill inside */}
+                <div className="mt-3 inline-block rounded-xl p-[2px] pricing-blue-shimmer w-full">
+                  <button type="button" onClick={() => navigate("/pricing")}
+                    className="w-full rounded-[9px] bg-primary px-6 py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90"
+                  >
+                    Full pricing details →
+                  </button>
+                </div>
+
+                {/* Feedback button */}
+                <div className="mt-4 border-t border-border pt-4">
+                  <p className="text-xs font-semibold text-muted-foreground mb-2">Already using RotaGen?</p>
+                  <button type="button" onClick={() => navigate("/feedback")}
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90"
+                    style={{ backgroundColor: '#16A34A' }}
+                  >
+                    <span className="flex h-5 w-5 items-center justify-center rounded-md bg-white/20">
+                      <Star className="h-3 w-3" />
+                    </span>
+                    Give us your feedback
+                  </button>
                 </div>
               </div>
 
@@ -174,33 +197,6 @@ export default function LandingPage() {
                 RotaGen is an AI-powered rota scheduler built for NHS anaesthetic departments. It collects your doctors' preferences, applies your department's rules, and generates a fully allocated rota in minutes — not days.
               </p>
 
-              <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-                <button
-                  type="button"
-                  onClick={() => navigate("/register")}
-                  className="w-full rounded-md bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-all hover:scale-[1.02] hover:bg-primary/90 active:scale-[0.98] sm:w-auto"
-                >
-                  Request early access →
-                </button>
-                <button
-                  type="button"
-                  onClick={() => scrollToSection("how-it-works")}
-                  className="w-full rounded-md border border-primary/30 px-6 py-3 text-sm font-semibold text-primary transition-all hover:bg-primary/5 sm:w-auto"
-                >
-                  See how it works
-                </button>
-              </div>
-
-              <div className="mt-6 flex flex-wrap items-center justify-center gap-4 text-xs text-muted-foreground">
-                {trustSignals.map((signal) => (
-                  <div key={signal} className="flex items-center gap-2">
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-green-100 text-green-700">
-                      <Check className="h-3 w-3" />
-                    </span>
-                    <span>{signal}</span>
-                  </div>
-                ))}
-              </div>
             </div>
 
             <div className="mx-auto mt-12 max-w-2xl overflow-hidden rounded-xl border border-border bg-card shadow-2xl float-anim">
@@ -311,32 +307,6 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section id="pricing" className="bg-white px-6 py-20">
-          <div className="mx-auto max-w-3xl text-center">
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Pricing</p>
-            <h2 className="mt-3 text-3xl font-bold text-foreground md:text-4xl">Free while we're building it with you.</h2>
-            <div ref={pricingRef} className="scroll-reveal-scale mx-auto mt-10 max-w-md rounded-2xl border-2 border-primary/20 bg-card p-8 text-center shadow-lg">
-              <div className="inline-flex items-center gap-2 rounded-full bg-green-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-green-700">
-                <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                Early Access — Free
-              </div>
-              <h3 className="mt-5 text-2xl font-bold text-foreground">Free for founding departments</h3>
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                We're onboarding a small group of anaesthetic departments to test RotaGen. No cost, no commitment — just your honest feedback.
-              </p>
-              <button
-                type="button"
-                onClick={() => navigate("/register")}
-                className="mt-6 w-full rounded-md bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-all hover:scale-[1.02] hover:bg-primary/90 active:scale-[0.98]"
-              >
-                Request early access →
-              </button>
-              <button type="button" onClick={() => navigate("/pricing")} className="mt-4 text-sm font-medium text-primary hover:underline">
-                Full pricing details →
-              </button>
-            </div>
-          </div>
-        </section>
 
         <section className="bg-slate-800 px-6 py-20">
           <div ref={ctaRef} className="scroll-reveal mx-auto max-w-3xl text-center">
