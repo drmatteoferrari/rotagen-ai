@@ -169,7 +169,6 @@ export default function LandingPage() {
                   </div>
                 </div>
               </div>
-              </h1>
 
               <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-muted-foreground md:text-lg">
                 RotaGen is an AI-powered rota scheduler built for NHS anaesthetic departments. It collects your doctors' preferences, applies your department's rules, and generates a fully allocated rota in minutes — not days.
