@@ -197,33 +197,6 @@ export default function LandingPage() {
                 RotaGen is an AI-powered rota scheduler built for NHS anaesthetic departments. It collects your doctors' preferences, applies your department's rules, and generates a fully allocated rota in minutes — not days.
               </p>
 
-              <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-                <button
-                  type="button"
-                  onClick={() => navigate("/register")}
-                  className="w-full rounded-md bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-all hover:scale-[1.02] hover:bg-primary/90 active:scale-[0.98] sm:w-auto"
-                >
-                  Request early access →
-                </button>
-                <button
-                  type="button"
-                  onClick={() => scrollToSection("how-it-works")}
-                  className="w-full rounded-md border border-primary/30 px-6 py-3 text-sm font-semibold text-primary transition-all hover:bg-primary/5 sm:w-auto"
-                >
-                  See how it works
-                </button>
-              </div>
-
-              <div className="mt-6 flex flex-wrap items-center justify-center gap-4 text-xs text-muted-foreground">
-                {trustSignals.map((signal) => (
-                  <div key={signal} className="flex items-center gap-2">
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-green-100 text-green-700">
-                      <Check className="h-3 w-3" />
-                    </span>
-                    <span>{signal}</span>
-                  </div>
-                ))}
-              </div>
             </div>
 
             <div className="mx-auto mt-12 max-w-2xl overflow-hidden rounded-xl border border-border bg-card shadow-2xl float-anim">
