@@ -74,10 +74,11 @@ export interface DoctorTargets {
   doctorName: string
   grade: string
   wte: number
-  contractedHoursPerWeek: number   // = wtr maxHoursPerWeek
-  hardWeeklyCap: number            // = wtr maxHoursPer168h
+  contractedHoursPerWeek: number
+  hardWeeklyCap: number
   weekendCap: number
   totalMaxHours: number
+  leaveSummary: LeaveSummary
   shiftTargets: DoctorShiftTarget[]
 }
 
