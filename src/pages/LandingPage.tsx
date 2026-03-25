@@ -140,12 +140,7 @@ export default function LandingPage() {
         <section id="hero" className="flex min-h-screen items-center bg-blue-100 px-6 py-16">
           <div className="mx-auto w-full max-w-6xl">
             <div className="animate-in slide-in-from-bottom-4 fade-in duration-500 text-center">
-              <div className="inline-flex items-center gap-2 rounded-full bg-green-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-green-700">
-                <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                Early Access — Free
-              </div>
-
-              <h1 className="mx-auto mt-6 max-w-4xl text-4xl font-extrabold leading-tight tracking-tight text-foreground md:text-5xl lg:text-6xl">
+              <h1 className="mx-auto max-w-4xl text-4xl font-extrabold leading-tight tracking-tight text-foreground md:text-5xl lg:text-6xl">
                 <span className="block">Your doctors' preferences.</span>
                 <span className="block">Your department's rules.</span>
               <span className="block shimmer-text">One compliant rota, automatically.</span>
