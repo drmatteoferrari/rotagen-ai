@@ -110,6 +110,10 @@ export default function LandingPage() {
                 Pricing
               </button>
             </div>
+            <button type="button" onClick={() => navigate("/feedback")}
+              className="hidden md:block text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+              Give feedback
+            </button>
             <button
               type="button"
               onClick={() => navigate("/login")}
