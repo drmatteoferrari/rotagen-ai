@@ -10,6 +10,7 @@ import { ChevronLeft, ChevronRight, Loader2, AlertTriangle, ArrowLeft, CalendarD
 import { Button } from '@/components/ui/button'
 import { EventDetailPanel } from '@/components/calendar/EventDetailPanel'
 import { AddEventModal } from '@/components/calendar/AddEventModal'
+import { refreshResolvedAvailabilityForDoctor } from '@/lib/resolvedAvailability'
 
 // ─── Constants ────────────────────────────────────────────────
 const CHIP_COLOURS: Record<string, string> = {
