@@ -411,7 +411,7 @@ export default function DepartmentStep3() {
 
       toast.success('✓ Distribution saved');
       setDepartmentComplete(true);
-      navigate('/admin/dashboard');
+      navigate('/admin/department/summary?mode=post-submit');
     } catch (e: any) {
       console.error('Step 3 save failed:', e);
       toast.error('Save failed — please try again');
