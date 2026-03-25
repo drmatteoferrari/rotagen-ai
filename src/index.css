@@ -195,3 +195,27 @@ body, #root {
   background-size: 400% 400%;
   animation: shimmer-feedback-border 3s ease infinite;
 }
+
+@keyframes shimmer-pricing-badge {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.pricing-badge-shimmer {
+  background: linear-gradient(270deg, #16A34A, #4ade80, #86efac, #16A34A);
+  background-size: 400% 400%;
+  animation: shimmer-pricing-badge 2.5s ease infinite;
+}
+
+@keyframes shimmer-pricing-blue {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.pricing-blue-shimmer {
+  background: linear-gradient(270deg, #1d4ed8, #60a5fa, #3b82f6, #1d4ed8);
+  background-size: 400% 400%;
+  animation: shimmer-pricing-blue 2.5s ease infinite;
+}

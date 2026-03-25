@@ -307,32 +307,6 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section id="pricing" className="bg-white px-6 py-20">
-          <div className="mx-auto max-w-3xl text-center">
-            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Pricing</p>
-            <h2 className="mt-3 text-3xl font-bold text-foreground md:text-4xl">Free while we're building it with you.</h2>
-            <div ref={pricingRef} className="scroll-reveal-scale mx-auto mt-10 max-w-md rounded-2xl border-2 border-primary/20 bg-card p-8 text-center shadow-lg">
-              <div className="inline-flex items-center gap-2 rounded-full bg-green-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-green-700">
-                <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                Early Access — Free
-              </div>
-              <h3 className="mt-5 text-2xl font-bold text-foreground">Free for founding departments</h3>
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                We're onboarding a small group of anaesthetic departments to test RotaGen. No cost, no commitment — just your honest feedback.
-              </p>
-              <button
-                type="button"
-                onClick={() => navigate("/register")}
-                className="mt-6 w-full rounded-md bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-all hover:scale-[1.02] hover:bg-primary/90 active:scale-[0.98]"
-              >
-                Request early access →
-              </button>
-              <button type="button" onClick={() => navigate("/pricing")} className="mt-4 text-sm font-medium text-primary hover:underline">
-                Full pricing details →
-              </button>
-            </div>
-          </div>
-        </section>
 
         <section className="bg-slate-800 px-6 py-20">
           <div ref={ctaRef} className="scroll-reveal mx-auto max-w-3xl text-center">
