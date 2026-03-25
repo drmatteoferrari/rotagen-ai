@@ -41,6 +41,69 @@ export type Database = {
         }
         Relationships: []
       }
+      app_feedback: {
+        Row: {
+          bugs: string | null
+          comment: string | null
+          contact_method: string | null
+          created_at: string
+          happy_to_contact: boolean | null
+          id: string
+          improvements: string | null
+          more_accurate: string
+          previous_method: string
+          quicker_than_before: string
+          rating_clarity: number
+          rating_overall: number
+          rating_speed: number
+          rating_ui: number
+          responder_email: string | null
+          responder_name: string | null
+          responder_trust: string | null
+          rota_creators: string[] | null
+        }
+        Insert: {
+          bugs?: string | null
+          comment?: string | null
+          contact_method?: string | null
+          created_at?: string
+          happy_to_contact?: boolean | null
+          id?: string
+          improvements?: string | null
+          more_accurate: string
+          previous_method: string
+          quicker_than_before: string
+          rating_clarity: number
+          rating_overall: number
+          rating_speed: number
+          rating_ui: number
+          responder_email?: string | null
+          responder_name?: string | null
+          responder_trust?: string | null
+          rota_creators?: string[] | null
+        }
+        Update: {
+          bugs?: string | null
+          comment?: string | null
+          contact_method?: string | null
+          created_at?: string
+          happy_to_contact?: boolean | null
+          id?: string
+          improvements?: string | null
+          more_accurate?: string
+          previous_method?: string
+          quicker_than_before?: string
+          rating_clarity?: number
+          rating_overall?: number
+          rating_speed?: number
+          rating_ui?: number
+          responder_email?: string | null
+          responder_name?: string | null
+          responder_trust?: string | null
+          rota_creators?: string[] | null
+        }
+        Relationships: []
+      }
       bank_holidays: {
         Row: {
           created_at: string | null
