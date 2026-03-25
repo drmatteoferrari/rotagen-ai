@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { generatePreRota } from "@/lib/preRotaGenerator";
 import type { PreRotaResult } from "@/lib/preRotaTypes";
+import { refreshResolvedAvailabilityForDoctor, rebuildResolvedAvailabilityFromDB } from '@/lib/resolvedAvailability';
 
 export default function PreRotaPage() {
   const navigate = useNavigate();
