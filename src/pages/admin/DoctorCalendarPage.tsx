@@ -382,6 +382,8 @@ export default function DoctorCalendarPage() {
       await reloadOverrides()
       setModalOpen(false); setModalPrefill(null); setModalCopyFrom(null); setModalInitialDate(null)
       setPanelOpen(false); setSelectedDate(null)
+      refreshResolvedAvailabilityForDoctor(currentRotaConfigId, doctorId!)
+        .catch(err => console.error('refreshResolvedAvailability failed:', err))
     } catch (err) {
       console.error('Failed to save override:', err)
     } finally {
