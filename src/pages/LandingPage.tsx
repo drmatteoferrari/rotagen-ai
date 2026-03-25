@@ -311,6 +311,14 @@ export default function LandingPage() {
               <button type="button" onClick={() => navigate("/pricing")} className="mt-4 text-sm font-medium text-primary hover:underline">
                 Full pricing details →
               </button>
+              <div className="mt-4 border-t border-border pt-4">
+                <p className="text-sm text-muted-foreground mb-2">Already using RotaGen?</p>
+                <button type="button" onClick={() => navigate("/feedback")}
+                  style={{ borderColor: '#34E0A1', color: '#34E0A1' }}
+                  className="w-full rounded-md border-2 bg-transparent px-6 py-2.5 text-sm font-semibold transition-all hover:opacity-80">
+                  ⭐ Give us your feedback
+                </button>
+              </div>
             </div>
           </div>
         </section>

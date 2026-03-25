@@ -87,6 +87,7 @@ const App = () => (
           <Route path="/approve" element={<Approve />} />
           <Route path="/change-password" element={<ChangePassword />} />
           <Route path="/" element={<LandingPage />} />
+          <Route path="/feedback" element={<Feedback />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route element={<ProtectedRoute><AdminShell /></ProtectedRoute>}>
             <Route path="/admin/dashboard" element={<Dashboard />} />

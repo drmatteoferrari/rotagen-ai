@@ -327,6 +327,14 @@ export default function SetupPage() {
           </div>
         </div>
 
+        {/* Feedback link */}
+        <div className="flex justify-center pb-2">
+          <button type="button" onClick={() => navigate("/feedback")}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2">
+            Give feedback on RotaGen
+          </button>
+        </div>
+
         {/* Reset button */}
         <div className="pt-4 flex justify-center">
           <button
