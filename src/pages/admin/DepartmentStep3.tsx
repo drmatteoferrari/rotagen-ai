@@ -411,7 +411,7 @@ export default function DepartmentStep3() {
 
       toast.success('✓ Distribution saved');
       setDepartmentComplete(true);
-      navigate('/admin/dashboard');
+      navigate('/admin/department/summary?mode=post-submit');
     } catch (e: any) {
       console.error('Step 3 save failed:', e);
       toast.error('Save failed — please try again');
@@ -539,8 +539,11 @@ export default function DepartmentStep3() {
             </Button>
           }
           right={
-            <Button size="lg" className="min-h-[44px]" disabled={!canSave} onClick={() => navigate('/admin/department/summary?mode=pre-submit')}>
-              <ArrowRight className="mr-1 h-4 w-4" />Review &amp; Save
+            <Button size="lg" className="min-h-[44px]" disabled={!canSave || saving} onClick={handleSave}>
+              {saving
+                ? <><Loader2 className="mr-1 h-4 w-4 animate-spin" />Saving…</>
+                : <><ArrowRight className="mr-1 h-4 w-4" />Review &amp; Save</>
+              }
             </Button>
           }
         />
