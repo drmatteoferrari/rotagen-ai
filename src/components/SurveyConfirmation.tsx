@@ -61,8 +61,8 @@ export function SurveyConfirmation() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen">
-      <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6">
+    <div className="flex flex-col h-full">
+      <div className="flex-1 overflow-y-auto min-h-0 px-4 sm:px-6 py-6">
         <div className="flex flex-col items-center mb-6">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-teal-50 mb-4">
             <CheckCircle2 className="h-8 w-8 text-teal-600" />
