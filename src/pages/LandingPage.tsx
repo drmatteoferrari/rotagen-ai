@@ -111,7 +111,11 @@ export default function LandingPage() {
               </button>
             </div>
             <button type="button" onClick={() => navigate("/feedback")}
-              className="hidden md:block text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+              className="hidden md:flex items-center gap-1.5 text-sm font-medium transition-colors hover:opacity-80"
+              style={{ color: '#16A34A' }}>
+              <span className="flex h-5 w-5 items-center justify-center rounded-md bg-green-100">
+                <Star className="h-3 w-3 text-green-600" />
+              </span>
               Give feedback
             </button>
             <button
