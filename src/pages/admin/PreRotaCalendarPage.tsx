@@ -609,6 +609,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
     note: string; overrideId: string | null; originalEventType: string | null
   }) => {
     if (!selectedCell || !rotaConfigId) return
+    const doctorId = selectedCell.doctorId
     setModalSaving(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
@@ -617,14 +618,14 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
       if (payload.overrideId) {
         await supabase.from('coordinator_calendar_overrides').delete().eq('id', payload.overrideId)
         await supabase.from('coordinator_calendar_overrides').insert({
-          rota_config_id: rotaConfigId, doctor_id: selectedCell.doctorId,
+          rota_config_id: rotaConfigId, doctor_id: doctorId,
           event_type: payload.eventType, start_date: payload.startDate, end_date: payload.endDate,
           action: 'modify', original_event_type: payload.originalEventType,
           note: payload.note || null, created_by: user.id,
         })
       } else {
         await supabase.from('coordinator_calendar_overrides').insert({
-          rota_config_id: rotaConfigId, doctor_id: selectedCell.doctorId,
+          rota_config_id: rotaConfigId, doctor_id: doctorId,
           event_type: payload.eventType, start_date: payload.startDate, end_date: payload.endDate,
           action: 'add', note: payload.note || null, created_by: user.id,
         })
@@ -632,6 +633,8 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
       await reloadOverrides()
       setModalOpen(false); setModalPrefill(null); setModalCopyFrom(null); setModalInitialDate(null)
       setPanelOpen(false); setSelectedCell(null)
+      refreshResolvedAvailabilityForDoctor(rotaConfigId, doctorId)
+        .catch(err => console.error('refreshResolvedAvailability failed:', err))
     } catch (err) {
       console.error('Failed to save override:', err)
     } finally {
