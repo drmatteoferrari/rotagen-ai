@@ -13,6 +13,7 @@ import {
 import { getTodayISO, mapOverrideRow, mergeOverridesIntoAvailability, type CalendarOverride, type MergedCell } from "@/lib/calendarOverrides";
 import { EventDetailPanel } from '@/components/calendar/EventDetailPanel'
 import { AddEventModal } from '@/components/calendar/AddEventModal'
+import { refreshResolvedAvailabilityForDoctor } from '@/lib/resolvedAvailability'
 
 const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
@@ -608,6 +609,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
     note: string; overrideId: string | null; originalEventType: string | null
   }) => {
     if (!selectedCell || !rotaConfigId) return
+    const doctorId = selectedCell.doctorId
     setModalSaving(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
@@ -616,14 +618,14 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
       if (payload.overrideId) {
         await supabase.from('coordinator_calendar_overrides').delete().eq('id', payload.overrideId)
         await supabase.from('coordinator_calendar_overrides').insert({
-          rota_config_id: rotaConfigId, doctor_id: selectedCell.doctorId,
+          rota_config_id: rotaConfigId, doctor_id: doctorId,
           event_type: payload.eventType, start_date: payload.startDate, end_date: payload.endDate,
           action: 'modify', original_event_type: payload.originalEventType,
           note: payload.note || null, created_by: user.id,
         })
       } else {
         await supabase.from('coordinator_calendar_overrides').insert({
-          rota_config_id: rotaConfigId, doctor_id: selectedCell.doctorId,
+          rota_config_id: rotaConfigId, doctor_id: doctorId,
           event_type: payload.eventType, start_date: payload.startDate, end_date: payload.endDate,
           action: 'add', note: payload.note || null, created_by: user.id,
         })
@@ -631,6 +633,8 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
       await reloadOverrides()
       setModalOpen(false); setModalPrefill(null); setModalCopyFrom(null); setModalInitialDate(null)
       setPanelOpen(false); setSelectedCell(null)
+      refreshResolvedAvailabilityForDoctor(rotaConfigId, doctorId)
+        .catch(err => console.error('refreshResolvedAvailability failed:', err))
     } catch (err) {
       console.error('Failed to save override:', err)
     } finally {
@@ -640,12 +644,15 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
 
   const handleDeleteOverride = async (override: CalendarOverride) => {
     if (!rotaConfigId || !selectedCell) return
+    const doctorId = selectedCell.doctorId
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
       await supabase.from('coordinator_calendar_overrides').delete().eq('id', override.id)
       await reloadOverrides()
       setPanelOpen(false); setSelectedCell(null)
+      refreshResolvedAvailabilityForDoctor(rotaConfigId, doctorId)
+        .catch(err => console.error('refreshResolvedAvailability failed:', err))
     } catch (err) {
       console.error('Failed to delete override:', err)
     }
@@ -653,13 +660,14 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
 
   const handleRemoveSurveyEvent = async () => {
     if (!selectedCell || !calendarData || !rotaConfigId) return
+    const doctorId = selectedCell.doctorId
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
-      const cellCode = mergedAvailabilityByDoctor[selectedCell.doctorId]?.[selectedCell.date]?.primary ?? 'AVAILABLE'
+      const cellCode = mergedAvailabilityByDoctor[doctorId]?.[selectedCell.date]?.primary ?? 'AVAILABLE'
       if (cellCode === 'AVAILABLE') return
       await supabase.from('coordinator_calendar_overrides').insert({
-        rota_config_id: rotaConfigId, doctor_id: selectedCell.doctorId,
+        rota_config_id: rotaConfigId, doctor_id: doctorId,
         event_type: cellCode, start_date: selectedCell.date, end_date: selectedCell.date,
         action: 'delete', original_event_type: cellCode,
         original_start_date: selectedCell.date, original_end_date: selectedCell.date,
@@ -667,6 +675,8 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
       })
       await reloadOverrides()
       setPanelOpen(false); setSelectedCell(null)
+      refreshResolvedAvailabilityForDoctor(rotaConfigId, doctorId)
+        .catch(err => console.error('refreshResolvedAvailability failed:', err))
     } catch (err) {
       console.error('Failed to remove survey event:', err)
     }

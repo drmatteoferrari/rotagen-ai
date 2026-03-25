@@ -10,6 +10,7 @@ import { ChevronLeft, ChevronRight, Loader2, AlertTriangle, ArrowLeft, CalendarD
 import { Button } from '@/components/ui/button'
 import { EventDetailPanel } from '@/components/calendar/EventDetailPanel'
 import { AddEventModal } from '@/components/calendar/AddEventModal'
+import { refreshResolvedAvailabilityForDoctor } from '@/lib/resolvedAvailability'
 
 // ─── Constants ────────────────────────────────────────────────
 const CHIP_COLOURS: Record<string, string> = {
@@ -381,6 +382,8 @@ export default function DoctorCalendarPage() {
       await reloadOverrides()
       setModalOpen(false); setModalPrefill(null); setModalCopyFrom(null); setModalInitialDate(null)
       setPanelOpen(false); setSelectedDate(null)
+      refreshResolvedAvailabilityForDoctor(currentRotaConfigId, doctorId!)
+        .catch(err => console.error('refreshResolvedAvailability failed:', err))
     } catch (err) {
       console.error('Failed to save override:', err)
     } finally {
@@ -395,6 +398,8 @@ export default function DoctorCalendarPage() {
       await supabase.from('coordinator_calendar_overrides').delete().eq('id', override.id)
       await reloadOverrides()
       setPanelOpen(false); setSelectedDate(null)
+      refreshResolvedAvailabilityForDoctor(currentRotaConfigId!, doctorId!)
+        .catch(err => console.error('refreshResolvedAvailability failed:', err))
     } catch (err) {
       console.error('Failed to delete override:', err)
     }
@@ -416,6 +421,8 @@ export default function DoctorCalendarPage() {
       })
       await reloadOverrides()
       setPanelOpen(false); setSelectedDate(null)
+      refreshResolvedAvailabilityForDoctor(currentRotaConfigId!, doctorId!)
+        .catch(err => console.error('refreshResolvedAvailability failed:', err))
     } catch (err) {
       console.error('Failed to remove survey event:', err)
     }

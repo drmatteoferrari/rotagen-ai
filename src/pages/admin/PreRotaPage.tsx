@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { generatePreRota } from "@/lib/preRotaGenerator";
 import type { PreRotaResult } from "@/lib/preRotaTypes";
+import { refreshResolvedAvailabilityForDoctor, rebuildResolvedAvailabilityFromDB } from '@/lib/resolvedAvailability';
 
 export default function PreRotaPage() {
   const navigate = useNavigate();
@@ -146,11 +147,16 @@ export default function PreRotaPage() {
   }
 
   const handleRevertOne = async (id: string) => {
+    const affectedDoctorId = overrides.find(o => o.id === id)?.doctor_id ?? null
     setRevertingId(id)
     await supabase.from('coordinator_calendar_overrides').delete().eq('id', id)
     setRevertOneConfirm(null)
     setRevertingId(null)
     await loadOverrides()
+    if (affectedDoctorId && currentRotaConfigId) {
+      refreshResolvedAvailabilityForDoctor(currentRotaConfigId, affectedDoctorId)
+        .catch(err => console.error('refreshResolvedAvailability failed:', err))
+    }
   }
 
   const handleRevertAll = async () => {
@@ -158,6 +164,8 @@ export default function PreRotaPage() {
     await supabase.from('coordinator_calendar_overrides').delete().eq('rota_config_id', currentRotaConfigId)
     setRevertAllConfirm(false)
     setOverrides([])
+    rebuildResolvedAvailabilityFromDB(currentRotaConfigId)
+      .catch(err => console.error('rebuildResolvedAvailabilityFromDB failed:', err))
   }
 
   useEffect(() => {

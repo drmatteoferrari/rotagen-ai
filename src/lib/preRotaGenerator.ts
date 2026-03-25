@@ -3,6 +3,7 @@
 import { runPreRotaValidation } from './preRotaValidation'
 import { buildCalendarData } from './preRotaCalendar'
 import { buildTargetsData } from './preRotaTargets'
+import { rebuildResolvedAvailability } from './resolvedAvailability'
 import { supabase } from '@/integrations/supabase/client'
 import type { Json } from '@/integrations/supabase/types'
 import type { PreRotaResult, PreRotaStatus } from './preRotaTypes'
@@ -253,6 +254,13 @@ export async function generatePreRota(
         targets_data: targetsData as unknown as Json,
       }], { onConflict: 'rota_config_id' })
       .select().single()
+
+    // 14. Rebuild resolved_availability (non-fatal if it fails)
+    try {
+      await rebuildResolvedAvailability(rotaConfigId, calendarData)
+    } catch (err) {
+      console.error('rebuildResolvedAvailability failed (non-fatal):', err)
+    }
 
     return {
       success: true,
