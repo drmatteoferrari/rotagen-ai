@@ -255,6 +255,13 @@ export async function generatePreRota(
       }], { onConflict: 'rota_config_id' })
       .select().single()
 
+    // 14. Rebuild resolved_availability (non-fatal if it fails)
+    try {
+      await rebuildResolvedAvailability(rotaConfigId, calendarData)
+    } catch (err) {
+      console.error('rebuildResolvedAvailability failed (non-fatal):', err)
+    }
+
     return {
       success: true,
       result: {

@@ -660,13 +660,14 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
 
   const handleRemoveSurveyEvent = async () => {
     if (!selectedCell || !calendarData || !rotaConfigId) return
+    const doctorId = selectedCell.doctorId
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
-      const cellCode = mergedAvailabilityByDoctor[selectedCell.doctorId]?.[selectedCell.date]?.primary ?? 'AVAILABLE'
+      const cellCode = mergedAvailabilityByDoctor[doctorId]?.[selectedCell.date]?.primary ?? 'AVAILABLE'
       if (cellCode === 'AVAILABLE') return
       await supabase.from('coordinator_calendar_overrides').insert({
-        rota_config_id: rotaConfigId, doctor_id: selectedCell.doctorId,
+        rota_config_id: rotaConfigId, doctor_id: doctorId,
         event_type: cellCode, start_date: selectedCell.date, end_date: selectedCell.date,
         action: 'delete', original_event_type: cellCode,
         original_start_date: selectedCell.date, original_end_date: selectedCell.date,
@@ -674,6 +675,8 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
       })
       await reloadOverrides()
       setPanelOpen(false); setSelectedCell(null)
+      refreshResolvedAvailabilityForDoctor(rotaConfigId, doctorId)
+        .catch(err => console.error('refreshResolvedAvailability failed:', err))
     } catch (err) {
       console.error('Failed to remove survey event:', err)
     }
