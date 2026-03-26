@@ -443,34 +443,35 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
       // ── Embedded fast-path ──────────────────────────────────────────────
       // When rendered inside Dashboard, pre_rota_results is already in the
       // React Query cache. Use it directly and skip the DB fetch entirely.
-      if (embedded && cachedPreRota && cachedPreRota.status !== 'blocked') {
+      if (
+        embedded &&
+        !embeddedInitialisedRef.current &&
+        cachedPreRota && cachedPreRota.status !== 'blocked' &&
+        cachedShiftTypes !== undefined &&
+        cachedBankHolidays !== undefined &&
+        cachedSurveys !== undefined
+      ) {
+        embeddedInitialisedRef.current = true;
+
         const cd = cachedPreRota.calendarData as CalendarData;
         const td = cachedPreRota.targetsData as TargetsData;
         setTargetsData(td);
 
-        // Fetch auxiliary data in parallel — these are not in the cache
-        const [stResult, bhResult, surveyResult, overrideResult] = await Promise.all([
-          supabase.from('shift_types').select('id, name, min_doctors, badge_night, badge_oncall').eq('rota_config_id', rotaConfigId ?? ''),
-          supabase.from('bank_holidays').select('date, is_active').eq('rota_config_id', rotaConfigId ?? ''),
-          supabase.from('doctor_survey_responses').select('doctor_id, ltft_days_off, ltft_night_flexibility').eq('rota_config_id', rotaConfigId ?? ''),
-          supabase.from('coordinator_calendar_overrides').select('*').eq('rota_config_id', rotaConfigId ?? ''),
-        ]);
-
-        const shifts: ShiftTypeRow[] = (stResult.data ?? []).map((s: any) => ({
+        const shifts: ShiftTypeRow[] = (cachedShiftTypes ?? []).map((s: any) => ({
           id: s.id, name: s.name, min_doctors: s.min_doctors ?? 1,
           badge_night: s.badge_night ?? false, badge_oncall: s.badge_oncall ?? false,
         }));
         setShiftTypes(shifts);
 
         const bhSet = new Set(
-          (bhResult.data ?? [])
+          (cachedBankHolidays ?? [])
             .filter((r: any) => r.is_active !== false)
             .map((r: any) => r.date as string)
         );
         setBankHolidays(bhSet);
 
         const sMap: Record<string, SurveyMap> = {};
-        for (const s of surveyResult.data ?? []) {
+        for (const s of cachedSurveys ?? []) {
           sMap[(s as any).doctor_id] = {
             ltftDaysOff: ((s as any).ltft_days_off ?? []).map(normaliseDayName),
             ltftNightFlexibility: ((s as any).ltft_night_flexibility ?? []).map((f: any) => ({
@@ -479,7 +480,6 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
           };
         }
         setSurveysMap(sMap);
-        setOverrides((overrideResult.data ?? []).map(mapOverrideRow));
 
         setDeptName(cd.departmentName ?? 'Department');
         setHospitalName(cd.hospitalName ?? 'Trust');
@@ -517,10 +517,19 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
           setEligibility(elig);
         }
 
+        // Render calendar immediately — load overrides silently in background
         setLoading(false);
-        return; // skip the standalone fetch path below
+
+        if (rotaConfigId) {
+          supabase
+            .from('coordinator_calendar_overrides')
+            .select('*')
+            .eq('rota_config_id', rotaConfigId)
+            .then(({ data }) => setOverrides((data ?? []).map(mapOverrideRow)));
+        }
+
+        return;
       }
-      // ── End embedded fast-path ──────────────────────────────────────────
 
       if (!rotaConfigId) { setErrorMsg('No rota config found. Go back to the dashboard.'); setLoading(false); return; }
 
