@@ -210,12 +210,3 @@ export function useInvalidateQuery() {
     },
   };
 }
-  const qc = useQueryClient();
-  return {
-    invalidateDoctors: () => qc.invalidateQueries({ queryKey: ["doctors"] }),
-    invalidateInactiveDoctors: () => qc.invalidateQueries({ queryKey: ["doctors_inactive"] }),
-    invalidatePreRota: () => qc.invalidateQueries({ queryKey: ["pre_rota_result"] }),
-    invalidateAccountSettings: () => qc.invalidateQueries({ queryKey: ["account_settings"] }),
-    invalidateRotaConfigDetails: () => qc.invalidateQueries({ queryKey: ["rota_config_details"] }),
-  };
-}
