@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
+import RotaGenIcon from "@/components/brand/RotaGenIcon";
 import RotaGenLogo from "@/components/brand/RotaGenLogo";
 import RotaGenTagline from "@/components/brand/RotaGenTagline";
 
@@ -88,10 +89,10 @@ export default function Login() {
         </div>
       )}
 
-      {/* Main container: h-screen and overflow-hidden ensures no scrolling */}
+      {/* Main container: h-screen and overflow-hidden ensures no scrolling on all devices */}
       <div className="relative flex h-screen w-full flex-col items-center justify-between overflow-hidden bg-blue-50/50 p-4 md:p-8">
-        {/* Top Header: Navigation and Logo */}
-        <div className="flex w-full max-w-[420px] items-center justify-between">
+        {/* Top Header: Navigation back button */}
+        <div className="flex w-full max-w-[420px] items-center justify-start">
           <Button
             variant="ghost"
             size="sm"
@@ -101,18 +102,19 @@ export default function Login() {
             <ArrowLeft className="h-4 w-4" />
             <span>Back</span>
           </Button>
-          <button onClick={() => navigate("/")} className="transition-transform active:scale-95">
-            <RotaGenLogo size="sm" variant="light" />
-          </button>
-          <div className="w-[60px]" /> {/* Spacer to balance the back button */}
         </div>
 
-        {/* Center Section: Branding + Login Card */}
+        {/* Center Section: Main Branding + Login Card */}
         <div className="flex w-full max-w-[420px] flex-col items-center gap-4">
           <div className="flex flex-col items-center gap-1 text-center">
-            <button onClick={() => navigate("/")} className="mb-2">
-              <div className="shimmer-text">
-                <RotaGenLogo size="md" variant="light" />
+            <button onClick={() => navigate("/")} className="mb-2 group transition-transform active:scale-95">
+              <div className="flex items-center gap-2">
+                <RotaGenIcon size={38} variant="light" />
+                <span className="font-['Poppins'] font-bold text-[22px] flex">
+                  {/* ROTA is black (shimmer) and GEN is blue (shimmer) */}
+                  <span className="shimmer-text-dark">ROTA</span>
+                  <span className="shimmer-text">GEN</span>
+                </span>
               </div>
             </button>
             <h2 className="text-lg font-semibold text-foreground/90">Welcome back</h2>
@@ -233,7 +235,7 @@ export default function Login() {
           </Card>
         </div>
 
-        {/* Bottom Section: Tagline + Footer */}
+        {/* Bottom Section: Tagline + Footer links */}
         <div className="flex w-full flex-col items-center gap-3">
           <div className="animate-fadeSlideUp">
             <RotaGenTagline variant="short" />
