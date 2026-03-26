@@ -120,6 +120,7 @@ function AdminShellInner() {
 
         {/* Content */}
         <main className="flex-1 overflow-hidden flex flex-col">
+          <PersistentDashboard />
           <Outlet />
         </main>
 
