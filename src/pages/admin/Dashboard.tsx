@@ -58,7 +58,7 @@ export default function Dashboard() {
       .then(({ data }) => setArchivedConfigs(data ?? []));
   }, [user?.id]);
 
-  if (!restoredFromDb || preRotaLoading || (hasPreRota && (shiftTypesLoading || bankHolidaysLoading || surveysLoading))) {
+  if (!restoredFromDb || preRotaLoading || preRotaResult === undefined || (hasPreRota && (shiftTypesLoading || bankHolidaysLoading || surveysLoading))) {
     return (
       <>
         {showOnboarding && <OnboardingModal onClose={() => setShowOnboarding(false)} />}
