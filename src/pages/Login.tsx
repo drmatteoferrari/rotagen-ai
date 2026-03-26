@@ -174,9 +174,8 @@ export default function Login() {
               onClick={async () => {
                 setLoading(true);
                 const result = await login("matteferro31@gmail.com", "matteferro31");
-                if (result.success) navigate("/admin/dashboard", { replace: true });
-                else setError(result.error ?? "Dev login failed");
-                setLoading(false);
+                if (result.success) setShowSplash(true);
+                else { setError(result.error ?? "Dev login failed"); setLoading(false); }
               }}
               className="w-full flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
             >
