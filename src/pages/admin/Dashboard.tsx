@@ -25,7 +25,7 @@ export default function Dashboard() {
   const [archivedConfigs, setArchivedConfigs] = useState<{id: string; rota_start_date: string | null; rota_end_date: string | null; created_at: string}[]>([]);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
-  const { data: preRotaResult } = usePreRotaResultQuery();
+  const { data: preRotaResult, isLoading: preRotaLoading } = usePreRotaResultQuery();
   const hasPreRota = !!preRotaResult && preRotaResult.status !== 'blocked';
 
   // Check onboarding status once
