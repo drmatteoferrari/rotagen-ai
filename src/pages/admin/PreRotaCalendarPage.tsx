@@ -380,6 +380,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
   const todayISO = getTodayISO();
   const [viewMode, setViewMode] = useState<'day' | 'week' | 'month'>('week');
   const { currentRotaConfigId: rotaConfigId } = useRotaContext();
+  const { data: cachedPreRota } = usePreRotaResultQuery();
 
   const [loading, setLoading] = useState(true);
   const [calendarData, setCalendarData] = useState<CalendarData | null>(null);
