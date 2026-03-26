@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import RotaGenLogo from "@/components/brand/RotaGenLogo";
 
 export default function Privacy() {
   const navigate = useNavigate();
