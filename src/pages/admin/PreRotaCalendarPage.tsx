@@ -428,6 +428,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
     goNext: () => {},
   });
   const panelRef = useRef<HTMLDivElement>(null)
+  const embeddedInitialisedRef = useRef(false);
 
   // Default to day view on mobile
   useEffect(() => {
