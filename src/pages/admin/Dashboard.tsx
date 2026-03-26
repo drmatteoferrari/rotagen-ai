@@ -25,12 +25,21 @@ export default function Dashboard({ isActive = true }: { isActive?: boolean }) {
   const [archivedConfigs, setArchivedConfigs] = useState<{id: string; rota_start_date: string | null; rota_end_date: string | null; created_at: string}[]>([]);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
-  const { data: preRotaResult, isLoading: preRotaLoading } = usePreRotaResultQuery();
-  const { isLoading: shiftTypesLoading } = useCalendarShiftTypesQuery();
-  const { isLoading: bankHolidaysLoading } = useCalendarBankHolidaysQuery();
-  const { isLoading: surveysLoading } = useCalendarSurveysQuery();
+  const { data: preRotaResult, status: preRotaStatus } = usePreRotaResultQuery();
+  const { status: shiftTypesStatus } = useCalendarShiftTypesQuery();
+  const { status: bankHolidaysStatus } = useCalendarBankHolidaysQuery();
+  const { status: surveysStatus } = useCalendarSurveysQuery();
+
   const hasPreRota = !!preRotaResult && preRotaResult.status !== 'blocked';
-  const calendarReady = hasPreRota && !shiftTypesLoading && !bankHolidaysLoading && !surveysLoading;
+
+  const allQueriesSettled =
+    (preRotaStatus === 'success' || preRotaStatus === 'error') &&
+    (shiftTypesStatus === 'success' || shiftTypesStatus === 'error') &&
+    (bankHolidaysStatus === 'success' || bankHolidaysStatus === 'error') &&
+    (surveysStatus === 'success' || surveysStatus === 'error');
+
+  const dashboardReady = restoredFromDb && !!currentRotaConfigId && allQueriesSettled;
+  const calendarReady = dashboardReady && hasPreRota;
 
   // Check onboarding status once
   useEffect(() => {
