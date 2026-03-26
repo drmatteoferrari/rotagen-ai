@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { usePreRotaResultQuery } from "@/hooks/useAdminQueries";
+import { usePreRotaResultQuery, useCalendarShiftTypesQuery, useCalendarBankHolidaysQuery, useCalendarSurveysQuery } from "@/hooks/useAdminQueries";
 import PreRotaCalendarPage from "./PreRotaCalendarPage";
 import OnboardingModal from "@/components/OnboardingModal";
 
