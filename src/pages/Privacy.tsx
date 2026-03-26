@@ -41,7 +41,6 @@ export default function Privacy() {
           <button type="button" onClick={() => navigate("/")} className="flex items-center gap-3">
             <RotaGenLogo size="sm" />
           </button>
-          </button>
           <div className="flex items-center gap-3">
             <div className="hidden items-center gap-5 md:flex">
               <button type="button" onClick={() => navigate("/#how-it-works")} className="text-sm text-muted-foreground transition-colors hover:text-foreground">

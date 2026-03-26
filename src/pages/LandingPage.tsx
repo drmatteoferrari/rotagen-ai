@@ -93,7 +93,6 @@ export default function LandingPage() {
           <button type="button" onClick={() => navigate("/")} className="flex items-center gap-3">
             <RotaGenLogo size="sm" />
           </button>
-          </button>
 
           <div className="flex items-center gap-3">
             <div className="hidden items-center gap-5 md:flex">
