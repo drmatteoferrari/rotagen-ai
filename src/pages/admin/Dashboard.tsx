@@ -78,7 +78,7 @@ export default function Dashboard() {
   const weeks = start && end ? Math.ceil(differenceInCalendarWeeks(end, start)) : null;
 
   // If pre-rota is ready, show the embedded calendar
-  if (hasPreRota) {
+  if (calendarReady) {
     return (
       <>
       {showOnboarding && <OnboardingModal onClose={() => setShowOnboarding(false)} />}
