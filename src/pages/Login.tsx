@@ -89,10 +89,10 @@ export default function Login() {
         </div>
       )}
 
-      {/* h-[100dvh] locked to prevent mobile scrolling. Background color set to landing page white. */}
-      <div className="relative flex h-[100dvh] w-full flex-col items-center justify-between overflow-hidden bg-white p-4">
-        {/* Top Header: Navigation back button (Reduced top padding) */}
-        <div className="flex w-full max-w-[420px] items-center justify-start pt-1">
+      {/* Main container: h-[100dvh] and overflow-hidden ensures no scrolling. bg-blue-100 matches landing page. */}
+      <div className="relative flex h-[100dvh] w-full flex-col items-center justify-between overflow-hidden bg-blue-100 p-4 md:p-8">
+        {/* Navigation back button - reduced top padding to move everything up */}
+        <div className="flex w-full max-w-[420px] items-center justify-start pt-0">
           <Button
             variant="ghost"
             size="sm"
@@ -104,29 +104,29 @@ export default function Login() {
           </Button>
         </div>
 
-        {/* Center Section: Massive Branding + Login Card */}
-        <div className="flex w-full max-w-[420px] flex-col items-center gap-2 md:gap-4 -mt-10">
-          <div className="flex flex-col items-center gap-0.5 text-center animate-fadeSlideUp">
-            <button onClick={() => navigate("/")} className="mb-1 group transition-transform active:scale-95">
-              <div className="flex flex-col items-center">
-                {/* Icon size increased significantly */}
+        {/* Center Section: Main Branding + Login Card - Added negative margin to pull up */}
+        <div className="flex w-full max-w-[420px] flex-col items-center gap-4 -mt-12 md:-mt-16">
+          <div className="flex flex-col items-center gap-2 text-center animate-fadeSlideUp">
+            <button onClick={() => navigate("/")} className="mb-4 group transition-transform active:scale-95">
+              <div className="flex items-center gap-4">
+                {/* Logo and Icon made even bigger */}
                 <RotaGenIcon size={64} variant="light" />
-                <span className="font-['Poppins'] font-bold text-[36px] flex tracking-tighter leading-none mt-2">
+                <span className="font-['Poppins'] font-bold text-[36px] flex tracking-tight">
                   <span className="shimmer-text-dark">ROTA</span>
                   <span className="shimmer-text">GEN</span>
                 </span>
               </div>
             </button>
-            <h2 className="text-base font-semibold text-slate-500">Welcome back</h2>
+            <h2 className="text-base font-semibold text-slate-600 mb-2">Welcome back</h2>
           </div>
 
-          <Card className="w-full border border-slate-100 shadow-2xl shadow-slate-200/50">
-            <CardContent className="p-5 md:p-6 pt-7">
+          <Card className="w-full border-none shadow-2xl shadow-blue-200/60">
+            <CardContent className="p-5 md:p-6 pt-8">
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-1.5">
                   <Label
                     htmlFor="identifier"
-                    className="text-[11px] font-bold uppercase tracking-widest text-slate-400"
+                    className="text-[11px] font-bold uppercase tracking-widest text-slate-500"
                   >
                     Email or username
                   </Label>
@@ -140,7 +140,7 @@ export default function Login() {
                       setIdentifier(e.target.value);
                       setError(null);
                     }}
-                    className="h-10 bg-slate-50/50 border-slate-100"
+                    className="h-10 bg-slate-50/50 border-slate-200"
                   />
                 </div>
 
@@ -149,14 +149,14 @@ export default function Login() {
                     <Label
                       htmlFor="password"
                       title="password"
-                      className="text-[11px] font-bold uppercase tracking-widest text-slate-400"
+                      className="text-[11px] font-bold uppercase tracking-widest text-slate-500"
                     >
                       Password
                     </Label>
                     <button
                       type="button"
                       onClick={() => navigate("/forgot-password")}
-                      className="text-[11px] font-bold text-primary hover:underline"
+                      className="text-[11px] font-semibold text-primary hover:underline"
                     >
                       Forgot?
                     </button>
@@ -171,7 +171,7 @@ export default function Login() {
                         setPassword(e.target.value);
                         setError(null);
                       }}
-                      className="h-10 pr-10 bg-slate-50/50 border-slate-100"
+                      className="h-10 pr-10 bg-slate-50/50 border-slate-200"
                     />
                     <button
                       type="button"
@@ -192,7 +192,7 @@ export default function Login() {
 
                 <Button
                   type="submit"
-                  className="w-full h-11 text-sm font-bold shadow-lg shadow-primary/20"
+                  className="w-full h-10 text-sm font-semibold shadow-lg shadow-primary/20"
                   disabled={loading}
                 >
                   {loading ? "Signing in…" : "Sign in"}
@@ -201,14 +201,14 @@ export default function Login() {
 
               <div className="my-5 flex items-center gap-3">
                 <div className="h-px flex-1 bg-slate-100" />
-                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-300">or</span>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">or</span>
                 <div className="h-px flex-1 bg-slate-100" />
               </div>
 
               <Button
                 type="button"
                 variant="outline"
-                className="w-full h-10 border-slate-200 text-sm font-semibold hover:bg-slate-50 text-slate-500"
+                className="w-full h-10 border-slate-200 text-sm font-medium hover:bg-slate-50 text-slate-600"
                 onClick={() => navigate("/signup")}
                 disabled={loading}
               >
@@ -226,7 +226,7 @@ export default function Login() {
                     setLoading(false);
                   }
                 }}
-                className="mt-5 w-full flex items-center justify-center gap-1.5 text-[9px] font-black text-slate-300 hover:text-primary transition-colors uppercase tracking-[0.2em]"
+                className="mt-5 w-full flex items-center justify-center gap-1.5 text-[10px] font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest"
               >
                 <Code className="h-3 w-3" />
                 Quick login (Dev)
@@ -235,8 +235,8 @@ export default function Login() {
           </Card>
         </div>
 
-        {/* Bottom Section: Tagline + Footer links (Padding added for mobile visibility) */}
-        <div className="flex w-full flex-col items-center gap-5 pb-10">
+        {/* Bottom Section: Tagline + Footer links - Added extra padding bottom */}
+        <div className="flex w-full flex-col items-center gap-4 pb-8 md:pb-12">
           <div className="animate-fadeSlideUp">
             <RotaGenTagline variant="short" />
           </div>
@@ -244,21 +244,21 @@ export default function Login() {
           <div className="flex flex-col items-center gap-2 text-center">
             <div className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
               <span>RotaGen</span>
-              <span className="h-1 w-1 rounded-full bg-slate-200" />
+              <span className="h-1 w-1 rounded-full bg-slate-300" />
               <span>NHS Rota Management</span>
-              <span className="h-1 w-1 rounded-full bg-slate-200" />
+              <span className="h-1 w-1 rounded-full bg-slate-300" />
               <span className="text-destructive/80 italic font-medium tracking-normal">Authorised users only</span>
             </div>
-            <div className="flex items-center gap-5 text-[11px] font-bold">
+            <div className="flex items-center gap-4 text-[11px] font-semibold">
               <a
                 href="/privacy"
-                className="text-slate-400 hover:text-primary transition-colors underline decoration-slate-100 underline-offset-4"
+                className="text-slate-500 hover:text-primary transition-colors underline decoration-slate-200 underline-offset-4"
               >
                 Privacy Policy
               </a>
               <a
                 href="/terms"
-                className="text-slate-400 hover:text-primary transition-colors underline decoration-slate-100 underline-offset-4"
+                className="text-slate-500 hover:text-primary transition-colors underline decoration-slate-200 underline-offset-4"
               >
                 Terms of Service
               </a>
