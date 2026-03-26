@@ -67,9 +67,10 @@ export default function Login() {
 
     if (signInError) {
       setError("Invalid email or password.");
+      setLoading(false);
+    } else {
+      setShowSplash(true);
     }
-
-    setLoading(false);
   };
 
   return (
