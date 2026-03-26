@@ -67,7 +67,8 @@ export default function Dashboard({ isActive = true }: { isActive?: boolean }) {
       .then(({ data }) => setArchivedConfigs(data ?? []));
   }, [user?.id]);
 
-  if (!restoredFromDb || preRotaLoading || preRotaResult === undefined || (hasPreRota && (shiftTypesLoading || bankHolidaysLoading || surveysLoading))) {
+  if (!dashboardReady) {
+    if (!isActive) return null;
     return (
       <>
         {showOnboarding && <OnboardingModal onClose={() => setShowOnboarding(false)} />}
