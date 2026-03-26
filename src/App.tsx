@@ -16,7 +16,6 @@ import Register from "./pages/Register";
 import Approve from "./pages/Approve";
 import ChangePassword from "./pages/ChangePassword";
 import Roster from "./pages/admin/Roster";
-import Dashboard from "./pages/admin/Dashboard";
 import RotaPeriodStep1 from "./pages/admin/RotaPeriodStep1";
 import RotaPeriodStep2 from "./pages/admin/RotaPeriodStep2";
 import DepartmentStep1 from "./pages/admin/DepartmentStep1";
@@ -90,7 +89,7 @@ const App = () => (
           <Route path="/feedback" element={<Feedback />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route element={<ProtectedRoute><AdminShell /></ProtectedRoute>}>
-            <Route path="/admin/dashboard" element={<Dashboard />} />
+            <Route path="/admin/dashboard" element={<></>} />
             <Route path="/admin/setup" element={<SetupPage />} />
             <Route path="/admin/rota-period/step-1" element={<RotaPeriodStep1 />} />
             <Route path="/admin/rota-period/step-2" element={<RotaPeriodStep2 />} />

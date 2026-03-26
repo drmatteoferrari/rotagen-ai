@@ -17,6 +17,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useAdminShell, AdminShellProvider } from "@/contexts/AdminShellContext";
 import RotaGenLogo from "@/components/brand/RotaGenLogo";
 import RotaGenIcon from "@/components/brand/RotaGenIcon";
+import Dashboard from "@/pages/admin/Dashboard";
 
 const navItems = [
   { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
@@ -31,6 +32,12 @@ function getInitials(displayName: string): string {
     .slice(0, 2)
     .map((n: string) => n[0].toUpperCase())
     .join("");
+}
+
+function PersistentDashboard() {
+  const location = useLocation();
+  const isActive = location.pathname === '/admin/dashboard';
+  return <Dashboard isActive={isActive} />;
 }
 
 function AdminShellInner() {
@@ -113,6 +120,7 @@ function AdminShellInner() {
 
         {/* Content */}
         <main className="flex-1 overflow-hidden flex flex-col">
+          <PersistentDashboard />
           <Outlet />
         </main>
 
@@ -225,6 +233,7 @@ function AdminShellInner() {
           )}
         </header>
         <main className="flex-1 overflow-hidden flex flex-col">
+          <PersistentDashboard />
           <Outlet />
         </main>
       </div>

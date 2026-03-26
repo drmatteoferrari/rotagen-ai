@@ -16,7 +16,7 @@ import { usePreRotaResultQuery, useCalendarShiftTypesQuery, useCalendarBankHolid
 import PreRotaCalendarPage from "./PreRotaCalendarPage";
 import OnboardingModal from "@/components/OnboardingModal";
 
-export default function Dashboard() {
+export default function Dashboard({ isActive = true }: { isActive?: boolean }) {
   const navigate = useNavigate();
   const { isDepartmentComplete, isWtrComplete, isPeriodComplete, restoredFromDb, rotaStartDate, rotaEndDate } = useAdminSetup();
   const { restoredConfig, currentRotaConfigId } = useRotaContext();
@@ -25,12 +25,21 @@ export default function Dashboard() {
   const [archivedConfigs, setArchivedConfigs] = useState<{id: string; rota_start_date: string | null; rota_end_date: string | null; created_at: string}[]>([]);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
-  const { data: preRotaResult, isLoading: preRotaLoading } = usePreRotaResultQuery();
-  const { isLoading: shiftTypesLoading } = useCalendarShiftTypesQuery();
-  const { isLoading: bankHolidaysLoading } = useCalendarBankHolidaysQuery();
-  const { isLoading: surveysLoading } = useCalendarSurveysQuery();
+  const { data: preRotaResult, status: preRotaStatus } = usePreRotaResultQuery();
+  const { status: shiftTypesStatus } = useCalendarShiftTypesQuery();
+  const { status: bankHolidaysStatus } = useCalendarBankHolidaysQuery();
+  const { status: surveysStatus } = useCalendarSurveysQuery();
+
   const hasPreRota = !!preRotaResult && preRotaResult.status !== 'blocked';
-  const calendarReady = hasPreRota && !shiftTypesLoading && !bankHolidaysLoading && !surveysLoading;
+
+  const allQueriesSettled =
+    (preRotaStatus === 'success' || preRotaStatus === 'error') &&
+    (shiftTypesStatus === 'success' || shiftTypesStatus === 'error') &&
+    (bankHolidaysStatus === 'success' || bankHolidaysStatus === 'error') &&
+    (surveysStatus === 'success' || surveysStatus === 'error');
+
+  const dashboardReady = restoredFromDb && !!currentRotaConfigId && allQueriesSettled;
+  const calendarReady = dashboardReady && hasPreRota;
 
   // Check onboarding status once
   useEffect(() => {
@@ -58,7 +67,8 @@ export default function Dashboard() {
       .then(({ data }) => setArchivedConfigs(data ?? []));
   }, [user?.id]);
 
-  if (!restoredFromDb || preRotaLoading || preRotaResult === undefined || (hasPreRota && (shiftTypesLoading || bankHolidaysLoading || surveysLoading))) {
+  if (!dashboardReady) {
+    if (!isActive) return null;
     return (
       <>
         {showOnboarding && <OnboardingModal onClose={() => setShowOnboarding(false)} />}
@@ -79,6 +89,7 @@ export default function Dashboard() {
 
   // If pre-rota is ready, show the embedded calendar
   if (calendarReady) {
+    if (!isActive) return null;
     return (
       <>
       {showOnboarding && <OnboardingModal onClose={() => setShowOnboarding(false)} />}
@@ -130,6 +141,7 @@ export default function Dashboard() {
   }
 
   // No pre-rota yet — show simple status overview (no progress bar)
+  if (!isActive) return null;
   return (
     <>
     {showOnboarding && <OnboardingModal onClose={() => setShowOnboarding(false)} />}
