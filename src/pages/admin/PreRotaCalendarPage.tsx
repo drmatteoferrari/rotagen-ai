@@ -381,8 +381,17 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
   const [viewMode, setViewMode] = useState<'day' | 'week' | 'month'>('week');
   const { currentRotaConfigId: rotaConfigId } = useRotaContext();
   const { data: cachedPreRota } = usePreRotaResultQuery();
+  const { data: cachedShiftTypes } = useCalendarShiftTypesQuery();
+  const { data: cachedBankHolidays } = useCalendarBankHolidaysQuery();
+  const { data: cachedSurveys } = useCalendarSurveysQuery();
 
-  const [loading, setLoading] = useState(true);
+  const embeddedCacheReady = embedded
+    && !!cachedPreRota && cachedPreRota.status !== 'blocked'
+    && cachedShiftTypes !== undefined
+    && cachedBankHolidays !== undefined
+    && cachedSurveys !== undefined;
+
+  const [loading, setLoading] = useState(!embeddedCacheReady);
   const [calendarData, setCalendarData] = useState<CalendarData | null>(null);
   const [targetsData, setTargetsData] = useState<TargetsData | null>(null);
   const [shiftTypes, setShiftTypes] = useState<ShiftTypeRow[]>([]);
