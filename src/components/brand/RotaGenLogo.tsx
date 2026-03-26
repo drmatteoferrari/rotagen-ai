@@ -20,7 +20,9 @@ export default function RotaGenLogo({ size = "md", variant = "light", showIcon =
     <div style={{ display: "flex", alignItems: "center", gap: cfg.gap }}>
       {showIcon && <RotaGenIcon size={cfg.iconSize} variant={variant} />}
       <span style={{ fontFamily: "Poppins, sans-serif", fontWeight: 700, fontSize: cfg.fontSize }}>
-        <span style={{ color: isLight ? "#1e293b" : "white" }}>ROTA</span>
+        {/* ROTA is black in light mode, white in dark mode */}
+        <span style={{ color: isLight ? "#000000" : "white" }}>ROTA</span>
+        {/* GEN is blue in both modes (lighter blue in dark mode) */}
         <span style={{ color: isLight ? "#2563EB" : "#dbeafe" }}>GEN</span>
       </span>
     </div>
