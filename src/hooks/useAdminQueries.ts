@@ -140,8 +140,76 @@ export function useRotaConfigDetailsQuery() {
   });
 }
 
+// ─── Calendar: Shift Types ───
+export function useCalendarShiftTypesQuery() {
+  const { currentRotaConfigId } = useRotaContext();
+  return useQuery({
+    queryKey: ["calendar_shift_types", currentRotaConfigId],
+    queryFn: async () => {
+      if (!currentRotaConfigId) return [];
+      const { data } = await supabase
+        .from("shift_types")
+        .select("id, name, min_doctors, badge_night, badge_oncall")
+        .eq("rota_config_id", currentRotaConfigId);
+      return data ?? [];
+    },
+    enabled: !!currentRotaConfigId,
+    staleTime: 30 * 60 * 1000,
+  });
+}
+
+// ─── Calendar: Bank Holidays ───
+export function useCalendarBankHolidaysQuery() {
+  const { currentRotaConfigId } = useRotaContext();
+  return useQuery({
+    queryKey: ["calendar_bank_holidays", currentRotaConfigId],
+    queryFn: async () => {
+      if (!currentRotaConfigId) return [];
+      const { data } = await supabase
+        .from("bank_holidays")
+        .select("date, is_active")
+        .eq("rota_config_id", currentRotaConfigId);
+      return data ?? [];
+    },
+    enabled: !!currentRotaConfigId,
+    staleTime: 30 * 60 * 1000,
+  });
+}
+
+// ─── Calendar: Survey LTFT fields ───
+export function useCalendarSurveysQuery() {
+  const { currentRotaConfigId } = useRotaContext();
+  return useQuery({
+    queryKey: ["calendar_surveys", currentRotaConfigId],
+    queryFn: async () => {
+      if (!currentRotaConfigId) return [];
+      const { data } = await supabase
+        .from("doctor_survey_responses")
+        .select("doctor_id, ltft_days_off, ltft_night_flexibility")
+        .eq("rota_config_id", currentRotaConfigId);
+      return data ?? [];
+    },
+    enabled: !!currentRotaConfigId,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
 // ─── Invalidation helpers ───
 export function useInvalidateQuery() {
+  const qc = useQueryClient();
+  return {
+    invalidateDoctors: () => qc.invalidateQueries({ queryKey: ["doctors"] }),
+    invalidateInactiveDoctors: () => qc.invalidateQueries({ queryKey: ["doctors_inactive"] }),
+    invalidatePreRota: () => qc.invalidateQueries({ queryKey: ["pre_rota_result"] }),
+    invalidateAccountSettings: () => qc.invalidateQueries({ queryKey: ["account_settings"] }),
+    invalidateRotaConfigDetails: () => qc.invalidateQueries({ queryKey: ["rota_config_details"] }),
+    invalidateCalendarAuxData: () => {
+      qc.invalidateQueries({ queryKey: ["calendar_shift_types"] });
+      qc.invalidateQueries({ queryKey: ["calendar_bank_holidays"] });
+      qc.invalidateQueries({ queryKey: ["calendar_surveys"] });
+    },
+  };
+}
   const qc = useQueryClient();
   return {
     invalidateDoctors: () => qc.invalidateQueries({ queryKey: ["doctors"] }),
