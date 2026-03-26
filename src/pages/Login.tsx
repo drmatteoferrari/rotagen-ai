@@ -19,6 +19,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showSplash, setShowSplash] = useState(false);
 
   const identifierRef = useRef<HTMLInputElement>(null);
 
@@ -66,12 +67,24 @@ export default function Login() {
 
     if (signInError) {
       setError("Invalid email or password.");
+      setLoading(false);
+    } else {
+      setShowSplash(true);
     }
-
-    setLoading(false);
   };
 
   return (
+    <>
+    {showSplash && (
+      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-primary">
+        <RotaGenLogo size="lg" variant="dark" />
+        <div className="mt-6 h-1 w-48 overflow-hidden rounded-full bg-white/20">
+          <div className="h-full rounded-full bg-white" style={{ animation: 'splashBar 1.8s ease-in-out forwards' }} />
+        </div>
+        <p className="mt-4 text-sm text-blue-100">Loading your rota…</p>
+        <style>{`@keyframes splashBar { from { width: 0% } to { width: 100% } }`}</style>
+      </div>
+    )}
     <div className="flex min-h-screen items-center justify-center bg-blue-100 p-4">
       <div className="flex w-full max-w-[420px] flex-col items-center gap-6">
         {/* Logo + branding */}
@@ -172,9 +185,8 @@ export default function Login() {
               onClick={async () => {
                 setLoading(true);
                 const result = await login("matteferro31@gmail.com", "matteferro31");
-                if (result.success) navigate("/admin/dashboard", { replace: true });
-                else setError(result.error ?? "Dev login failed");
-                setLoading(false);
+                if (result.success) setShowSplash(true);
+                else { setError(result.error ?? "Dev login failed"); setLoading(false); }
               }}
               className="w-full flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
             >
@@ -191,5 +203,6 @@ export default function Login() {
         </p>
       </div>
     </div>
+    </>
   );
 }
