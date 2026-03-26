@@ -936,7 +936,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
 
   return (
     <Wrapper>
-      <div className="space-y-3 animate-fadeSlideUp" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+      <div className={`space-y-3 ${embedded ? '' : 'animate-fadeSlideUp'}`} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
 
         {/* Top bar — non-embedded only */}
         {!embedded && (
