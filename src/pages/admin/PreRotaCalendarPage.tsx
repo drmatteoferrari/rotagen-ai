@@ -14,6 +14,7 @@ import { getTodayISO, mapOverrideRow, mergeOverridesIntoAvailability, type Calen
 import { EventDetailPanel } from '@/components/calendar/EventDetailPanel'
 import { AddEventModal } from '@/components/calendar/AddEventModal'
 import { refreshResolvedAvailabilityForDoctor } from '@/lib/resolvedAvailability'
+import { usePreRotaResultQuery } from '@/hooks/useAdminQueries';
 
 const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
@@ -379,6 +380,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
   const todayISO = getTodayISO();
   const [viewMode, setViewMode] = useState<'day' | 'week' | 'month'>('week');
   const { currentRotaConfigId: rotaConfigId } = useRotaContext();
+  const { data: cachedPreRota } = usePreRotaResultQuery();
 
   const [loading, setLoading] = useState(true);
   const [calendarData, setCalendarData] = useState<CalendarData | null>(null);
@@ -427,6 +429,89 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
   useEffect(() => {
     const load = async () => {
       setLoadError(null);
+
+      // ── Embedded fast-path ──────────────────────────────────────────────
+      // When rendered inside Dashboard, pre_rota_results is already in the
+      // React Query cache. Use it directly and skip the DB fetch entirely.
+      if (embedded && cachedPreRota && cachedPreRota.status !== 'blocked') {
+        const cd = cachedPreRota.calendarData as CalendarData;
+        const td = cachedPreRota.targetsData as TargetsData;
+        setTargetsData(td);
+
+        // Fetch auxiliary data in parallel — these are not in the cache
+        const [stResult, bhResult, surveyResult, overrideResult] = await Promise.all([
+          supabase.from('shift_types').select('id, name, min_doctors, badge_night, badge_oncall').eq('rota_config_id', rotaConfigId ?? ''),
+          supabase.from('bank_holidays').select('date, is_active').eq('rota_config_id', rotaConfigId ?? ''),
+          supabase.from('doctor_survey_responses').select('doctor_id, ltft_days_off, ltft_night_flexibility').eq('rota_config_id', rotaConfigId ?? ''),
+          supabase.from('coordinator_calendar_overrides').select('*').eq('rota_config_id', rotaConfigId ?? ''),
+        ]);
+
+        const shifts: ShiftTypeRow[] = (stResult.data ?? []).map((s: any) => ({
+          id: s.id, name: s.name, min_doctors: s.min_doctors ?? 1,
+          badge_night: s.badge_night ?? false, badge_oncall: s.badge_oncall ?? false,
+        }));
+        setShiftTypes(shifts);
+
+        const bhSet = new Set(
+          (bhResult.data ?? [])
+            .filter((r: any) => r.is_active !== false)
+            .map((r: any) => r.date as string)
+        );
+        setBankHolidays(bhSet);
+
+        const sMap: Record<string, SurveyMap> = {};
+        for (const s of surveyResult.data ?? []) {
+          sMap[(s as any).doctor_id] = {
+            ltftDaysOff: ((s as any).ltft_days_off ?? []).map(normaliseDayName),
+            ltftNightFlexibility: ((s as any).ltft_night_flexibility ?? []).map((f: any) => ({
+              ...f, day: normaliseDayName(f.day ?? ''),
+            })),
+          };
+        }
+        setSurveysMap(sMap);
+        setOverrides((overrideResult.data ?? []).map(mapOverrideRow));
+
+        setDeptName(cd.departmentName ?? 'Department');
+        setHospitalName(cd.hospitalName ?? 'Trust');
+
+        const mergedDoctors = (cd.doctors ?? []).map((doc: any) => ({
+          ...doc,
+          ltftDaysOff: (doc.ltftDaysOff ?? doc.ltft_days_off ?? sMap[doc.doctorId]?.ltftDaysOff ?? []).map(normaliseDayName),
+        }));
+        const mergedCd = { ...cd, doctors: mergedDoctors };
+        setCalendarData(mergedCd);
+
+        const initialDate = (todayISO >= mergedCd.rotaStartDate && todayISO <= mergedCd.rotaEndDate)
+          ? todayISO : mergedCd.rotaStartDate;
+        const initialWeekIdx = mergedCd.weeks.findIndex(w => w.startDate <= initialDate && initialDate <= w.endDate);
+        setCurrentWeekIndex(initialWeekIdx >= 0 ? initialWeekIdx : 0);
+        const allDatesFlat = mergedCd.weeks.flatMap(w => w.dates);
+        const initialDayIdx = allDatesFlat.indexOf(initialDate);
+        setCurrentDayIndex(initialDayIdx >= 0 ? initialDayIdx : 0);
+        setCurrentMonthKey(initialDate.slice(0, 7));
+
+        if (mergedCd.doctors && mergedCd.weeks) {
+          const allDates: string[] = [];
+          for (const w of mergedCd.weeks) allDates.push(...w.dates);
+          const elig: Record<string, Record<string, number>> = {};
+          for (const shift of shifts) {
+            elig[shift.id] = {};
+            for (const date of allDates) {
+              let count = 0;
+              for (const doctor of mergedCd.doctors) {
+                if (isDoctorEligible(doctor, date, shift, sMap)) count++;
+              }
+              elig[shift.id][date] = count;
+            }
+          }
+          setEligibility(elig);
+        }
+
+        setLoading(false);
+        return; // skip the standalone fetch path below
+      }
+      // ── End embedded fast-path ──────────────────────────────────────────
+
       if (!rotaConfigId) { setErrorMsg('No rota config found. Go back to the dashboard.'); setLoading(false); return; }
 
       try {
@@ -555,7 +640,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
       }
     };
     load();
-  }, [rotaConfigId]);
+  }, [rotaConfigId, embedded, cachedPreRota]);
 
   // Keyboard navigation via navRef
   useEffect(() => {
