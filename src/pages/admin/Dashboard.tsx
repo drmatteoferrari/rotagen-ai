@@ -89,6 +89,7 @@ export default function Dashboard({ isActive = true }: { isActive?: boolean }) {
 
   // If pre-rota is ready, show the embedded calendar
   if (calendarReady) {
+    if (!isActive) return null;
     return (
       <>
       {showOnboarding && <OnboardingModal onClose={() => setShowOnboarding(false)} />}
