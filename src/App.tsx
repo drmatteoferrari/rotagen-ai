@@ -16,7 +16,7 @@ import Register from "./pages/Register";
 import Approve from "./pages/Approve";
 import ChangePassword from "./pages/ChangePassword";
 import Roster from "./pages/admin/Roster";
-import Dashboard from "./pages/admin/Dashboard";
+import Roster from "./pages/admin/Roster";
 import RotaPeriodStep1 from "./pages/admin/RotaPeriodStep1";
 import RotaPeriodStep2 from "./pages/admin/RotaPeriodStep2";
 import DepartmentStep1 from "./pages/admin/DepartmentStep1";
