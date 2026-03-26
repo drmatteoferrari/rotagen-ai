@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Eye, EyeOff, Code } from "lucide-react";
+import { Eye, EyeOff, Code, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,7 +44,6 @@ export default function Login() {
 
     let emailToUse = identifier.trim();
 
-    // If no "@", treat as username and resolve email
     if (!emailToUse.includes("@")) {
       const { data: coordRow } = await (supabase
         .from("coordinator_accounts" as any)
@@ -75,134 +74,196 @@ export default function Login() {
 
   return (
     <>
-    {showSplash && (
-      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-primary">
-        <RotaGenLogo size="lg" variant="dark" />
-        <div className="mt-6 h-1 w-48 overflow-hidden rounded-full bg-white/20">
-          <div className="h-full rounded-full bg-white" style={{ animation: 'splashBar 1.8s ease-in-out forwards' }} />
+      {showSplash && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-primary">
+          <RotaGenLogo size="lg" variant="dark" />
+          <div className="mt-6 h-1 w-48 overflow-hidden rounded-full bg-white/20">
+            <div
+              className="h-full rounded-full bg-white"
+              style={{ animation: "splashBar 1.8s ease-in-out forwards" }}
+            />
+          </div>
+          <p className="mt-4 text-sm text-blue-100">Loading your rota…</p>
+          <style>{`@keyframes splashBar { from { width: 0% } to { width: 100% } }`}</style>
         </div>
-        <p className="mt-4 text-sm text-blue-100">Loading your rota…</p>
-        <style>{`@keyframes splashBar { from { width: 0% } to { width: 100% } }`}</style>
-      </div>
-    )}
-    <div className="flex min-h-screen items-center justify-center bg-blue-100 p-4">
-      <div className="flex w-full max-w-[420px] flex-col items-center gap-6">
-        {/* Logo + branding */}
-        <div className="flex flex-col items-center gap-2">
-          <RotaGenLogo size="md" variant="light" />
-          <RotaGenTagline variant="short" />
+      )}
+
+      {/* Main container: h-screen and overflow-hidden ensures no scrolling */}
+      <div className="relative flex h-screen w-full flex-col items-center justify-between overflow-hidden bg-blue-50/50 p-4 md:p-8">
+        {/* Top Header: Navigation and Logo */}
+        <div className="flex w-full max-w-[420px] items-center justify-between">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="flex items-center gap-1 text-muted-foreground hover:text-foreground"
+            onClick={() => navigate(-1)}
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>Back</span>
+          </Button>
+          <button onClick={() => navigate("/")} className="transition-transform active:scale-95">
+            <RotaGenLogo size="sm" variant="light" />
+          </button>
+          <div className="w-[60px]" /> {/* Spacer to balance the back button */}
         </div>
 
-        {/* Login card */}
-        <Card className="w-full shadow-xl">
-          <CardContent className="p-6 pt-6">
-            <h2 className="mb-5 text-center text-lg font-semibold text-card-foreground">Sign in to your account</h2>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Email or username */}
-              <div className="space-y-1.5">
-                <Label htmlFor="identifier">Email or username</Label>
-                <Input
-                  ref={identifierRef}
-                  id="identifier"
-                  type="text"
-                  placeholder="Email address or username"
-                  value={identifier}
-                  onChange={(e) => { setIdentifier(e.target.value); setError(null); }}
-                />
+        {/* Center Section: Branding + Login Card */}
+        <div className="flex w-full max-w-[420px] flex-col items-center gap-4">
+          <div className="flex flex-col items-center gap-1 text-center">
+            <button onClick={() => navigate("/")} className="mb-2">
+              <div className="shimmer-text">
+                <RotaGenLogo size="md" variant="light" />
               </div>
+            </button>
+            <h2 className="text-lg font-semibold text-foreground/90">Welcome back</h2>
+          </div>
 
-              {/* Password */}
-              <div className="space-y-1.5">
-                <Label htmlFor="password">Password</Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={(e) => { setPassword(e.target.value); setError(null); }}
-                    className="pr-10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                    tabIndex={-1}
+          <Card className="w-full border-none shadow-2xl shadow-blue-200/50">
+            <CardContent className="p-5 pt-6">
+              <form onSubmit={handleSubmit} className="space-y-3.5">
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="identifier"
+                    className="text-xs font-medium uppercase tracking-wider text-muted-foreground"
                   >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
+                    Email or username
+                  </Label>
+                  <Input
+                    ref={identifierRef}
+                    id="identifier"
+                    type="text"
+                    placeholder="Email or username"
+                    value={identifier}
+                    onChange={(e) => {
+                      setIdentifier(e.target.value);
+                      setError(null);
+                    }}
+                    className="h-10 bg-slate-50/50"
+                  />
                 </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label
+                      htmlFor="password"
+                      title="password"
+                      className="text-xs font-medium uppercase tracking-wider text-muted-foreground"
+                    >
+                      Password
+                    </Label>
+                    <button
+                      type="button"
+                      onClick={() => navigate("/forgot-password")}
+                      className="text-[11px] font-medium text-primary hover:underline"
+                    >
+                      Forgot?
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => {
+                        setPassword(e.target.value);
+                        setError(null);
+                      }}
+                      className="h-10 pr-10 bg-slate-50/50"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      tabIndex={-1}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {error && (
+                  <p className="text-[12px] font-medium text-destructive text-center animate-in fade-in zoom-in-95 duration-200">
+                    {error}
+                  </p>
+                )}
+
+                <Button
+                  type="submit"
+                  className="w-full h-10 text-sm font-semibold shadow-lg shadow-primary/20"
+                  disabled={loading}
+                >
+                  {loading ? "Signing in…" : "Sign in"}
+                </Button>
+              </form>
+
+              <div className="my-4 flex items-center gap-3">
+                <div className="h-px flex-1 bg-slate-100" />
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">or</span>
+                <div className="h-px flex-1 bg-slate-100" />
               </div>
 
-              {/* Error */}
-              {error && <p className="text-sm text-destructive text-center">{error}</p>}
-
-              {/* Sign in button */}
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Signing in…" : "Sign in"}
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full h-10 border-slate-200 text-sm font-medium hover:bg-slate-50"
+                onClick={() => navigate("/signup")}
+                disabled={loading}
+              >
+                Request access
               </Button>
-            </form>
 
-            {/* Forgot password */}
-            <div className="mt-2 text-right">
               <button
                 type="button"
-                onClick={() => navigate("/forgot-password")}
-                className="text-xs text-primary hover:underline"
+                onClick={async () => {
+                  setLoading(true);
+                  const result = await login("matteferro31@gmail.com", "matteferro31");
+                  if (result.success) setShowSplash(true);
+                  else {
+                    setError(result.error ?? "Dev login failed");
+                    setLoading(false);
+                  }
+                }}
+                className="mt-4 w-full flex items-center justify-center gap-1.5 text-[10px] font-medium text-muted-foreground/60 hover:text-primary transition-colors"
               >
-                Forgot password?
+                <Code className="h-3 w-3" />
+                Quick login (Dev)
               </button>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Bottom Section: Tagline + Footer */}
+        <div className="flex w-full flex-col items-center gap-3">
+          <div className="animate-fadeSlideUp">
+            <RotaGenTagline variant="short" />
+          </div>
+
+          <div className="flex flex-col items-center gap-1.5 text-center">
+            <div className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground/80">
+              <span>RotaGen</span>
+              <span className="h-1 w-1 rounded-full bg-slate-300" />
+              <span>NHS Rota Management</span>
+              <span className="h-1 w-1 rounded-full bg-slate-300" />
+              <span className="text-destructive/70 italic">Authorised users only</span>
             </div>
-
-            {/* Divider */}
-            <div className="my-5 flex items-center gap-3">
-              <div className="h-px flex-1 bg-border" />
-              <span className="text-xs text-muted-foreground">or</span>
-              <div className="h-px flex-1 bg-border" />
+            <div className="flex items-center gap-3 text-[11px]">
+              <a
+                href="/privacy"
+                className="font-semibold text-slate-500 hover:text-primary transition-colors underline decoration-slate-300 underline-offset-2"
+              >
+                Privacy Policy
+              </a>
+              <a
+                href="/terms"
+                className="font-semibold text-slate-500 hover:text-primary transition-colors underline decoration-slate-300 underline-offset-2"
+              >
+                Terms of Service
+              </a>
             </div>
-
-            {/* Request access */}
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
-              onClick={() => navigate("/signup")}
-              disabled={loading}
-            >
-              Request access
-            </Button>
-
-            {/* Dev divider */}
-            <div className="my-4 flex items-center gap-3">
-              <div className="h-px flex-1 bg-border" />
-              <div className="h-px flex-1 bg-border" />
-            </div>
-
-            {/* Dev quick login */}
-            <button
-              type="button"
-              onClick={async () => {
-                setLoading(true);
-                const result = await login("matteferro31@gmail.com", "matteferro31");
-                if (result.success) setShowSplash(true);
-                else { setError(result.error ?? "Dev login failed"); setLoading(false); }
-              }}
-              className="w-full flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <Code className="h-3 w-3" />
-              Dev login (matteferro31@gmail.com)
-            </button>
-          </CardContent>
-        </Card>
-
-        {/* Footer */}
-        <p className="text-center text-xs text-muted-foreground">
-          RotaGen · NHS Rota Management · For authorised users only ·{" "}
-          <a href="/privacy" className="underline hover:text-foreground">Privacy Policy</a>
-        </p>
+          </div>
+        </div>
       </div>
-    </div>
     </>
   );
 }
