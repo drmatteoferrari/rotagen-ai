@@ -438,6 +438,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
   // Data load
   useEffect(() => {
     const load = async () => {
+      if (embedded && embeddedInitialisedRef.current) return;
       setLoadError(null);
 
       // ── Embedded fast-path ──────────────────────────────────────────────
@@ -659,7 +660,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
       }
     };
     load();
-  }, [rotaConfigId, embedded, cachedPreRota, cachedShiftTypes, cachedBankHolidays, cachedSurveys]);
+  }, [rotaConfigId, embedded, cachedPreRota]);
 
   // Keyboard navigation via navRef
   useEffect(() => {
