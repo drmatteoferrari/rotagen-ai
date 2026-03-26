@@ -26,7 +26,11 @@ export default function Dashboard() {
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   const { data: preRotaResult, isLoading: preRotaLoading } = usePreRotaResultQuery();
+  const { isLoading: shiftTypesLoading } = useCalendarShiftTypesQuery();
+  const { isLoading: bankHolidaysLoading } = useCalendarBankHolidaysQuery();
+  const { isLoading: surveysLoading } = useCalendarSurveysQuery();
   const hasPreRota = !!preRotaResult && preRotaResult.status !== 'blocked';
+  const calendarReady = hasPreRota && !shiftTypesLoading && !bankHolidaysLoading && !surveysLoading;
 
   // Check onboarding status once
   useEffect(() => {
