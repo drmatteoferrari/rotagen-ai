@@ -14,6 +14,7 @@ import { getTodayISO, mapOverrideRow, mergeOverridesIntoAvailability, type Calen
 import { EventDetailPanel } from '@/components/calendar/EventDetailPanel'
 import { AddEventModal } from '@/components/calendar/AddEventModal'
 import { refreshResolvedAvailabilityForDoctor } from '@/lib/resolvedAvailability'
+import { usePreRotaResultQuery } from '@/hooks/useAdminQueries';
 
 const DAY_NAMES = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
