@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Check } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useScrollReveal } from "@/lib/useScrollReveal";
+import RotaGenLogo from "@/components/brand/RotaGenLogo";
 
 const trustSignals = ["No payment details", "No IT procurement", "Live within a week"];
 
