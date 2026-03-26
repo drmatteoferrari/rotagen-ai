@@ -660,7 +660,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
       }
     };
     load();
-  }, [rotaConfigId, embedded, cachedPreRota, cachedShiftTypes, cachedBankHolidays, cachedSurveys]);
+  }, [rotaConfigId, embedded, cachedPreRota]);
 
   // Keyboard navigation via navRef
   useEffect(() => {
