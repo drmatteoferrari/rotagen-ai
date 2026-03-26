@@ -4,7 +4,6 @@ import {
   LayoutDashboard,
   Wand2,
   Users,
-  Stethoscope,
   ChevronLeft,
   ChevronRight,
   LogOut,
@@ -16,6 +15,8 @@ import { cn } from "@/lib/utils";
 import { useIsMobile, useIsTablet } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdminShell, AdminShellProvider } from "@/contexts/AdminShellContext";
+import RotaGenLogo from "@/components/brand/RotaGenLogo";
+import RotaGenIcon from "@/components/brand/RotaGenIcon";
 
 const navItems = [
   { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
@@ -147,15 +148,11 @@ function AdminShellInner() {
         )}
       >
         {/* Logo */}
-        <div className="flex h-16 items-center gap-3 border-b border-sidebar-border px-4">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary">
-            <Stethoscope className="h-4 w-4 text-sidebar-primary-foreground" />
-          </div>
-          {!collapsed && (
-            <span className="text-sm font-semibold text-sidebar-accent-foreground tracking-tight">
-              RotaGen
-            </span>
-          )}
+        <div className="flex h-16 items-center justify-center border-b border-sidebar-border px-4">
+          {collapsed
+            ? <RotaGenIcon size={28} variant="dark" />
+            : <RotaGenLogo size="sm" variant="dark" />
+          }
         </div>
 
         {/* Nav */}

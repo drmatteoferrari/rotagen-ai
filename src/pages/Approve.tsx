@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
+import RotaGenLogo from "@/components/brand/RotaGenLogo";
 
 type PageState = "loading" | "invalid" | "already_approved" | "confirm" | "processing" | "success" | "error";
 
@@ -209,11 +210,7 @@ export default function Approve() {
     <div className="flex min-h-screen items-center justify-center bg-blue-100 p-4">
       <div className="flex w-full max-w-[420px] flex-col items-center gap-6">
         <div className="flex flex-col items-center gap-2">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-card border border-border shadow-sm">
-            <span className="text-2xl font-black tracking-tighter text-primary">RE</span>
-          </div>
-          <h1 className="text-3xl font-bold text-foreground">RotaGen</h1>
-          <p className="text-sm text-muted-foreground">Account Approval</p>
+          <RotaGenLogo size="md" variant="light" />
         </div>
         <Card className="w-full shadow-xl">
           <CardContent className="p-6 pt-6">{renderContent()}</CardContent>

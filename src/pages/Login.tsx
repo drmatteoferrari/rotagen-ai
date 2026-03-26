@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
+import RotaGenLogo from "@/components/brand/RotaGenLogo";
+import RotaGenTagline from "@/components/brand/RotaGenTagline";
 
 export default function Login() {
   const { login, isAuthenticated, user } = useAuth();
@@ -74,11 +76,8 @@ export default function Login() {
       <div className="flex w-full max-w-[420px] flex-col items-center gap-6">
         {/* Logo + branding */}
         <div className="flex flex-col items-center gap-2">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-card border border-border shadow-sm">
-            <span className="text-2xl font-black tracking-tighter text-primary">RE</span>
-          </div>
-          <h1 className="text-3xl font-bold text-foreground">RotaGen</h1>
-          <p className="text-sm text-muted-foreground">Fair NHS rotas in minutes, not hours</p>
+          <RotaGenLogo size="md" variant="light" />
+          <RotaGenTagline variant="short" />
         </div>
 
         {/* Login card */}

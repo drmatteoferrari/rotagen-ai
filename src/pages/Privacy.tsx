@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import RotaGenLogo from "@/components/brand/RotaGenLogo";
 
 export default function Privacy() {
   const navigate = useNavigate();
@@ -38,10 +39,7 @@ export default function Privacy() {
       >
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
           <button type="button" onClick={() => navigate("/")} className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-border bg-card text-xs font-black tracking-tighter text-primary shadow-sm">
-              RE
-            </div>
-            <span className="text-base font-bold text-foreground">RotaGen</span>
+            <RotaGenLogo size="sm" />
           </button>
           <div className="flex items-center gap-3">
             <div className="hidden items-center gap-5 md:flex">
