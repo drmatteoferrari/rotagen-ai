@@ -141,6 +141,7 @@ export default function Dashboard({ isActive = true }: { isActive?: boolean }) {
   }
 
   // No pre-rota yet — show simple status overview (no progress bar)
+  if (!isActive) return null;
   return (
     <>
     {showOnboarding && <OnboardingModal onClose={() => setShowOnboarding(false)} />}
