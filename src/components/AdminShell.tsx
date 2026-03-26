@@ -17,11 +17,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useAdminShell, AdminShellProvider } from "@/contexts/AdminShellContext";
 import RotaGenLogo from "@/components/brand/RotaGenLogo";
 import RotaGenIcon from "@/components/brand/RotaGenIcon";
-import { useState } from "react";
-import { cn } from "@/lib/utils";
-import { useIsMobile, useIsTablet } from "@/hooks/use-mobile";
-import { useAuth } from "@/contexts/AuthContext";
-import { useAdminShell, AdminShellProvider } from "@/contexts/AdminShellContext";
 
 const navItems = [
   { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
