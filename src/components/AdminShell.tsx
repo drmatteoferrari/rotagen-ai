@@ -4,13 +4,19 @@ import {
   LayoutDashboard,
   Wand2,
   Users,
-  Stethoscope,
   ChevronLeft,
   ChevronRight,
   LogOut,
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
+import { useState } from "react";
+import { cn } from "@/lib/utils";
+import { useIsMobile, useIsTablet } from "@/hooks/use-mobile";
+import { useAuth } from "@/contexts/AuthContext";
+import { useAdminShell, AdminShellProvider } from "@/contexts/AdminShellContext";
+import RotaGenLogo from "@/components/brand/RotaGenLogo";
+import RotaGenIcon from "@/components/brand/RotaGenIcon";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { useIsMobile, useIsTablet } from "@/hooks/use-mobile";
