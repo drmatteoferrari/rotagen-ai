@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Loader2, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
+import RotaGenLogo from "@/components/brand/RotaGenLogo";
 
 type PageState = "loading" | "invalid" | "already_approved" | "confirm" | "processing" | "success" | "error";
 
