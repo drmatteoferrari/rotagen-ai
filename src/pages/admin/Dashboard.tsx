@@ -16,7 +16,7 @@ import { usePreRotaResultQuery, useCalendarShiftTypesQuery, useCalendarBankHolid
 import PreRotaCalendarPage from "./PreRotaCalendarPage";
 import OnboardingModal from "@/components/OnboardingModal";
 
-export default function Dashboard() {
+export default function Dashboard({ isActive = true }: { isActive?: boolean }) {
   const navigate = useNavigate();
   const { isDepartmentComplete, isWtrComplete, isPeriodComplete, restoredFromDb, rotaStartDate, rotaEndDate } = useAdminSetup();
   const { restoredConfig, currentRotaConfigId } = useRotaContext();
