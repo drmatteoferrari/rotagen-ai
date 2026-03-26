@@ -137,11 +137,12 @@ export default function LandingPage() {
         <section id="hero" className="flex min-h-screen items-center bg-blue-100 px-6 py-16">
           <div className="mx-auto w-full max-w-6xl">
             <div className="animate-in slide-in-from-bottom-4 fade-in duration-500 text-center">
-              <h1 className="mx-auto max-w-4xl text-4xl font-extrabold leading-tight tracking-tight text-foreground md:text-5xl lg:text-6xl">
-                <span className="block">Your doctors' preferences.</span>
-                <span className="block">Your department's rules.</span>
-              <span className="block shimmer-text">One compliant rota, automatically.</span>
-              </h1>
+              <div className="flex justify-center mb-4">
+                <RotaGenLogo size="lg" />
+              </div>
+              <div className="text-lg md:text-xl">
+                <RotaGenTagline variant="full" />
+              </div>
 
               <div ref={pricingRef} className="scroll-reveal-scale mx-auto mt-8 max-w-md rounded-2xl border-2 border-primary/20 bg-card p-8 text-center shadow-lg">
                 {/* Early Access badge — shimmer outline only, white/green-100 fill inside */}

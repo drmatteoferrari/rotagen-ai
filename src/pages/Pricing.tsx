@@ -133,13 +133,7 @@ export default function Pricing() {
         <div className="mx-auto max-w-5xl">
           <div className="animate-in slide-in-from-bottom-4 fade-in mb-10 text-center duration-500">
             <div className="mx-auto flex w-fit items-center gap-3 rounded-2xl bg-card px-5 py-4 shadow-sm">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card text-sm font-black tracking-tighter text-primary shadow-sm">
-                RE
-              </div>
-              <div className="text-left">
-                <p className="text-lg font-bold text-foreground">RotaGen</p>
-                <p className="text-sm text-muted-foreground">Fair NHS rotas in minutes, not hours</p>
-              </div>
+              <RotaGenLogo size="md" />
             </div>
           </div>
 
