@@ -34,6 +34,12 @@ function getInitials(displayName: string): string {
     .join("");
 }
 
+function PersistentDashboard() {
+  const location = useLocation();
+  const isActive = location.pathname === '/admin/dashboard';
+  return <Dashboard isActive={isActive} />;
+}
+
 function AdminShellInner() {
   const { title, subtitle, accentColor, pageIcon } = useAdminShell();
   const bgColorMap: Record<string, string> = {
