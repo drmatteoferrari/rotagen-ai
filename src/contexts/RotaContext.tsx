@@ -18,10 +18,9 @@ const RotaContext = createContext<RotaContextType | undefined>(undefined);
 const STORAGE_KEY = "currentRotaConfigId";
 
 export function RotaProvider({ children }: { children: ReactNode }) {
-  // Clear any stale localStorage immediately on mount
-  localStorage.removeItem(STORAGE_KEY);
-
-  const [currentRotaConfigId, setCurrentRotaConfigIdState] = useState<string | null>(null);
+  const [currentRotaConfigId, setCurrentRotaConfigIdState] = useState<string | null>(
+    () => localStorage.getItem(STORAGE_KEY)
+  );
   const [restoredConfig, setRestoredConfig] = useState<RotaConfig | null>(null);
   const [contextReady, setContextReady] = useState(false);
 
@@ -35,9 +34,6 @@ export function RotaProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const restoreForUser = useCallback(async (userId: string): Promise<RotaConfig | null> => {
-    // Clear stale config from previous session immediately
-    localStorage.removeItem(STORAGE_KEY);
-    setCurrentRotaConfigIdState(null);
     setRestoredConfig(null);
 
     try {
