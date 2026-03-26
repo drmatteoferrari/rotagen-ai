@@ -2,9 +2,8 @@ import { useEffect, useState, type MutableRefObject } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { BarChart3, Mail, ShieldCheck, Star, Wand2 } from "lucide-react";
 import { useScrollReveal } from "@/lib/useScrollReveal";
-
-
-
+import RotaGenLogo from "@/components/brand/RotaGenLogo";
+import RotaGenTagline from "@/components/brand/RotaGenTagline";
 const featureCards = [
   {
     icon: Wand2,
