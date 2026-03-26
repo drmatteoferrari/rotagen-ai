@@ -89,10 +89,10 @@ export default function Login() {
         </div>
       )}
 
-      {/* Main container: h-screen and overflow-hidden ensures no scrolling. bg-slate-100 matches landing page. */}
-      <div className="relative flex h-screen w-full flex-col items-center justify-between overflow-hidden bg-slate-100 p-4 md:p-8">
-        {/* Top Header: Navigation back button */}
-        <div className="flex w-full max-w-[420px] items-center justify-start pt-2">
+      {/* Main container: h-screen and overflow-hidden ensures no scrolling. bg-blue-100 matches landing page hero. */}
+      <div className="relative flex h-screen w-full flex-col items-center justify-between overflow-hidden bg-blue-100 p-4 md:p-8 pb-12">
+        {/* Top Header: Simple Back button to avoid hitting the logo */}
+        <div className="flex w-full max-w-6xl items-center justify-start pt-2">
           <Button
             variant="ghost"
             size="sm"
@@ -106,7 +106,7 @@ export default function Login() {
 
         {/* Center Section: Branding (Bigger) + Login Box (Moved Up) */}
         <div className="flex w-full max-w-[420px] flex-col items-center gap-2 -mt-12">
-          <div className="flex flex-col items-center gap-2 text-center">
+          <div className="flex flex-col items-center gap-2 text-center animate-fadeSlideUp">
             <button onClick={() => navigate("/")} className="mb-2 group transition-transform active:scale-95">
               <div className="flex items-center gap-3">
                 {/* Logo size increased to 64 */}
@@ -122,7 +122,7 @@ export default function Login() {
           </div>
 
           <Card className="w-full border-none shadow-2xl shadow-blue-200/50">
-            <CardContent className="p-5 pt-6">
+            <CardContent className="p-5 pt-6 pb-4">
               <form onSubmit={handleSubmit} className="space-y-3.5">
                 <div className="space-y-1.5">
                   <Label
@@ -131,7 +131,7 @@ export default function Login() {
                   >
                     Email or username
                   </Label>
-                  <input
+                  <Input
                     ref={identifierRef}
                     id="identifier"
                     type="text"
@@ -141,7 +141,7 @@ export default function Login() {
                       setIdentifier(e.target.value);
                       setError(null);
                     }}
-                    className="flex h-10 w-full rounded-md border border-input bg-slate-50/50 px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="h-10 bg-slate-50/50"
                   />
                 </div>
 
@@ -149,6 +149,7 @@ export default function Login() {
                   <div className="flex items-center justify-between">
                     <Label
                       htmlFor="password"
+                      title="password"
                       className="text-xs font-medium uppercase tracking-wider text-muted-foreground"
                     >
                       Password
@@ -162,7 +163,7 @@ export default function Login() {
                     </button>
                   </div>
                   <div className="relative">
-                    <input
+                    <Input
                       id="password"
                       type={showPassword ? "text" : "password"}
                       placeholder="••••••••"
@@ -171,7 +172,7 @@ export default function Login() {
                         setPassword(e.target.value);
                         setError(null);
                       }}
-                      className="flex h-10 w-full rounded-md border border-input bg-slate-50/50 px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 pr-10"
+                      className="h-10 pr-10 bg-slate-50/50"
                     />
                     <button
                       type="button"
@@ -199,7 +200,7 @@ export default function Login() {
                 </Button>
               </form>
 
-              <div className="my-4 flex items-center gap-3">
+              <div className="my-3.5 flex items-center gap-3">
                 <div className="h-px flex-1 bg-slate-100" />
                 <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">or</span>
                 <div className="h-px flex-1 bg-slate-100" />
@@ -226,7 +227,7 @@ export default function Login() {
                     setLoading(false);
                   }
                 }}
-                className="mt-4 w-full flex items-center justify-center gap-1.5 text-[10px] font-medium text-muted-foreground/60 hover:text-primary transition-colors"
+                className="mt-3.5 w-full flex items-center justify-center gap-1.5 text-[10px] font-medium text-muted-foreground/60 hover:text-primary transition-colors"
               >
                 <Code className="h-3 w-3" />
                 Quick login (Dev)
@@ -235,8 +236,8 @@ export default function Login() {
           </Card>
         </div>
 
-        {/* Bottom Section: Footer Links (Added padding to prevent cut-off) */}
-        <div className="flex w-full flex-col items-center gap-3 pb-8">
+        {/* Bottom Section: Tagline + Footer links */}
+        <div className="flex w-full flex-col items-center gap-3">
           <div className="animate-fadeSlideUp">
             <RotaGenTagline variant="short" />
           </div>
