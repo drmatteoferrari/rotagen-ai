@@ -74,6 +74,17 @@ export default function Login() {
   };
 
   return (
+    <>
+    {showSplash && (
+      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-primary">
+        <RotaGenLogo size="lg" variant="dark" />
+        <div className="mt-6 h-1 w-48 overflow-hidden rounded-full bg-white/20">
+          <div className="h-full rounded-full bg-white" style={{ animation: 'splashBar 1.8s ease-in-out forwards' }} />
+        </div>
+        <p className="mt-4 text-sm text-blue-100">Loading your rota…</p>
+        <style>{`@keyframes splashBar { from { width: 0% } to { width: 100% } }`}</style>
+      </div>
+    )}
     <div className="flex min-h-screen items-center justify-center bg-blue-100 p-4">
       <div className="flex w-full max-w-[420px] flex-col items-center gap-6">
         {/* Logo + branding */}
