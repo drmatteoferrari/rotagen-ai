@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { usePreRotaResultQuery } from "@/hooks/useAdminQueries";
+import { usePreRotaResultQuery, useCalendarShiftTypesQuery, useCalendarBankHolidaysQuery, useCalendarSurveysQuery } from "@/hooks/useAdminQueries";
 import PreRotaCalendarPage from "./PreRotaCalendarPage";
 import OnboardingModal from "@/components/OnboardingModal";
 
@@ -26,7 +26,11 @@ export default function Dashboard() {
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   const { data: preRotaResult, isLoading: preRotaLoading } = usePreRotaResultQuery();
+  const { isLoading: shiftTypesLoading } = useCalendarShiftTypesQuery();
+  const { isLoading: bankHolidaysLoading } = useCalendarBankHolidaysQuery();
+  const { isLoading: surveysLoading } = useCalendarSurveysQuery();
   const hasPreRota = !!preRotaResult && preRotaResult.status !== 'blocked';
+  const calendarReady = hasPreRota && !shiftTypesLoading && !bankHolidaysLoading && !surveysLoading;
 
   // Check onboarding status once
   useEffect(() => {
@@ -54,7 +58,7 @@ export default function Dashboard() {
       .then(({ data }) => setArchivedConfigs(data ?? []));
   }, [user?.id]);
 
-  if (!restoredFromDb || preRotaLoading) {
+  if (!restoredFromDb || preRotaLoading || (hasPreRota && (shiftTypesLoading || bankHolidaysLoading || surveysLoading))) {
     return (
       <>
         {showOnboarding && <OnboardingModal onClose={() => setShowOnboarding(false)} />}
@@ -74,7 +78,7 @@ export default function Dashboard() {
   const weeks = start && end ? Math.ceil(differenceInCalendarWeeks(end, start)) : null;
 
   // If pre-rota is ready, show the embedded calendar
-  if (hasPreRota) {
+  if (calendarReady) {
     return (
       <>
       {showOnboarding && <OnboardingModal onClose={() => setShowOnboarding(false)} />}
