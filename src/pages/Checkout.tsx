@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Check, AlertCircle } from "lucide-react";
+import PublicTopBar from "@/components/PublicTopBar";
 
 export default function Checkout() {
   const navigate = useNavigate();
