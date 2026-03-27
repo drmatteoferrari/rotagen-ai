@@ -1,32 +1,61 @@
 
 
-## Plan: Redesign LandingPage Hero & Navbar
+## Plan: Shared Public Topbar Component
 
-### 1. Append new CSS animations to `src/index.css`
-Append after line 221: new keyframes (`shimmer-dark`, `fade-up`, `ecg-draw`, `shimmer-nav-border`) and utility classes (`.shimmer-text-dark`, `.shimmer-text-blue`, `.fade-up-1` through `.fade-up-5`, `.ecg-draw`, `.nav-cta-shimmer-wrap`). No existing classes removed.
+### What changes
+Create a reusable `PublicTopBar` component and integrate it into all public pages, replacing their individual headers. The topbar uses a mobile-first layout on all screen sizes.
 
-### 2. Rewrite `src/pages/LandingPage.tsx` — Navbar
-- Add `useState` for `mobileMenuOpen`
-- Replace the `<header>` inner content with:
-  - **Desktop/tablet**: Logo left, centre nav links (How it works / Features / Pricing), right actions (Give feedback green pill, Sign in solid blue, Request access with shimmer border wrap)
-  - **Mobile (<768px)**: Logo + Sign in button + hamburger icon (3 spans). Hamburger toggles a dropdown with all nav links, feedback, and Request access button
-- Centre links use `hidden md:flex`, right actions use `hidden md:flex`, mobile controls use `flex md:hidden`
+### New file: `src/components/PublicTopBar.tsx`
 
-### 3. Rewrite `src/pages/LandingPage.tsx` — Hero section
-Replace the entire `<section id="hero">` with:
-- **Early access badge** — green pill with pulse dot, `fade-up-1`
-- **Logo lockup** — `<RotaGenLogo size="lg" />`, `fade-up-2`
-- **Tagline** — three lines with `.shimmer-text-dark` on "ROTA" and `.shimmer-text-blue` on "GEN", `fade-up-3`
-- **Pricing card** — same content as current but with `fade-up-4`, rounded-2xl, early access badge, all three buttons preserved exactly
-- **Mock rota** — `fade-up-5 float-anim`, responsive sizing (`max-w-xs` on mobile, `max-w-lg` on md+), includes window chrome dots + "RotaGen — Final Rota · August 2025" title, grid table, and an SVG ECG polyline with `.ecg-draw` animation
-- Delete the old description paragraph (lines 193-195)
+A shared sticky topbar component that accepts an optional `menuItems` prop for page-specific links shown in the hamburger dropdown.
 
-### 4. No other sections changed
-How it works, Features, dark CTA, footer all remain untouched.
+**Layout (all screen sizes):**
+```text
+┌──────────────────────────────────────────────────┐
+│ [Logo+ROTAGEN]   [★] [Sign in] [Request access] [≡] │
+└──────────────────────────────────────────────────┘
+```
 
-### Files modified
-- `src/index.css` — append new animations
-- `src/pages/LandingPage.tsx` — navbar + hero rewrite
+- **Left**: RotaGenLogo (clickable → `/`), size "sm"
+- **Right group** (all inline, responsive sizing):
+  - Star icon button → `/feedback` (icon only, no text)
+  - "Sign in" button → `/login` (compact on small screens)
+  - "Request access" button → `/register` (compact on small screens)
+  - Hamburger menu (3-bar) → toggles dropdown
+- **Dropdown**: Shows page-specific `menuItems` passed as prop, plus default links (Home, Pricing, Privacy, Terms)
+- Sticky, white/blur background, shadow on scroll (same style as existing headers)
+- Hides "Sign in" button when current route is `/login`, hides "Request access" when on `/register`, hides star when on `/feedback`
 
-### No backend changes
+**Props interface:**
+```ts
+interface PublicTopBarProps {
+  menuItems?: { label: string; onClick: () => void }[];
+}
+```
+
+### Files modified (7 pages):
+
+1. **`src/pages/Login.tsx`** — Remove the existing Back button header and bottom tagline/footer section. Add `<PublicTopBar />` at the top. Remove the `ArrowLeft` import and the top header div. The page content (card) remains centered.
+
+2. **`src/pages/Register.tsx`** — Replace the inline logo/back-button header with `<PublicTopBar />`.
+
+3. **`src/pages/Pricing.tsx`** — Replace the entire `<header>` block with `<PublicTopBar menuItems={[...]} />`. Page-specific menu items: links to FAQ section, Features section on landing page.
+
+4. **`src/pages/Privacy.tsx`** — Replace the `<header>` block with `<PublicTopBar />`. Menu items: Terms of Use link.
+
+5. **`src/pages/Terms.tsx`** — Replace the `<header>` block with `<PublicTopBar />`. Menu items: Privacy Policy link.
+
+6. **`src/pages/Feedback.tsx`** — Replace the sticky top bar div with `<PublicTopBar />`.
+
+7. **`src/pages/Checkout.tsx`** — Add `<PublicTopBar />` above the existing content (currently has no topbar).
+
+### NOT changed:
+- **LandingPage.tsx** — Keeps its own header since it has scroll-to-section navigation specific to that page. The shared component is modeled after it but simplified.
+- **Approve.tsx** — Admin-facing token page, not a typical public page.
+- **ForgotPassword.tsx** — Will also get the topbar (8th page modified).
+
+### Technical details
+- The component uses `useLocation` to auto-hide contextually irrelevant buttons (e.g., no "Sign in" on login page)
+- Button sizes adapt via Tailwind responsive classes (`text-xs sm:text-sm`, `px-2.5 sm:px-3`) to fit all items on small screens
+- Hamburger dropdown uses the same pattern as LandingPage's mobile menu
 
