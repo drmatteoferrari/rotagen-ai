@@ -5,8 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
-import RotaGenLogo from "@/components/brand/RotaGenLogo";
-import RotaGenTagline from "@/components/brand/RotaGenTagline";
+import PublicTopBar from "@/components/PublicTopBar";
 
 export default function ForgotPassword() {
   const navigate = useNavigate();
@@ -35,57 +34,55 @@ export default function ForgotPassword() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-blue-100 p-4">
-      <div className="flex w-full max-w-[420px] flex-col items-center gap-6">
-        {/* Logo */}
-        <div className="flex flex-col items-center gap-2">
-          <RotaGenLogo size="md" variant="light" />
-          <RotaGenTagline variant="short" />
+    <div className="min-h-screen bg-blue-100">
+      <PublicTopBar />
+
+      <div className="flex justify-center px-4 py-16">
+        <div className="flex w-full max-w-[420px] flex-col items-center gap-6">
+          <Card className="w-full shadow-xl">
+            <CardContent className="p-6 pt-6">
+              <h2 className="mb-5 text-center text-lg font-semibold text-card-foreground">Reset your password</h2>
+
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="email">Email address</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="you@nhs.net"
+                    value={email}
+                    onChange={(e) => { setEmail(e.target.value); setError(null); }}
+                  />
+                </div>
+
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? "Sending…" : "Send reset link"}
+                </Button>
+              </form>
+
+              {success && (
+                <p className="mt-3 text-xs text-emerald-600 text-center">
+                  Check your email for a reset link.
+                </p>
+              )}
+              {error && (
+                <p className="mt-3 text-xs text-destructive text-center">{error}</p>
+              )}
+
+              <button
+                type="button"
+                onClick={() => navigate("/login")}
+                className="text-xs text-primary hover:underline w-full text-center mt-4 block"
+              >
+                Back to sign in
+              </button>
+            </CardContent>
+          </Card>
+
+          <p className="text-center text-xs text-muted-foreground">
+            RotaGen · NHS Rota Management · For authorised users only
+          </p>
         </div>
-
-        <Card className="w-full shadow-xl">
-          <CardContent className="p-6 pt-6">
-            <h2 className="mb-5 text-center text-lg font-semibold text-card-foreground">Reset your password</h2>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="email">Email address</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="you@nhs.net"
-                  value={email}
-                  onChange={(e) => { setEmail(e.target.value); setError(null); }}
-                />
-              </div>
-
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Sending…" : "Send reset link"}
-              </Button>
-            </form>
-
-            {success && (
-              <p className="mt-3 text-xs text-emerald-600 text-center">
-                Check your email for a reset link.
-              </p>
-            )}
-            {error && (
-              <p className="mt-3 text-xs text-destructive text-center">{error}</p>
-            )}
-
-            <button
-              type="button"
-              onClick={() => navigate("/login")}
-              className="text-xs text-primary hover:underline w-full text-center mt-4 block"
-            >
-              Back to sign in
-            </button>
-          </CardContent>
-        </Card>
-
-        <p className="text-center text-xs text-muted-foreground">
-          RotaGen · NHS Rota Management · For authorised users only
-        </p>
       </div>
     </div>
   );

@@ -164,21 +164,7 @@ export default function Feedback() {
 
   return (
     <div className="min-h-screen text-foreground" style={{ backgroundColor: '#f0fdf4' }}>
-      {/* Sticky top bar */}
-      <div className="sticky top-0 z-50 border-b border-border bg-white/95 backdrop-blur" style={{ height: 56 }}>
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
-          <button type="button" onClick={() => navigate("/")} className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-border bg-card text-xs font-black tracking-tighter text-primary shadow-sm">
-              RE
-            </div>
-            <span className="text-base font-bold text-foreground">RotaGen</span>
-          </button>
-          <button type="button" onClick={() => navigate("/")}
-            className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
-            ← Back
-          </button>
-        </div>
-      </div>
+      <PublicTopBar />
 
       {/* Content */}
       <div className="mx-auto max-w-2xl px-4 py-10 sm:px-6">

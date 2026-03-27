@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import RotaGenLogo from "@/components/brand/RotaGenLogo";
+import PublicTopBar from "@/components/PublicTopBar";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -56,16 +56,25 @@ export default function Register() {
           hospital: hospital.trim(),
           department: department.trim(),
           heard_from: heardFrom.trim() || null,
-          status: 'pending',
-        })
-        .select('approval_token')
+        } as any)
+        .select()
         .single() as any);
+
       if (dbError) throw dbError;
 
       try {
         await Promise.race([
           supabase.functions.invoke("send-registration-request", {
-            body: { fullName, email: email.trim(), phone: phone.trim(), jobTitle: jobTitle.trim(), hospital: hospital.trim(), department: department.trim(), heardFrom: heardFrom.trim(), approvalToken: reqData.approval_token },
+            body: {
+              fullName,
+              email: email.trim(),
+              phone: phone.trim(),
+              jobTitle: jobTitle.trim(),
+              hospital: hospital.trim(),
+              department: department.trim(),
+              heardFrom: heardFrom.trim() || null,
+              approvalToken: reqData?.approval_token,
+            },
           }),
           new Promise<void>((_, reject) =>
             setTimeout(() => reject(new Error("Email notification timed out")), 10000)
@@ -99,76 +108,74 @@ export default function Register() {
   );
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-blue-100 p-4">
-      <div className="flex w-full max-w-[420px] flex-col items-center gap-6">
-        {/* Logo */}
-        <div className="flex flex-col items-center gap-2">
-          <RotaGenLogo size="md" variant="light" />
-        </div>
+    <div className="min-h-screen bg-blue-100">
+      <PublicTopBar />
 
-        <Card className="w-full shadow-xl">
-          <CardContent className="p-6 pt-6">
-            {success ? (
-              <div className="text-center space-y-3 py-4">
-                <h2 className="text-lg font-semibold text-card-foreground">Request received</h2>
-                <p className="text-sm text-muted-foreground">
-                  Thank you — your request has been received. We'll review your details and be in touch at <strong className="text-foreground">{email}</strong> shortly.
-                </p>
-                <Button variant="outline" className="mt-4" onClick={() => navigate("/login")}>
-                  Back to sign in
-                </Button>
-              </div>
-            ) : (
-              <>
-                <h2 className="mb-5 text-center text-lg font-semibold text-card-foreground">Request access</h2>
-
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  {/* First name / Last name side by side */}
-                  <div className="grid grid-cols-2 gap-3">
-                    {renderField("firstName", "First name", firstName, setFirstName, { placeholder: "e.g. Jane" })}
-                    {renderField("lastName", "Last name", lastName, setLastName, { placeholder: "e.g. Smith" })}
-                  </div>
-
-                  {renderField("email", "Email address", email, setEmail, { placeholder: "you@nhs.net", type: "email" })}
-                  {renderField("phone", "Contact phone number", phone, setPhone, { placeholder: "07700 900000", type: "tel" })}
-                  {renderField("jobTitle", "Job title", jobTitle, setJobTitle, { placeholder: "e.g. Rota Coordinator, Clinical Lead, Consultant Anaesthetist" })}
-                  {renderField("hospital", "Hospital / Trust name", hospital, setHospital, { placeholder: "e.g. Royal Devon University Healthcare" })}
-                  {renderField("department", "Department name", department, setDepartment, { placeholder: "e.g. Anaesthetics" })}
-
-                  <div className="space-y-1.5">
-                    <Label htmlFor="heardFrom">How did you hear about RotaGen? <span className="text-muted-foreground">(optional)</span></Label>
-                    <Textarea
-                      id="heardFrom"
-                      placeholder="e.g. colleague recommendation, conference, social media"
-                      value={heardFrom}
-                      onChange={(e) => setHeardFrom(e.target.value)}
-                      rows={2}
-                    />
-                  </div>
-
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? "Submitting…" : "Submit request"}
+      <div className="flex justify-center px-4 py-8">
+        <div className="flex w-full max-w-[420px] flex-col items-center gap-6">
+          <Card className="w-full shadow-xl">
+            <CardContent className="p-6 pt-6">
+              {success ? (
+                <div className="text-center space-y-3 py-4">
+                  <h2 className="text-lg font-semibold text-card-foreground">Request received</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Thank you — your request has been received. We'll review your details and be in touch at <strong className="text-foreground">{email}</strong> shortly.
+                  </p>
+                  <Button variant="outline" className="mt-4" onClick={() => navigate("/login")}>
+                    Back to sign in
                   </Button>
-                </form>
+                </div>
+              ) : (
+                <>
+                  <h2 className="mb-5 text-center text-lg font-semibold text-card-foreground">Request access</h2>
 
-                {error && <p className="mt-3 text-xs text-destructive text-center">{error}</p>}
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      {renderField("firstName", "First name", firstName, setFirstName, { placeholder: "e.g. Jane" })}
+                      {renderField("lastName", "Last name", lastName, setLastName, { placeholder: "e.g. Smith" })}
+                    </div>
 
-                <button
-                  type="button"
-                  onClick={() => navigate("/login")}
-                  className="text-xs text-primary hover:underline w-full text-center mt-4 block"
-                >
-                  Already have an account? Sign in
-                </button>
-              </>
-            )}
-          </CardContent>
-        </Card>
+                    {renderField("email", "Email address", email, setEmail, { placeholder: "you@nhs.net", type: "email" })}
+                    {renderField("phone", "Contact phone number", phone, setPhone, { placeholder: "07700 900000", type: "tel" })}
+                    {renderField("jobTitle", "Job title", jobTitle, setJobTitle, { placeholder: "e.g. Rota Coordinator, Clinical Lead, Consultant Anaesthetist" })}
+                    {renderField("hospital", "Hospital / Trust name", hospital, setHospital, { placeholder: "e.g. Royal Devon University Healthcare" })}
+                    {renderField("department", "Department name", department, setDepartment, { placeholder: "e.g. Anaesthetics" })}
 
-        <p className="text-center text-xs text-muted-foreground">
-          RotaGen · NHS Rota Management · For authorised users only ·{" "}
-          <a href="/privacy" className="underline hover:text-foreground">Privacy Policy</a>
-        </p>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="heardFrom">How did you hear about RotaGen? <span className="text-muted-foreground">(optional)</span></Label>
+                      <Textarea
+                        id="heardFrom"
+                        placeholder="e.g. colleague recommendation, conference, social media"
+                        value={heardFrom}
+                        onChange={(e) => setHeardFrom(e.target.value)}
+                        rows={2}
+                      />
+                    </div>
+
+                    <Button type="submit" className="w-full" disabled={loading}>
+                      {loading ? "Submitting…" : "Submit request"}
+                    </Button>
+                  </form>
+
+                  {error && <p className="mt-3 text-xs text-destructive text-center">{error}</p>}
+
+                  <button
+                    type="button"
+                    onClick={() => navigate("/login")}
+                    className="text-xs text-primary hover:underline w-full text-center mt-4 block"
+                  >
+                    Already have an account? Sign in
+                  </button>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          <p className="text-center text-xs text-muted-foreground">
+            RotaGen · NHS Rota Management · For authorised users only ·{" "}
+            <a href="/privacy" className="underline hover:text-foreground">Privacy Policy</a>
+          </p>
+        </div>
       </div>
     </div>
   );
