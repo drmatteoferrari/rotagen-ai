@@ -1,9 +1,10 @@
-import { useEffect, useState, type MutableRefObject } from "react";
+import { type MutableRefObject } from "react";
 import { useNavigate } from "react-router-dom";
 import { Check } from "lucide-react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useScrollReveal } from "@/lib/useScrollReveal";
 import RotaGenLogo from "@/components/brand/RotaGenLogo";
+import PublicTopBar from "@/components/PublicTopBar";
 
 const trustSignals = ["No payment details", "No IT procurement", "Live within a week"];
 
@@ -57,19 +58,11 @@ const faqs = [
 
 export default function Pricing() {
   const navigate = useNavigate();
-  const [navShadow, setNavShadow] = useState(false);
 
   const accessRef = useScrollReveal() as MutableRefObject<HTMLDivElement | null>;
   const featuresRef = useScrollReveal() as MutableRefObject<HTMLDivElement | null>;
   const faqRef = useScrollReveal() as MutableRefObject<HTMLDivElement | null>;
   const ctaRef = useScrollReveal() as MutableRefObject<HTMLDivElement | null>;
-
-  useEffect(() => {
-    const handleScroll = () => setNavShadow(window.scrollY > 10);
-    handleScroll();
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
 
   const footerLinks = (
     <div className="mt-2 flex flex-wrap items-center justify-center gap-2 text-xs text-primary">
@@ -89,44 +82,12 @@ export default function Pricing() {
 
   return (
     <div className="min-h-screen bg-blue-100 text-foreground">
-      <header
-        className={`sticky top-0 z-50 border-b border-border bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 ${
-          navShadow ? "shadow-sm" : ""
-        }`}
-      >
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
-          <button type="button" onClick={() => navigate("/")} className="flex items-center gap-3">
-            <RotaGenLogo size="sm" />
-          </button>
-          <div className="flex items-center gap-3">
-            <div className="hidden items-center gap-5 md:flex">
-              <button type="button" onClick={() => navigate("/#how-it-works")} className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-                How it works
-              </button>
-              <button type="button" onClick={() => navigate("/#features")} className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-                Features
-              </button>
-              <button type="button" onClick={() => navigate("/pricing")} className="text-sm text-muted-foreground transition-colors hover:text-foreground">
-                Pricing
-              </button>
-            </div>
-            <button
-              type="button"
-              onClick={() => navigate("/login")}
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-            >
-              Sign in
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate("/register")}
-              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-all hover:scale-[1.02] hover:bg-primary/90 active:scale-[0.98]"
-            >
-              Request access
-            </button>
-          </div>
-        </div>
-      </header>
+      <PublicTopBar
+        menuItems={[
+          { label: "How it works", onClick: () => navigate("/#how-it-works") },
+          { label: "Features", onClick: () => navigate("/#features") },
+        ]}
+      />
 
       <main className="px-4 pb-16 pt-10 sm:px-6">
         <div className="mx-auto max-w-5xl">
@@ -136,89 +97,69 @@ export default function Pricing() {
             </div>
           </div>
 
-          <div className="space-y-8">
-            <div ref={accessRef} className="scroll-reveal-scale mx-auto w-full max-w-lg rounded-xl border-2 border-primary/20 bg-card p-7 shadow-xl">
-              <div className="inline-flex items-center gap-2 rounded-full bg-green-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-green-700">
-                <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                Early Access — Free
-              </div>
-              <h1 className="mt-5 text-2xl font-bold text-foreground">Free for founding departments</h1>
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                We're onboarding a small group of anaesthetic departments to test RotaGen and shape its development.
-              </p>
-              <p className="mt-3 text-sm text-muted-foreground">
-                No cost. No commitment. <span className="font-semibold text-foreground">Just your honest feedback.</span>
-              </p>
-              <button
-                type="button"
-                onClick={() => navigate("/register")}
-                className="mt-6 w-full rounded-md bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-all hover:scale-[1.02] hover:bg-primary/90 active:scale-[0.98]"
-              >
-                Request early access →
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate("/login")}
-                className="mt-3 w-full rounded-md border border-border bg-background px-6 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-accent"
-              >
-                Sign in to existing account
-              </button>
-              <div className="mt-6 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
-                {trustSignals.map((signal) => (
-                  <div key={signal} className="flex items-center gap-2">
-                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-green-100 text-green-700">
-                      <Check className="h-3 w-3" />
-                    </span>
-                    <span>{signal}</span>
-                  </div>
-                ))}
-              </div>
+          {/* Early Access Card */}
+          <div ref={accessRef} className="scroll-reveal mx-auto mb-12 max-w-2xl rounded-2xl border border-primary/20 bg-card p-8 shadow-xl">
+            <div className="mb-4 flex items-baseline gap-2">
+              <span className="text-4xl font-extrabold text-foreground">Free</span>
+              <span className="rounded-full bg-primary/10 px-3 py-0.5 text-xs font-bold text-primary">Early Access</span>
             </div>
+            <p className="mb-6 text-sm text-muted-foreground">
+              Full product access during the early access period — no payment details required. In exchange, we ask for honest feedback on what works and what doesn't.
+            </p>
+            <div className="mb-6 flex flex-wrap gap-3">
+              {trustSignals.map((t) => (
+                <span key={t} className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1 text-xs font-medium text-muted-foreground">
+                  <Check className="h-3 w-3 text-primary" />
+                  {t}
+                </span>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => navigate("/register")}
+              className="rounded-xl bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground transition-all hover:scale-[1.02] hover:bg-primary/90 active:scale-[0.98]"
+            >
+              Request early access →
+            </button>
+          </div>
 
-            <div ref={featuresRef} className="scroll-reveal mx-auto w-full max-w-lg rounded-xl border border-border bg-card p-7 shadow-xl">
-              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">What's included</p>
-              <div className="mt-5 space-y-4">
-                {includedFeatures.map((feature, index) => (
-                  <div key={feature} className={`flex items-start gap-3 text-sm text-foreground ${["delay-100", "delay-200", "delay-300", "delay-400"][index % 4]}`}>
-                    <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-100 text-green-700">
-                      <Check className="h-3 w-3" />
-                    </span>
-                    <span className="leading-relaxed">{feature}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+          {/* What's included */}
+          <div ref={featuresRef} className="scroll-reveal mx-auto mb-12 max-w-2xl">
+            <h2 className="mb-6 text-xl font-bold">What's included</h2>
+            <ul className="space-y-3">
+              {includedFeatures.map((f) => (
+                <li key={f} className="flex items-start gap-3 rounded-lg bg-card px-4 py-3 text-sm text-muted-foreground shadow-sm">
+                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                  {f}
+                </li>
+              ))}
+            </ul>
+          </div>
 
-            <div ref={faqRef} className="scroll-reveal mx-auto w-full max-w-lg rounded-xl border border-border bg-card p-7 shadow-xl">
-              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">Frequently asked questions</p>
-              <Accordion type="single" collapsible className="mt-4 w-full">
-                {faqs.map((faq, index) => (
-                  <AccordionItem key={faq.question} value={`item-${index + 1}`}>
-                    <AccordionTrigger className="text-left text-sm text-foreground hover:no-underline">
-                      {faq.question}
-                    </AccordionTrigger>
-                    <AccordionContent className="text-sm leading-relaxed text-muted-foreground">
-                      {faq.answer}
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
-            </div>
+          {/* FAQ */}
+          <div ref={faqRef} className="scroll-reveal mx-auto mb-12 max-w-2xl">
+            <h2 className="mb-6 text-xl font-bold">Frequently asked questions</h2>
+            <Accordion type="single" collapsible className="space-y-2">
+              {faqs.map((faq, i) => (
+                <AccordionItem key={i} value={`faq-${i}`} className="rounded-lg border border-border bg-card px-4 shadow-sm">
+                  <AccordionTrigger className="py-3 text-sm font-medium hover:no-underline">{faq.question}</AccordionTrigger>
+                  <AccordionContent className="pb-3 text-sm text-muted-foreground">{faq.answer}</AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </div>
 
-            <div ref={ctaRef} className="scroll-reveal mx-auto w-full max-w-lg rounded-xl bg-slate-800 p-8 text-center">
-              <h2 className="text-xl font-bold text-white">Stop losing days to the rota.</h2>
-              <p className="mt-3 text-sm text-blue-300">
-                Join the first departments using RotaGen — free access in exchange for your feedback.
-              </p>
-              <button
-                type="button"
-                onClick={() => navigate("/checkout")}
-                className="mt-6 w-full rounded-md bg-primary px-6 py-3 text-sm font-semibold text-white transition-all hover:scale-[1.02] hover:bg-primary/90 active:scale-[0.98]"
-              >
-                View pricing plans →
-              </button>
-              <p className="mt-3 text-xs text-blue-400">No payment details · No procurement · Cancel anytime</p>
-            </div>
+          {/* Bottom CTA */}
+          <div ref={ctaRef} className="scroll-reveal mx-auto max-w-lg rounded-2xl border border-primary/20 bg-card p-6 text-center shadow-xl">
+            <p className="mb-3 text-lg font-bold">Ready to try RotaGen?</p>
+            <p className="mb-5 text-sm text-muted-foreground">No payment details required — get started in minutes.</p>
+            <button
+              type="button"
+              onClick={() => navigate("/register")}
+              className="rounded-xl bg-primary px-8 py-3 text-sm font-semibold text-primary-foreground transition-all hover:scale-[1.02] hover:bg-primary/90 active:scale-[0.98]"
+            >
+              Request early access →
+            </button>
           </div>
         </div>
       </main>

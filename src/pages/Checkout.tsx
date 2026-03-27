@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Check, AlertCircle } from "lucide-react";
+import PublicTopBar from "@/components/PublicTopBar";
 
 export default function Checkout() {
   const navigate = useNavigate();
@@ -12,16 +13,11 @@ export default function Checkout() {
   const cancelled = searchParams.get("cancelled") === "true";
 
   return (
-    <div className="min-h-screen bg-blue-100 py-12 px-4">
-      <div className="mx-auto max-w-4xl">
+    <div className="min-h-screen bg-blue-100">
+      <PublicTopBar />
+      <div className="mx-auto max-w-4xl px-4 py-12">
         {/* Header */}
         <div className="text-center mb-10 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="flex items-center justify-center gap-2 mb-3">
-            <div className="h-8 w-8 rounded-xl bg-card border border-border shadow-sm flex items-center justify-center">
-              <span className="text-primary text-xs font-black tracking-tighter">RE</span>
-            </div>
-            <span className="text-base font-bold text-foreground">RotaGen</span>
-          </div>
           <h1 className="text-3xl md:text-4xl font-extrabold text-foreground tracking-tight mb-2">Choose your plan</h1>
           <p className="text-muted-foreground text-sm">Simple, transparent pricing for NHS anaesthetic departments.</p>
         </div>

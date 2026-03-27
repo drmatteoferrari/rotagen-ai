@@ -2,14 +2,14 @@ import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Eye, EyeOff, Code, ArrowLeft } from "lucide-react";
+import { Eye, EyeOff, Code } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import RotaGenIcon from "@/components/brand/RotaGenIcon";
 import RotaGenLogo from "@/components/brand/RotaGenLogo";
-import RotaGenTagline from "@/components/brand/RotaGenTagline";
+import PublicTopBar from "@/components/PublicTopBar";
 
 export default function Login() {
   const { login, isAuthenticated, user } = useAuth();
@@ -89,181 +89,149 @@ export default function Login() {
         </div>
       )}
 
-      {/* Main container: h-screen and overflow-hidden ensures no scrolling. bg-blue-100 matches landing page hero. */}
-      <div className="relative flex h-screen w-full flex-col items-center justify-between overflow-hidden bg-blue-100 p-4 md:p-8 pb-12">
-        {/* Top Header: Simple Back button to avoid hitting the logo */}
-        <div className="flex w-full max-w-6xl items-center justify-start pt-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="flex items-center gap-1 text-muted-foreground hover:text-foreground"
-            onClick={() => navigate(-1)}
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Back</span>
-          </Button>
-        </div>
+      <div className="relative flex min-h-screen w-full flex-col bg-blue-100">
+        <PublicTopBar />
 
-        {/* Center Section: Branding (Bigger) + Login Box (Moved Up) */}
-        <div className="flex w-full max-w-[420px] flex-col items-center gap-2 -mt-12">
-          <div className="flex flex-col items-center gap-2 text-center animate-fadeSlideUp">
-            <button onClick={() => navigate("/")} className="mb-2 group transition-transform active:scale-95">
-              <div className="flex items-center gap-3">
-                {/* Logo size increased to 64 */}
-                <RotaGenIcon size={64} variant="light" />
-                {/* Text size increased to 36px */}
-                <span className="font-['Poppins'] font-bold text-[36px] flex tracking-tight">
-                  <span className="shimmer-text-dark">ROTA</span>
-                  <span className="shimmer-text">GEN</span>
-                </span>
-              </div>
-            </button>
-            <h2 className="text-lg font-semibold text-foreground/90">Welcome back</h2>
-          </div>
-
-          <Card className="w-full border-none shadow-2xl shadow-blue-200/50">
-            <CardContent className="p-5 pt-6 pb-4">
-              <form onSubmit={handleSubmit} className="space-y-3.5">
-                <div className="space-y-1.5">
-                  <Label
-                    htmlFor="identifier"
-                    className="text-xs font-medium uppercase tracking-wider text-muted-foreground"
-                  >
-                    Email or username
-                  </Label>
-                  <Input
-                    ref={identifierRef}
-                    id="identifier"
-                    type="text"
-                    placeholder="Email or username"
-                    value={identifier}
-                    onChange={(e) => {
-                      setIdentifier(e.target.value);
-                      setError(null);
-                    }}
-                    className="h-10 bg-slate-50/50"
-                  />
+        {/* Center Section */}
+        <div className="flex flex-1 flex-col items-center justify-center px-4 py-8">
+          <div className="flex w-full max-w-[420px] flex-col items-center gap-2">
+            <div className="flex flex-col items-center gap-2 text-center animate-fadeSlideUp">
+              <button onClick={() => navigate("/")} className="mb-2 group transition-transform active:scale-95">
+                <div className="flex items-center gap-3">
+                  <RotaGenIcon size={64} variant="light" />
+                  <span className="font-['Poppins'] font-bold text-[36px] flex tracking-tight">
+                    <span className="shimmer-text-dark">ROTA</span>
+                    <span className="shimmer-text">GEN</span>
+                  </span>
                 </div>
+              </button>
+              <h2 className="text-lg font-semibold text-foreground/90">Welcome back</h2>
+            </div>
 
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
+            <Card className="w-full border-none shadow-2xl shadow-blue-200/50">
+              <CardContent className="p-5 pt-6 pb-4">
+                <form onSubmit={handleSubmit} className="space-y-3.5">
+                  <div className="space-y-1.5">
                     <Label
-                      htmlFor="password"
-                      title="password"
+                      htmlFor="identifier"
                       className="text-xs font-medium uppercase tracking-wider text-muted-foreground"
                     >
-                      Password
+                      Email or username
                     </Label>
-                    <button
-                      type="button"
-                      onClick={() => navigate("/forgot-password")}
-                      className="text-[11px] font-medium text-primary hover:underline"
-                    >
-                      Forgot?
-                    </button>
-                  </div>
-                  <div className="relative">
                     <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="••••••••"
-                      value={password}
+                      ref={identifierRef}
+                      id="identifier"
+                      type="text"
+                      placeholder="Email or username"
+                      value={identifier}
                       onChange={(e) => {
-                        setPassword(e.target.value);
+                        setIdentifier(e.target.value);
                         setError(null);
                       }}
-                      className="h-10 pr-10 bg-slate-50/50"
+                      className="h-10 bg-slate-50/50"
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                      tabIndex={-1}
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </button>
                   </div>
+
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label
+                        htmlFor="password"
+                        title="password"
+                        className="text-xs font-medium uppercase tracking-wider text-muted-foreground"
+                      >
+                        Password
+                      </Label>
+                      <button
+                        type="button"
+                        onClick={() => navigate("/forgot-password")}
+                        className="text-[11px] font-medium text-primary hover:underline"
+                      >
+                        Forgot?
+                      </button>
+                    </div>
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        placeholder="••••••••"
+                        value={password}
+                        onChange={(e) => {
+                          setPassword(e.target.value);
+                          setError(null);
+                        }}
+                        className="h-10 pr-10 bg-slate-50/50"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                        tabIndex={-1}
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  {error && (
+                    <p className="text-[12px] font-medium text-destructive text-center animate-in fade-in zoom-in-95 duration-200">
+                      {error}
+                    </p>
+                  )}
+
+                  <Button
+                    type="submit"
+                    className="w-full h-10 text-sm font-semibold shadow-lg shadow-primary/20"
+                    disabled={loading}
+                  >
+                    {loading ? "Signing in…" : "Sign in"}
+                  </Button>
+                </form>
+
+                <div className="my-3.5 flex items-center gap-3">
+                  <div className="h-px flex-1 bg-slate-100" />
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">or</span>
+                  <div className="h-px flex-1 bg-slate-100" />
                 </div>
 
-                {error && (
-                  <p className="text-[12px] font-medium text-destructive text-center animate-in fade-in zoom-in-95 duration-200">
-                    {error}
-                  </p>
-                )}
-
                 <Button
-                  type="submit"
-                  className="w-full h-10 text-sm font-semibold shadow-lg shadow-primary/20"
+                  type="button"
+                  variant="outline"
+                  className="w-full h-10 border-slate-200 text-sm font-medium hover:bg-slate-50"
+                  onClick={() => navigate("/signup")}
                   disabled={loading}
                 >
-                  {loading ? "Signing in…" : "Sign in"}
+                  Request access
                 </Button>
-              </form>
 
-              <div className="my-3.5 flex items-center gap-3">
-                <div className="h-px flex-1 bg-slate-100" />
-                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">or</span>
-                <div className="h-px flex-1 bg-slate-100" />
-              </div>
-
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full h-10 border-slate-200 text-sm font-medium hover:bg-slate-50"
-                onClick={() => navigate("/signup")}
-                disabled={loading}
-              >
-                Request access
-              </Button>
-
-              <button
-                type="button"
-                onClick={async () => {
-                  setLoading(true);
-                  const result = await login("matteferro31@gmail.com", "matteferro31");
-                  if (result.success) setShowSplash(true);
-                  else {
-                    setError(result.error ?? "Dev login failed");
-                    setLoading(false);
-                  }
-                }}
-                className="mt-3.5 w-full flex items-center justify-center gap-1.5 text-[10px] font-medium text-muted-foreground/60 hover:text-primary transition-colors"
-              >
-                <Code className="h-3 w-3" />
-                Quick login (Dev)
-              </button>
-            </CardContent>
-          </Card>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setLoading(true);
+                    const result = await login("matteferro31@gmail.com", "matteferro31");
+                    if (result.success) setShowSplash(true);
+                    else {
+                      setError(result.error ?? "Dev login failed");
+                      setLoading(false);
+                    }
+                  }}
+                  className="mt-3.5 w-full flex items-center justify-center gap-1.5 text-[10px] font-medium text-muted-foreground/60 hover:text-primary transition-colors"
+                >
+                  <Code className="h-3 w-3" />
+                  Quick login (Dev)
+                </button>
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
-        {/* Bottom Section: Tagline + Footer links */}
-        <div className="flex w-full flex-col items-center gap-3">
-          <div className="animate-fadeSlideUp">
-            <RotaGenTagline variant="short" />
-          </div>
-
-          <div className="flex flex-col items-center gap-1.5 text-center">
-            <div className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground/80">
-              <span>RotaGen</span>
-              <span className="h-1 w-1 rounded-full bg-slate-300" />
-              <span>NHS Rota Management</span>
-              <span className="h-1 w-1 rounded-full bg-slate-300" />
-              <span className="text-destructive/70 italic">Authorised users only</span>
-            </div>
-            <div className="flex items-center gap-3 text-[11px]">
-              <a
-                href="/privacy"
-                className="font-semibold text-slate-500 hover:text-primary transition-colors underline decoration-slate-300 underline-offset-2"
-              >
-                Privacy Policy
-              </a>
-              <a
-                href="/terms"
-                className="font-semibold text-slate-500 hover:text-primary transition-colors underline decoration-slate-300 underline-offset-2"
-              >
-                Terms of Service
-              </a>
-            </div>
+        {/* Footer */}
+        <div className="flex flex-col items-center gap-1.5 pb-6 text-center">
+          <div className="flex items-center gap-1 text-[11px] font-medium text-muted-foreground/80">
+            <span>RotaGen</span>
+            <span className="h-1 w-1 rounded-full bg-slate-300" />
+            <span>NHS Rota Management</span>
+            <span className="h-1 w-1 rounded-full bg-slate-300" />
+            <span className="text-destructive/70 italic">Authorised users only</span>
           </div>
         </div>
       </div>
