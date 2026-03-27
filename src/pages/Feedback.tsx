@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabasePublic } from "@/integrations/supabase/publicClient";
 import { Loader2, Star, BarChart3, Users, MessageSquare, User, Phone } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import PublicTopBar from "@/components/PublicTopBar";
 
 type RotaCreator = 'consultant' | 'resident' | 'secretary' | 'med_staffing' | 'other';
 
