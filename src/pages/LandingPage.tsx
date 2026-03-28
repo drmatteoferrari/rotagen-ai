@@ -86,30 +86,25 @@ export default function LandingPage() {
       />
 
       <main>
-        <section id="hero" className="flex min-h-screen items-center bg-blue-100 px-6 py-16">
+        {/* Compressed py-16 to py-6 and removed items-center to move content up */}
+        <section id="hero" className="flex flex-col bg-blue-100 px-6 py-6 md:py-10">
           <div className="mx-auto w-full max-w-6xl text-center">
-            {/* Early access badge */}
-            <div className="fade-up-1 flex justify-center">
-              <div className="inline-flex items-center gap-2 rounded-full bg-green-100 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-green-700 border border-green-200">
-                <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                Early Access — Now Open
-              </div>
-            </div>
+            {/* 1. REMOVED: Early access badge div */}
 
-            {/* Logo lockup */}
-            <div className="fade-up-2 flex justify-center mt-6">
+            {/* 2. Logo lockup - Moved up by reducing mt-6 to mt-2 */}
+            <div className="fade-up-2 flex justify-center mt-2">
               <RotaGenLogo size="lg" />
             </div>
 
-            {/* Tagline */}
-            <div className="fade-up-3 mt-6 text-lg md:text-xl">
-              <p className="text-muted-foreground" style={{ lineHeight: 1.9 }}>
+            {/* 3. Tagline - Squeezed mt-6 to mt-3 and reduced lineHeight from 1.9 to 1.4 */}
+            <div className="fade-up-3 mt-3 text-lg md:text-xl">
+              <p className="text-muted-foreground" style={{ lineHeight: 1.4 }}>
                 Your doctors' preferences.
               </p>
-              <p className="text-muted-foreground" style={{ lineHeight: 1.9 }}>
+              <p className="text-muted-foreground" style={{ lineHeight: 1.4 }}>
                 Your department's rules.
               </p>
-              <p style={{ lineHeight: 1.9 }}>
+              <p style={{ lineHeight: 1.4 }}>
                 One{" "}
                 <span className="shimmer-text-dark" style={{ fontFamily: "Poppins, sans-serif", fontWeight: 700 }}>
                   ROTA
@@ -122,10 +117,10 @@ export default function LandingPage() {
               </p>
             </div>
 
-            {/* Pricing card */}
+            {/* 4. Pricing card - Squeezed mt-8 to mt-4 and padding p-8 to p-5 */}
             <div
               ref={pricingRef}
-              className="fade-up-4 mx-auto mt-8 max-w-md rounded-2xl border-2 border-primary/20 bg-card p-8 text-center shadow-lg"
+              className="fade-up-4 mx-auto mt-4 max-w-md rounded-2xl border-2 border-primary/20 bg-card p-5 text-center shadow-lg"
             >
               <div className="inline-block rounded-full p-[2px] pricing-badge-shimmer">
                 <div className="inline-flex items-center gap-2 rounded-full bg-green-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-green-700">
@@ -134,8 +129,8 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              <h3 className="mt-5 text-2xl font-bold text-foreground">Free for founding departments</h3>
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+              <h3 className="mt-4 text-xl font-bold text-foreground">Free for founding departments</h3>
+              <p className="mt-2 text-sm leading-snug text-muted-foreground">
                 We're onboarding a small group of anaesthetic departments to test RotaGen. No cost, no commitment — just
                 your honest feedback.
               </p>
@@ -143,7 +138,7 @@ export default function LandingPage() {
               <button
                 type="button"
                 onClick={() => navigate("/register")}
-                className="mt-6 w-full rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-all hover:scale-[1.02] hover:bg-primary/90 active:scale-[0.98]"
+                className="mt-5 w-full rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground transition-all hover:scale-[1.02] hover:bg-primary/90 active:scale-[0.98]"
               >
                 Request early access →
               </button>
@@ -152,18 +147,18 @@ export default function LandingPage() {
                 <button
                   type="button"
                   onClick={() => navigate("/pricing")}
-                  className="w-full rounded-[9px] bg-primary px-6 py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90"
+                  className="w-full rounded-[9px] bg-primary px-6 py-2 text-sm font-semibold text-white transition-all hover:opacity-90"
                 >
                   Full pricing details →
                 </button>
               </div>
 
-              <div className="mt-4 border-t border-border pt-4">
-                <p className="text-xs font-semibold text-muted-foreground mb-2">Already using RotaGen?</p>
+              <div className="mt-4 border-t border-border pt-3">
+                <p className="text-xs font-semibold text-muted-foreground mb-1.5">Already using RotaGen?</p>
                 <button
                   type="button"
                   onClick={() => navigate("/feedback")}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white transition-all hover:opacity-90"
                   style={{ backgroundColor: "#16A34A" }}
                 >
                   <span className="flex h-5 w-5 items-center justify-center rounded-md bg-white/20">
@@ -174,8 +169,8 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* Mock rota */}
-            <div className="fade-up-5 float-anim mx-auto mt-12 max-w-xs md:max-w-lg overflow-hidden rounded-xl border border-border bg-card shadow-2xl">
+            {/* Mock rota - Reduced mt-12 to mt-8 to keep verticality tight */}
+            <div className="fade-up-5 float-anim mx-auto mt-8 max-w-xs md:max-w-lg overflow-hidden rounded-xl border border-border bg-card shadow-2xl">
               <div className="flex h-8 items-center gap-2 bg-slate-800 px-4">
                 <span className="h-3 w-3 rounded-full bg-red-400" />
                 <span className="h-3 w-3 rounded-full bg-amber-400" />
