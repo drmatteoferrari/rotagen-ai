@@ -881,6 +881,18 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
     return docs;
   }, [calendarData, searchQuery, sortConfig]);
 
+  const currentDateForSync = allDates[currentDayIndex] ?? allDates[0] ?? "";
+
+  // Keep unmanaged date inputs in sync without changing hook order across renders
+  useEffect(() => {
+    if (dateInputDesktopRef.current && dateInputDesktopRef.current.value !== currentDateForSync) {
+      dateInputDesktopRef.current.value = currentDateForSync;
+    }
+    if (dateInputMobileRef.current && dateInputMobileRef.current.value !== currentDateForSync) {
+      dateInputMobileRef.current.value = currentDateForSync;
+    }
+  }, [currentDateForSync]);
+
   const Wrapper = embedded
     ? ({ children }: { children: React.ReactNode }) => <>{children}</>
     : ({ children }: { children: React.ReactNode }) => (
@@ -924,16 +936,6 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
   const { weeks, doctors } = calendarData;
   const currentWeek = weeks[currentWeekIndex];
   const currentDate = allDates[currentDayIndex] ?? allDates[0];
-
-  // Sync unmanaged date inputs securely safely inside an effect to prevent rendering loops
-  useEffect(() => {
-    if (dateInputDesktopRef.current && dateInputDesktopRef.current.value !== currentDate) {
-      dateInputDesktopRef.current.value = currentDate;
-    }
-    if (dateInputMobileRef.current && dateInputMobileRef.current.value !== currentDate) {
-      dateInputMobileRef.current.value = currentDate;
-    }
-  }, [currentDate]);
 
   const weekLabel = currentWeek
     ? `Wk ${currentWeek.weekNumber} · ${new Date(currentWeek.dates[0] + "T00:00:00").toLocaleDateString("en-GB", {
