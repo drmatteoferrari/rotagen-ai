@@ -42,48 +42,47 @@ export default function PublicTopBar({ menuItems = [] }: PublicTopBarProps) {
       >
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-3 sm:px-6">
           {/* Left: Logo */}
-          <button
-            type="button"
-            onClick={() => navigate("/")}
-            className="flex items-center gap-2 shrink-0"
-          >
+          <button type="button" onClick={() => navigate("/")} className="flex items-center gap-2 shrink-0">
             <RotaGenLogo size="sm" />
           </button>
 
           {/* Right: action buttons + hamburger */}
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            {/* Feedback star */}
+          <div className="flex items-center gap-1.5 sm:gap-3">
+            {/* 1 & 2: Feedback - Accent Green, Responsive Label */}
             {!isFeedback && (
               <button
                 type="button"
                 onClick={() => navigate("/feedback")}
-                className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 transition-colors"
                 title="Give feedback"
               >
                 <Star className="h-4 w-4" />
+                <span className="hidden sm:inline text-sm font-semibold">Feedback</span>
               </button>
             )}
 
-            {/* Sign in */}
+            {/* 3: Sign in - Accent Blue */}
             {!isLogin && (
               <button
                 type="button"
                 onClick={() => navigate("/login")}
-                className="shrink-0 rounded-md px-2.5 py-1.5 text-xs sm:text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                className="shrink-0 rounded-lg px-3 py-1.5 text-sm font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors"
               >
                 Sign in
               </button>
             )}
 
-            {/* Request access */}
+            {/* 4: Request access - Accent Blue with Thick Shimmer Outline */}
             {!isRegister && (
-              <button
-                type="button"
-                onClick={() => navigate("/register")}
-                className="shrink-0 rounded-md bg-primary px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98]"
-              >
-                Request access
-              </button>
+              <div className="nav-cta-shimmer-wrap">
+                <button
+                  type="button"
+                  onClick={() => navigate("/register")}
+                  className="block shrink-0 rounded-[8px] bg-blue-600 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-semibold text-white transition-all hover:bg-blue-700 active:scale-[0.98] whitespace-nowrap"
+                >
+                  Request access
+                </button>
+              </div>
             )}
 
             {/* Hamburger */}
