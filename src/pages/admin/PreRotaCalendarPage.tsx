@@ -418,6 +418,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
   });
 
   const lastTapRef = useRef<{ doctorId: string; date: string; time: number } | null>(null);
+  const singleTapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
   const navRef = useRef<{ goPrev: () => void; goNext: () => void }>({
