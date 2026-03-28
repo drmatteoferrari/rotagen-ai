@@ -418,6 +418,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
   });
 
   const lastTapRef = useRef<{ doctorId: string; date: string; time: number } | null>(null);
+  const singleTapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
   const navRef = useRef<{ goPrev: () => void; goNext: () => void }>({
@@ -817,27 +818,37 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
     }
   };
 
+  const handleDoubleTap = useCallback((doctorId: string, date: string) => {
+    if (singleTapTimerRef.current) clearTimeout(singleTapTimerRef.current);
+    lastTapRef.current = null;
+    setPanelOpen(false);
+    setSelectedCell(null);
+    navigate(`/admin/doctor-calendar/${doctorId}?date=${date}&view=day`);
+  }, [navigate]);
+
   const handleCellTap = (doctorId: string, date: string) => {
     const now = Date.now();
     const last = lastTapRef.current;
 
-    // Check if double-tap happened
+    // Double-tap detected
     if (last && last.doctorId === doctorId && last.date === date && now - last.time < 500) {
-      lastTapRef.current = null;
-      navigate(`/admin/doctor-calendar/${doctorId}?date=${date}&view=day`);
+      handleDoubleTap(doctorId, date);
       return;
     }
 
     lastTapRef.current = { doctorId, date, time: now };
 
-    if (selectedCell?.doctorId === doctorId && selectedCell?.date === date && panelOpen) {
-      setPanelOpen(false);
-      setSelectedCell(null);
-    } else {
-      setSelectedCell({ doctorId, date });
-      setPanelOpen(true);
-      setModalOpen(false);
-    }
+    if (singleTapTimerRef.current) clearTimeout(singleTapTimerRef.current);
+    singleTapTimerRef.current = setTimeout(() => {
+      if (selectedCell?.doctorId === doctorId && selectedCell?.date === date && panelOpen) {
+        setPanelOpen(false);
+        setSelectedCell(null);
+      } else {
+        setSelectedCell({ doctorId, date });
+        setPanelOpen(true);
+        setModalOpen(false);
+      }
+    }, 200);
   };
 
   const allDates = useMemo(() => calendarData?.weeks.flatMap((w) => w.dates) ?? [], [calendarData]);
@@ -1091,6 +1102,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
       <div
         key={doctor.doctorId}
         onClick={() => handleCellTap(doctor.doctorId, currentDate)}
+        onDoubleClick={() => handleDoubleTap(doctor.doctorId, currentDate)}
         className={`flex flex-row items-center justify-between px-2 py-1.5 rounded-md border border-border/50 cursor-pointer transition-colors hover:bg-muted/50 ${
           isSelected ? "bg-blue-50 ring-2 ring-inset ring-blue-500 z-10 relative" : cellBg
         } ${isUnavailable ? "opacity-70 grayscale-[20%]" : ""}`}
@@ -1168,6 +1180,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
             <td
               key={date}
               onClick={() => handleCellTap(doctor.doctorId, date)}
+              onDoubleClick={() => handleDoubleTap(doctor.doctorId, date)}
               className={`border-l border-border/50 p-0.5 text-center align-middle cursor-pointer transition-colors hover:bg-muted/50 ${cellBg} ${
                 isSelected ? "ring-2 ring-inset ring-blue-500 z-10 relative" : ""
               }`}
@@ -1216,6 +1229,9 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
               key={`${doctor.doctorId}-${idx}`}
               onClick={() => {
                 if (inRota && inMonth) handleCellTap(doctor.doctorId, date);
+              }}
+              onDoubleClick={() => {
+                if (inRota && inMonth) handleDoubleTap(doctor.doctorId, date);
               }}
               className={`border-l border-border/50 p-0 sm:p-0.5 text-center cursor-default h-6 sm:h-8 ${bg} ${
                 !inRota || !inMonth ? "opacity-20" : inRota && inMonth ? "cursor-pointer hover:bg-muted/50" : ""
