@@ -41,27 +41,27 @@ export default function PublicTopBar({ menuItems = [] }: PublicTopBarProps) {
         }`}
       >
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-3 sm:px-6">
-          {/* Left: Logo - shrink-0 prevents it from being squashed by buttons */}
-          <button type="button" onClick={() => navigate("/")} className="flex items-center gap-2 shrink-0">
+          {/* Left: Logo - Protected with shrink-0 to prevent squashing on narrow screens */}
+          <button type="button" onClick={() => navigate("/")} className="flex items-center gap-2 shrink-0 min-w-0">
             <RotaGenLogo size="sm" />
           </button>
 
-          {/* Right: action buttons + hamburger - Tighter gap on mobile */}
+          {/* Right: Action buttons + hamburger - Optimized with tight gap-1 for mobile */}
           <div className="flex items-center gap-1 sm:gap-3">
-            {/* Feedback: Accent Green. Star only on mobile, Star+Text on md+ screens */}
+            {/* 1 & 2: Feedback - Accent Green. Responsive: Icon only on mobile, Icon+Text on tablet/desktop */}
             {!isFeedback && (
               <button
                 type="button"
                 onClick={() => navigate("/feedback")}
-                className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-green-700 bg-green-50 border border-green-200 transition-colors hover:bg-green-100"
+                className="flex items-center gap-1 px-1.5 py-1.5 sm:px-2.5 sm:py-1.5 rounded-lg bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 transition-colors"
                 title="Give feedback"
               >
                 <Star className="h-4 w-4 fill-green-700/20" />
-                <span className="hidden md:inline text-sm font-semibold">Feedback</span>
+                <span className="hidden sm:inline text-sm font-semibold">Feedback</span>
               </button>
             )}
 
-            {/* Sign in: Accent Blue, smaller padding/font on mobile */}
+            {/* 3: Sign in - Accent Blue, smaller on mobile */}
             {!isLogin && (
               <button
                 type="button"
@@ -72,7 +72,7 @@ export default function PublicTopBar({ menuItems = [] }: PublicTopBarProps) {
               </button>
             )}
 
-            {/* Request access: Accent Blue with Thick Shimmer Outline */}
+            {/* 4: Request access - Accent Blue + Thick Shimmer Outline effect */}
             {!isRegister && (
               <div className="nav-cta-shimmer-wrap">
                 <button
@@ -85,18 +85,18 @@ export default function PublicTopBar({ menuItems = [] }: PublicTopBarProps) {
               </div>
             )}
 
-            {/* Hamburger: sized for consistency */}
+            {/* Hamburger - Sized for space efficiency on mobile */}
             <button
               type="button"
               onClick={() => setMenuOpen(!menuOpen)}
-              className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
             >
               {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
           </div>
         </div>
 
-        {/* Dropdown menu */}
+        {/* Dropdown menu - Restored logic to ensure functionality isn't lost */}
         {menuOpen && (
           <div className="border-t border-border bg-white px-4 pb-3 pt-2">
             <nav className="flex flex-col gap-1">
