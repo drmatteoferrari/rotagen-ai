@@ -88,14 +88,14 @@ export default function LandingPage() {
       <main>
         {/* Compressed padding for mobile to keep everything above the fold */}
         <section id="hero" className="flex flex-col bg-blue-100 px-4 py-5 md:px-6 md:py-10 lg:py-16">
-          {/* Max-w-5xl pulls columns closer together. Grid handles the flow. */}
-          <div className="mx-auto w-full max-w-5xl grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-3 md:gap-y-6 items-center justify-items-center">
+          {/* max-w-[850px] forces the columns closer together and perfectly centers the block on desktop */}
+          <div className="mx-auto w-full max-w-[850px] grid grid-cols-1 lg:grid-cols-2 gap-x-6 lg:gap-x-12 gap-y-3 md:gap-y-6 lg:gap-y-8 items-center justify-items-center">
             {/* 1. Logo & Tagline (Order 1 on mobile, Col 1 Row 1 on desktop) */}
             <div className="order-1 lg:order-1 flex flex-col items-center text-center w-full max-w-sm">
               <div className="fade-up-1 flex justify-center">
                 <RotaGenLogo size="lg" />
               </div>
-              <div className="fade-up-2 mt-2 md:mt-4 text-base md:text-xl">
+              <div className="fade-up-2 mt-2 md:mt-4 text-base md:text-xl text-center">
                 <p className="text-muted-foreground" style={{ lineHeight: 1.3 }}>
                   Your doctors' preferences.
                 </p>
@@ -174,7 +174,7 @@ export default function LandingPage() {
             </div>
 
             {/* 4. Mock Rota (Order 4 on mobile, Col 1 Row 2 on desktop) */}
-            <div className="order-4 lg:order-3 fade-up-3 float-anim w-full max-w-xs md:max-w-sm overflow-hidden rounded-xl border border-border bg-card shadow-2xl mt-2 lg:mt-0">
+            <div className="order-4 lg:order-3 fade-up-3 float-anim w-full max-w-xs md:max-w-sm overflow-hidden rounded-xl border border-border bg-card shadow-2xl mt-2 lg:mt-0 mx-auto">
               <div className="flex h-6 md:h-8 items-center gap-1.5 md:gap-2 bg-slate-800 px-3 md:px-4">
                 <span className="h-2 w-2 md:h-3 md:w-3 rounded-full bg-red-400" />
                 <span className="h-2 w-2 md:h-3 md:w-3 rounded-full bg-amber-400" />
