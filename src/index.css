@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap");
 
 @layer base {
   :root {
@@ -93,21 +93,28 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: "Inter", system-ui, sans-serif;
   }
 }
 
 @keyframes pulse-once {
-  0% { box-shadow: 0 0 0 0 hsl(var(--destructive) / 0.5); }
-  70% { box-shadow: 0 0 0 6px hsl(var(--destructive) / 0); }
-  100% { box-shadow: 0 0 0 0 hsl(var(--destructive) / 0); }
+  0% {
+    box-shadow: 0 0 0 0 hsl(var(--destructive) / 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 6px hsl(var(--destructive) / 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 hsl(var(--destructive) / 0);
+  }
 }
 
 .animate-pulse-once {
   animation: pulse-once 0.6s ease-out;
 }
 
-body, #root {
+body,
+#root {
   background-color: #ffffff;
   min-height: 100dvh;
 }
@@ -127,91 +134,106 @@ body, #root {
   animation: fadeSlideUp 0.35s ease-out forwards;
 }
 
-/* ── Public page scroll-reveal animations ── */
+/* ── Public page animations ── */
 @keyframes revealUp {
-  from { opacity: 0; transform: translateY(24px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-@keyframes revealScale {
-  from { opacity: 0; transform: scale(0.96) translateY(16px); }
-  to   { opacity: 1; transform: scale(1) translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 @keyframes floatY {
-  0%, 100% { transform: translateY(0px); }
-  50%       { transform: translateY(-8px); }
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
 }
 @keyframes shimmer {
-  0%   { background-position: -200% center; }
-  100% { background-position:  200% center; }
-}
-@keyframes navShadow {
-  from { box-shadow: none; }
-  to   { box-shadow: 0 1px 12px rgba(0,0,0,0.08); }
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
 }
 
 .scroll-reveal {
   opacity: 0;
   transform: translateY(24px);
-  transition: opacity 0.55s cubic-bezier(0.22,1,0.36,1),
-              transform 0.55s cubic-bezier(0.22,1,0.36,1);
+  transition:
+    opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .scroll-reveal.revealed {
   opacity: 1;
   transform: translateY(0);
 }
-.scroll-reveal-scale {
-  opacity: 0;
-  transform: scale(0.96) translateY(16px);
-  transition: opacity 0.5s cubic-bezier(0.22,1,0.36,1),
-              transform 0.5s cubic-bezier(0.22,1,0.36,1);
+
+.delay-100 {
+  transition-delay: 0.1s;
 }
-.scroll-reveal-scale.revealed {
-  opacity: 1;
-  transform: scale(1) translateY(0);
+.delay-200 {
+  transition-delay: 0.2s;
 }
-.delay-100 { transition-delay: 0.10s; }
-.delay-200 { transition-delay: 0.20s; }
-.delay-300 { transition-delay: 0.30s; }
-.delay-400 { transition-delay: 0.40s; }
-.delay-500 { transition-delay: 0.50s; }
-.float-anim { animation: floatY 4s ease-in-out infinite; }
-.shimmer-text {
-  background: linear-gradient(90deg, #1d4ed8 0%, #60a5fa 40%, #1d4ed8 80%);
-  background-size: 200% auto;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  animation: shimmer 3s linear infinite;
+.delay-300 {
+  transition-delay: 0.3s;
+}
+.float-anim {
+  animation: floatY 4s ease-in-out infinite;
 }
 
 @keyframes shimmer-feedback-border {
-  0%   { background-position: 0% 50%; }
-  50%  { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 .feedback-shimmer-card {
-  background: linear-gradient(270deg, #16A34A, #4ade80, #86efac, #16A34A);
+  background: linear-gradient(270deg, #16a34a, #4ade80, #86efac, #16a34a);
   background-size: 400% 400%;
   animation: shimmer-feedback-border 3s ease infinite;
 }
 
 @keyframes shimmer-pricing-badge {
-  0%   { background-position: 0% 50%; }
-  50%  { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 .pricing-badge-shimmer {
-  background: linear-gradient(270deg, #16A34A, #4ade80, #86efac, #16A34A);
+  background: linear-gradient(270deg, #16a34a, #4ade80, #86efac, #16a34a);
   background-size: 400% 400%;
   animation: shimmer-pricing-badge 2.5s ease infinite;
 }
 
 @keyframes shimmer-pricing-blue {
-  0%   { background-position: 0% 50%; }
-  50%  { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 .pricing-blue-shimmer {
@@ -221,23 +243,42 @@ body, #root {
 }
 
 @keyframes shimmer-dark {
-  0% { background-position: 200% center; }
-  100% { background-position: -200% center; }
+  0% {
+    background-position: 200% center;
+  }
+  100% {
+    background-position: -200% center;
+  }
 }
 
 @keyframes fade-up {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes ecg-draw {
-  from { stroke-dashoffset: 400; }
-  to { stroke-dashoffset: 0; }
+  from {
+    stroke-dashoffset: 400;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
 }
 
 @keyframes shimmer-nav-border {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
 }
 
 .shimmer-text-dark {
@@ -258,11 +299,29 @@ body, #root {
   animation: shimmer 3s linear infinite;
 }
 
-.fade-up-1 { animation: fade-up 0.5s ease both; }
-.fade-up-2 { animation: fade-up 0.5s 0.1s ease both; opacity: 0; animation-fill-mode: forwards; }
-.fade-up-3 { animation: fade-up 0.5s 0.2s ease both; opacity: 0; animation-fill-mode: forwards; }
-.fade-up-4 { animation: fade-up 0.5s 0.3s ease both; opacity: 0; animation-fill-mode: forwards; }
-.fade-up-5 { animation: fade-up 0.6s 0.4s ease both; opacity: 0; animation-fill-mode: forwards; }
+.fade-up-1 {
+  animation: fade-up 0.5s ease both;
+}
+.fade-up-2 {
+  animation: fade-up 0.5s 0.1s ease both;
+  opacity: 0;
+  animation-fill-mode: forwards;
+}
+.fade-up-3 {
+  animation: fade-up 0.5s 0.2s ease both;
+  opacity: 0;
+  animation-fill-mode: forwards;
+}
+.fade-up-4 {
+  animation: fade-up 0.5s 0.3s ease both;
+  opacity: 0;
+  animation-fill-mode: forwards;
+}
+.fade-up-5 {
+  animation: fade-up 0.6s 0.4s ease both;
+  opacity: 0;
+  animation-fill-mode: forwards;
+}
 
 .ecg-draw {
   stroke-dasharray: 400;
