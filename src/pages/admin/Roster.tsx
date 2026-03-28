@@ -1098,12 +1098,12 @@ export default function Roster() {
         {doctors.length > 0 && (
           <div className="flex flex-col sm:flex-row sm:items-center gap-4 bg-card border border-border px-4 py-3 rounded-lg shadow-sm">
             {/* Mobile View: 2 rows */}
-            <div className="flex flex-col gap-2.5 sm:hidden w-full">
+            <div className="flex flex-col gap-3 sm:hidden w-full">
               {/* Row 1: Total & Completion Bar */}
               <div className="flex justify-between items-center w-full">
-                <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-lg text-primary leading-none">{doctors.length}</span>
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Total</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-xl text-primary leading-none">{doctors.length}</span>
+                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Total</span>
                 </div>
                 <div className="flex items-center gap-2 w-32 shrink-0">
                   <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
@@ -1118,19 +1118,23 @@ export default function Roster() {
                 </div>
               </div>
               {/* Row 2: Submitted, In Progress, Not Started */}
-              <div className="flex items-center justify-between w-full">
-                <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-base text-emerald-600 leading-none">{submitted}</span>
-                  <span className="text-[9px] font-bold text-emerald-600/70 uppercase tracking-wider">Subm.</span>
+              <div className="grid grid-cols-3 gap-2 w-full">
+                <div className="flex flex-col items-center justify-center py-2 px-1 bg-emerald-50/50 rounded-lg border border-emerald-100">
+                  <span className="font-bold text-lg text-emerald-600 leading-none mb-1">{submitted}</span>
+                  <span className="text-[10px] font-bold text-emerald-600/80 uppercase tracking-wider text-center leading-tight">
+                    Submitted
+                  </span>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-base text-amber-600 leading-none">{inProgress}</span>
-                  <span className="text-[9px] font-bold text-amber-600/70 uppercase tracking-wider">In Prog.</span>
+                <div className="flex flex-col items-center justify-center py-2 px-1 bg-amber-50/50 rounded-lg border border-amber-100">
+                  <span className="font-bold text-lg text-amber-600 leading-none mb-1">{inProgress}</span>
+                  <span className="text-[10px] font-bold text-amber-600/80 uppercase tracking-wider text-center leading-tight">
+                    In Progress
+                  </span>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-base text-muted-foreground leading-none">{notStarted}</span>
-                  <span className="text-[9px] font-bold text-muted-foreground/70 uppercase tracking-wider">
-                    Not Start.
+                <div className="flex flex-col items-center justify-center py-2 px-1 bg-muted/30 rounded-lg border border-border">
+                  <span className="font-bold text-lg text-muted-foreground leading-none mb-1">{notStarted}</span>
+                  <span className="text-[10px] font-bold text-muted-foreground/80 uppercase tracking-wider text-center leading-tight">
+                    Not Started
                   </span>
                 </div>
               </div>
@@ -1215,66 +1219,12 @@ export default function Roster() {
           </div>
 
           <div className="flex items-center gap-2 self-end sm:self-auto">
-            {/* Add Doctor Modal Trigger */}
-            <Dialog open={isAddDoctorOpen} onOpenChange={setIsAddDoctorOpen}>
-              <DialogTrigger asChild>
-                <Button size="sm" className="gap-2">
-                  <UserPlus className="h-4 w-4" /> Add Doctor
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="w-[92vw] sm:max-w-[425px] rounded-2xl">
-                <DialogHeader>
-                  <DialogTitle>Add New Doctor</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">First Name *</label>
-                      <Input
-                        value={addFirstName}
-                        onChange={(e) => setAddFirstName(e.target.value)}
-                        placeholder="e.g. John"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Last Name *</label>
-                      <Input
-                        value={addLastName}
-                        onChange={(e) => setAddLastName(e.target.value)}
-                        placeholder="e.g. Smith"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Email *</label>
-                    <Input
-                      type="email"
-                      value={addEmail}
-                      onChange={(e) => setAddEmail(e.target.value)}
-                      placeholder="john.smith@nhs.net"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Grade (Optional)</label>
-                      <Input value={addGrade} onChange={(e) => setAddGrade(e.target.value)} placeholder="e.g. ST3" />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium">Phone (Optional)</label>
-                      <Input value={addPhone} onChange={(e) => setAddPhone(e.target.value)} placeholder="07..." />
-                    </div>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsAddDoctorOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button onClick={addDoctor} disabled={!addFirstName || !addLastName || !addEmail}>
-                    Save Doctor
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+            {/* Desktop Add Doctor Modal Trigger */}
+            <div className="hidden sm:block">
+              <Button size="sm" className="gap-2 h-9" onClick={() => setIsAddDoctorOpen(true)}>
+                <UserPlus className="h-4 w-4" /> Add Doctor
+              </Button>
+            </div>
 
             {/* Bulk Send Button */}
             {(() => {
@@ -1293,7 +1243,7 @@ export default function Roster() {
                       variant="outline"
                       size="sm"
                       disabled={bulkSending}
-                      className="gap-1.5 border-primary text-primary hover:bg-primary/5"
+                      className="gap-1.5 border-primary text-primary hover:bg-primary/5 h-9"
                     >
                       {bulkSending ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -1333,59 +1283,68 @@ export default function Roster() {
 
         {/* Filters Row */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <Search className="h-4 w-4 text-muted-foreground shrink-0" />
             <Input
               placeholder="Search by name…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="max-w-xs h-8 text-sm"
+              className="w-full sm:max-w-xs h-9 text-sm"
             />
           </div>
 
-          {doctors.length > 1 && (
-            <div className="flex items-center gap-2 self-end sm:self-auto">
-              <div className="sm:hidden flex-1">
-                <select
-                  value={sortKey}
-                  onChange={(e) => setSortKey(e.target.value as SortKey)}
-                  className="w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm"
-                >
-                  <option value="surname_asc">Sort: A–Z</option>
-                  <option value="surname_desc">Sort: Z–A</option>
-                  <option value="status">Sort: Status</option>
-                  <option value="grade">Sort: Grade</option>
-                </select>
-              </div>
-              <div className="hidden sm:flex items-center gap-1.5">
-                <span className="text-xs text-muted-foreground flex items-center gap-1">
-                  <ArrowUpDown className="h-3 w-3" /> Sort:
-                </span>
-                {(["surname_asc", "surname_desc", "status", "grade"] as const).map((key) => {
-                  const labels: Record<SortKey, string> = {
-                    surname_asc: "A–Z",
-                    surname_desc: "Z–A",
-                    status: "Status",
-                    grade: "Grade",
-                  };
-                  return (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => setSortKey(key)}
-                      className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium border transition-colors ${
-                        sortKey === key
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "bg-background text-muted-foreground border-border hover:border-primary/50"
-                      }`}
-                    >
-                      {labels[key]}
-                    </button>
-                  );
-                })}
-              </div>
+          <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
+            {/* Mobile Add Doctor */}
+            <div className="sm:hidden shrink-0">
+              <Button size="sm" className="gap-2 h-9 px-3" onClick={() => setIsAddDoctorOpen(true)}>
+                <UserPlus className="h-4 w-4" /> Add Doctor
+              </Button>
             </div>
-          )}
+
+            {doctors.length > 1 && (
+              <>
+                <div className="sm:hidden flex-1 min-w-0">
+                  <select
+                    value={sortKey}
+                    onChange={(e) => setSortKey(e.target.value as SortKey)}
+                    className="w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm h-9"
+                  >
+                    <option value="surname_asc">Sort: A–Z</option>
+                    <option value="surname_desc">Sort: Z–A</option>
+                    <option value="status">Sort: Status</option>
+                    <option value="grade">Sort: Grade</option>
+                  </select>
+                </div>
+                <div className="hidden sm:flex items-center gap-1.5">
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <ArrowUpDown className="h-3 w-3" /> Sort:
+                  </span>
+                  {(["surname_asc", "surname_desc", "status", "grade"] as const).map((key) => {
+                    const labels: Record<SortKey, string> = {
+                      surname_asc: "A–Z",
+                      surname_desc: "Z–A",
+                      status: "Status",
+                      grade: "Grade",
+                    };
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setSortKey(key)}
+                        className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium border transition-colors ${
+                          sortKey === key
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-background text-muted-foreground border-border hover:border-primary/50"
+                        }`}
+                      >
+                        {labels[key]}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Main List Container */}
@@ -1710,6 +1669,54 @@ export default function Roster() {
           </div>
         )}
       </div>
+
+      {/* Global Add Doctor Dialog */}
+      <Dialog open={isAddDoctorOpen} onOpenChange={setIsAddDoctorOpen}>
+        <DialogContent className="w-[92vw] sm:max-w-[425px] rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>Add New Doctor</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">First Name *</label>
+                <Input value={addFirstName} onChange={(e) => setAddFirstName(e.target.value)} placeholder="e.g. John" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Last Name *</label>
+                <Input value={addLastName} onChange={(e) => setAddLastName(e.target.value)} placeholder="e.g. Smith" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Email *</label>
+              <Input
+                type="email"
+                value={addEmail}
+                onChange={(e) => setAddEmail(e.target.value)}
+                placeholder="john.smith@nhs.net"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Grade (Optional)</label>
+                <Input value={addGrade} onChange={(e) => setAddGrade(e.target.value)} placeholder="e.g. ST3" />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Phone (Optional)</label>
+                <Input value={addPhone} onChange={(e) => setAddPhone(e.target.value)} placeholder="07..." />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAddDoctorOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={addDoctor} disabled={!addFirstName || !addLastName || !addEmail}>
+              Save Doctor
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Global Send Invite Dialog */}
       <Dialog open={!!doctorToSend} onOpenChange={(open) => !open && setDoctorToSend(null)}>
