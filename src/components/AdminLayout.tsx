@@ -22,7 +22,7 @@ export function AdminLayout({ children, title, subtitle, accentColor = 'blue', p
     // Step pages: full-height flex column — content scrolls, nav bar pinned at bottom
     return (
       <div className="flex flex-col h-full min-h-0">
-        <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6">
+        <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-6">
           {children}
         </div>
         {navBar}
@@ -31,9 +31,8 @@ export function AdminLayout({ children, title, subtitle, accentColor = 'blue', p
   }
 
   // Non-step pages (Dashboard, Roster, Setup etc): scrollable with padding.
-  // pb-20 on mobile preserves clearance above the fixed bottom dashboard nav.
   return (
-    <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6">
+    <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-6">
       {children}
     </div>
   );
