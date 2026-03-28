@@ -88,156 +88,166 @@ export default function LandingPage() {
       <main>
         {/* Compressed padding for mobile to keep everything above the fold */}
         <section id="hero" className="flex flex-col bg-blue-100 px-4 py-5 md:px-6 md:py-10 lg:py-16">
-          {/* max-w-[850px] forces the columns closer together and perfectly centers the block on desktop */}
-          <div className="mx-auto w-full max-w-[850px] grid grid-cols-1 lg:grid-cols-2 gap-x-6 lg:gap-x-12 gap-y-3 md:gap-y-6 lg:gap-y-8 items-center justify-items-center">
-            {/* 1. Logo & Tagline (Order 1 on mobile, Col 1 Row 1 on desktop) */}
-            <div className="order-1 lg:order-1 flex flex-col items-center text-center w-full max-w-sm">
-              <div className="fade-up-1 flex justify-center">
-                <RotaGenLogo size="lg" />
-              </div>
-              <div className="fade-up-2 mt-2 md:mt-4 text-base md:text-xl text-center">
-                <p className="text-muted-foreground" style={{ lineHeight: 1.3 }}>
-                  Your doctors' preferences.
-                </p>
-                <p className="text-muted-foreground" style={{ lineHeight: 1.3 }}>
-                  Your department's rules.
-                </p>
-                <p style={{ lineHeight: 1.3 }}>
-                  One{" "}
-                  <span className="shimmer-text-dark" style={{ fontFamily: "Poppins, sans-serif", fontWeight: 700 }}>
-                    ROTA
-                  </span>
-                  .{" "}
-                  <span className="shimmer-text-blue" style={{ fontFamily: "Poppins, sans-serif", fontWeight: 700 }}>
-                    GEN
-                  </span>
-                  erated for you.
-                </p>
-              </div>
-            </div>
-
-            {/* 2. Pricing Card (Order 2 on mobile, Col 2 Row 1 on desktop) */}
-            <div
-              ref={pricingRef}
-              className="order-2 lg:order-2 fade-up-4 w-full max-w-sm rounded-2xl border-2 border-primary/20 bg-card p-4 md:p-6 text-center shadow-lg"
-            >
-              <div className="inline-block rounded-full p-[2px] pricing-badge-shimmer">
-                <div className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-2.5 py-0.5 md:px-3 md:py-1 text-[10px] md:text-xs font-bold uppercase tracking-wider text-green-700">
-                  <span className="h-1.5 w-1.5 md:h-2 md:w-2 rounded-full bg-green-500 animate-pulse" />
-                  Early Access — Free
+          {/* Mobile: flex-col ensures specific ordering (1, 2, 3, 4).
+            Desktop (lg): grid with 2 columns centers the structural blocks. 
+          */}
+          <div className="mx-auto w-full max-w-5xl flex flex-col lg:grid lg:grid-cols-2 lg:gap-12 lg:items-center">
+            {/* --- LEFT COLUMN BLOCK (Desktop) --- */}
+            {/* On Mobile: this wraps Logo+Tagline (order-1) and Mock Rota (order-4), which breaks the required visual flow. 
+                To solve this, we use contents on mobile so flex ordering works flat, and block on desktop to group them. */}
+            <div className="contents lg:flex lg:flex-col lg:items-center lg:gap-8">
+              {/* 1. Logo & Tagline (Mobile: Order 1, Desktop: Top Left) */}
+              <div className="order-1 flex flex-col items-center text-center w-full max-w-sm mb-3 lg:mb-0">
+                <div className="fade-up-1 flex justify-center">
+                  <RotaGenLogo size="lg" />
+                </div>
+                <div className="fade-up-2 mt-2 md:mt-4 text-base md:text-xl">
+                  <p className="text-muted-foreground" style={{ lineHeight: 1.3 }}>
+                    Your doctors' preferences.
+                  </p>
+                  <p className="text-muted-foreground" style={{ lineHeight: 1.3 }}>
+                    Your department's rules.
+                  </p>
+                  <p style={{ lineHeight: 1.3 }}>
+                    One{" "}
+                    <span className="shimmer-text-dark" style={{ fontFamily: "Poppins, sans-serif", fontWeight: 700 }}>
+                      ROTA
+                    </span>
+                    .{" "}
+                    <span className="shimmer-text-blue" style={{ fontFamily: "Poppins, sans-serif", fontWeight: 700 }}>
+                      GEN
+                    </span>
+                    erated for you.
+                  </p>
                 </div>
               </div>
 
-              <h3 className="mt-3 md:mt-4 text-lg md:text-xl font-bold text-foreground">
-                FREE for Founding Departments
-              </h3>
-              <p className="mt-2 md:mt-3 text-xs md:text-sm leading-snug text-muted-foreground">
-                Join our early testing group for anaesthetic departments. Zero cost. No commitment. Just your honest
-                feedback.
-              </p>
+              {/* 4. Mock Rota (Mobile: Order 4, Desktop: Bottom Left) */}
+              <div className="order-4 fade-up-3 float-anim w-full max-w-xs md:max-w-sm mx-auto overflow-hidden rounded-xl border border-border bg-card shadow-2xl mt-3 lg:mt-0">
+                <div className="flex h-6 md:h-8 items-center gap-1.5 md:gap-2 bg-slate-800 px-3 md:px-4">
+                  <span className="h-2 w-2 md:h-3 md:w-3 rounded-full bg-red-400" />
+                  <span className="h-2 w-2 md:h-3 md:w-3 rounded-full bg-amber-400" />
+                  <span className="h-2 w-2 md:h-3 md:w-3 rounded-full bg-green-400" />
+                  <span className="ml-1 md:ml-2 text-[8px] md:text-[10px] text-slate-400 font-medium hidden sm:inline">
+                    RotaGen — Final Rota · August 2025
+                  </span>
+                </div>
+                <div className="space-y-1.5 md:space-y-4 p-2 md:p-5 relative">
+                  <div className="grid grid-cols-5 gap-1 md:gap-2 text-[8px] md:text-[11px] font-semibold text-muted-foreground">
+                    <div>Doctor</div>
+                    <div>Mon</div>
+                    <div>Tue</div>
+                    <div>Wed</div>
+                    <div>Thu</div>
+                  </div>
+                  {[
+                    ["Dr Patel", "Long Day", "Short Day", "On-Call", "Night"],
+                    ["Dr Khan", "Short Day", "Long Day", "Night", "Short Day"],
+                    ["Dr Smith", "On-Call", "Short Day", "Long Day", "Long Day"],
+                  ].map((row) => (
+                    <div key={row[0]} className="grid grid-cols-5 gap-1 md:gap-2">
+                      <div className="flex items-center rounded-lg bg-muted px-1 py-1.5 md:px-3 md:py-3 text-[8px] md:text-sm font-medium text-foreground">
+                        {row[0]}
+                      </div>
+                      {row.slice(1).map((shift) => {
+                        const badgeClass =
+                          shift === "Long Day"
+                            ? "bg-green-100 text-green-700"
+                            : shift === "Night"
+                              ? "bg-red-100 text-red-700"
+                              : shift === "On-Call"
+                                ? "bg-amber-100 text-amber-700"
+                                : "bg-blue-100 text-blue-700";
+                        return (
+                          <div
+                            key={`${row[0]}-${shift}`}
+                            className="rounded-lg bg-muted px-0.5 py-1.5 md:px-2 md:py-3 flex items-center justify-center"
+                          >
+                            <span
+                              className={`inline-flex rounded-full px-1 py-0.5 md:px-2 md:py-1 text-[6px] md:text-[10px] font-semibold ${badgeClass}`}
+                            >
+                              {shift}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+                  {/* ECG line */}
+                  <svg
+                    className="absolute bottom-1 md:bottom-2 left-0 w-full h-6 md:h-8 pointer-events-none"
+                    viewBox="0 0 400 30"
+                    preserveAspectRatio="none"
+                  >
+                    <polyline
+                      className="ecg-draw"
+                      fill="none"
+                      stroke="hsl(213 94% 48% / 0.15)"
+                      strokeWidth="2"
+                      points="0,20 60,20 80,20 90,5 100,25 110,12 120,20 180,20 200,20 210,5 220,25 230,12 240,20 300,20 320,20 330,5 340,25 350,12 360,20 400,20"
+                    />
+                  </svg>
+                </div>
+              </div>
+            </div>
 
-              <button
-                type="button"
-                onClick={() => navigate("/register")}
-                className="mt-4 md:mt-5 w-full rounded-xl bg-primary px-4 py-2 md:px-6 md:py-2.5 text-sm font-semibold text-primary-foreground transition-all hover:scale-[1.02] hover:bg-primary/90 active:scale-[0.98]"
+            {/* --- RIGHT COLUMN BLOCK (Desktop) --- */}
+            <div className="contents lg:flex lg:flex-col lg:items-center lg:gap-6">
+              {/* 2. Pricing Card (Mobile: Order 2, Desktop: Top Right) */}
+              <div
+                ref={pricingRef}
+                className="order-2 fade-up-4 w-full max-w-sm mx-auto rounded-2xl border-2 border-primary/20 bg-card p-4 md:p-6 text-center shadow-lg mb-3 lg:mb-0"
               >
-                Request early access →
-              </button>
+                <div className="inline-block rounded-full p-[2px] pricing-badge-shimmer">
+                  <div className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-2.5 py-0.5 md:px-3 md:py-1 text-[10px] md:text-xs font-bold uppercase tracking-wider text-green-700">
+                    <span className="h-1.5 w-1.5 md:h-2 md:w-2 rounded-full bg-green-500 animate-pulse" />
+                    Early Access — Free
+                  </div>
+                </div>
 
-              <div className="mt-2 md:mt-3 inline-block rounded-xl p-[2px] pricing-blue-shimmer w-full">
+                <h3 className="mt-3 md:mt-4 text-lg md:text-xl font-bold text-foreground">
+                  FREE for Founding Departments
+                </h3>
+                <p className="mt-2 md:mt-3 text-xs md:text-sm leading-snug text-muted-foreground">
+                  Join our early testing group for anaesthetic departments. Zero cost. No commitment. Just your honest
+                  feedback.
+                </p>
+
                 <button
                   type="button"
-                  onClick={() => navigate("/pricing")}
-                  className="w-full rounded-[9px] bg-primary px-4 py-1.5 md:px-6 md:py-2 text-xs md:text-sm font-semibold text-white transition-all hover:opacity-90"
+                  onClick={() => navigate("/register")}
+                  className="mt-4 md:mt-5 w-full rounded-xl bg-primary px-4 py-2 md:px-6 md:py-2.5 text-sm font-semibold text-primary-foreground transition-all hover:scale-[1.02] hover:bg-primary/90 active:scale-[0.98]"
                 >
-                  Full pricing details →
+                  Request early access →
                 </button>
-              </div>
-            </div>
 
-            {/* 3. Feedback Card (Order 3 on mobile, Col 2 Row 2 on desktop) */}
-            <div className="order-3 lg:order-4 fade-up-5 w-full max-w-sm rounded-2xl border border-border bg-card p-3 md:p-5 text-center shadow-md">
-              <p className="text-xs md:text-sm font-semibold text-muted-foreground mb-2 md:mb-3">
-                Already using RotaGen?
-              </p>
-              <button
-                type="button"
-                onClick={() => navigate("/feedback")}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2 md:py-2.5 text-xs md:text-sm font-semibold text-white transition-all hover:opacity-90"
-                style={{ backgroundColor: "#16A34A" }}
-              >
-                <span className="flex h-4 w-4 md:h-5 md:w-5 items-center justify-center rounded-md bg-white/20">
-                  <Star className="h-2.5 w-2.5 md:h-3 md:w-3" />
-                </span>
-                Give us your feedback
-              </button>
-            </div>
-
-            {/* 4. Mock Rota (Order 4 on mobile, Col 1 Row 2 on desktop) */}
-            <div className="order-4 lg:order-3 fade-up-3 float-anim w-full max-w-xs md:max-w-sm overflow-hidden rounded-xl border border-border bg-card shadow-2xl mt-2 lg:mt-0 mx-auto">
-              <div className="flex h-6 md:h-8 items-center gap-1.5 md:gap-2 bg-slate-800 px-3 md:px-4">
-                <span className="h-2 w-2 md:h-3 md:w-3 rounded-full bg-red-400" />
-                <span className="h-2 w-2 md:h-3 md:w-3 rounded-full bg-amber-400" />
-                <span className="h-2 w-2 md:h-3 md:w-3 rounded-full bg-green-400" />
-                <span className="ml-1 md:ml-2 text-[8px] md:text-[10px] text-slate-400 font-medium hidden sm:inline">
-                  RotaGen — Final Rota · August 2025
-                </span>
-              </div>
-              <div className="space-y-1.5 md:space-y-4 p-2 md:p-5 relative">
-                <div className="grid grid-cols-5 gap-1 md:gap-2 text-[8px] md:text-[11px] font-semibold text-muted-foreground">
-                  <div>Doctor</div>
-                  <div>Mon</div>
-                  <div>Tue</div>
-                  <div>Wed</div>
-                  <div>Thu</div>
+                <div className="mt-2 md:mt-3 inline-block rounded-xl p-[2px] pricing-blue-shimmer w-full">
+                  <button
+                    type="button"
+                    onClick={() => navigate("/pricing")}
+                    className="w-full rounded-[9px] bg-primary px-4 py-1.5 md:px-6 md:py-2 text-xs md:text-sm font-semibold text-white transition-all hover:opacity-90"
+                  >
+                    Full pricing details →
+                  </button>
                 </div>
-                {[
-                  ["Dr Patel", "Long Day", "Short Day", "On-Call", "Night"],
-                  ["Dr Khan", "Short Day", "Long Day", "Night", "Short Day"],
-                  ["Dr Smith", "On-Call", "Short Day", "Long Day", "Long Day"],
-                ].map((row) => (
-                  <div key={row[0]} className="grid grid-cols-5 gap-1 md:gap-2">
-                    <div className="flex items-center rounded-lg bg-muted px-1 py-1.5 md:px-3 md:py-3 text-[8px] md:text-sm font-medium text-foreground">
-                      {row[0]}
-                    </div>
-                    {row.slice(1).map((shift) => {
-                      const badgeClass =
-                        shift === "Long Day"
-                          ? "bg-green-100 text-green-700"
-                          : shift === "Night"
-                            ? "bg-red-100 text-red-700"
-                            : shift === "On-Call"
-                              ? "bg-amber-100 text-amber-700"
-                              : "bg-blue-100 text-blue-700";
-                      return (
-                        <div
-                          key={`${row[0]}-${shift}`}
-                          className="rounded-lg bg-muted px-0.5 py-1.5 md:px-2 md:py-3 flex items-center justify-center"
-                        >
-                          <span
-                            className={`inline-flex rounded-full px-1 py-0.5 md:px-2 md:py-1 text-[6px] md:text-[10px] font-semibold ${badgeClass}`}
-                          >
-                            {shift}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ))}
-                {/* ECG line */}
-                <svg
-                  className="absolute bottom-1 md:bottom-2 left-0 w-full h-6 md:h-8 pointer-events-none"
-                  viewBox="0 0 400 30"
-                  preserveAspectRatio="none"
+              </div>
+
+              {/* 3. Feedback Card (Mobile: Order 3, Desktop: Bottom Right) */}
+              <div className="order-3 fade-up-5 w-full max-w-sm mx-auto rounded-2xl border border-border bg-card p-3 md:p-5 text-center shadow-md">
+                <p className="text-xs md:text-sm font-semibold text-muted-foreground mb-2 md:mb-3">
+                  Already using RotaGen?
+                </p>
+                <button
+                  type="button"
+                  onClick={() => navigate("/feedback")}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2 md:py-2.5 text-xs md:text-sm font-semibold text-white transition-all hover:opacity-90"
+                  style={{ backgroundColor: "#16A34A" }}
                 >
-                  <polyline
-                    className="ecg-draw"
-                    fill="none"
-                    stroke="hsl(213 94% 48% / 0.15)"
-                    strokeWidth="2"
-                    points="0,20 60,20 80,20 90,5 100,25 110,12 120,20 180,20 200,20 210,5 220,25 230,12 240,20 300,20 320,20 330,5 340,25 350,12 360,20 400,20"
-                  />
-                </svg>
+                  <span className="flex h-4 w-4 md:h-5 md:w-5 items-center justify-center rounded-md bg-white/20">
+                    <Star className="h-2.5 w-2.5 md:h-3 md:w-3" />
+                  </span>
+                  Give us your feedback
+                </button>
               </div>
             </div>
           </div>
