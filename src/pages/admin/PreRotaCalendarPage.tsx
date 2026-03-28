@@ -424,7 +424,6 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
     goPrev: () => {},
     goNext: () => {},
   });
-  const panelRef = useRef<HTMLDivElement>(null);
   const dateInputDesktopRef = useRef<HTMLInputElement>(null);
   const dateInputMobileRef = useRef<HTMLInputElement>(null);
   const embeddedInitialisedRef = useRef(false);
@@ -532,7 +531,6 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
         return;
       }
 
-      // DO NOT automatically throw an error here immediately. Wait for the async context to load to prevent reload flashing.
       if (!rotaConfigId) {
         return;
       }
@@ -822,15 +820,16 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
   const handleCellTap = (doctorId: string, date: string) => {
     const now = Date.now();
     const last = lastTapRef.current;
+
+    // Check if double-tap happened
     if (last && last.doctorId === doctorId && last.date === date && now - last.time < 500) {
       lastTapRef.current = null;
-      // Navigate to Doctor Calendar using specific date and view context
-      navigate(`/admin/doctor-calendar/${doctorId}?date=${date}&view=day`, {
-        state: { selectedDate: date, view: "day" },
-      });
+      navigate(`/admin/doctor-calendar/${doctorId}?date=${date}&view=day`);
       return;
     }
+
     lastTapRef.current = { doctorId, date, time: now };
+
     if (selectedCell?.doctorId === doctorId && selectedCell?.date === date && panelOpen) {
       setPanelOpen(false);
       setSelectedCell(null);
@@ -881,18 +880,6 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
     return docs;
   }, [calendarData, searchQuery, sortConfig]);
 
-  const currentDateForSync = allDates[currentDayIndex] ?? allDates[0] ?? "";
-
-  // Keep unmanaged date inputs in sync without changing hook order across renders
-  useEffect(() => {
-    if (dateInputDesktopRef.current && dateInputDesktopRef.current.value !== currentDateForSync) {
-      dateInputDesktopRef.current.value = currentDateForSync;
-    }
-    if (dateInputMobileRef.current && dateInputMobileRef.current.value !== currentDateForSync) {
-      dateInputMobileRef.current.value = currentDateForSync;
-    }
-  }, [currentDateForSync]);
-
   const Wrapper = embedded
     ? ({ children }: { children: React.ReactNode }) => <>{children}</>
     : ({ children }: { children: React.ReactNode }) => (
@@ -936,6 +923,16 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
   const { weeks, doctors } = calendarData;
   const currentWeek = weeks[currentWeekIndex];
   const currentDate = allDates[currentDayIndex] ?? allDates[0];
+
+  // Sync unmanaged date inputs securely safely inside an effect to prevent rendering loops
+  useEffect(() => {
+    if (dateInputDesktopRef.current && dateInputDesktopRef.current.value !== currentDate) {
+      dateInputDesktopRef.current.value = currentDate;
+    }
+    if (dateInputMobileRef.current && dateInputMobileRef.current.value !== currentDate) {
+      dateInputMobileRef.current.value = currentDate;
+    }
+  }, [currentDate]);
 
   const weekLabel = currentWeek
     ? `Wk ${currentWeek.weekNumber} · ${new Date(currentWeek.dates[0] + "T00:00:00").toLocaleDateString("en-GB", {
@@ -1100,7 +1097,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
         <div
           onClick={(e) => {
             e.stopPropagation();
-            navigate(`/admin/doctor-calendar/${doctor.doctorId}`);
+            navigate(`/admin/doctor-calendar/${doctor.doctorId}?date=${currentDate}&view=day`);
           }}
           className={`flex flex-col min-w-0 pr-1 shrink cursor-pointer hover:underline ${nameColor}`}
           title={doctor.doctorName}
@@ -1143,7 +1140,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
         <td className={`p-0.5 sm:p-1 border-r border-border align-middle overflow-hidden`}>
           <div className="flex flex-row items-center gap-1 sm:gap-1.5 w-full pr-1">
             <div
-              onClick={() => navigate(`/admin/doctor-calendar/${doctor.doctorId}`)}
+              onClick={() => navigate(`/admin/doctor-calendar/${doctor.doctorId}?date=${currentDate}&view=week`)}
               className="font-semibold text-blue-600 truncate cursor-pointer hover:underline text-[9px] sm:text-[10px] shrink-0 max-w-[45%]"
               title={doctor.doctorName}
             >
@@ -1190,7 +1187,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
     return (
       <tr key={doctor.doctorId} className={`border-b border-border/50 ${rowBg}`}>
         <td
-          onClick={() => navigate(`/admin/doctor-calendar/${doctor.doctorId}`)}
+          onClick={() => navigate(`/admin/doctor-calendar/${doctor.doctorId}?date=${currentDate}&view=month`)}
           className={`p-1 sm:p-1.5 border-r border-border text-left align-middle cursor-pointer hover:underline overflow-hidden`}
           title={doctor.doctorName}
         >
@@ -1414,8 +1411,8 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
           <CalendarRange className="h-3.5 w-3.5 mt-0.5 shrink-0" />
           <span>
             {isMobile
-              ? "Tap a cell to view/edit overrides. Switch to week view for context."
-              : "Click any cell to edit overrides or view leave details. Use the navigation to change dates."}
+              ? "Double-tap a cell to view doctor details. Switch to week view for context."
+              : "Double-click any cell to jump to that doctor's calendar. Use the navigation to change dates."}
           </span>
         </div>
 
@@ -1873,7 +1870,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
             const mergedCell = mergedAvailabilityByDoctor[selectedCell.doctorId]?.[selectedCell.date];
             if (!selDoctor || !mergedCell) return null;
             return (
-              <div ref={panelRef} className="mt-4 pb-4">
+              <div className="mt-4 pb-4">
                 <EventDetailPanel
                   mergedCell={mergedCell}
                   date={selectedCell.date}
@@ -1911,7 +1908,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                   }}
                   onRemoveSurveyEvent={handleRemoveSurveyEvent}
                   onGoToDate={() => {
-                    navigate(`/admin/doctor-calendar/${selectedCell!.doctorId}`);
+                    navigate(`/admin/doctor-calendar/${selectedCell!.doctorId}?date=${selectedCell.date}&view=day`);
                   }}
                   onClose={() => {
                     setPanelOpen(false);
