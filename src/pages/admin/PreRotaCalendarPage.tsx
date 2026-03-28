@@ -860,23 +860,32 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
   const sortedAndFilteredDoctors = useMemo(() => {
     if (!calendarData?.doctors) return [];
     let docs = [...calendarData.doctors];
-
-    if (searchQuery.trim() !== "") {
-      const lowerQuery = searchQuery.toLowerCase();
-      docs = docs.filter((d) => d.doctorName.toLowerCase().includes(lowerQuery));
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      docs = docs.filter((d) => d.doctorName.toLowerCase().includes(q) || (d.grade ?? "").toLowerCase().includes(q));
     }
-
-    docs.sort((a, b) => {
-      const valA = sortConfig.key === "name" ? a.doctorName : a.grade || "";
-      const valB = sortConfig.key === "name" ? b.doctorName : b.grade || "";
-
-      if (valA < valB) return sortConfig.direction === "asc" ? -1 : 1;
-      if (valA > valB) return sortConfig.direction === "asc" ? 1 : -1;
-      return 0;
-    });
-
+    if (sortConfig.key === "name") {
+      docs.sort((a, b) => {
+        const valA = a.doctorName.toLowerCase();
+        const valB = b.doctorName.toLowerCase();
+        if (valA < valB) return sortConfig.direction === "asc" ? -1 : 1;
+        if (valA > valB) return sortConfig.direction === "asc" ? 1 : -1;
+        return 0;
+      });
+    }
     return docs;
   }, [calendarData, searchQuery, sortConfig]);
+
+  // Sync unmanaged date inputs — must be before early returns to maintain hook count
+  const currentDateForSync = allDates[currentDayIndex] ?? allDates[0] ?? "";
+  useEffect(() => {
+    if (dateInputDesktopRef.current && dateInputDesktopRef.current.value !== currentDateForSync) {
+      dateInputDesktopRef.current.value = currentDateForSync;
+    }
+    if (dateInputMobileRef.current && dateInputMobileRef.current.value !== currentDateForSync) {
+      dateInputMobileRef.current.value = currentDateForSync;
+    }
+  }, [currentDateForSync]);
 
   const Wrapper = embedded
     ? ({ children }: { children: React.ReactNode }) => <>{children}</>
@@ -922,15 +931,6 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
   const currentWeek = weeks[currentWeekIndex];
   const currentDate = allDates[currentDayIndex] ?? allDates[0];
 
-  // Sync unmanaged date inputs securely safely inside an effect to prevent rendering loops
-  useEffect(() => {
-    if (dateInputDesktopRef.current && dateInputDesktopRef.current.value !== currentDate) {
-      dateInputDesktopRef.current.value = currentDate;
-    }
-    if (dateInputMobileRef.current && dateInputMobileRef.current.value !== currentDate) {
-      dateInputMobileRef.current.value = currentDate;
-    }
-  }, [currentDate]);
 
   const weekLabel = currentWeek
     ? `Wk ${currentWeek.weekNumber} · ${new Date(currentWeek.dates[0] + "T00:00:00").toLocaleDateString("en-GB", {
