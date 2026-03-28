@@ -1,72 +1,40 @@
 
 
-## Plan: Fix Double-Click/Double-Tap Navigation in PreRotaCalendarPage
+## Plan: Fix Navigation Boundary Layout
 
 ### Problem
-Double-clicking a calendar cell to navigate to a doctor's calendar is unreliable. There's no native `onDoubleClick` handler for desktop, and the tap-based detection can conflict with single-click panel logic.
+Two issues cause content to hide behind navigation:
+1. **Desktop `StepNavBar`** uses `fixed bottom-0` positioning, overlaying content instead of acting as a boundary. `AdminLayout` only applies `pb-6` on desktop (md+), insufficient to clear the ~52px bar.
+2. **`AdminLayout`** uses a `pb-20` padding hack on mobile to try to clear the bottom nav, but since the shell already uses a proper flex layout with `shrink-0` bottom nav, this is redundant and inconsistent.
 
-### Changes (single file: `src/pages/admin/PreRotaCalendarPage.tsx`)
+### Current Architecture (already correct)
+- **AdminShell mobile/tablet**: `flex flex-col h-dvh` → header (`shrink-0`) + main (`flex-1 overflow-hidden`) + bottom nav (`shrink-0`) — correct boundary.
+- **AdminShell desktop**: `flex h-dvh` → sidebar (fixed width) + content column (`flex-1 flex-col`) — correct boundary.
+- **DoctorLayout**: `h-dvh flex flex-col overflow-hidden` — already correct.
 
-**1. Add a dedicated `handleDoubleTap` helper**
+### Changes
 
-Create a new function that navigates immediately and clears state to prevent panel glitches:
+**1. `StepNavBar` — Remove `fixed` on desktop, use `shrink-0` universally**
 
-```ts
-const handleDoubleTap = (doctorId: string, date: string) => {
-  lastTapRef.current = null;
-  setPanelOpen(false);
-  setSelectedCell(null);
-  navigate(`/admin/doctor-calendar/${doctorId}?date=${date}&view=day`);
-};
+Replace the desktop branch (currently `fixed bottom-0 left-0 right-0 z-40`) with the same `shrink-0` flex-sibling pattern used on mobile. This makes it a natural boundary in the flex column rather than an overlay.
+
+Both mobile and desktop will render:
+```tsx
+<div className="shrink-0 w-full bg-card border-t border-border shadow-... px-4 py-3 flex items-center justify-between gap-3">
 ```
 
-**2. Refactor `handleCellTap` to use a delayed single-click**
+**2. `AdminLayout` — Remove `pb-20` padding hacks**
 
-When a first tap is detected, use `setTimeout(200ms)` to delay the single-click panel logic. If a second tap arrives within 500ms, clear the timeout and call `handleDoubleTap` instead. This prevents the panel from opening/closing on double-tap. Store the timeout ID in a new ref (`singleTapTimerRef`).
+- Step pages: change `pb-20 md:pb-6` → `pb-6` (the StepNavBar is now a flex sibling, no clearance needed)
+- Non-step pages: change `pb-20 md:pb-6` → `pb-6` (bottom nav is already a `shrink-0` sibling in AdminShell)
 
-```ts
-const singleTapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-const handleCellTap = (doctorId: string, date: string) => {
-  const now = Date.now();
-  const last = lastTapRef.current;
-
-  if (last && last.doctorId === doctorId && last.date === date && now - last.time < 500) {
-    // Double-tap detected
-    if (singleTapTimerRef.current) clearTimeout(singleTapTimerRef.current);
-    handleDoubleTap(doctorId, date);
-    return;
-  }
-
-  lastTapRef.current = { doctorId, date, time: now };
-
-  if (singleTapTimerRef.current) clearTimeout(singleTapTimerRef.current);
-  singleTapTimerRef.current = setTimeout(() => {
-    // Single-tap logic (open/close panel)
-    if (selectedCell?.doctorId === doctorId && selectedCell?.date === date && panelOpen) {
-      setPanelOpen(false);
-      setSelectedCell(null);
-    } else {
-      setSelectedCell({ doctorId, date });
-      setPanelOpen(true);
-      setModalOpen(false);
-    }
-  }, 200);
-};
-```
-
-**3. Add `onDoubleClick` to all three view cells**
-
-Add native `onDoubleClick` handler alongside existing `onClick` at each cell location:
-
-- **Day view** (~line 1093): Add `onDoubleClick={() => handleDoubleTap(doctor.doctorId, currentDate)}` to the wrapper `<div>`.
-- **Week view** (~line 1170): Add `onDoubleClick={() => handleDoubleTap(doctor.doctorId, date)}` to the `<td>`.
-- **Month view** (~line 1217): Add `onDoubleClick={() => { if (inRota && inMonth) handleDoubleTap(doctor.doctorId, date); }}` to the `<td>`.
-
-This gives desktop users native, 100% reliable double-click detection independent of the tap timer logic.
+### Files changed
+| File | Change |
+|------|--------|
+| `src/components/StepNavBar.tsx` | Remove mobile/desktop branching; single `shrink-0` layout for all sizes |
+| `src/components/AdminLayout.tsx` | Remove `pb-20` hack, use consistent `pb-6` |
 
 ### Technical notes
-- The 200ms single-tap delay is imperceptible but gives enough buffer to detect double-clicks before committing to panel state changes.
-- The native `onDoubleClick` fires independently of `handleCellTap`, so desktop double-clicks work even if the timer logic has edge cases.
-- `handleDoubleTap` clears panel state before navigating to prevent any flash of the detail panel.
+- No changes to AdminShell or DoctorLayout — their flex structures are already correct boundaries.
+- The `index.css` `body, #root` styles remain as-is (`min-height: 100dvh`).
 
