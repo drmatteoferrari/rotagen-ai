@@ -280,6 +280,30 @@ export default function Roster() {
     invalidateDoctors();
   }, [invalidateDoctors]);
 
+  // ─── Auto-fetch Survey Data for all doctors upfront ───
+  useEffect(() => {
+    if (!currentRotaConfigId) return;
+
+    const fetchAllSurveys = async () => {
+      const { data, error } = await supabase
+        .from("doctor_survey_responses")
+        .select(
+          "doctor_id, wte_percent, ltft_days_off, competencies_json, grade, nhs_email, phone_number, iac_achieved, iac_working, iac_remote, iaoc_achieved, iaoc_working, iaoc_remote, icu_achieved, icu_working, icu_remote, transfer_achieved, transfer_working, transfer_remote",
+        )
+        .eq("rota_config_id", currentRotaConfigId);
+
+      if (data) {
+        const newCache: Record<string, any> = {};
+        data.forEach((row) => {
+          newCache[row.doctor_id] = row;
+        });
+        setSurveyCache((prev) => ({ ...prev, ...newCache }));
+      }
+    };
+
+    fetchAllSurveys();
+  }, [currentRotaConfigId, doctorsData, inactiveDoctorsData]);
+
   // ─── Backfill null survey tokens ───
   const backfillRan = useRef(false);
   useEffect(() => {
@@ -459,7 +483,7 @@ export default function Roster() {
     toast.success("Survey link copied to clipboard");
   };
 
-  // ─── Toggle expand and lazy-load survey data ───
+  // ─── Toggle expand for Mobile/Tablet ───
   const toggleExpand = async (doctorId: string) => {
     const isCurrentlyExpanded = expandedIds.has(doctorId);
 
@@ -472,34 +496,6 @@ export default function Roster() {
       return;
     }
 
-    const alreadyCached = Object.prototype.hasOwnProperty.call(surveyCache, doctorId);
-
-    if (alreadyCached) {
-      setExpandedIds((prev) => {
-        const next = new Set(prev);
-        next.add(doctorId);
-        return next;
-      });
-      return;
-    }
-
-    // Fetch first, then expand — prevents panel rendering before data is ready
-    setSurveyLoading((prev) => ({ ...prev, [doctorId]: true }));
-    const doctor = [...doctors, ...inactiveDoctors].find((d) => d.id === doctorId);
-    if (doctor) {
-      const { data } = await supabase
-        .from("doctor_survey_responses")
-        .select(
-          "wte_percent, ltft_days_off, competencies_json, grade, nhs_email, phone_number, iac_achieved, iac_working, iac_remote, iaoc_achieved, iaoc_working, iaoc_remote, icu_achieved, icu_working, icu_remote, transfer_achieved, transfer_working, transfer_remote",
-        )
-        .eq("doctor_id", doctorId)
-        .eq("rota_config_id", doctor.rota_config_id)
-        .maybeSingle();
-      setSurveyCache((prev) => ({ ...prev, [doctorId]: data ?? null }));
-    } else {
-      setSurveyCache((prev) => ({ ...prev, [doctorId]: null }));
-    }
-    setSurveyLoading((prev) => ({ ...prev, [doctorId]: false }));
     setExpandedIds((prev) => {
       const next = new Set(prev);
       next.add(doctorId);
@@ -1055,7 +1051,7 @@ export default function Roster() {
 
   return (
     <AdminLayout title="Team Roster" subtitle="Manage doctors" accentColor="blue" pageIcon={Users}>
-      <div className="mx-auto max-w-[1000px] space-y-4 animate-fadeSlideUp">
+      <div className="mx-auto max-w-[1200px] space-y-4 animate-fadeSlideUp">
         {/* No config banner */}
         {!currentRotaConfigId && (
           <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 flex items-center gap-3">
@@ -1101,7 +1097,47 @@ export default function Roster() {
         {/* Improved Summary Section - Minimal Verticality */}
         {doctors.length > 0 && (
           <div className="flex flex-col sm:flex-row sm:items-center gap-4 bg-card border border-border px-4 py-3 rounded-lg shadow-sm">
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm flex-1">
+            {/* Mobile View: 2 rows */}
+            <div className="flex flex-col gap-2.5 sm:hidden w-full">
+              {/* Row 1: Total & Completion Bar */}
+              <div className="flex justify-between items-center w-full">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-lg text-primary leading-none">{doctors.length}</span>
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Total</span>
+                </div>
+                <div className="flex items-center gap-2 w-32 shrink-0">
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
+                    {progressPct}% Done
+                  </span>
+                  <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-emerald-500 transition-all duration-500"
+                      style={{ width: `${progressPct}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+              {/* Row 2: Submitted, In Progress, Not Started */}
+              <div className="flex items-center justify-between w-full">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-base text-emerald-600 leading-none">{submitted}</span>
+                  <span className="text-[9px] font-bold text-emerald-600/70 uppercase tracking-wider">Subm.</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-base text-amber-600 leading-none">{inProgress}</span>
+                  <span className="text-[9px] font-bold text-amber-600/70 uppercase tracking-wider">In Prog.</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-base text-muted-foreground leading-none">{notStarted}</span>
+                  <span className="text-[9px] font-bold text-muted-foreground/70 uppercase tracking-wider">
+                    Not Start.
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Tablet/Desktop View: 1 row */}
+            <div className="hidden sm:flex flex-wrap items-center gap-x-4 gap-y-2 text-sm flex-1">
               <div className="flex items-center gap-1.5">
                 <span className="font-bold text-lg text-primary leading-none">{doctors.length}</span>
                 <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Total</span>
@@ -1125,7 +1161,8 @@ export default function Roster() {
               </div>
             </div>
 
-            <div className="flex items-center gap-3 w-full sm:w-48 shrink-0 mt-2 sm:mt-0">
+            {/* Tablet/Desktop Progress Bar */}
+            <div className="hidden sm:flex items-center gap-3 w-48 shrink-0">
               <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
                 {progressPct}% Done
               </span>
@@ -1368,47 +1405,90 @@ export default function Roster() {
 
             return (
               <div key={doctor.id} className="bg-card">
-                {/* ── Desktop Row (lg and up) ── */}
-                <div className="hidden lg:flex items-center gap-3 py-3 px-4 w-full text-sm hover:bg-muted/30 transition-colors">
-                  <div
-                    className="w-[20%] font-semibold truncate text-[15px] cursor-pointer hover:text-primary transition-colors flex items-center gap-1.5"
-                    onClick={() => toggleExpand(doctor.id)}
-                  >
-                    {isExpanded ? (
-                      <ChevronUp className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                    ) : (
-                      <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                    )}
-                    <span className="truncate">
-                      {doctor.last_name}, {doctor.first_name}
-                    </span>
+                {/* ── Desktop Row (lg and up) ── no collapse, full 1-line view */}
+                <div className="hidden lg:flex items-center gap-3 py-3 px-4 w-full text-sm hover:bg-muted/30 transition-colors group">
+                  {/* Name */}
+                  <div className="w-[15%] font-semibold truncate text-[14px]">
+                    {doctor.last_name}, {doctor.first_name}
                   </div>
-                  <div className="w-[10%] text-muted-foreground truncate">{doctor.grade || "—"}</div>
-                  <div className="w-[8%] text-muted-foreground truncate">
-                    {cached ? `${cached.wte_percent ?? 100}%` : "—"}
-                  </div>
-                  <div className="w-[20%] text-muted-foreground truncate">
+                  {/* Grade */}
+                  <div className="w-[8%] text-muted-foreground truncate">{doctor.grade || "—"}</div>
+                  {/* Email */}
+                  <div className="w-[16%] text-muted-foreground truncate">
                     {cached?.nhs_email ?? doctor.email ?? "—"}
                   </div>
-                  <div className="w-[15%] text-muted-foreground truncate">{cached?.phone_number ?? "—"}</div>
-                  <div className="w-[12%] shrink-0">
+                  {/* Phone */}
+                  <div className="w-[10%] text-muted-foreground truncate">{cached?.phone_number ?? "—"}</div>
+                  {/* WTE & Days Off */}
+                  <div className="w-[10%] text-muted-foreground truncate flex flex-col text-xs justify-center">
+                    <span>{cached ? `${cached.wte_percent ?? 100}%` : "—"}</span>
+                    {cached?.ltft_days_off?.length > 0 && (
+                      <span className="text-[10px] opacity-80 truncate">
+                        Off: {cached.ltft_days_off.map((d: string) => d.slice(0, 3)).join(",")}
+                      </span>
+                    )}
+                  </div>
+                  {/* Competencies */}
+                  <div className="w-[16%] flex flex-wrap gap-1 items-center">
+                    {cached &&
+                      (["iac", "iaoc", "icu", "transfer"] as const).map((k) => {
+                        const achieved = cached[`${k}_achieved`] ?? cached.competencies_json?.[k]?.achieved;
+                        const working = cached[`${k}_working`] ?? cached.competencies_json?.[k]?.workingTowards;
+                        if (!achieved && !working) return null;
+                        return (
+                          <span
+                            key={k}
+                            className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${achieved ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}
+                          >
+                            {k.toUpperCase()}
+                          </span>
+                        );
+                      })}
+                  </div>
+                  {/* Status */}
+                  <div className="w-[10%] shrink-0">
                     {doctor.survey_status === "submitted" && (
-                      <Badge className="bg-emerald-500/15 text-emerald-600 border-emerald-500/20 shadow-none pointer-events-none">
+                      <Badge className="bg-emerald-500/15 text-emerald-600 border-emerald-500/20 shadow-none pointer-events-none text-[10px]">
                         Submitted
                       </Badge>
                     )}
                     {doctor.survey_status === "in_progress" && (
-                      <Badge className="bg-amber-500/15 text-amber-600 border-amber-500/20 shadow-none pointer-events-none">
+                      <Badge className="bg-amber-500/15 text-amber-600 border-amber-500/20 shadow-none pointer-events-none text-[10px]">
                         In Progress
                       </Badge>
                     )}
                     {(!doctor.survey_status || doctor.survey_status === "not_started") && (
-                      <Badge className="bg-muted text-muted-foreground border-border shadow-none pointer-events-none">
+                      <Badge className="bg-muted text-muted-foreground border-border shadow-none pointer-events-none text-[10px]">
                         Not Started
                       </Badge>
                     )}
                   </div>
-                  <div className="flex-1 flex justify-end items-center gap-1 min-w-0">{renderDoctorMenu(doctor)}</div>
+                  {/* Actions */}
+                  <div className="flex-1 flex justify-end items-center gap-1.5 min-w-0">
+                    <button
+                      type="button"
+                      title="View Profile"
+                      className="h-7 w-7 inline-flex items-center justify-center rounded-md text-teal-600 hover:text-teal-700 hover:bg-teal-50 transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/admin/doctor/${doctor.id}`);
+                      }}
+                    >
+                      <User className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      title="View Calendar"
+                      className="h-7 w-7 inline-flex items-center justify-center rounded-md text-teal-600 hover:text-teal-700 hover:bg-teal-50 transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/admin/doctor-calendar/${doctor.id}`);
+                      }}
+                    >
+                      <CalendarDays className="h-3.5 w-3.5" />
+                    </button>
+                    {renderDoctorMenu(doctor)}
+                  </div>
                 </div>
 
                 {/* ── Mobile/Tablet Row (below lg) ── */}
@@ -1487,39 +1567,20 @@ export default function Roster() {
                     <div key={doctor.id} className="bg-card">
                       <div
                         className="flex flex-col sm:flex-row sm:items-center gap-2 px-3 py-3 sm:px-4 cursor-pointer"
-                        onClick={async () => {
+                        onClick={() => {
                           if (isExpanded) {
                             setInactiveExpandedIds((prev) => {
                               const next = new Set(prev);
                               next.delete(doctor.id);
                               return next;
                             });
-                            return;
-                          }
-                          if (cached !== undefined) {
+                          } else {
                             setInactiveExpandedIds((prev) => {
                               const next = new Set(prev);
                               next.add(doctor.id);
                               return next;
                             });
-                            return;
                           }
-                          setSurveyLoading((prev) => ({ ...prev, [doctor.id]: true }));
-                          const { data } = await supabase
-                            .from("doctor_survey_responses")
-                            .select(
-                              "wte_percent, ltft_days_off, competencies_json, grade, nhs_email, phone_number, iac_achieved, iac_working, iac_remote, iaoc_achieved, iaoc_working, iaoc_remote, icu_achieved, icu_working, icu_remote, transfer_achieved, transfer_working, transfer_remote",
-                            )
-                            .eq("doctor_id", doctor.id)
-                            .eq("rota_config_id", doctor.rota_config_id)
-                            .maybeSingle();
-                          setSurveyCache((prev) => ({ ...prev, [doctor.id]: data ?? null }));
-                          setSurveyLoading((prev) => ({ ...prev, [doctor.id]: false }));
-                          setInactiveExpandedIds((prev) => {
-                            const next = new Set(prev);
-                            next.add(doctor.id);
-                            return next;
-                          });
                         }}
                       >
                         <div className="flex items-center justify-between sm:flex-1">
