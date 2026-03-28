@@ -350,7 +350,6 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
   const isMobile = useIsMobile();
   const todayISO = getTodayISO();
 
-  // Set accurate defaults depending on screen size
   const [viewMode, setViewMode] = useState<"day" | "week" | "month">(() => {
     if (typeof window !== "undefined" && window.innerWidth < 768) return "day";
     return "week";
@@ -1343,7 +1342,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
 
           {/* Search and Sort Toolbar */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 bg-muted/30 p-2 border border-border/60 rounded-lg">
-            <div className="relative flex-1 max-w-sm">
+            <div className="relative flex-1 w-full sm:max-w-sm">
               <Search className="h-3.5 w-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <input
                 type="text"
@@ -1353,32 +1352,39 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                 className="w-full pl-8 pr-3 py-1.5 text-xs border border-border rounded-md bg-card focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            <div className="flex items-center gap-2 justify-end flex-wrap">
+            <div className="flex items-center gap-3 justify-between sm:justify-end flex-wrap w-full sm:w-auto">
               {viewMode === "day" && (
-                <Button
-                  variant="outline"
-                  size="sm"
+                <button
                   onClick={() => setGroupAvailability(!groupAvailability)}
-                  className={`h-8 text-xs px-2 py-1 transition-colors ${groupAvailability ? "bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200" : ""}`}
+                  className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border font-medium transition-all shadow-sm ${
+                    groupAvailability
+                      ? "bg-blue-600 text-white border-blue-600"
+                      : "bg-card text-muted-foreground border-border hover:bg-muted"
+                  }`}
                 >
-                  Group by Status
-                </Button>
+                  <div
+                    className={`w-2 h-2 rounded-full transition-colors ${groupAvailability ? "bg-white" : "bg-muted-foreground"}`}
+                  />
+                  Group by Availability
+                </button>
               )}
-              <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground ml-2" />
-              <span className="text-[11px] text-muted-foreground font-medium hidden sm:inline">Sort:</span>
-              <select
-                value={`${sortConfig.key}-${sortConfig.direction}`}
-                onChange={(e) => {
-                  const [k, d] = e.target.value.split("-");
-                  setSortConfig({ key: k as "name" | "grade", direction: d as "asc" | "desc" });
-                }}
-                className="text-xs px-2 py-1.5 border border-border rounded-md bg-card focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-              >
-                <option value="name-asc">Name (A-Z)</option>
-                <option value="name-desc">Name (Z-A)</option>
-                <option value="grade-asc">Grade (A-Z)</option>
-                <option value="grade-desc">Grade (Z-A)</option>
-              </select>
+              <div className="flex items-center gap-1.5">
+                <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-[11px] text-muted-foreground font-medium hidden sm:inline">Sort:</span>
+                <select
+                  value={`${sortConfig.key}-${sortConfig.direction}`}
+                  onChange={(e) => {
+                    const [k, d] = e.target.value.split("-");
+                    setSortConfig({ key: k as "name" | "grade", direction: d as "asc" | "desc" });
+                  }}
+                  className="text-xs px-2 py-1.5 border border-border rounded-md bg-card focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                >
+                  <option value="name-asc">Name (A-Z)</option>
+                  <option value="name-desc">Name (Z-A)</option>
+                  <option value="grade-asc">Grade (A-Z)</option>
+                  <option value="grade-desc">Grade (Z-A)</option>
+                </select>
+              </div>
             </div>
           </div>
         </div>
@@ -1583,7 +1589,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                   {/* Group 2: Partially Available */}
                   <div className="border-t border-border/50 pt-3">
                     <div
-                      className="flex items-center justify-between cursor-pointer mb-2 px-1 hover:bg-muted/30 rounded"
+                      className="flex items-center justify-between cursor-pointer mb-2 px-1 hover:bg-muted/30 rounded transition-colors"
                       onClick={() => setCollapsePartial(!collapsePartial)}
                     >
                       <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
@@ -1605,7 +1611,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                   {/* Group 3: Unavailable */}
                   <div className="border-t border-border/50 pt-3">
                     <div
-                      className="flex items-center justify-between cursor-pointer mb-2 px-1 hover:bg-muted/30 rounded"
+                      className="flex items-center justify-between cursor-pointer mb-2 px-1 hover:bg-muted/30 rounded transition-colors"
                       onClick={() => setCollapseUnavailable(!collapseUnavailable)}
                     >
                       <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
