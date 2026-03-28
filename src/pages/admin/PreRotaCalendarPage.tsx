@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEimport { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,7 +17,6 @@ import {
   ChevronDown,
   CalendarRange,
   ChevronUp,
-  RefreshCw,
 } from "lucide-react";
 import {
   getTodayISO,
@@ -39,20 +38,10 @@ import {
 const DAY_NAMES = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
 
 const FULL_DAY_NAMES: Record<string, string> = {
-  sun: "sunday",
-  mon: "monday",
-  tue: "tuesday",
-  wed: "wednesday",
-  thu: "thursday",
-  fri: "friday",
-  sat: "saturday",
-  sunday: "sunday",
-  monday: "monday",
-  tuesday: "tuesday",
-  wednesday: "wednesday",
-  thursday: "thursday",
-  friday: "friday",
-  saturday: "saturday",
+  sun: "sunday", mon: "monday", tue: "tuesday", wed: "wednesday",
+  thu: "thursday", fri: "friday", sat: "saturday",
+  sunday: "sunday", monday: "monday", tuesday: "tuesday", wednesday: "wednesday",
+  thursday: "thursday", friday: "friday", saturday: "saturday",
 };
 
 function normaliseDayName(raw: string): string {
@@ -93,7 +82,7 @@ function isDoctorEligible(
   doctor: CalendarDoctor,
   date: string,
   shift: { badge_night: boolean; badge_oncall: boolean },
-  surveys: Record<string, SurveyMap>,
+  surveys: Record<string, SurveyMap>
 ): boolean {
   const cell = doctor.availability[date];
   const primary = cell?.primary ?? "AVAILABLE";
@@ -146,9 +135,7 @@ const BADGE_STYLES = {
 function LeaveBadge({ type, className = "" }: { type: keyof typeof BADGE_STYLES; className?: string }) {
   const s = BADGE_STYLES[type];
   return (
-    <span
-      className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wider leading-tight ${s.classes} ${className}`}
-    >
+    <span className={`inline-block px-1 sm:px-1.5 py-0.5 rounded text-[8px] sm:text-[10px] font-bold tracking-tighter sm:tracking-wider leading-none sm:leading-tight ${s.classes} ${className}`}>
       {s.label}
     </span>
   );
@@ -170,12 +157,8 @@ function getMergedCellBackground(mergedCell: MergedCell | undefined, isLtftDay: 
 function CalendarLegend() {
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-4 text-xs text-muted-foreground bg-card border border-border rounded-lg px-4 py-3 shadow-sm">
-      <div className="flex items-center gap-1.5">
-        <LeaveBadge type="AL" /> <span>Annual Leave</span>
-      </div>
-      <div className="flex items-center gap-1.5">
-        <LeaveBadge type="SL" /> <span>Study Leave</span>
-      </div>
+      <div className="flex items-center gap-1.5"><LeaveBadge type="AL" /> <span>Annual Leave</span></div>
+      <div className="flex items-center gap-1.5"><LeaveBadge type="SL" /> <span>Study Leave</span></div>
       <div className="flex items-center gap-1.5">
         <div className="w-8 h-5 flex items-center justify-center rounded bg-orange-50 border border-orange-200">
           <LeaveBadge type="ROT" className="text-[9px] px-1 py-0" />
@@ -188,9 +171,7 @@ function CalendarLegend() {
         </div>
         <span>Parental Leave</span>
       </div>
-      <div className="flex items-center gap-1.5">
-        <LeaveBadge type="NOC" /> <span>Not On-Call</span>
-      </div>
+      <div className="flex items-center gap-1.5"><LeaveBadge type="NOC" /> <span>Not On-Call</span></div>
       <div className="w-px h-4 bg-border mx-0.5" />
       <div className="flex items-center gap-1.5">
         <div className="w-8 h-5 flex items-center justify-center rounded bg-yellow-50 border border-yellow-200">
@@ -205,15 +186,9 @@ function CalendarLegend() {
         </span>
         <span>Coordinator override</span>
       </div>
-      <div className="flex items-center gap-1.5">
-        <div className="w-3.5 h-3.5 rounded bg-blue-100 border border-blue-200 shrink-0" /> <span>Today</span>
-      </div>
-      <div className="flex items-center gap-1.5">
-        <div className="w-3.5 h-3.5 rounded bg-red-100 border border-red-200 shrink-0" /> <span>Bank Holiday</span>
-      </div>
-      <div className="flex items-center gap-1.5">
-        <div className="w-3.5 h-3.5 rounded bg-muted border border-border shrink-0" /> <span>Weekend</span>
-      </div>
+      <div className="flex items-center gap-1.5"><div className="w-3.5 h-3.5 rounded bg-blue-100 border border-blue-200 shrink-0" /> <span>Today</span></div>
+      <div className="flex items-center gap-1.5"><div className="w-3.5 h-3.5 rounded bg-red-100 border border-red-200 shrink-0" /> <span>Bank Holiday</span></div>
+      <div className="flex items-center gap-1.5"><div className="w-3.5 h-3.5 rounded bg-muted border border-border shrink-0" /> <span>Weekend</span></div>
     </div>
   );
 }
@@ -238,42 +213,38 @@ function WeekCellContent({
 
   if (mergedCell?.isDeleted && mergedCell.deletedCode) {
     return (
-      <span className="bg-muted text-muted-foreground text-[10px] font-bold px-1.5 py-0.5 rounded line-through">
+      <span className="bg-muted text-muted-foreground text-[8px] sm:text-[10px] font-bold px-1 py-0.5 rounded line-through">
         {mergedCell.deletedCode}
       </span>
     );
   }
 
   return (
-    <>
+    <div className="flex flex-col gap-0.5 items-center justify-center w-full px-0.5">
       {(["AL", "SL", "ROT", "PL"] as const)
         .filter((e) => primary === e)
         .map((event) => (
-          <span key={event} className="inline-flex items-center">
+          <span key={event} className="inline-flex items-center max-w-full overflow-hidden">
             <LeaveBadge type={event} />
             {hasOverrideDot && <RotaOverrideDot />}
           </span>
         ))}
       {isNoc && (
-        <span className="inline-flex items-center">
+        <span className="inline-flex items-center max-w-full overflow-hidden">
           <LeaveBadge type="NOC" />
           {hasOverrideDot && <RotaOverrideDot />}
         </span>
       )}
       {isLtftDay && <LeaveBadge type="LTFT" />}
-    </>
+    </div>
   );
 }
 
 const MONTH_DAY_ABBR = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 const MONTH_EVENT_COLOURS: Record<string, string> = {
-  AL: "#16a34a",
-  SL: "#2563eb",
-  NOC: "#ec4899",
-  ROT: "#ea580c",
-  PL: "#7c3aed",
-  LTFT: "#ca8a04",
+  AL: "#16a34a", SL: "#2563eb", NOC: "#ec4899",
+  ROT: "#ea580c", PL: "#7c3aed", LTFT: "#ca8a04",
 };
 
 function buildMonthGrid(yearMonth: string): string[] {
@@ -384,7 +355,6 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
   const [modalInitialDate, setModalInitialDate] = useState<string | null>(null);
 
   const lastTapRef = useRef<{ doctorId: string; date: string; time: number } | null>(null);
-  const dateInputRef = useRef<HTMLInputElement>(null);
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
   const navRef = useRef<{ goPrev: () => void; goNext: () => void }>({
@@ -432,7 +402,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
         setShiftTypes(shifts);
 
         const bhSet = new Set(
-          (cachedBankHolidays ?? []).filter((r: any) => r.is_active !== false).map((r: any) => r.date as string),
+          (cachedBankHolidays ?? []).filter((r: any) => r.is_active !== false).map((r: any) => r.date as string)
         );
         setBankHolidays(bhSet);
 
@@ -453,17 +423,24 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
 
         const mergedDoctors = (cd.doctors ?? []).map((doc: any) => ({
           ...doc,
-          ltftDaysOff: (doc.ltftDaysOff ?? doc.ltft_days_off ?? sMap[doc.doctorId]?.ltftDaysOff ?? []).map(
-            normaliseDayName,
-          ),
+          ltftDaysOff: (
+            doc.ltftDaysOff ??
+            doc.ltft_days_off ??
+            sMap[doc.doctorId]?.ltftDaysOff ??
+            []
+          ).map(normaliseDayName),
         }));
         const mergedCd = { ...cd, doctors: mergedDoctors };
         setCalendarData(mergedCd);
 
         // Start from current date logic
         const initialDate =
-          todayISO >= mergedCd.rotaStartDate && todayISO <= mergedCd.rotaEndDate ? todayISO : mergedCd.rotaStartDate;
-        const initialWeekIdx = mergedCd.weeks.findIndex((w) => w.startDate <= initialDate && initialDate <= w.endDate);
+          todayISO >= mergedCd.rotaStartDate && todayISO <= mergedCd.rotaEndDate
+            ? todayISO
+            : mergedCd.rotaStartDate;
+        const initialWeekIdx = mergedCd.weeks.findIndex(
+          (w) => w.startDate <= initialDate && initialDate <= w.endDate
+        );
         setCurrentWeekIndex(initialWeekIdx >= 0 ? initialWeekIdx : 0);
         const allDatesFlat = mergedCd.weeks.flatMap((w) => w.dates);
         const initialDayIdx = allDatesFlat.indexOf(initialDate);
@@ -521,7 +498,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
         const pr = preRota as any;
         if (pr.status === "blocked") {
           setErrorMsg(
-            "Pre-rota is blocked due to critical issues. Resolve them on the dashboard before viewing the calendar.",
+            "Pre-rota is blocked due to critical issues. Resolve them on the dashboard before viewing the calendar."
           );
           setLoading(false);
           return;
@@ -549,7 +526,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
           .select("date, is_active")
           .eq("rota_config_id", rotaConfigId);
         const bhSet = new Set(
-          (bhRows ?? []).filter((r: any) => r.is_active !== false).map((r: any) => r.date as string),
+          (bhRows ?? []).filter((r: any) => r.is_active !== false).map((r: any) => r.date as string)
         );
         setBankHolidays(bhSet);
 
@@ -569,7 +546,11 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
         }
         setSurveysMap(sMap);
 
-        const { data: config } = await supabase.from("rota_configs").select("owned_by").eq("id", rotaConfigId).single();
+        const { data: config } = await supabase
+          .from("rota_configs")
+          .select("owned_by")
+          .eq("id", rotaConfigId)
+          .single();
         if (config) {
           const { data: acct } = await supabase
             .from("account_settings")
@@ -582,17 +563,24 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
 
         const mergedDoctors = (cd.doctors ?? []).map((doc: any) => ({
           ...doc,
-          ltftDaysOff: (doc.ltftDaysOff ?? doc.ltft_days_off ?? sMap[doc.doctorId]?.ltftDaysOff ?? []).map(
-            normaliseDayName,
-          ),
+          ltftDaysOff: (
+            doc.ltftDaysOff ??
+            doc.ltft_days_off ??
+            sMap[doc.doctorId]?.ltftDaysOff ??
+            []
+          ).map(normaliseDayName),
         }));
         const mergedCd = { ...cd, doctors: mergedDoctors };
         setCalendarData(mergedCd);
 
         // Start from current date logic
         const initialDate =
-          todayISO >= mergedCd.rotaStartDate && todayISO <= mergedCd.rotaEndDate ? todayISO : mergedCd.rotaStartDate;
-        const initialWeekIdx = mergedCd.weeks.findIndex((w) => w.startDate <= initialDate && initialDate <= w.endDate);
+          todayISO >= mergedCd.rotaStartDate && todayISO <= mergedCd.rotaEndDate
+            ? todayISO
+            : mergedCd.rotaStartDate;
+        const initialWeekIdx = mergedCd.weeks.findIndex(
+          (w) => w.startDate <= initialDate && initialDate <= w.endDate
+        );
         setCurrentWeekIndex(initialWeekIdx >= 0 ? initialWeekIdx : 0);
         const allDatesFlat = mergedCd.weeks.flatMap((w) => w.dates);
         const initialDayIdx = allDatesFlat.indexOf(initialDate);
@@ -733,7 +721,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
       setPanelOpen(false);
       setSelectedCell(null);
       refreshResolvedAvailabilityForDoctor(rotaConfigId, doctorId).catch((err) =>
-        console.error("refreshResolvedAvailability failed:", err),
+        console.error("refreshResolvedAvailability failed:", err)
       );
     } catch (err) {
       console.error("Failed to save override:", err);
@@ -755,7 +743,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
       setPanelOpen(false);
       setSelectedCell(null);
       refreshResolvedAvailabilityForDoctor(rotaConfigId, doctorId).catch((err) =>
-        console.error("refreshResolvedAvailability failed:", err),
+        console.error("refreshResolvedAvailability failed:", err)
       );
     } catch (err) {
       console.error("Failed to delete override:", err);
@@ -789,7 +777,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
       setPanelOpen(false);
       setSelectedCell(null);
       refreshResolvedAvailabilityForDoctor(rotaConfigId, doctorId).catch((err) =>
-        console.error("refreshResolvedAvailability failed:", err),
+        console.error("refreshResolvedAvailability failed:", err)
       );
     } catch (err) {
       console.error("Failed to remove survey event:", err);
@@ -827,7 +815,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
         doctor.availability,
         doctorOverrides,
         calendarData.rotaStartDate,
-        calendarData.rotaEndDate,
+        calendarData.rotaEndDate
       );
     }
     return result;
@@ -864,8 +852,8 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
           <div className="rounded-xl border border-border bg-card p-6 text-center space-y-4">
             <AlertTriangle className="h-8 w-8 text-amber-500 mx-auto" />
             <p className="text-sm text-foreground">{loadError ?? errorMsg ?? "No calendar data available."}</p>
-            <Button variant="outline" onClick={() => navigate("/admin/pre-rota-calendar")}>
-              <RefreshCw className="h-4 w-4 mr-2" /> Reload Calendar
+            <Button variant="outline" onClick={() => navigate("/admin/pre-rota")}>
+              <ArrowLeft className="h-4 w-4 mr-2" /> Back to Pre-rota
             </Button>
           </div>
         </div>
@@ -880,7 +868,13 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
   const currentDate = allDates[currentDayIndex] ?? allDates[0];
 
   const weekLabel = currentWeek
-    ? `Wk ${currentWeek.weekNumber} · ${new Date(currentWeek.dates[0] + "T00:00:00").toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}–${new Date(currentWeek.dates[currentWeek.dates.length - 1] + "T00:00:00").toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}`
+    ? `Wk ${currentWeek.weekNumber} · ${new Date(currentWeek.dates[0] + "T00:00:00").toLocaleDateString(
+        "en-GB",
+        { day: "2-digit", month: "short" }
+      )}–${new Date(currentWeek.dates[currentWeek.dates.length - 1] + "T00:00:00").toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+      })}`
     : "";
   const dayLabel = currentDate
     ? new Date(currentDate + "T00:00:00").toLocaleDateString("en-GB", {
@@ -891,18 +885,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
       })
     : "";
   const MONTH_NAMES_LONG = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
+    "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December",
   ];
   const monthLabel = currentMonthKey
     ? `${MONTH_NAMES_LONG[Number(currentMonthKey.split("-")[1]) - 1]} ${currentMonthKey.split("-")[0]}`
@@ -913,14 +896,14 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
     viewMode === "week"
       ? currentWeekIndex === 0
       : viewMode === "day"
-        ? currentDayIndex === 0
-        : !currentMonthKey || currentMonthKey <= (calendarData?.rotaStartDate.slice(0, 7) ?? "");
+      ? currentDayIndex === 0
+      : !currentMonthKey || currentMonthKey <= (calendarData?.rotaStartDate.slice(0, 7) ?? "");
   const nextDisabled =
     viewMode === "week"
       ? currentWeekIndex >= weeks.length - 1
       : viewMode === "day"
-        ? currentDayIndex >= allDates.length - 1
-        : !currentMonthKey || currentMonthKey >= (calendarData?.rotaEndDate.slice(0, 7) ?? "");
+      ? currentDayIndex >= allDates.length - 1
+      : !currentMonthKey || currentMonthKey >= (calendarData?.rotaEndDate.slice(0, 7) ?? "");
 
   const goPrev = () => {
     if (viewMode === "week") setCurrentWeekIndex((i) => Math.max(0, i - 1));
@@ -954,19 +937,15 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
   };
 
   // Day view pre-computed values
-  const isBHDay = bankHolidays.has(currentDate);
-  const isWkndDay = (() => {
-    const d = new Date(currentDate + "T00:00:00");
-    return d.getDay() === 0 || d.getDay() === 6;
-  })();
   const totalAvailable = doctors.filter((doc) => {
     const mc = mergedAvailabilityByDoctor[doc.doctorId]?.[currentDate];
-    const p = mc?.isDeleted ? "AVAILABLE" : (mc?.primary ?? "AVAILABLE");
+    const p = mc?.isDeleted ? "AVAILABLE" : mc?.primary ?? "AVAILABLE";
     return !["AL", "SL", "ROT", "PL", "NOC"].includes(p);
   }).length;
+  
   const nocOnlyCount = doctors.filter((doc) => {
     const mc = mergedAvailabilityByDoctor[doc.doctorId]?.[currentDate];
-    const p = mc?.isDeleted ? "AVAILABLE" : (mc?.primary ?? "AVAILABLE");
+    const p = mc?.isDeleted ? "AVAILABLE" : mc?.primary ?? "AVAILABLE";
     return p === "NOC";
   }).length;
 
@@ -987,10 +966,10 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
         {!embedded && (
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
             <button
-              onClick={() => navigate("/admin/pre-rota-calendar")}
+              onClick={() => navigate("/admin/pre-rota")}
               className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors bg-transparent border-none cursor-pointer"
             >
-              <ArrowLeft className="h-4 w-4" /> Back to Calendar
+              <ArrowLeft className="h-4 w-4" /> Back to Pre-rota
             </button>
             <Button variant="outline" size="sm" onClick={handleDownload}>
               <Download className="h-4 w-4 mr-2" /> Export Calendar
@@ -1034,7 +1013,9 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
-            <span className="text-sm font-semibold text-foreground min-w-[150px] text-center">{navLabel}</span>
+            <span className="text-sm font-semibold text-foreground min-w-[150px] text-center">
+              {navLabel}
+            </span>
             <button
               onClick={goNext}
               disabled={nextDisabled}
@@ -1059,184 +1040,190 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
 
         {/* ── WEEK VIEW ── */}
         {viewMode === "week" && currentWeek && (
-          <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs border-collapse">
-                <thead>
-                  <tr className="border-b border-border text-left">
-                    <th className="sticky left-0 bg-card z-10 py-2 px-3 font-medium text-muted-foreground border-r border-border min-w-[110px] sm:min-w-[140px] max-w-[140px]">
-                      Doctor
-                    </th>
-                    {currentWeek.dates.map((date) => {
-                      const dd = new Date(date + "T00:00:00");
-                      const isWknd = dd.getDay() === 0 || dd.getDay() === 6;
-                      const isBH = bankHolidays.has(date);
-                      const isToday = date === todayISO;
+          <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden w-full">
+            <table className="w-full table-fixed text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-border text-left">
+                  <th className="bg-card py-2 px-1 sm:px-2 font-medium text-muted-foreground border-r border-border w-[22%] sm:w-[16%] align-bottom">
+                    Doctor
+                  </th>
+                  {currentWeek.dates.map((date) => {
+                    const dd = new Date(date + "T00:00:00");
+                    const isWknd = dd.getDay() === 0 || dd.getDay() === 6;
+                    const isBH = bankHolidays.has(date);
+                    const isToday = date === todayISO;
 
-                      const hdrBg = isToday ? "bg-blue-100" : isBH ? "bg-red-100" : isWknd ? "bg-muted" : "bg-card";
-                      const hdrColor = isToday
-                        ? "text-blue-800"
-                        : isBH
-                          ? "text-red-800"
-                          : isWknd
-                            ? "text-muted-foreground"
-                            : "text-foreground";
+                    const hdrBg = isToday ? "bg-blue-100" : isBH ? "bg-red-100" : isWknd ? "bg-muted" : "bg-card";
+                    const hdrColor = isToday
+                      ? "text-blue-800"
+                      : isBH
+                      ? "text-red-800"
+                      : isWknd
+                      ? "text-muted-foreground"
+                      : "text-foreground";
 
-                      return (
-                        <th
-                          key={date}
-                          className={`py-2 px-1 text-center font-medium border-l border-border min-w-[40px] ${hdrBg} ${hdrColor}`}
-                        >
-                          <div className="text-[10px] uppercase tracking-wider">
-                            {dd.toLocaleDateString("en-GB", { weekday: "short" })}
-                          </div>
-                          <div className={`text-[10px] ${isToday ? "font-bold" : "font-normal"}`}>
-                            {dd.toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
-                          </div>
-                          {isBH && (
-                            <span className="inline-block bg-red-700 text-white text-[9px] font-bold px-1 rounded mt-0.5 tracking-wider">
-                              BH
-                            </span>
-                          )}
-                        </th>
-                      );
-                    })}
-                  </tr>
-                </thead>
-                <tbody>
-                  {doctors.map((doctor, i) => {
-                    const rowBg = i % 2 === 0 ? "bg-card" : "bg-muted/20";
-                    const ltftDays = getLtftDaysOff(doctor);
                     return (
-                      <tr key={doctor.doctorId} className={`border-b border-border/50 ${rowBg}`}>
-                        <td
-                          className={`sticky left-0 ${rowBg} z-10 p-2 border-r border-border min-w-[110px] sm:min-w-[140px] max-w-[140px] align-middle overflow-hidden`}
+                      <th
+                        key={date}
+                        className={`py-1 px-0.5 sm:px-1 text-center font-medium border-l border-border w-[11.1%] md:w-[12%] ${hdrBg} ${hdrColor}`}
+                      >
+                        <div className="text-[8px] sm:text-[10px] uppercase tracking-tighter sm:tracking-wider truncate">
+                          {dd.toLocaleDateString("en-GB", { weekday: "short" })}
+                        </div>
+                        <div
+                          className={`text-[9px] sm:text-[10px] truncate ${isToday ? "font-bold" : "font-normal"}`}
                         >
-                          <div
-                            onClick={() => navigate(`/admin/doctor-calendar/${doctor.doctorId}`)}
-                            className="font-semibold text-blue-600 truncate cursor-pointer hover:underline"
-                            title={doctor.doctorName}
-                          >
-                            {doctor.doctorName.replace("Dr ", "")}
-                          </div>
-                          <div className="text-[10px] text-muted-foreground truncate mt-0.5">
-                            {doctor.grade} · {doctor.wte}%
-                          </div>
-                          {!isMobile && ltftDays.length > 0 && (
-                            <div className="mt-1">
-                              <span className="inline-block text-[9px] font-semibold text-yellow-800 bg-yellow-100 border border-yellow-200 rounded px-1.5 py-0.5 truncate max-w-full">
-                                LTFT:{" "}
-                                {ltftDays.map((d) => d.slice(0, 3).charAt(0).toUpperCase() + d.slice(1, 3)).join(", ")}
-                              </span>
-                            </div>
-                          )}
-                        </td>
-                        {currentWeek.dates.map((date) => {
-                          const mergedCell = mergedAvailabilityByDoctor[doctor.doctorId]?.[date];
-                          const primary = mergedCell?.primary ?? "AVAILABLE";
-                          const isLtftDay = ltftDays.includes(getDayNameFromISO(date));
-                          const cellBg = getMergedCellBackground(mergedCell, isLtftDay);
-                          const isSelected = selectedCell?.doctorId === doctor.doctorId && selectedCell?.date === date;
-
-                          return (
-                            <td
-                              key={date}
-                              onClick={() => handleCellTap(doctor.doctorId, date)}
-                              className={`border-l border-border/50 p-1 text-center align-middle cursor-pointer transition-colors hover:bg-muted/50 ${cellBg} ${isSelected ? "ring-2 ring-inset ring-blue-500 z-10 relative" : ""}`}
-                            >
-                              <div className="flex flex-col items-center gap-1 justify-center min-h-[44px]">
-                                <WeekCellContent mergedCell={mergedCell} isLtftDay={isLtftDay} primary={primary} />
-                              </div>
-                            </td>
-                          );
-                        })}
-                      </tr>
+                          {dd.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                        </div>
+                        {isBH && (
+                          <span className="inline-block bg-red-700 text-white text-[8px] font-bold px-0.5 rounded mt-0.5 tracking-tighter">
+                            BH
+                          </span>
+                        )}
+                      </th>
                     );
                   })}
-
-                  {/* Divider */}
-                  <tr>
-                    <td colSpan={currentWeek.dates.length + 1} className="p-0">
-                      <div className="h-1 bg-border/50" />
-                    </td>
-                  </tr>
-
-                  {/* Total available row */}
-                  <tr className="bg-muted/30 border-b-2 border-border">
-                    <td className="sticky left-0 bg-muted/30 z-10 py-3 px-3 border-r border-border text-foreground font-semibold">
-                      All shifts
-                    </td>
-                    {currentWeek.dates.map((date) => {
-                      const availableAll = doctors.filter(
-                        (doc) =>
-                          !["AL", "SL", "ROT", "PL", "NOC"].includes(
-                            mergedAvailabilityByDoctor[doc.doctorId]?.[date]?.isDeleted
-                              ? "AVAILABLE"
-                              : (mergedAvailabilityByDoctor[doc.doctorId]?.[date]?.primary ?? "AVAILABLE"),
-                          ),
-                      ).length;
-                      const availableNocOnly = doctors.filter(
-                        (doc) =>
-                          (mergedAvailabilityByDoctor[doc.doctorId]?.[date]?.isDeleted
-                            ? "AVAILABLE"
-                            : (mergedAvailabilityByDoctor[doc.doctorId]?.[date]?.primary ?? "AVAILABLE")) === "NOC",
-                      ).length;
-                      const bgClass = getAvailabilityColorClass(availableAll, maxMinDoctors);
-
-                      return (
-                        <td key={date} className="border-l border-border bg-card text-center p-2">
-                          <div className="flex flex-col items-center gap-1 justify-center">
-                            <span
-                              className={`inline-flex items-center justify-center w-7 h-7 rounded text-white font-bold shadow-sm ${bgClass}`}
-                            >
-                              {availableAll}
+                </tr>
+              </thead>
+              <tbody>
+                {doctors.map((doctor, i) => {
+                  const rowBg = i % 2 === 0 ? "bg-card" : "bg-muted/20";
+                  const ltftDays = getLtftDaysOff(doctor);
+                  return (
+                    <tr key={doctor.doctorId} className={`border-b border-border/50 ${rowBg}`}>
+                      <td className={`p-1 sm:p-2 border-r border-border align-middle overflow-hidden`}>
+                        <div
+                          onClick={() => navigate(`/admin/doctor-calendar/${doctor.doctorId}`)}
+                          className="font-semibold text-blue-600 truncate cursor-pointer hover:underline text-[10px] sm:text-xs"
+                          title={doctor.doctorName}
+                        >
+                          {doctor.doctorName.replace("Dr ", "")}
+                        </div>
+                        <div className="text-[8px] sm:text-[10px] text-muted-foreground truncate mt-0.5 hidden sm:block">
+                          {doctor.grade} · {doctor.wte}%
+                        </div>
+                        {!isMobile && ltftDays.length > 0 && (
+                          <div className="mt-1">
+                            <span className="inline-block text-[8px] sm:text-[9px] font-semibold text-yellow-800 bg-yellow-100 border border-yellow-200 rounded px-1.5 py-0.5 truncate max-w-full">
+                              LTFT:{" "}
+                              {ltftDays
+                                .map((d) => d.slice(0, 3).charAt(0).toUpperCase() + d.slice(1, 3))
+                                .join(", ")}
                             </span>
-                            {availableNocOnly > 0 && (
-                              <span className="text-[9px] text-pink-500 font-bold tracking-tight">
-                                +{availableNocOnly} NOC
-                              </span>
-                            )}
                           </div>
-                        </td>
-                      );
-                    })}
-                  </tr>
-
-                  {/* Per-shift eligibility rows */}
-                  {shiftTypes.map((shift, si) => (
-                    <tr key={shift.id} className={si % 2 === 0 ? "bg-card" : "bg-muted/20"}>
-                      <td
-                        className={`sticky left-0 ${si % 2 === 0 ? "bg-card" : "bg-muted/20"} z-10 py-2 pl-4 pr-3 border-r border-border text-muted-foreground`}
-                      >
-                        {shift.name}
+                        )}
                       </td>
                       {currentWeek.dates.map((date) => {
-                        const count = eligibility[shift.id]?.[date] ?? 0;
-                        const bgClass =
-                          count < shift.min_doctors
-                            ? "text-red-600"
-                            : count === shift.min_doctors
-                              ? "text-amber-500"
-                              : "text-green-600";
+                        const mergedCell = mergedAvailabilityByDoctor[doctor.doctorId]?.[date];
+                        const primary = mergedCell?.primary ?? "AVAILABLE";
+                        const isLtftDay = ltftDays.includes(getDayNameFromISO(date));
+                        const cellBg = getMergedCellBackground(mergedCell, isLtftDay);
+                        const isSelected =
+                          selectedCell?.doctorId === doctor.doctorId && selectedCell?.date === date;
+
                         return (
-                          <td key={date} className="border-l border-border/50 bg-card text-center p-2 align-middle">
-                            <span className={`font-bold ${bgClass}`}>{count}</span>
+                          <td
+                            key={date}
+                            onClick={() => handleCellTap(doctor.doctorId, date)}
+                            className={`border-l border-border/50 p-0.5 sm:p-1 text-center align-middle cursor-pointer transition-colors hover:bg-muted/50 ${cellBg} ${
+                              isSelected ? "ring-2 ring-inset ring-blue-500 z-10 relative" : ""
+                            }`}
+                          >
+                            <div className="flex flex-col items-center gap-0.5 sm:gap-1 justify-center min-h-[36px] sm:min-h-[44px] overflow-hidden">
+                              <WeekCellContent mergedCell={mergedCell} isLtftDay={isLtftDay} primary={primary} />
+                            </div>
                           </td>
                         );
                       })}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  );
+                })}
+
+                {/* Divider */}
+                <tr>
+                  <td colSpan={currentWeek.dates.length + 1} className="p-0">
+                    <div className="h-1 bg-border/50" />
+                  </td>
+                </tr>
+
+                {/* Total available row */}
+                <tr className="bg-muted/30 border-b-2 border-border">
+                  <td className="py-2 px-1 sm:px-2 border-r border-border text-foreground font-semibold text-[10px] sm:text-xs">
+                    All shifts
+                  </td>
+                  {currentWeek.dates.map((date) => {
+                    const availableAll = doctors.filter(
+                      (doc) =>
+                        !["AL", "SL", "ROT", "PL", "NOC"].includes(
+                          mergedAvailabilityByDoctor[doc.doctorId]?.[date]?.isDeleted
+                            ? "AVAILABLE"
+                            : mergedAvailabilityByDoctor[doc.doctorId]?.[date]?.primary ?? "AVAILABLE"
+                        )
+                    ).length;
+                    const availableNocOnly = doctors.filter(
+                      (doc) =>
+                        (mergedAvailabilityByDoctor[doc.doctorId]?.[date]?.isDeleted
+                          ? "AVAILABLE"
+                          : mergedAvailabilityByDoctor[doc.doctorId]?.[date]?.primary ?? "AVAILABLE") === "NOC"
+                    ).length;
+                    const bgClass = getAvailabilityColorClass(availableAll, maxMinDoctors);
+
+                    return (
+                      <td key={date} className="border-l border-border bg-card text-center p-1 sm:p-2">
+                        <div className="flex flex-col items-center gap-0.5 sm:gap-1 justify-center">
+                          <span
+                            className={`inline-flex items-center justify-center w-5 h-5 sm:w-7 sm:h-7 rounded text-white font-bold text-[10px] sm:text-xs shadow-sm ${bgClass}`}
+                          >
+                            {availableAll}
+                          </span>
+                          {availableNocOnly > 0 && (
+                            <span className="text-[7px] sm:text-[9px] text-pink-500 font-bold tracking-tighter sm:tracking-tight">
+                              +{availableNocOnly} NOC
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    );
+                  })}
+                </tr>
+
+                {/* Per-shift eligibility rows */}
+                {shiftTypes.map((shift, si) => (
+                  <tr key={shift.id} className={si % 2 === 0 ? "bg-card" : "bg-muted/20"}>
+                    <td
+                      className={`py-1.5 sm:py-2 pl-2 sm:pl-4 pr-1 sm:pr-3 border-r border-border text-muted-foreground text-[10px] sm:text-xs truncate`}
+                    >
+                      {shift.name}
+                    </td>
+                    {currentWeek.dates.map((date) => {
+                      const count = eligibility[shift.id]?.[date] ?? 0;
+                      const bgClass =
+                        count < shift.min_doctors
+                          ? "text-red-600"
+                          : count === shift.min_doctors
+                          ? "text-amber-500"
+                          : "text-green-600";
+                      return (
+                        <td
+                          key={date}
+                          className="border-l border-border/50 bg-card text-center p-1 sm:p-2 align-middle"
+                        >
+                          <span className={`font-bold text-[10px] sm:text-xs ${bgClass}`}>{count}</span>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
 
         {/* ── DAY VIEW ── */}
         {viewMode === "day" && (
           <div className="space-y-3">
-            <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
-              <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-muted/30">
+            <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden p-2 sm:p-3">
+              <div className="flex items-center gap-2 px-2 py-2 mb-2 border-b border-border/50">
                 <CalendarRange className="h-4 w-4 text-primary" />
                 <span className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
                   Doctors Availability
@@ -1244,10 +1231,11 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                 <span className="text-xs text-muted-foreground ml-auto">{doctors.length} total</span>
               </div>
 
-              <div className="divide-y divide-border/60">
+              {/* Extremely dense adaptive grid layout for desktop scaling */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-2">
                 {doctors.map((doctor) => {
                   const mergedCell = mergedAvailabilityByDoctor[doctor.doctorId]?.[currentDate];
-                  const primary = mergedCell?.isDeleted ? "AVAILABLE" : (mergedCell?.primary ?? "AVAILABLE");
+                  const primary = mergedCell?.isDeleted ? "AVAILABLE" : mergedCell?.primary ?? "AVAILABLE";
                   const isLtftDay = getLtftDaysOff(doctor).includes(getDayNameFromISO(currentDate));
                   const cellBg = getMergedCellBackground(mergedCell, isLtftDay);
                   const isUnavailable = ["AL", "SL", "ROT", "PL"].includes(primary);
@@ -1257,80 +1245,37 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                     <div
                       key={doctor.doctorId}
                       onClick={() => handleCellTap(doctor.doctorId, currentDate)}
-                      className={`flex items-center justify-between p-3 cursor-pointer transition-colors hover:bg-muted/50 ${isSelected ? "bg-blue-50 ring-2 ring-inset ring-blue-500 z-10 relative" : cellBg} ${isUnavailable ? "opacity-60 grayscale-[30%]" : ""}`}
+                      className={`flex flex-col justify-center px-2 py-1.5 rounded-md border border-border/50 cursor-pointer transition-colors hover:bg-muted/50 ${
+                        isSelected ? "bg-blue-50 ring-2 ring-inset ring-blue-500 z-10 relative" : cellBg
+                      } ${isUnavailable ? "opacity-60" : ""}`}
                     >
-                      <div className="flex-1 min-w-0 pr-4">
-                        <div
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/admin/doctor-calendar/${doctor.doctorId}`);
-                          }}
-                          className="font-semibold text-blue-600 text-sm hover:underline cursor-pointer truncate"
-                        >
-                          {doctor.doctorName}
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-0.5 truncate">
-                          {doctor.grade} · {doctor.wte}%
-                        </div>
-                        {getLtftDaysOff(doctor).length > 0 && (
-                          <div className="mt-1.5">
-                            <span className="inline-block text-[10px] font-semibold text-yellow-800 bg-yellow-100 border border-yellow-200 rounded px-1.5 py-0.5 truncate max-w-full">
-                              LTFT:{" "}
-                              {getLtftDaysOff(doctor)
-                                .map((d) => d.slice(0, 3).charAt(0).toUpperCase() + d.slice(1, 3))
-                                .join(", ")}
-                            </span>
-                          </div>
-                        )}
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/admin/doctor-calendar/${doctor.doctorId}`);
+                        }}
+                        className="font-semibold text-blue-600 text-xs hover:underline cursor-pointer truncate w-full"
+                        title={doctor.doctorName}
+                      >
+                        {doctor.doctorName.replace("Dr ", "")}
                       </div>
-                      <div className="flex items-center gap-1.5 shrink-0">
+
+                      <div className="flex items-center gap-1 mt-0.5 min-h-[18px] overflow-hidden">
                         {mergedCell?.isDeleted && mergedCell.deletedCode ? (
-                          <span className="bg-muted text-muted-foreground text-[10px] font-bold px-1.5 py-0.5 rounded line-through">
+                          <span className="bg-muted text-muted-foreground text-[9px] font-bold px-1 py-0.5 rounded line-through truncate">
                             {mergedCell.deletedCode}
                           </span>
                         ) : (
                           <>
-                            {primary === "AL" && (
-                              <span className="inline-flex items-center">
-                                <LeaveBadge type="AL" />
-                                {(mergedCell?.overrideAction === "add" || mergedCell?.overrideAction === "modify") && (
-                                  <RotaOverrideDot />
-                                )}
-                              </span>
+                            {primary === "AL" && <LeaveBadge type="AL" className="text-[9px] px-1 py-0" />}
+                            {primary === "SL" && <LeaveBadge type="SL" className="text-[9px] px-1 py-0" />}
+                            {primary === "ROT" && <LeaveBadge type="ROT" className="text-[9px] px-1 py-0" />}
+                            {primary === "PL" && <LeaveBadge type="PL" className="text-[9px] px-1 py-0" />}
+                            {primary === "NOC" && <LeaveBadge type="NOC" className="text-[9px] px-1 py-0" />}
+                            {isLtftDay && <LeaveBadge type="LTFT" className="text-[9px] px-1 py-0" />}
+                            {(mergedCell?.overrideAction === "add" || mergedCell?.overrideAction === "modify") && (
+                              <RotaOverrideDot />
                             )}
-                            {primary === "SL" && (
-                              <span className="inline-flex items-center">
-                                <LeaveBadge type="SL" />
-                                {(mergedCell?.overrideAction === "add" || mergedCell?.overrideAction === "modify") && (
-                                  <RotaOverrideDot />
-                                )}
-                              </span>
-                            )}
-                            {primary === "ROT" && (
-                              <span className="inline-flex items-center">
-                                <LeaveBadge type="ROT" />
-                                {(mergedCell?.overrideAction === "add" || mergedCell?.overrideAction === "modify") && (
-                                  <RotaOverrideDot />
-                                )}
-                              </span>
-                            )}
-                            {primary === "PL" && (
-                              <span className="inline-flex items-center">
-                                <LeaveBadge type="PL" />
-                                {(mergedCell?.overrideAction === "add" || mergedCell?.overrideAction === "modify") && (
-                                  <RotaOverrideDot />
-                                )}
-                              </span>
-                            )}
-                            {primary === "NOC" && (
-                              <span className="inline-flex items-center">
-                                <LeaveBadge type="NOC" />
-                                {(mergedCell?.overrideAction === "add" || mergedCell?.overrideAction === "modify") && (
-                                  <RotaOverrideDot />
-                                )}
-                              </span>
-                            )}
-                            {isLtftDay && <LeaveBadge type="LTFT" />}
                           </>
                         )}
                       </div>
@@ -1348,7 +1293,10 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
               >
                 <div className="flex items-center gap-3">
                   <span
-                    className={`inline-flex items-center justify-center w-7 h-7 rounded text-white font-bold text-sm shadow-sm ${getAvailabilityColorClass(totalAvailable, maxMinDoctors)}`}
+                    className={`inline-flex items-center justify-center w-7 h-7 rounded text-white font-bold text-sm shadow-sm ${getAvailabilityColorClass(
+                      totalAvailable,
+                      maxMinDoctors
+                    )}`}
                   >
                     {totalAvailable}
                   </span>
@@ -1363,7 +1311,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
               </button>
 
               {showBreakdown && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-4 border-t border-border bg-card">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 p-4 border-t border-border bg-card">
                   {shiftTypes.map((shift) => {
                     const count = eligibility[shift.id]?.[currentDate] ?? 0;
                     return (
@@ -1372,7 +1320,10 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                         className="flex items-center gap-2 bg-muted/30 rounded-lg p-2 border border-border/50"
                       >
                         <span
-                          className={`inline-flex items-center justify-center w-6 h-6 rounded text-white font-bold text-xs shadow-sm ${getAvailabilityColorClass(count, shift.min_doctors)}`}
+                          className={`inline-flex items-center justify-center w-6 h-6 rounded text-white font-bold text-xs shadow-sm ${getAvailabilityColorClass(
+                            count,
+                            shift.min_doctors
+                          )}`}
                         >
                           {count}
                         </span>
@@ -1389,145 +1340,149 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
         {/* ── MONTH VIEW ── */}
         {viewMode === "month" &&
           (isMobile ? (
-            <div className="p-8 text-center border border-border rounded-xl bg-card shadow-sm">
-              <div className="text-3xl mb-2">🖥️</div>
-              <p className="font-semibold text-foreground text-sm mb-1">Month view needs more space</p>
-              <p className="text-xs text-muted-foreground">
-                Switch to desktop or tablet to see the full monthly overview.
+            <div className="p-8 flex flex-col items-center justify-center text-center border border-border rounded-xl bg-card shadow-sm min-h-[40vh]">
+              <CalendarRange className="h-12 w-12 text-muted-foreground/50 mb-4" />
+              <p className="font-semibold text-foreground text-lg mb-2">Monthly View Unavailable</p>
+              <p className="text-sm text-muted-foreground max-w-[250px]">
+                The monthly view is too large for mobile screens. Please use a tablet or desktop device to see the full month overview.
               </p>
             </div>
           ) : calendarData && currentMonthKey ? (
             (() => {
               const gridDates = buildMonthGrid(currentMonthKey);
               return (
-                <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-xs border-collapse min-w-[800px]">
-                      <thead>
-                        <tr className="border-b border-border text-left">
-                          <th className="sticky left-0 bg-muted/30 z-10 py-2 px-2 font-medium text-muted-foreground border-r border-border min-w-[120px] max-w-[140px]">
-                            Doctor
-                          </th>
-                          {gridDates.map((date, idx) => {
-                            const inRota = date >= calendarData.rotaStartDate && date <= calendarData.rotaEndDate;
-                            const inMonth = date.startsWith(currentMonthKey);
-                            const d = new Date(date + "T00:00:00Z");
-                            const dow = d.getUTCDay();
-                            const isWknd = dow === 0 || dow === 6;
-                            const isBH = bankHolidays.has(date);
-                            const isToday = date === todayISO;
+                <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden w-full">
+                  <table className="w-full table-fixed text-[10px] sm:text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b border-border text-left">
+                        <th className="bg-muted/30 py-1 sm:py-2 px-1 font-medium text-muted-foreground border-r border-border w-[12%] sm:w-[15%] truncate align-bottom">
+                          Doctor
+                        </th>
+                        {gridDates.map((date, idx) => {
+                          const inRota = date >= calendarData.rotaStartDate && date <= calendarData.rotaEndDate;
+                          const inMonth = date.startsWith(currentMonthKey);
+                          const d = new Date(date + "T00:00:00Z");
+                          const dow = d.getUTCDay();
+                          const isWknd = dow === 0 || dow === 6;
+                          const isBH = bankHolidays.has(date);
+                          const isToday = date === todayISO;
 
-                            const hdrBg = isToday
-                              ? "bg-blue-100"
+                          const hdrBg = isToday ? "bg-blue-100" : isBH ? "bg-red-100" : isWknd ? "bg-muted" : "bg-card";
+                          const hdrColor =
+                            !inRota || !inMonth
+                              ? "text-muted-foreground/40"
+                              : isToday
+                              ? "text-blue-800"
                               : isBH
-                                ? "bg-red-100"
-                                : isWknd
-                                  ? "bg-muted"
-                                  : "bg-card";
-                            const hdrColor =
-                              !inRota || !inMonth
-                                ? "text-muted-foreground/40"
-                                : isToday
-                                  ? "text-blue-800"
-                                  : isBH
-                                    ? "text-red-800"
-                                    : isWknd
-                                      ? "text-muted-foreground"
-                                      : "text-foreground";
+                              ? "text-red-800"
+                              : isWknd
+                              ? "text-muted-foreground"
+                              : "text-foreground";
 
-                            return (
-                              <th
-                                key={`h${idx}`}
-                                className={`py-1.5 px-0.5 text-center font-medium border-l border-border/50 min-w-[28px] ${hdrBg} ${hdrColor} ${!inRota || !inMonth ? "opacity-50" : ""}`}
-                              >
-                                <div className="text-[9px] uppercase tracking-wider">
-                                  {MONTH_DAY_ABBR[(dow + 6) % 7]}
-                                </div>
-                                <div className={`text-[10px] ${isToday ? "font-bold" : "font-normal"}`}>
-                                  {d.getUTCDate()}
-                                </div>
-                              </th>
-                            );
-                          })}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {doctors.map((doctor, i) => {
-                          const rowBg = i % 2 === 0 ? "bg-card" : "bg-muted/10";
                           return (
-                            <tr key={doctor.doctorId} className={`border-b border-border/50 ${rowBg}`}>
-                              <td
-                                onClick={() => navigate(`/admin/doctor-calendar/${doctor.doctorId}`)}
-                                className={`sticky left-0 ${rowBg} z-10 p-1.5 border-r border-border text-left align-middle cursor-pointer hover:underline`}
-                                title={doctor.doctorName}
-                              >
-                                <div className="font-semibold text-[11px] text-blue-600 truncate max-w-[120px]">
-                                  {doctor.doctorName.replace("Dr ", "")}
-                                </div>
-                                <div className="text-[9px] text-muted-foreground truncate mt-0.5">
-                                  {doctor.grade} · {doctor.wte}%
-                                </div>
-                              </td>
-                              {gridDates.map((date, idx) => {
-                                const inRota = date >= calendarData.rotaStartDate && date <= calendarData.rotaEndDate;
-                                const inMonth = date.startsWith(currentMonthKey);
-                                const mergedCell = inRota
-                                  ? mergedAvailabilityByDoctor[doctor.doctorId]?.[date]
-                                  : undefined;
-                                const primary = mergedCell?.isDeleted
-                                  ? "AVAILABLE"
-                                  : (mergedCell?.primary ?? "AVAILABLE");
-                                const isLtftDay = getLtftDaysOff(doctor).includes(getDayNameFromISO(date));
-                                const bg = inRota ? getMergedCellBackground(mergedCell, isLtftDay) : "bg-card";
-                                const hasOverride = !!mergedCell?.overrideId;
-                                const isSelected =
-                                  selectedCell?.doctorId === doctor.doctorId && selectedCell?.date === date;
-
-                                const eventStyle = BADGE_STYLES[primary as keyof typeof BADGE_STYLES];
-
-                                return (
-                                  <td
-                                    key={`${doctor.doctorId}-${idx}`}
-                                    onClick={() => {
-                                      if (inRota && inMonth) handleCellTap(doctor.doctorId, date);
-                                    }}
-                                    className={`border-l border-border/50 p-0 text-center cursor-default h-8 ${bg} ${!inRota || !inMonth ? "opacity-20" : inRota && inMonth ? "cursor-pointer hover:bg-muted/50" : ""} ${isSelected ? "ring-2 ring-inset ring-blue-500 z-10 relative" : ""}`}
-                                  >
-                                    {inRota &&
-                                      inMonth &&
-                                      (mergedCell?.isDeleted && mergedCell.deletedCode ? (
-                                        <span className="text-[8px] font-bold text-muted-foreground line-through block">
-                                          {mergedCell.deletedCode}
-                                        </span>
-                                      ) : primary !== "AVAILABLE" && primary !== "BH" ? (
-                                        <span className="inline-flex items-center gap-px">
-                                          <span
-                                            className={`text-[8px] font-bold px-1 py-0.5 rounded leading-none ${eventStyle?.classes ?? "bg-muted text-muted-foreground"}`}
-                                          >
-                                            {primary}
-                                          </span>
-                                          {hasOverride && (
-                                            <span className="w-1 h-1 rounded-full bg-orange-500 shrink-0" />
-                                          )}
-                                        </span>
-                                      ) : isLtftDay ? (
-                                        <span className="text-[9px] font-bold text-yellow-800">L</span>
-                                      ) : null)}
-                                  </td>
-                                );
-                              })}
-                            </tr>
+                            <th
+                              key={`h${idx}`}
+                              style={{ width: `${85 / gridDates.length}%` }}
+                              className={`py-1 px-0 text-center font-medium border-l border-border/50 overflow-hidden ${hdrBg} ${hdrColor} ${
+                                !inRota || !inMonth ? "opacity-50" : ""
+                              }`}
+                            >
+                              <div className="text-[7px] sm:text-[9px] uppercase tracking-tighter truncate">
+                                {MONTH_DAY_ABBR[(dow + 6) % 7][0]}
+                              </div>
+                              <div className={`text-[8px] sm:text-[10px] ${isToday ? "font-bold" : "font-normal"}`}>
+                                {d.getUTCDate()}
+                              </div>
+                            </th>
                           );
                         })}
-                      </tbody>
-                    </table>
-                  </div>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {doctors.map((doctor, i) => {
+                        const rowBg = i % 2 === 0 ? "bg-card" : "bg-muted/10";
+                        return (
+                          <tr key={doctor.doctorId} className={`border-b border-border/50 ${rowBg}`}>
+                            <td
+                              onClick={() => navigate(`/admin/doctor-calendar/${doctor.doctorId}`)}
+                              className={`p-1 sm:p-1.5 border-r border-border text-left align-middle cursor-pointer hover:underline overflow-hidden`}
+                              title={doctor.doctorName}
+                            >
+                              <div className="font-semibold text-[10px] sm:text-[11px] text-blue-600 truncate w-full">
+                                {doctor.doctorName.replace("Dr ", "")}
+                              </div>
+                              <div className="text-[8px] sm:text-[9px] text-muted-foreground truncate mt-0.5 hidden sm:block">
+                                {doctor.grade} · {doctor.wte}%
+                              </div>
+                            </td>
+                            {gridDates.map((date, idx) => {
+                              const inRota = date >= calendarData.rotaStartDate && date <= calendarData.rotaEndDate;
+                              const inMonth = date.startsWith(currentMonthKey);
+                              const mergedCell = inRota ? mergedAvailabilityByDoctor[doctor.doctorId]?.[date] : undefined;
+                              const primary = mergedCell?.isDeleted ? "AVAILABLE" : mergedCell?.primary ?? "AVAILABLE";
+                              const isLtftDay = getLtftDaysOff(doctor).includes(getDayNameFromISO(date));
+                              const bg = inRota ? getMergedCellBackground(mergedCell, isLtftDay) : "bg-card";
+                              const hasOverride = !!mergedCell?.overrideId;
+                              const isSelected =
+                                selectedCell?.doctorId === doctor.doctorId && selectedCell?.date === date;
+
+                              return (
+                                <td
+                                  key={`${doctor.doctorId}-${idx}`}
+                                  onClick={() => {
+                                    if (inRota && inMonth) handleCellTap(doctor.doctorId, date);
+                                  }}
+                                  className={`border-l border-border/50 p-0 text-center cursor-default h-6 sm:h-8 ${bg} ${
+                                    !inRota || !inMonth
+                                      ? "opacity-20"
+                                      : inRota && inMonth
+                                      ? "cursor-pointer hover:bg-muted/50"
+                                      : ""
+                                  } ${isSelected ? "ring-2 ring-inset ring-blue-500 z-10 relative" : ""}`}
+                                >
+                                  {inRota && inMonth && (
+                                    mergedCell?.isDeleted && mergedCell.deletedCode ? (
+                                      <span className="text-[6px] sm:text-[8px] font-bold text-muted-foreground line-through block truncate">
+                                        {mergedCell.deletedCode}
+                                      </span>
+                                    ) : primary !== "AVAILABLE" && primary !== "BH" ? (
+                                      <span className="inline-flex items-center gap-px">
+                                        <span
+                                          style={{
+                                            fontSize: 8,
+                                            fontWeight: 700,
+                                            color: "#fff",
+                                            background: MONTH_EVENT_COLOURS[primary] ?? "#6b7280",
+                                            borderRadius: 2,
+                                            padding: "1px 2px",
+                                            display: "inline-block",
+                                            lineHeight: 1,
+                                          }}
+                                        >
+                                          {primary}
+                                        </span>
+                                        {hasOverride && (
+                                          <span className="w-1 h-1 rounded-full bg-orange-500 shrink-0 hidden sm:inline-block" />
+                                        )}
+                                      </span>
+                                    ) : isLtftDay ? (
+                                      <span className="text-[8px] sm:text-[9px] font-bold text-yellow-800">L</span>
+                                    ) : null
+                                  )}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               );
             })()
           ) : null)}
 
-        {/* Legend */}
+        {/* Full legend — always shown */}
         <CalendarLegend />
 
         {/* Detail/Action Panel (renders below legend) */}
