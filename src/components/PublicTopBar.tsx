@@ -41,14 +41,14 @@ export default function PublicTopBar({ menuItems = [] }: PublicTopBarProps) {
         }`}
       >
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-3 sm:px-6">
-          {/* Left: Logo - Protected with shrink-0 and min-w-0 */}
-          <button type="button" onClick={() => navigate("/")} className="flex items-center gap-2 shrink-0 min-w-0">
+          {/* Left: Logo - shrink-0 prevents it from being squashed by buttons */}
+          <button type="button" onClick={() => navigate("/")} className="flex items-center gap-2 shrink-0">
             <RotaGenLogo size="sm" />
           </button>
 
           {/* Right: action buttons + hamburger - Tighter gap on mobile */}
           <div className="flex items-center gap-1 sm:gap-3">
-            {/* Feedback: Green accent. Star only on mobile, Star+Text on md+ screens */}
+            {/* Feedback: Accent Green. Star only on mobile, Star+Text on md+ screens */}
             {!isFeedback && (
               <button
                 type="button"
@@ -61,7 +61,7 @@ export default function PublicTopBar({ menuItems = [] }: PublicTopBarProps) {
               </button>
             )}
 
-            {/* Sign in: Accent Blue, scaled for mobile */}
+            {/* Sign in: Accent Blue, smaller padding/font on mobile */}
             {!isLogin && (
               <button
                 type="button"
@@ -72,24 +72,24 @@ export default function PublicTopBar({ menuItems = [] }: PublicTopBarProps) {
               </button>
             )}
 
-            {/* Request access: Accent Blue + Thick Shimmer Outline */}
+            {/* Request access: Accent Blue with Thick Shimmer Outline */}
             {!isRegister && (
               <div className="nav-cta-shimmer-wrap">
                 <button
                   type="button"
                   onClick={() => navigate("/register")}
-                  className="block shrink-0 rounded-[8px] bg-blue-600 px-2 py-1 sm:px-4 sm:py-2 text-[10px] sm:text-sm font-bold text-white transition-all hover:bg-blue-700 active:scale-[0.98] whitespace-nowrap"
+                  className="block shrink-0 rounded-[8px] bg-blue-600 px-2 py-1.5 sm:px-4 sm:py-2 text-[10px] sm:text-sm font-bold text-white transition-all hover:bg-blue-700 active:scale-[0.98] whitespace-nowrap"
                 >
                   Request access
                 </button>
               </div>
             )}
 
-            {/* Hamburger: Slightly smaller on mobile to save space */}
+            {/* Hamburger: sized for consistency */}
             <button
               type="button"
               onClick={() => setMenuOpen(!menuOpen)}
-              className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
             >
               {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
