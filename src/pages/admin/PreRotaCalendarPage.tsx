@@ -1230,6 +1230,9 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
               onClick={() => {
                 if (inRota && inMonth) handleCellTap(doctor.doctorId, date);
               }}
+              onDoubleClick={() => {
+                if (inRota && inMonth) handleDoubleTap(doctor.doctorId, date);
+              }}
               className={`border-l border-border/50 p-0 sm:p-0.5 text-center cursor-default h-6 sm:h-8 ${bg} ${
                 !inRota || !inMonth ? "opacity-20" : inRota && inMonth ? "cursor-pointer hover:bg-muted/50" : ""
               } ${isSelected ? "ring-2 ring-inset ring-blue-500 z-10 relative" : ""}`}
