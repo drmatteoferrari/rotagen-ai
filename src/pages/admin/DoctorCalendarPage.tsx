@@ -20,10 +20,15 @@ import {
   ArrowLeft,
   CalendarDays,
   CalendarRange,
+  Plus,
+  Edit2,
+  Copy,
+  Trash2,
+  Calendar as CalendarIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { EventDetailPanel } from "@/components/calendar/EventDetailPanel";
 import { AddEventModal } from "@/components/calendar/AddEventModal";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { refreshResolvedAvailabilityForDoctor } from "@/lib/resolvedAvailability";
 
 // ─── Constants ────────────────────────────────────────────────
@@ -38,20 +43,7 @@ const EVENT_LABELS: Record<string, string> = {
 
 const SKIP_CODES = new Set(["AVAILABLE", "BH"]);
 
-const MONTH_NAMES = [
-  "Jan", // Abbreviated for compactness
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-];
+const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 const DAY_ABBR = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -125,7 +117,7 @@ function fmtShort(iso: string): string {
 
 function fmtFull(iso: string): string {
   return isoToUTCDate(iso).toLocaleDateString("en-GB", {
-    weekday: "short", // Shortened for compactness on mobile
+    weekday: "short",
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -505,26 +497,21 @@ export default function DoctorCalendarPage() {
     }
   };
 
-  const handleCellTap = (date: string) => {
+  // Cell clicking now handles single open vs double tap
+  const handleCellClick = (date: string, e: React.MouseEvent) => {
     const now = Date.now();
     const last = lastTapRef.current;
     if (last && last.date === date && now - last.time < 350) {
+      e.preventDefault();
       lastTapRef.current = null;
       navigateToDate(date);
       setViewMode("day");
       setPanelOpen(false);
       setSelectedDate(null);
-      return;
+      return true; // Was double tap
     }
     lastTapRef.current = { date, time: now };
-    if (selectedDate === date && panelOpen) {
-      setPanelOpen(false);
-      setSelectedDate(null);
-    } else {
-      setSelectedDate(date);
-      setPanelOpen(true);
-      setModalOpen(false);
-    }
+    return false; // Was single tap
   };
 
   useEffect(() => {
@@ -545,6 +532,197 @@ export default function DoctorCalendarPage() {
       calendarData.rotaEndDate,
     );
   }, [doctor, overrides, calendarData]);
+
+  // ─── Actions Handlers ───────────────────────────────────────
+  const handleActionEdit = (date: string, mergedCell: MergedCell | undefined) => {
+    if (!mergedCell) return;
+    const dayOverride = overrides.find((o) => o.id === mergedCell.overrideId);
+    if (dayOverride) {
+      setModalPrefill({
+        eventType: dayOverride.eventType,
+        startDate: dayOverride.startDate,
+        endDate: dayOverride.endDate,
+        note: dayOverride.note ?? "",
+        overrideId: dayOverride.id,
+        originalEventType: dayOverride.originalEventType,
+      });
+    } else {
+      setModalPrefill({
+        eventType: mergedCell.primary ?? "AVAILABLE",
+        startDate: date,
+        endDate: date,
+        note: "",
+        overrideId: "",
+        originalEventType: mergedCell.primary ?? "AVAILABLE",
+      });
+    }
+    setModalInitialDate(null);
+    setModalCopyFrom(null);
+    setModalOpen(true);
+    setPanelOpen(false);
+  };
+
+  const handleActionCopy = (date: string, mergedCell: MergedCell | undefined) => {
+    if (!mergedCell) return;
+    const dayOverride = overrides.find((o) => o.id === mergedCell.overrideId);
+    if (dayOverride) {
+      setModalCopyFrom({
+        eventType: dayOverride.eventType,
+        startDate: dayOverride.startDate,
+        endDate: dayOverride.endDate,
+      });
+    } else {
+      setModalCopyFrom({
+        eventType: mergedCell.primary ?? "AVAILABLE",
+        startDate: date,
+        endDate: date,
+      });
+    }
+    setModalPrefill(null);
+    setModalInitialDate(null);
+    setModalOpen(true);
+    setPanelOpen(false);
+  };
+
+  const handleActionDelete = (date: string, mergedCell: MergedCell | undefined) => {
+    if (!mergedCell) return;
+    const dayOverride = overrides.find((o) => o.id === mergedCell.overrideId);
+    if (dayOverride) {
+      handleDeleteOverride(dayOverride);
+    } else {
+      handleRemoveSurveyEvent(date);
+    }
+    setPanelOpen(false);
+  };
+
+  const handleActionAdd = (date: string) => {
+    setModalPrefill(null);
+    setModalCopyFrom(null);
+    setModalInitialDate(date);
+    setModalOpen(true);
+    setPanelOpen(false);
+  };
+
+  const ActionButtonsPopover = ({ date, mergedCell }: { date: string; mergedCell?: MergedCell }) => {
+    const eventsExist =
+      mergedCell && mergedCell.primary !== "AVAILABLE" && mergedCell.primary !== "BH" && !mergedCell.isDeleted;
+
+    return (
+      <PopoverContent className="w-48 p-1 z-50 shadow-xl border-border/50" side="bottom" align="center">
+        <div className="flex flex-col gap-0.5">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="justify-start h-8 text-xs font-medium"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleActionAdd(date);
+            }}
+          >
+            <Plus className="w-3.5 h-3.5 mr-2 text-muted-foreground" /> Add Event
+          </Button>
+          {eventsExist && (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="justify-start h-8 text-xs font-medium"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleActionEdit(date, mergedCell);
+                }}
+              >
+                <Edit2 className="w-3.5 h-3.5 mr-2 text-muted-foreground" /> Edit Event
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="justify-start h-8 text-xs font-medium"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleActionCopy(date, mergedCell);
+                }}
+              >
+                <Copy className="w-3.5 h-3.5 mr-2 text-muted-foreground" /> Copy Event
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="justify-start h-8 text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-50"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleActionDelete(date, mergedCell);
+                }}
+              >
+                <Trash2 className="w-3.5 h-3.5 mr-2 text-red-500" /> Delete Event
+              </Button>
+            </>
+          )}
+          <div className="h-px bg-border my-1" />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="justify-start h-8 text-xs font-medium"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigateToDate(date);
+              setViewMode("day");
+              setPanelOpen(false);
+              setSelectedDate(null);
+            }}
+          >
+            <CalendarIcon className="w-3.5 h-3.5 mr-2 text-muted-foreground" /> Go to Day View
+          </Button>
+        </div>
+      </PopoverContent>
+    );
+  };
+
+  function DayActionButtons({ date, mergedCell }: { date: string; mergedCell?: MergedCell }) {
+    const eventsExist =
+      mergedCell && mergedCell.primary !== "AVAILABLE" && mergedCell.primary !== "BH" && !mergedCell.isDeleted;
+
+    return (
+      <div className="flex flex-wrap items-center justify-end gap-1 sm:gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-7 sm:h-8 text-[10px] sm:text-xs px-2 sm:px-3 bg-teal-50 hover:bg-teal-100 border-teal-200 text-teal-700 flex-1 sm:flex-none"
+          onClick={() => handleActionAdd(date)}
+        >
+          <Plus className="w-3 h-3 mr-1" /> Add
+        </Button>
+        {eventsExist && (
+          <>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 sm:h-8 text-[10px] sm:text-xs px-2 sm:px-3 flex-1 sm:flex-none"
+              onClick={() => handleActionEdit(date, mergedCell)}
+            >
+              <Edit2 className="w-3 h-3 mr-1" /> Edit
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 sm:h-8 text-[10px] sm:text-xs px-2 sm:px-3 flex-1 sm:flex-none"
+              onClick={() => handleActionCopy(date, mergedCell)}
+            >
+              <Copy className="w-3 h-3 mr-1" /> Copy
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 sm:h-8 text-[10px] sm:text-xs px-2 sm:px-3 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 flex-1 sm:flex-none"
+              onClick={() => handleActionDelete(date, mergedCell)}
+            >
+              <Trash2 className="w-3 h-3 mr-1" /> Delete
+            </Button>
+          </>
+        )}
+      </div>
+    );
+  }
 
   // ─── Loading / error ───────────────────────────────────────
   if (loading)
@@ -599,27 +777,27 @@ export default function DoctorCalendarPage() {
   function MonthView() {
     const rows = getMonthWeekRows(currentMonthKey);
     return (
-      <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden w-full">
-        <table className="w-full table-fixed border-collapse">
+      <div className="flex-1 min-h-0 rounded-xl border border-border bg-card shadow-sm overflow-hidden w-full flex flex-col">
+        <table className="w-full h-full table-fixed border-collapse">
           <thead>
             <tr className="border-b border-border text-left">
-              <th className="bg-muted/30 py-1 sm:py-2 px-0.5 sm:px-1 font-medium text-muted-foreground border-r border-border w-[10%] sm:w-[8%] truncate text-center align-middle text-[9px] sm:text-xs">
+              <th className="bg-muted/30 py-1 px-0.5 sm:px-1 font-medium text-muted-foreground border-r border-border w-[10%] sm:w-[8%] truncate text-center align-middle text-[9px] sm:text-xs">
                 Wk
               </th>
               {DAY_ABBR.map((d) => (
                 <th
                   key={d}
-                  className="bg-muted/30 py-1 sm:py-2 px-0.5 sm:px-1 font-medium text-muted-foreground border-l border-border/50 text-center uppercase tracking-tighter text-[9px] sm:text-xs"
+                  className="bg-muted/30 py-1 px-0.5 sm:px-1 font-medium text-muted-foreground border-l border-border/50 text-center uppercase tracking-tighter text-[9px] sm:text-xs"
                 >
                   {d}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody>
+          <tbody className="h-full">
             {rows.map((week, ri) => (
               <tr key={ri} className="border-b border-border/50 bg-card">
-                <td className="p-0.5 sm:p-2 border-r border-border text-center align-middle text-muted-foreground/70 font-medium text-[9px] sm:text-xs">
+                <td className="p-0.5 border-r border-border text-center align-middle text-muted-foreground/70 font-medium text-[9px] sm:text-xs">
                   {getISOWeekNumber(week[0])}
                 </td>
                 {week.map((date) => {
@@ -637,10 +815,8 @@ export default function DoctorCalendarPage() {
                     rawLtftDays.includes(DAY_ABBR[(dow + 6) % 7].toLowerCase()) ||
                     rawLtftDays.includes(new Date(date).toLocaleDateString("en-GB", { weekday: "long" }).toLowerCase());
                   const cellBg = inRota ? getMergedCellBackground(mergedCell, isLtftDay) : "bg-card";
-
                   const isSelected = selectedDate === date;
                   const hasOverride = !!mergedCell?.overrideId;
-
                   const eventChar = primary === "NOC" ? "N" : primary === "ROT" ? "R" : primary.charAt(0);
 
                   const hdrColor =
@@ -657,48 +833,72 @@ export default function DoctorCalendarPage() {
                   return (
                     <td
                       key={date}
-                      onClick={() => {
-                        if (inRota && inMonth) handleCellTap(date);
-                      }}
-                      className={`border-l border-border/50 p-0.5 sm:p-2 align-top h-10 sm:h-14 md:h-20 ${cellBg} ${
-                        !inRota || !inMonth ? "opacity-30" : inRota && inMonth ? "cursor-pointer hover:bg-muted/50" : ""
+                      className={`border-l border-border/50 p-0 align-top ${cellBg} ${
+                        !inRota || !inMonth ? "opacity-30" : ""
                       } ${isSelected ? "ring-2 ring-inset ring-teal-500 z-10 relative" : ""}`}
                     >
-                      <div className="flex flex-col h-full justify-between">
-                        <div className={`text-[8px] sm:text-xs text-right ${hdrColor}`}>
-                          {isoToUTCDate(date).getUTCDate()}
+                      {!inRota || !inMonth ? (
+                        <div className="w-full h-full p-0.5 sm:p-1 flex flex-col justify-between overflow-hidden">
+                          <div className={`text-[8px] sm:text-xs text-right shrink-0 ${hdrColor}`}>
+                            {isoToUTCDate(date).getUTCDate()}
+                          </div>
                         </div>
-
-                        <div className="flex flex-col items-center justify-center flex-1 w-full relative">
-                          {inRota &&
-                            inMonth &&
-                            (mergedCell?.isDeleted && mergedCell.deletedCode ? (
-                              <span className="text-[7px] sm:text-[10px] font-bold text-muted-foreground line-through block truncate">
-                                {mergedCell.deletedCode.charAt(0)}
-                              </span>
-                            ) : primary !== "AVAILABLE" && primary !== "BH" ? (
-                              <div className="flex justify-center items-center relative">
-                                <span
-                                  className="flex items-center justify-center rounded shadow-sm w-4 h-4 sm:w-5 sm:h-5 text-[8px] sm:text-[10px]"
-                                  style={{
-                                    fontWeight: 700,
-                                    color: "#fff",
-                                    background: MONTH_EVENT_COLOURS[primary] ?? "#6b7280",
-                                    lineHeight: 1,
-                                  }}
-                                  title={primary}
-                                >
-                                  {eventChar}
-                                </span>
-                                {hasOverride && (
-                                  <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-orange-500 border border-white" />
-                                )}
+                      ) : (
+                        <Popover
+                          open={selectedDate === date && panelOpen}
+                          onOpenChange={(o) => {
+                            if (!o) {
+                              setPanelOpen(false);
+                              setSelectedDate(null);
+                            }
+                          }}
+                        >
+                          <PopoverTrigger asChild>
+                            <div
+                              className="w-full h-full p-0.5 sm:p-1 flex flex-col justify-between cursor-pointer hover:bg-muted/50 transition-colors overflow-hidden"
+                              onClick={(e) => {
+                                if (handleCellClick(date, e)) return;
+                                if (!panelOpen || selectedDate !== date) {
+                                  setSelectedDate(date);
+                                  setPanelOpen(true);
+                                }
+                              }}
+                            >
+                              <div className={`text-[8px] sm:text-xs text-right shrink-0 ${hdrColor}`}>
+                                {isoToUTCDate(date).getUTCDate()}
                               </div>
-                            ) : isLtftDay ? (
-                              <span className="text-[9px] sm:text-xs font-bold text-yellow-800">L</span>
-                            ) : null)}
-                        </div>
-                      </div>
+                              <div className="flex flex-col items-center justify-center flex-1 w-full relative min-h-0 overflow-hidden">
+                                {mergedCell?.isDeleted && mergedCell.deletedCode ? (
+                                  <span className="text-[7px] sm:text-[10px] font-bold text-muted-foreground line-through block truncate">
+                                    {mergedCell.deletedCode.charAt(0)}
+                                  </span>
+                                ) : primary !== "AVAILABLE" && primary !== "BH" ? (
+                                  <div className="flex justify-center items-center relative">
+                                    <span
+                                      className="flex items-center justify-center rounded shadow-sm w-4 h-4 sm:w-5 sm:h-5 text-[8px] sm:text-[10px]"
+                                      style={{
+                                        fontWeight: 700,
+                                        color: "#fff",
+                                        background: MONTH_EVENT_COLOURS[primary] ?? "#6b7280",
+                                        lineHeight: 1,
+                                      }}
+                                      title={primary}
+                                    >
+                                      {eventChar}
+                                    </span>
+                                    {hasOverride && (
+                                      <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-orange-500 border border-white" />
+                                    )}
+                                  </div>
+                                ) : isLtftDay ? (
+                                  <span className="text-[9px] sm:text-xs font-bold text-yellow-800">L</span>
+                                ) : null}
+                              </div>
+                            </div>
+                          </PopoverTrigger>
+                          <ActionButtonsPopover date={date} mergedCell={mergedCell} />
+                        </Popover>
+                      )}
                     </td>
                   );
                 })}
@@ -714,8 +914,8 @@ export default function DoctorCalendarPage() {
     const week = calendarData!.weeks[currentWeekIndex];
     if (!week) return null;
     return (
-      <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden w-full">
-        <table className="w-full table-fixed text-xs border-collapse">
+      <div className="flex-1 min-h-0 rounded-xl border border-border bg-card shadow-sm overflow-hidden w-full flex flex-col">
+        <table className="w-full h-full table-fixed border-collapse">
           <thead>
             <tr className="border-b border-border text-left">
               {week.dates.map((date) => {
@@ -754,8 +954,8 @@ export default function DoctorCalendarPage() {
               })}
             </tr>
           </thead>
-          <tbody>
-            <tr className="bg-card">
+          <tbody className="h-full">
+            <tr className="bg-card h-full">
               {week.dates.map((date) => {
                 const mergedCell = mergedAvailability[date];
                 const primary = mergedCell?.primary ?? "AVAILABLE";
@@ -773,36 +973,57 @@ export default function DoctorCalendarPage() {
                 return (
                   <td
                     key={date}
-                    onClick={() => handleCellTap(date)}
-                    className={`border-l border-border/50 first:border-l-0 p-1 sm:p-2 align-top h-16 sm:h-24 md:h-[100px] cursor-pointer transition-colors hover:bg-muted/50 ${cellBg} ${
+                    className={`border-l border-border/50 first:border-l-0 p-0 align-top h-full ${cellBg} ${
                       isSelected ? "ring-2 ring-inset ring-teal-500 z-10 relative" : ""
                     }`}
                   >
-                    <div className="flex flex-col gap-1 sm:gap-1.5 items-center justify-center w-full h-full">
-                      {mergedCell?.isDeleted && mergedCell.deletedCode ? (
-                        <span className="bg-muted text-muted-foreground text-[8px] sm:text-xs font-bold px-1 sm:px-1.5 py-0.5 rounded line-through">
-                          {mergedCell.deletedCode}
-                        </span>
-                      ) : (
-                        <>
-                          {(["AL", "SL", "ROT", "PL"] as const)
-                            .filter((e) => primary === e)
-                            .map((event) => (
-                              <span key={event} className="inline-flex items-center">
-                                <LeaveBadge type={event} size="large" />
-                                {hasOverrideDot && <RotaOverrideDot />}
-                              </span>
-                            ))}
-                          {isNoc && (
-                            <span className="inline-flex items-center">
-                              <LeaveBadge type="NOC" size="large" />
-                              {hasOverrideDot && <RotaOverrideDot />}
+                    <Popover
+                      open={selectedDate === date && panelOpen}
+                      onOpenChange={(o) => {
+                        if (!o) {
+                          setPanelOpen(false);
+                          setSelectedDate(null);
+                        }
+                      }}
+                    >
+                      <PopoverTrigger asChild>
+                        <div
+                          className="w-full h-full p-1 sm:p-2 flex flex-col gap-1 sm:gap-1.5 items-center justify-center cursor-pointer hover:bg-muted/50 transition-colors overflow-hidden"
+                          onClick={(e) => {
+                            if (handleCellClick(date, e)) return;
+                            if (!panelOpen || selectedDate !== date) {
+                              setSelectedDate(date);
+                              setPanelOpen(true);
+                            }
+                          }}
+                        >
+                          {mergedCell?.isDeleted && mergedCell.deletedCode ? (
+                            <span className="bg-muted text-muted-foreground text-[8px] sm:text-xs font-bold px-1 sm:px-1.5 py-0.5 rounded line-through">
+                              {mergedCell.deletedCode}
                             </span>
+                          ) : (
+                            <>
+                              {(["AL", "SL", "ROT", "PL"] as const)
+                                .filter((e) => primary === e)
+                                .map((event) => (
+                                  <span key={event} className="inline-flex items-center">
+                                    <LeaveBadge type={event} size="large" />
+                                    {hasOverrideDot && <RotaOverrideDot />}
+                                  </span>
+                                ))}
+                              {isNoc && (
+                                <span className="inline-flex items-center">
+                                  <LeaveBadge type="NOC" size="large" />
+                                  {hasOverrideDot && <RotaOverrideDot />}
+                                </span>
+                              )}
+                              {isLtftDay && <LeaveBadge type="LTFT" size="large" />}
+                            </>
                           )}
-                          {isLtftDay && <LeaveBadge type="LTFT" size="large" />}
-                        </>
-                      )}
-                    </div>
+                        </div>
+                      </PopoverTrigger>
+                      <ActionButtonsPopover date={date} mergedCell={mergedCell} />
+                    </Popover>
                   </td>
                 );
               })}
@@ -839,80 +1060,65 @@ export default function DoctorCalendarPage() {
     const finalCodes = Array.from(codesSet);
 
     return (
-      <div className="rounded-xl border border-border bg-card shadow-sm p-4 sm:p-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-4 border-b border-border/50">
+      <div className="rounded-xl border border-border bg-card shadow-sm p-4 sm:p-5 h-full overflow-y-auto flex flex-col">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-4 border-b border-border/50 shrink-0">
           <p className="text-[15px] sm:text-lg font-semibold text-foreground flex items-center gap-2">
             <CalendarRange className="h-4 w-4 sm:h-5 sm:w-5 text-teal-600" />
             {fmtFull(currentDateISO)}
           </p>
-          {inRota && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                setPanelOpen(false);
-                setSelectedDate(null);
-                setModalPrefill(null);
-                setModalCopyFrom(null);
-                setModalInitialDate(currentDateISO);
-                setModalOpen(true);
-              }}
-              className="text-teal-700 bg-teal-50 hover:bg-teal-100 border-teal-200 h-8 text-xs sm:text-sm w-full sm:w-auto"
+          {inRota && <DayActionButtons date={currentDateISO} mergedCell={mergedCell} />}
+        </div>
+        <div className="flex-1 min-h-0">
+          {!inRota ? (
+            <p className="text-xs sm:text-sm text-muted-foreground italic text-center py-4">
+              This date is outside the rota period.
+            </p>
+          ) : showDeleted ? (
+            <div
+              className="rounded-lg border border-border bg-muted/30 p-3 sm:p-4 flex items-center gap-3"
+              style={{ borderLeft: `4px solid #d1d5db` }}
             >
-              + Add Event
-            </Button>
+              <span
+                className="inline-block rounded-full px-2 sm:px-2.5 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold"
+                style={{ backgroundColor: "#d1d5db", color: "#6b7280", textDecoration: "line-through" }}
+              >
+                {EVENT_LABELS[mergedCell!.deletedCode!] ?? mergedCell!.deletedCode}
+              </span>
+              <span className="text-xs sm:text-sm text-muted-foreground font-medium">Removed by coordinator</span>
+            </div>
+          ) : finalCodes.length === 0 ? (
+            <p className="text-xs sm:text-sm text-muted-foreground italic text-center py-4">
+              No events scheduled. Fully available.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {finalCodes.map((code) => {
+                const isExplicitOverride =
+                  (code === mergedCell?.primary || code === mergedCell?.secondary) &&
+                  (mergedCell?.overrideAction === "add" || mergedCell?.overrideAction === "modify");
+
+                return (
+                  <div
+                    key={code}
+                    className={`rounded-lg border border-border bg-card p-3 sm:p-4 flex items-center justify-between transition-colors`}
+                    style={{ borderLeftWidth: "4px", borderLeftColor: MONTH_EVENT_COLOURS[code] ?? "#6b7280" }}
+                  >
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <LeaveBadge type={code} size="large" />
+                      <span className="text-xs sm:text-sm font-semibold">{EVENT_LABELS[code] ?? code}</span>
+                    </div>
+                    {isExplicitOverride && (
+                      <span className="text-[9px] sm:text-xs text-orange-600 font-bold bg-orange-50 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded border border-orange-200 flex items-center gap-1 sm:gap-1.5">
+                        <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-orange-500"></span>
+                        Override
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
-        {!inRota ? (
-          <p className="text-xs sm:text-sm text-muted-foreground italic text-center py-4">
-            This date is outside the rota period.
-          </p>
-        ) : showDeleted ? (
-          <div
-            className="rounded-lg border border-border bg-muted/30 p-3 sm:p-4 flex items-center gap-3"
-            style={{ borderLeft: `4px solid #d1d5db` }}
-          >
-            <span
-              className="inline-block rounded-full px-2 sm:px-2.5 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold"
-              style={{ backgroundColor: "#d1d5db", color: "#6b7280", textDecoration: "line-through" }}
-            >
-              {EVENT_LABELS[mergedCell!.deletedCode!] ?? mergedCell!.deletedCode}
-            </span>
-            <span className="text-xs sm:text-sm text-muted-foreground font-medium">Removed by coordinator</span>
-          </div>
-        ) : finalCodes.length === 0 ? (
-          <p className="text-xs sm:text-sm text-muted-foreground italic text-center py-4">
-            No events scheduled. Fully available.
-          </p>
-        ) : (
-          <div className="space-y-3">
-            {finalCodes.map((code) => {
-              const isExplicitOverride =
-                (code === mergedCell?.primary || code === mergedCell?.secondary) &&
-                (mergedCell?.overrideAction === "add" || mergedCell?.overrideAction === "modify");
-
-              return (
-                <div
-                  key={code}
-                  onClick={() => handleCellTap(currentDateISO)}
-                  className={`rounded-lg border border-border bg-card p-3 sm:p-4 cursor-pointer hover:bg-muted/30 transition-colors flex items-center justify-between ${selectedDate === currentDateISO ? "ring-2 ring-inset ring-teal-500" : ""}`}
-                  style={{ borderLeftWidth: "4px", borderLeftColor: MONTH_EVENT_COLOURS[code] ?? "#6b7280" }}
-                >
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <LeaveBadge type={code} size="large" />
-                    <span className="text-xs sm:text-sm font-semibold">{EVENT_LABELS[code] ?? code}</span>
-                  </div>
-                  {isExplicitOverride && (
-                    <span className="text-[9px] sm:text-xs text-orange-600 font-bold bg-orange-50 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded border border-orange-200 flex items-center gap-1 sm:gap-1.5">
-                      <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-orange-500"></span>
-                      Override
-                    </span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
       </div>
     );
   }
@@ -920,9 +1126,13 @@ export default function DoctorCalendarPage() {
   // ─── Main render ───────────────────────────────────────────
   return (
     <AdminLayout title="Doctor Calendar" subtitle={doctor?.doctorName} accentColor="teal" pageIcon={CalendarDays}>
-      <div className="space-y-3 sm:space-y-4" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+      <div
+        className="flex flex-col gap-2 sm:gap-3 h-[calc(100dvh-8rem)] sm:h-[calc(100dvh-9rem)] overflow-hidden"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
         {/* Header / Nav Container */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 shrink-0">
           <button
             onClick={() => navigate("/admin/pre-rota-calendar")}
             className="flex items-center gap-1.5 text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors bg-transparent border-none cursor-pointer"
@@ -932,7 +1142,7 @@ export default function DoctorCalendarPage() {
         </div>
 
         {/* Doctor Info Block */}
-        <div className="flex items-center justify-between p-3 sm:p-4 rounded-xl border border-border bg-card shadow-sm">
+        <div className="flex items-center justify-between p-2 sm:p-3 rounded-xl border border-border bg-card shadow-sm shrink-0">
           <div>
             <h2 className="text-lg sm:text-xl font-bold text-foreground leading-tight">{doctor.doctorName}</h2>
             <p className="text-xs sm:text-sm text-muted-foreground font-medium mt-0.5">
@@ -957,7 +1167,7 @@ export default function DoctorCalendarPage() {
         </div>
 
         {/* Unified Nav Bar */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-card rounded-xl border border-border shadow-sm">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-card rounded-xl border border-border shadow-sm shrink-0">
           <ViewToggle viewMode={viewMode} setViewMode={setViewMode} />
 
           <div className="flex items-center justify-between sm:justify-center gap-1 sm:gap-2 flex-1">
@@ -995,69 +1205,11 @@ export default function DoctorCalendarPage() {
         </div>
 
         {/* View content */}
-        {viewMode === "month" && <MonthView />}
-        {viewMode === "week" && <WeekView />}
-        {viewMode === "day" && <DayView />}
-
-        {panelOpen && selectedDate && calendarData && doctor && (
-          <EventDetailPanel
-            mergedCell={
-              mergedAvailability[selectedDate] ?? {
-                primary: "AVAILABLE",
-                secondary: null,
-                label: "",
-                overrideId: null,
-                overrideAction: null,
-                isDeleted: false,
-                deletedCode: null,
-              }
-            }
-            date={selectedDate}
-            doctorName={doctor.doctorName}
-            overrides={overrides}
-            onEdit={(override) => {
-              setModalPrefill({
-                eventType: override.eventType,
-                startDate: override.startDate,
-                endDate: override.endDate,
-                note: override.note ?? "",
-                overrideId: override.id,
-                originalEventType: override.originalEventType,
-              });
-              setModalCopyFrom(null);
-              setModalInitialDate(null);
-              setModalOpen(true);
-            }}
-            onDelete={handleDeleteOverride}
-            onCopy={(override) => {
-              setModalCopyFrom({
-                eventType: override.eventType,
-                startDate: override.startDate,
-                endDate: override.endDate,
-              });
-              setModalPrefill(null);
-              setModalInitialDate(null);
-              setModalOpen(true);
-            }}
-            onAddNew={() => {
-              setModalPrefill(null);
-              setModalCopyFrom(null);
-              setModalInitialDate(selectedDate);
-              setModalOpen(true);
-            }}
-            onRemoveSurveyEvent={() => handleRemoveSurveyEvent(selectedDate)}
-            onGoToDate={() => {
-              navigateToDate(selectedDate);
-              setViewMode("day");
-              setPanelOpen(false);
-              setSelectedDate(null);
-            }}
-            onClose={() => {
-              setPanelOpen(false);
-              setSelectedDate(null);
-            }}
-          />
-        )}
+        <div className="flex-1 min-h-0 w-full overflow-hidden flex flex-col">
+          {viewMode === "month" && <MonthView />}
+          {viewMode === "week" && <WeekView />}
+          {viewMode === "day" && <DayView />}
+        </div>
 
         {modalOpen && calendarData && doctor && (
           <AddEventModal
