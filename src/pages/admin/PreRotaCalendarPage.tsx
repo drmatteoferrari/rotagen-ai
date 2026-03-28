@@ -19,6 +19,8 @@ import {
   ChevronUp,
   RefreshCw,
   MonitorSmartphone,
+  Search,
+  ArrowUpDown,
 } from "lucide-react";
 import {
   getTodayISO,
@@ -148,7 +150,7 @@ function LeaveBadge({ type, className = "" }: { type: keyof typeof BADGE_STYLES;
   const s = BADGE_STYLES[type];
   return (
     <span
-      className={`inline-block px-1 sm:px-1.5 py-0.5 rounded text-[8px] sm:text-[10px] font-bold tracking-tighter sm:tracking-wider leading-none sm:leading-tight ${s.classes} ${className}`}
+      className={`inline-block px-1 sm:px-1.5 py-[1px] rounded text-[8px] sm:text-[9px] font-bold tracking-tighter sm:tracking-wider leading-none sm:leading-none ${s.classes} ${className}`}
     >
       {s.label}
     </span>
@@ -239,30 +241,30 @@ function WeekCellContent({
 
   if (mergedCell?.isDeleted && mergedCell.deletedCode) {
     return (
-      <span className="bg-muted text-muted-foreground text-[8px] sm:text-[10px] font-bold px-1 py-0.5 rounded line-through">
+      <span className="bg-muted text-muted-foreground text-[8px] sm:text-[9px] font-bold px-1 py-0.5 rounded line-through">
         {mergedCell.deletedCode}
       </span>
     );
   }
 
   return (
-    <div className="flex flex-col gap-0.5 items-center justify-center w-full px-0.5">
+    <>
       {(["AL", "SL", "ROT", "PL"] as const)
         .filter((e) => primary === e)
         .map((event) => (
-          <span key={event} className="inline-flex items-center max-w-full overflow-hidden">
+          <span key={event} className="inline-flex items-center max-w-full overflow-hidden shrink-0">
             <LeaveBadge type={event} />
             {hasOverrideDot && <RotaOverrideDot />}
           </span>
         ))}
       {isNoc && (
-        <span className="inline-flex items-center max-w-full overflow-hidden">
+        <span className="inline-flex items-center max-w-full overflow-hidden shrink-0">
           <LeaveBadge type="NOC" />
           {hasOverrideDot && <RotaOverrideDot />}
         </span>
       )}
       {isLtftDay && <LeaveBadge type="LTFT" />}
-    </div>
+    </>
   );
 }
 
@@ -383,6 +385,13 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
     endDate: string;
   } | null>(null);
   const [modalInitialDate, setModalInitialDate] = useState<string | null>(null);
+
+  // Sorting and Filtering State
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortConfig, setSortConfig] = useState<{ key: "name" | "grade"; direction: "asc" | "desc" }>({
+    key: "name",
+    direction: "asc",
+  });
 
   const lastTapRef = useRef<{ doctorId: string; date: string; time: number } | null>(null);
   const touchStartX = useRef(0);
@@ -833,6 +842,30 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
     return result;
   }, [calendarData, overrides]);
 
+  // Apply Search & Sort
+  const sortedAndFilteredDoctors = useMemo(() => {
+    if (!calendarData?.doctors) return [];
+    let docs = [...calendarData.doctors];
+
+    // Search filter
+    if (searchQuery.trim() !== "") {
+      const lowerQuery = searchQuery.toLowerCase();
+      docs = docs.filter((d) => d.doctorName.toLowerCase().includes(lowerQuery));
+    }
+
+    // Sort
+    docs.sort((a, b) => {
+      const valA = sortConfig.key === "name" ? a.doctorName : a.grade || "";
+      const valB = sortConfig.key === "name" ? b.doctorName : b.grade || "";
+
+      if (valA < valB) return sortConfig.direction === "asc" ? -1 : 1;
+      if (valA > valB) return sortConfig.direction === "asc" ? 1 : -1;
+      return 0;
+    });
+
+    return docs;
+  }, [calendarData, searchQuery, sortConfig]);
+
   const Wrapper = embedded
     ? ({ children }: { children: React.ReactNode }) => <>{children}</>
     : ({ children }: { children: React.ReactNode }) => (
@@ -957,9 +990,10 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
     if (wIdx >= 0) setCurrentWeekIndex(wIdx);
     const dIdx = allDates.indexOf(iso);
     if (dIdx >= 0) setCurrentDayIndex(dIdx);
+    setCurrentMonthKey(iso.slice(0, 7)); // Update month view dependency correctly
   };
 
-  // Day view pre-computed values
+  // Day view pre-computed values (Always calculated across all doctors for true coverage numbers)
   const totalAvailable = doctors.filter((doc) => {
     const mc = mergedAvailabilityByDoctor[doc.doctorId]?.[currentDate];
     const p = mc?.isDeleted ? "AVAILABLE" : (mc?.primary ?? "AVAILABLE");
@@ -1011,10 +1045,43 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
         </div>
 
         {/* Unified Nav Bar */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 p-3 bg-card rounded-xl border border-border shadow-sm">
-          <div className="flex items-center justify-between sm:justify-start w-full sm:w-auto">
-            <ViewToggle viewMode={viewMode} setViewMode={setViewMode} />
-            {isMobile && (
+        <div className="flex flex-col gap-3 p-3 bg-card rounded-xl border border-border shadow-sm">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <div className="flex items-center justify-between sm:justify-start w-full sm:w-auto">
+              <ViewToggle viewMode={viewMode} setViewMode={setViewMode} />
+              {isMobile && (
+                <input
+                  type="date"
+                  min={allDates[0]}
+                  max={allDates[allDates.length - 1]}
+                  value={currentDate}
+                  onChange={(e) => {
+                    if (e.target.value) handleDateChange(e.target.value);
+                  }}
+                  className="text-xs px-2 py-1.5 border border-border rounded-md bg-card text-foreground cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 h-[34px]"
+                />
+              )}
+            </div>
+
+            <div className="flex items-center justify-center gap-2 flex-1">
+              <button
+                onClick={goPrev}
+                disabled={prevDisabled}
+                className="p-1.5 rounded-md hover:bg-muted disabled:opacity-30 transition-colors"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <span className="text-sm font-semibold text-foreground min-w-[150px] text-center">{navLabel}</span>
+              <button
+                onClick={goNext}
+                disabled={nextDisabled}
+                className="p-1.5 rounded-md hover:bg-muted disabled:opacity-30 transition-colors"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+
+            {!isMobile && (
               <input
                 type="date"
                 min={allDates[0]}
@@ -1023,40 +1090,41 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                 onChange={(e) => {
                   if (e.target.value) handleDateChange(e.target.value);
                 }}
-                className="text-xs px-2 py-1.5 border border-border rounded-md bg-card text-foreground cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="ml-auto text-xs px-3 py-1.5 border border-border rounded-md bg-card text-foreground cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 h-[34px]"
               />
             )}
           </div>
 
-          <div className="flex items-center justify-center gap-2 flex-1">
-            <button
-              onClick={goPrev}
-              disabled={prevDisabled}
-              className="p-1.5 rounded-md hover:bg-muted disabled:opacity-30 transition-colors"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <span className="text-sm font-semibold text-foreground min-w-[150px] text-center">{navLabel}</span>
-            <button
-              onClick={goNext}
-              disabled={nextDisabled}
-              className="p-1.5 rounded-md hover:bg-muted disabled:opacity-30 transition-colors"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
+          {/* Search and Sort Toolbar */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 bg-muted/30 p-2 border border-border/60 rounded-lg">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="h-3.5 w-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search doctors..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-8 pr-3 py-1.5 text-xs border border-border rounded-md bg-card focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div className="flex items-center gap-2 justify-end">
+              <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-[11px] text-muted-foreground font-medium hidden sm:inline">Sort:</span>
+              <select
+                value={`${sortConfig.key}-${sortConfig.direction}`}
+                onChange={(e) => {
+                  const [k, d] = e.target.value.split("-");
+                  setSortConfig({ key: k as "name" | "grade", direction: d as "asc" | "desc" });
+                }}
+                className="text-xs px-2 py-1.5 border border-border rounded-md bg-card focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+              >
+                <option value="name-asc">Name (A-Z)</option>
+                <option value="name-desc">Name (Z-A)</option>
+                <option value="grade-asc">Grade (A-Z)</option>
+                <option value="grade-desc">Grade (Z-A)</option>
+              </select>
+            </div>
           </div>
-
-          {!isMobile && (
-            <input
-              type="date"
-              min={allDates[0]}
-              max={allDates[allDates.length - 1]}
-              onChange={(e) => {
-                if (e.target.value) handleDateChange(e.target.value);
-              }}
-              className="ml-auto text-xs px-3 py-1.5 border border-border rounded-md bg-card text-foreground cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          )}
         </div>
 
         {/* ── WEEK VIEW ── */}
@@ -1065,7 +1133,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
             <table className="w-full table-fixed text-xs border-collapse">
               <thead>
                 <tr className="border-b border-border text-left">
-                  <th className="bg-card py-2 px-1 sm:px-2 font-medium text-muted-foreground border-r border-border w-[22%] sm:w-[16%] align-bottom">
+                  <th className="bg-card py-2 px-1 sm:px-2 font-medium text-muted-foreground border-r border-border w-[25%] sm:w-[20%] align-bottom">
                     Doctor
                   </th>
                   {currentWeek.dates.map((date) => {
@@ -1086,7 +1154,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                     return (
                       <th
                         key={date}
-                        className={`py-1 px-0.5 sm:px-1 text-center font-medium border-l border-border w-[11.1%] md:w-[12%] ${hdrBg} ${hdrColor}`}
+                        className={`py-1 px-0.5 sm:px-1 text-center font-medium border-l border-border w-[10.7%] md:w-[11.4%] ${hdrBg} ${hdrColor}`}
                       >
                         <div className="text-[8px] sm:text-[10px] uppercase tracking-tighter sm:tracking-wider truncate">
                           {dd.toLocaleDateString("en-GB", { weekday: "short" })}
@@ -1105,30 +1173,29 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                 </tr>
               </thead>
               <tbody>
-                {doctors.map((doctor, i) => {
+                {sortedAndFilteredDoctors.map((doctor, i) => {
                   const rowBg = i % 2 === 0 ? "bg-card" : "bg-muted/20";
                   const ltftDays = getLtftDaysOff(doctor);
                   return (
                     <tr key={doctor.doctorId} className={`border-b border-border/50 ${rowBg}`}>
-                      <td className={`p-1 sm:p-2 border-r border-border align-middle overflow-hidden`}>
-                        <div
-                          onClick={() => navigate(`/admin/doctor-calendar/${doctor.doctorId}`)}
-                          className="font-semibold text-blue-600 truncate cursor-pointer hover:underline text-[10px] sm:text-xs"
-                          title={doctor.doctorName}
-                        >
-                          {doctor.doctorName.replace("Dr ", "")}
-                        </div>
-                        <div className="text-[8px] sm:text-[10px] text-muted-foreground truncate mt-0.5 hidden sm:block">
-                          {doctor.grade} · {doctor.wte}%
-                        </div>
-                        {!isMobile && ltftDays.length > 0 && (
-                          <div className="mt-1">
-                            <span className="inline-block text-[8px] sm:text-[9px] font-semibold text-yellow-800 bg-yellow-100 border border-yellow-200 rounded px-1.5 py-0.5 truncate max-w-full">
-                              LTFT:{" "}
-                              {ltftDays.map((d) => d.slice(0, 3).charAt(0).toUpperCase() + d.slice(1, 3)).join(", ")}
-                            </span>
+                      <td className={`p-0.5 sm:p-1 border-r border-border align-middle overflow-hidden`}>
+                        <div className="flex flex-row items-center gap-1 sm:gap-1.5 w-full pr-1">
+                          <div
+                            onClick={() => navigate(`/admin/doctor-calendar/${doctor.doctorId}`)}
+                            className="font-semibold text-blue-600 truncate cursor-pointer hover:underline text-[9px] sm:text-[10px] shrink-0 max-w-[45%]"
+                            title={doctor.doctorName}
+                          >
+                            {doctor.doctorName.replace("Dr ", "")}
                           </div>
-                        )}
+                          <div className="text-[7px] sm:text-[8px] text-muted-foreground truncate shrink-0">
+                            {doctor.grade}·{doctor.wte}%
+                          </div>
+                          {ltftDays.length > 0 && (
+                            <span className="inline-block text-[7px] sm:text-[8px] font-semibold text-yellow-800 bg-yellow-100 border border-yellow-200 rounded px-1 truncate shrink-0">
+                              LTFT
+                            </span>
+                          )}
+                        </div>
                       </td>
                       {currentWeek.dates.map((date) => {
                         const mergedCell = mergedAvailabilityByDoctor[doctor.doctorId]?.[date];
@@ -1141,11 +1208,11 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                           <td
                             key={date}
                             onClick={() => handleCellTap(doctor.doctorId, date)}
-                            className={`border-l border-border/50 p-0.5 sm:p-1 text-center align-middle cursor-pointer transition-colors hover:bg-muted/50 ${cellBg} ${
+                            className={`border-l border-border/50 p-0.5 text-center align-middle cursor-pointer transition-colors hover:bg-muted/50 ${cellBg} ${
                               isSelected ? "ring-2 ring-inset ring-blue-500 z-10 relative" : ""
                             }`}
                           >
-                            <div className="flex flex-col items-center gap-0.5 sm:gap-1 justify-center min-h-[36px] sm:min-h-[44px] overflow-hidden">
+                            <div className="flex flex-row flex-wrap items-center justify-center gap-[1px] min-h-[18px] sm:min-h-[22px] overflow-hidden w-full">
                               <WeekCellContent mergedCell={mergedCell} isLtftDay={isLtftDay} primary={primary} />
                             </div>
                           </td>
@@ -1162,10 +1229,11 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                   </td>
                 </tr>
 
-                {/* Total available row */}
+                {/* Total available row (Always calculated from all docs) */}
                 <tr className="bg-muted/30 border-b-2 border-border">
-                  <td className="py-2 px-1 sm:px-2 border-r border-border text-foreground font-semibold text-[10px] sm:text-xs">
-                    All shifts
+                  <td className="py-1.5 px-1 sm:px-2 border-r border-border text-foreground font-semibold text-[9px] sm:text-[11px] leading-tight">
+                    All shifts <br />
+                    <span className="font-normal text-[8px] text-muted-foreground">(Total Pool)</span>
                   </td>
                   {currentWeek.dates.map((date) => {
                     const availableAll = doctors.filter(
@@ -1185,15 +1253,15 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                     const bgClass = getAvailabilityColorClass(availableAll, maxMinDoctors);
 
                     return (
-                      <td key={date} className="border-l border-border bg-card text-center p-1 sm:p-2">
-                        <div className="flex flex-col items-center gap-0.5 sm:gap-1 justify-center">
+                      <td key={date} className="border-l border-border bg-card text-center p-1">
+                        <div className="flex flex-col items-center justify-center">
                           <span
-                            className={`inline-flex items-center justify-center w-5 h-5 sm:w-7 sm:h-7 rounded text-white font-bold text-[10px] sm:text-xs shadow-sm ${bgClass}`}
+                            className={`inline-flex items-center justify-center w-4 h-4 sm:w-6 sm:h-6 rounded text-white font-bold text-[9px] sm:text-[11px] shadow-sm ${bgClass}`}
                           >
                             {availableAll}
                           </span>
                           {availableNocOnly > 0 && (
-                            <span className="text-[7px] sm:text-[9px] text-pink-500 font-bold tracking-tighter sm:tracking-tight">
+                            <span className="text-[6px] sm:text-[8px] text-pink-500 font-bold tracking-tighter mt-[1px]">
                               +{availableNocOnly} NOC
                             </span>
                           )}
@@ -1207,7 +1275,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                 {shiftTypes.map((shift, si) => (
                   <tr key={shift.id} className={si % 2 === 0 ? "bg-card" : "bg-muted/20"}>
                     <td
-                      className={`py-1.5 sm:py-2 pl-2 sm:pl-4 pr-1 sm:pr-3 border-r border-border text-muted-foreground text-[10px] sm:text-xs truncate`}
+                      className={`py-1 sm:py-1.5 pl-1 sm:pl-2 pr-1 border-r border-border text-muted-foreground text-[9px] sm:text-[11px] truncate`}
                     >
                       {shift.name}
                     </td>
@@ -1220,11 +1288,8 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                             ? "text-amber-500"
                             : "text-green-600";
                       return (
-                        <td
-                          key={date}
-                          className="border-l border-border/50 bg-card text-center p-1 sm:p-2 align-middle"
-                        >
-                          <span className={`font-bold text-[10px] sm:text-xs ${bgClass}`}>{count}</span>
+                        <td key={date} className="border-l border-border/50 bg-card text-center p-1 align-middle">
+                          <span className={`font-bold text-[9px] sm:text-[11px] ${bgClass}`}>{count}</span>
                         </td>
                       );
                     })}
@@ -1244,12 +1309,12 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                 <span className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
                   Doctors Availability
                 </span>
-                <span className="text-xs text-muted-foreground ml-auto">{doctors.length} total</span>
+                <span className="text-xs text-muted-foreground ml-auto">{sortedAndFilteredDoctors.length} found</span>
               </div>
 
-              {/* Single row list layout per doctor for day view */}
-              <div className="flex flex-col divide-y divide-border/60 border border-border/50 rounded-lg">
-                {doctors.map((doctor) => {
+              {/* Extremely dense adaptive grid layout for desktop scaling */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-2">
+                {sortedAndFilteredDoctors.map((doctor) => {
                   const mergedCell = mergedAvailabilityByDoctor[doctor.doctorId]?.[currentDate];
                   const primary = mergedCell?.isDeleted ? "AVAILABLE" : (mergedCell?.primary ?? "AVAILABLE");
                   const isLtftDay = getLtftDaysOff(doctor).includes(getDayNameFromISO(currentDate));
@@ -1262,36 +1327,34 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                     <div
                       key={doctor.doctorId}
                       onClick={() => handleCellTap(doctor.doctorId, currentDate)}
-                      className={`flex items-center justify-between px-3 py-2.5 cursor-pointer transition-colors hover:bg-muted/50 ${
+                      className={`flex flex-col justify-center px-2 py-1.5 rounded-md border border-border/50 cursor-pointer transition-colors hover:bg-muted/50 ${
                         isSelected ? "bg-blue-50 ring-2 ring-inset ring-blue-500 z-10 relative" : cellBg
-                      }`}
+                      } ${isUnavailable ? "opacity-70 grayscale-[20%]" : ""}`}
                     >
-                      <div className="flex-1 min-w-0 pr-4">
-                        <div
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/admin/doctor-calendar/${doctor.doctorId}`);
-                          }}
-                          className={`font-semibold text-sm hover:underline cursor-pointer truncate w-full ${nameColor}`}
-                          title={doctor.doctorName}
-                        >
-                          {doctor.doctorName.replace("Dr ", "")}
-                        </div>
+                      <div
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/admin/doctor-calendar/${doctor.doctorId}`);
+                        }}
+                        className={`font-semibold text-xs hover:underline cursor-pointer truncate w-full ${nameColor}`}
+                        title={doctor.doctorName}
+                      >
+                        {doctor.doctorName.replace("Dr ", "")}
                       </div>
 
-                      <div className="flex items-center gap-1.5 shrink-0">
+                      <div className="flex flex-row flex-wrap items-center gap-1 mt-0.5 min-h-[16px] overflow-hidden">
                         {mergedCell?.isDeleted && mergedCell.deletedCode ? (
-                          <span className="bg-muted text-muted-foreground text-[9px] font-bold px-1.5 py-0.5 rounded line-through">
+                          <span className="bg-muted text-muted-foreground text-[9px] font-bold px-1 py-0.5 rounded line-through truncate">
                             {mergedCell.deletedCode}
                           </span>
                         ) : (
                           <>
-                            {primary === "AL" && <LeaveBadge type="AL" />}
-                            {primary === "SL" && <LeaveBadge type="SL" />}
-                            {primary === "ROT" && <LeaveBadge type="ROT" />}
-                            {primary === "PL" && <LeaveBadge type="PL" />}
-                            {primary === "NOC" && <LeaveBadge type="NOC" />}
-                            {isLtftDay && <LeaveBadge type="LTFT" />}
+                            {primary === "AL" && <LeaveBadge type="AL" className="text-[9px] px-1 py-0" />}
+                            {primary === "SL" && <LeaveBadge type="SL" className="text-[9px] px-1 py-0" />}
+                            {primary === "ROT" && <LeaveBadge type="ROT" className="text-[9px] px-1 py-0" />}
+                            {primary === "PL" && <LeaveBadge type="PL" className="text-[9px] px-1 py-0" />}
+                            {primary === "NOC" && <LeaveBadge type="NOC" className="text-[9px] px-1 py-0" />}
+                            {isLtftDay && <LeaveBadge type="LTFT" className="text-[9px] px-1 py-0" />}
                             {(mergedCell?.overrideAction === "add" || mergedCell?.overrideAction === "modify") && (
                               <RotaOverrideDot />
                             )}
@@ -1419,7 +1482,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                       </tr>
                     </thead>
                     <tbody>
-                      {doctors.map((doctor, i) => {
+                      {sortedAndFilteredDoctors.map((doctor, i) => {
                         const rowBg = i % 2 === 0 ? "bg-card" : "bg-muted/10";
                         return (
                           <tr key={doctor.doctorId} className={`border-b border-border/50 ${rowBg}`}>
