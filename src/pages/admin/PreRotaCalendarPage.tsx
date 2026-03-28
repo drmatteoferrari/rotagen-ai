@@ -1102,6 +1102,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
       <div
         key={doctor.doctorId}
         onClick={() => handleCellTap(doctor.doctorId, currentDate)}
+        onDoubleClick={() => handleDoubleTap(doctor.doctorId, currentDate)}
         className={`flex flex-row items-center justify-between px-2 py-1.5 rounded-md border border-border/50 cursor-pointer transition-colors hover:bg-muted/50 ${
           isSelected ? "bg-blue-50 ring-2 ring-inset ring-blue-500 z-10 relative" : cellBg
         } ${isUnavailable ? "opacity-70 grayscale-[20%]" : ""}`}
