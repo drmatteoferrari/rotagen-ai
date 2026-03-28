@@ -44,6 +44,7 @@ export default function LandingPage() {
   const feature3Ref = useScrollReveal() as MutableRefObject<HTMLDivElement | null>;
   const feature4Ref = useScrollReveal() as MutableRefObject<HTMLDivElement | null>;
   const pricingRef = useScrollReveal() as MutableRefObject<HTMLDivElement | null>;
+  const pricingMobileRef = useScrollReveal() as MutableRefObject<HTMLDivElement | null>;
   const ctaRef = useScrollReveal() as MutableRefObject<HTMLDivElement | null>;
 
   useEffect(() => {
@@ -88,13 +89,16 @@ export default function LandingPage() {
       <main>
         {/* Compressed padding for mobile and pushed higher up towards top bar for desktop/tablet */}
         <section id="hero" className="flex flex-col bg-blue-100 px-4 pt-4 pb-6 md:pt-6 md:pb-10 lg:pt-8 lg:pb-12">
-          {/* md:grid-cols-2 activates the 2-column layout on tablets when width is sufficient */}
-          <div className="mx-auto w-full max-w-5xl flex flex-col md:grid md:grid-cols-2 gap-x-6 gap-y-2 md:gap-y-0 lg:gap-x-12 md:items-center lg:items-start justify-items-center">
-            {/* --- LEFT COLUMN BLOCK --- */}
-            {/* contents un-wraps this on mobile so flex-col ordering works, md:flex restores columns */}
-            <div className="contents md:flex md:flex-col md:items-center md:gap-4 lg:gap-6">
-              {/* 1. Logo & Tagline */}
-              <div className="order-1 md:order-1 flex flex-col items-center text-center w-full max-w-sm mb-1 md:mb-0">
+          {/* 2-column layout on tablets/desktop. Flex column on mobile. 
+              Added id="pricing" here so the navbar scrolling lands perfectly at the top of the grid. */}
+          <div
+            id="pricing"
+            className="mx-auto w-full max-w-5xl flex flex-col md:grid md:grid-cols-2 gap-x-6 gap-y-4 lg:gap-x-12 md:items-center lg:items-start justify-items-center"
+          >
+            {/* --- LEFT COLUMN --- */}
+            <div className="flex flex-col items-center md:gap-4 lg:gap-6 w-full">
+              {/* 1. Logo & Tagline (fade-up-1 & fade-up-2 for both Mobile and Desktop) */}
+              <div className="flex flex-col items-center text-center w-full max-w-sm mb-2 md:mb-0">
                 <div className="fade-up-1 flex justify-center">
                   <RotaGenLogo size="lg" />
                 </div>
@@ -119,8 +123,8 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              {/* 4. Mock Rota - Desktop/Tablet Only. Hidden on mobile to be moved to its own section below. */}
-              <div className="hidden md:block order-4 md:order-3 fade-up-3 float-anim w-full max-w-xs md:max-w-sm lg:max-w-md xl:max-w-lg mx-auto overflow-hidden rounded-xl border border-border bg-card shadow-2xl">
+              {/* Desktop Mock Rota (Hidden on mobile) - Desktop Animation: fade-up-3 */}
+              <div className="hidden md:block fade-up-3 float-anim w-full max-w-xs md:max-w-sm lg:max-w-md xl:max-w-lg mx-auto overflow-hidden rounded-xl border border-border bg-card shadow-2xl">
                 <div className="flex h-5 md:h-6 lg:h-8 items-center gap-1.5 lg:gap-2 px-2 md:px-3 lg:px-4 bg-slate-800">
                   <span className="h-1.5 w-1.5 md:h-2 md:w-2 lg:h-3 lg:w-3 rounded-full bg-red-400" />
                   <span className="h-1.5 w-1.5 md:h-2 md:w-2 lg:h-3 lg:w-3 rounded-full bg-amber-400" />
@@ -146,7 +150,7 @@ export default function LandingPage() {
                       <div className="flex items-center rounded-lg bg-muted px-1 py-1 md:px-2 md:py-1.5 lg:px-3 lg:py-2 text-[7px] md:text-[10px] lg:text-sm font-medium text-foreground">
                         {row[0]}
                       </div>
-                      {row.slice(1).map((shift, index) => {
+                      {row.slice(1).map((shift, shiftIndex) => {
                         const badgeClass =
                           shift === "Long Day"
                             ? "bg-green-100 text-green-700"
@@ -157,7 +161,7 @@ export default function LandingPage() {
                                 : "bg-blue-100 text-blue-700";
                         return (
                           <div
-                            key={`${row[0]}-${index}`}
+                            key={`${row[0]}-${shiftIndex}`}
                             className="rounded-lg bg-muted px-0.5 py-1 md:px-1 md:py-1.5 lg:px-2 lg:py-2 flex items-center justify-center"
                           >
                             <span
@@ -188,12 +192,12 @@ export default function LandingPage() {
               </div>
             </div>
 
-            {/* --- RIGHT COLUMN BLOCK --- */}
-            <div className="contents md:flex md:flex-col md:items-center md:gap-4 lg:gap-6">
-              {/* 2. Pricing Card */}
+            {/* --- RIGHT COLUMN (DESKTOP) --- */}
+            <div className="hidden md:flex flex-col items-center gap-4 lg:gap-6 w-full mt-2 md:mt-0">
+              {/* Desktop Pricing Card - Desktop Animation: fade-up-4 */}
               <div
                 ref={pricingRef}
-                className="order-2 md:order-2 fade-up-4 w-full max-w-sm mx-auto rounded-2xl border-2 border-primary/20 bg-card p-3 md:p-5 lg:p-6 text-center shadow-lg mb-1.5 md:mb-0"
+                className="fade-up-4 w-full max-w-sm mx-auto rounded-2xl border-2 border-primary/20 bg-card p-3 md:p-5 lg:p-6 text-center shadow-lg"
               >
                 <div className="inline-block rounded-full p-[2px] pricing-badge-shimmer">
                   <div className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-2.5 py-0.5 md:px-3 md:py-1 text-[10px] md:text-xs font-bold uppercase tracking-wider text-green-700">
@@ -210,7 +214,7 @@ export default function LandingPage() {
                   feedback.
                 </p>
 
-                {/* Primary Button - Added Shimmer, Removed Arrow */}
+                {/* Primary Button */}
                 <div className="mt-3 md:mt-5 inline-block rounded-xl p-[2px] pricing-blue-shimmer w-full">
                   <button
                     type="button"
@@ -221,7 +225,7 @@ export default function LandingPage() {
                   </button>
                 </div>
 
-                {/* Secondary Button - Removed Shimmer, Removed Arrow */}
+                {/* Secondary Button */}
                 <button
                   type="button"
                   onClick={() => navigate("/pricing")}
@@ -231,8 +235,70 @@ export default function LandingPage() {
                 </button>
               </div>
 
-              {/* 3. Feedback Card */}
-              <div className="order-3 md:order-4 fade-up-5 w-full max-w-sm mx-auto rounded-2xl border border-border bg-card p-3 md:p-4 text-center shadow-md">
+              {/* Desktop Feedback Card - Desktop Animation: fade-up-5 */}
+              <div className="fade-up-5 w-full max-w-sm mx-auto rounded-2xl border border-border bg-card p-3 md:p-4 text-center shadow-md">
+                <p className="text-xs md:text-sm font-semibold text-muted-foreground mb-1.5 md:mb-3">
+                  Already using RotaGen?
+                </p>
+                <button
+                  type="button"
+                  onClick={() => navigate("/feedback")}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2 md:py-2.5 text-xs md:text-sm font-semibold text-white transition-all hover:opacity-90"
+                  style={{ backgroundColor: "#16A34A" }}
+                >
+                  <span className="flex h-4 w-4 md:h-5 md:w-5 items-center justify-center rounded-md bg-white/20">
+                    <Star className="h-2.5 w-2.5 md:h-3 md:w-3" />
+                  </span>
+                  Give us your feedback
+                </button>
+              </div>
+            </div>
+
+            {/* --- RIGHT COLUMN (MOBILE) --- */}
+            <div className="flex md:hidden flex-col items-center gap-4 w-full mt-2">
+              {/* Mobile Pricing Card - Mobile Animation: fade-up-3 */}
+              <div
+                ref={pricingMobileRef}
+                className="fade-up-3 w-full max-w-sm mx-auto rounded-2xl border-2 border-primary/20 bg-card p-3 md:p-5 lg:p-6 text-center shadow-lg"
+              >
+                <div className="inline-block rounded-full p-[2px] pricing-badge-shimmer">
+                  <div className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-2.5 py-0.5 md:px-3 md:py-1 text-[10px] md:text-xs font-bold uppercase tracking-wider text-green-700">
+                    <span className="h-1.5 w-1.5 md:h-2 md:w-2 rounded-full bg-green-500 animate-pulse" />
+                    Early Access — Free
+                  </div>
+                </div>
+
+                <h3 className="mt-2 md:mt-4 text-lg md:text-xl font-bold text-foreground">
+                  FREE for Founding Departments
+                </h3>
+                <p className="mt-1.5 md:mt-3 text-xs md:text-sm leading-snug text-muted-foreground">
+                  Join our early testing group for anaesthetic departments. Zero cost. No commitment. Just your honest
+                  feedback.
+                </p>
+
+                {/* Primary Button */}
+                <div className="mt-3 md:mt-5 inline-block rounded-xl p-[2px] pricing-blue-shimmer w-full">
+                  <button
+                    type="button"
+                    onClick={() => navigate("/register")}
+                    className="w-full rounded-[9px] bg-primary px-4 py-2 md:px-6 md:py-2.5 text-sm font-semibold text-primary-foreground transition-all hover:opacity-90 active:scale-[0.98]"
+                  >
+                    Request early access
+                  </button>
+                </div>
+
+                {/* Secondary Button */}
+                <button
+                  type="button"
+                  onClick={() => navigate("/pricing")}
+                  className="mt-2 md:mt-3 w-full rounded-xl bg-blue-50 border border-blue-200 px-4 py-1.5 md:px-6 md:py-2 text-xs md:text-sm font-semibold text-blue-700 transition-all hover:bg-blue-100"
+                >
+                  Full pricing details
+                </button>
+              </div>
+
+              {/* Mobile Feedback Card - Mobile Animation: fade-up-4 */}
+              <div className="fade-up-4 w-full max-w-sm mx-auto rounded-2xl border border-border bg-card p-3 md:p-4 text-center shadow-md">
                 <p className="text-xs md:text-sm font-semibold text-muted-foreground mb-1.5 md:mb-3">
                   Already using RotaGen?
                 </p>
@@ -253,8 +319,9 @@ export default function LandingPage() {
         </section>
 
         {/* --- MOBILE ONLY: Dedicated Mock Rota Section Below the Fold --- */}
+        {/* Mobile Animation: fade-up-5 */}
         <section className="md:hidden bg-blue-100 px-4 pb-12 pt-2">
-          <div className="fade-up-3 float-anim w-full max-w-xs mx-auto overflow-hidden rounded-xl border border-border bg-card shadow-2xl">
+          <div className="fade-up-5 float-anim w-full max-w-xs mx-auto overflow-hidden rounded-xl border border-border bg-card shadow-2xl">
             <div className="flex h-5 items-center gap-1.5 px-2 bg-slate-800">
               <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
               <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
