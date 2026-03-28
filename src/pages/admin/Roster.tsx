@@ -95,13 +95,15 @@ function ExpandedDoctorPanel({
   if (!surveyData) {
     return (
       <div className="space-y-2">
-        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+        <div className="grid grid-cols-[80px_1fr] sm:grid-cols-[90px_1fr] gap-x-3 gap-y-1.5 text-sm">
           <span className="text-muted-foreground">Grade</span>
-          <span className="font-medium">{doctor.grade || "—"}</span>
+          <span className="font-medium text-foreground">{doctor.grade || "—"}</span>
           <span className="text-muted-foreground">Email</span>
-          <span className="font-medium truncate">{doctor.email || "—"}</span>
+          <span className="font-medium text-foreground truncate">{doctor.email || "—"}</span>
         </div>
-        <p className="text-xs text-muted-foreground italic">Survey not yet started — no preference data available.</p>
+        <p className="text-xs text-muted-foreground italic mt-2">
+          Survey not yet started — no preference data available.
+        </p>
       </div>
     );
   }
@@ -120,44 +122,41 @@ function ExpandedDoctorPanel({
   const displayPhone = surveyData?.phone_number || "—";
 
   return (
-    <div className="space-y-3">
-      {/* Contact & Identity — always shown */}
-      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-        <span className="text-muted-foreground">Grade</span>
-        <span className="font-medium">{displayGrade}</span>
-        <span className="text-muted-foreground">Email</span>
-        <span className="font-medium truncate">{displayEmail}</span>
-        {displayPhone !== "—" && (
-          <>
-            <span className="text-muted-foreground">Phone</span>
-            <span className="font-medium">{displayPhone}</span>
-          </>
-        )}
-      </div>
-
-      {/* No survey data message */}
-      {!surveyData && (
-        <p className="text-sm text-muted-foreground italic">Survey not yet started — no preference data available.</p>
-      )}
-
-      {/* Working pattern — only if survey data exists */}
-      {surveyData && (
-        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-          <span className="text-muted-foreground">WTE</span>
-          <span className="font-medium">{wte !== null ? `${wte}%` : "—"}</span>
-          {sortedDays.length > 0 && (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Contact & Identity — always shown */}
+        <div className="grid grid-cols-[80px_1fr] sm:grid-cols-[90px_1fr] gap-x-2 gap-y-1.5 text-sm">
+          <span className="text-muted-foreground">Grade</span>
+          <span className="font-medium text-foreground truncate">{displayGrade}</span>
+          <span className="text-muted-foreground">Email</span>
+          <span className="font-medium text-foreground truncate">{displayEmail}</span>
+          {displayPhone !== "—" && (
             <>
-              <span className="text-muted-foreground">Days off</span>
-              <span className="font-medium">{sortedDays.join(", ")}</span>
+              <span className="text-muted-foreground">Phone</span>
+              <span className="font-medium text-foreground truncate">{displayPhone}</span>
             </>
           )}
         </div>
-      )}
+
+        {/* Working pattern — only if survey data exists */}
+        {surveyData && (
+          <div className="grid grid-cols-[80px_1fr] sm:grid-cols-[90px_1fr] gap-x-2 gap-y-1.5 text-sm">
+            <span className="text-muted-foreground">WTE</span>
+            <span className="font-medium text-foreground truncate">{wte !== null ? `${wte}%` : "—"}</span>
+            {sortedDays.length > 0 && (
+              <>
+                <span className="text-muted-foreground">Days off</span>
+                <span className="font-medium text-foreground truncate">{sortedDays.join(", ")}</span>
+              </>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Competencies — only if survey data exists */}
       {surveyData && (
-        <div className="space-y-1">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Competencies</p>
+        <div className="space-y-1.5">
+          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wide">Competencies</p>
           <div className="flex flex-wrap gap-1.5">
             {(["iac", "iaoc", "icu", "transfer"] as const).map((key) => {
               const achieved = flatKey(key, "achieved") ?? cj[key]?.achieved ?? null;
@@ -189,7 +188,7 @@ function ExpandedDoctorPanel({
       )}
 
       {/* Navigation Buttons */}
-      <div className="flex gap-2 mt-4">
+      <div className="flex gap-2 pt-1">
         <button
           type="button"
           onClick={onNavigateProfile}
@@ -344,7 +343,7 @@ export default function Roster() {
       return;
     }
     invalidateDoctors();
-    toast("Doctor permanently deleted");
+    toast.success("Doctor permanently deleted");
     setDoctorToRemove(null);
   };
 
@@ -357,7 +356,7 @@ export default function Roster() {
     }
     invalidateDoctors();
     invalidateInactiveDoctors();
-    toast("Doctor moved to inactive");
+    toast.success("Doctor moved to inactive");
     setDoctorToRemove(null);
   };
 
@@ -457,6 +456,7 @@ export default function Roster() {
     navigator.clipboard.writeText(link);
     setCopiedId(doctor.id);
     setTimeout(() => setCopiedId(null), 2000);
+    toast.success("Survey link copied to clipboard");
   };
 
   // ─── Toggle expand and lazy-load survey data ───
@@ -595,7 +595,7 @@ export default function Roster() {
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground shrink-0">
             <MoreVertical className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
@@ -1098,54 +1098,45 @@ export default function Roster() {
           </div>
         )}
 
-        {/* Improved Summary Section */}
+        {/* Improved Summary Section - Minimal Verticality */}
         {doctors.length > 0 && (
-          <>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <Card className="bg-primary/5 border-primary/20 shadow-none">
-                <CardContent className="p-4 flex flex-col items-center">
-                  <div className="text-3xl font-bold text-primary">{doctors.length}</div>
-                  <div className="text-[11px] font-bold text-primary/70 uppercase tracking-wider mt-1">Total</div>
-                </CardContent>
-              </Card>
-              <Card className="bg-emerald-50 border-emerald-200 shadow-none">
-                <CardContent className="p-4 flex flex-col items-center">
-                  <div className="text-3xl font-bold text-emerald-600">{submitted}</div>
-                  <div className="text-[11px] font-bold text-emerald-600/70 uppercase tracking-wider mt-1">
-                    Submitted
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="bg-amber-50 border-amber-200 shadow-none">
-                <CardContent className="p-4 flex flex-col items-center">
-                  <div className="text-3xl font-bold text-amber-600">{inProgress}</div>
-                  <div className="text-[11px] font-bold text-amber-600/70 uppercase tracking-wider mt-1">
-                    In Progress
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="bg-muted/50 border-border shadow-none">
-                <CardContent className="p-4 flex flex-col items-center">
-                  <div className="text-3xl font-bold text-muted-foreground">{notStarted}</div>
-                  <div className="text-[11px] font-bold text-muted-foreground/70 uppercase tracking-wider mt-1">
-                    Not Started
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between items-center text-sm font-bold text-card-foreground">
-                <span className="uppercase tracking-wider text-xs text-muted-foreground">Survey Completion</span>
-                <span>{progressPct}%</span>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 bg-card border border-border px-4 py-3 rounded-lg shadow-sm">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm flex-1">
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-lg text-primary leading-none">{doctors.length}</span>
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Total</span>
               </div>
-              <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+              <div className="w-px h-6 bg-border hidden sm:block"></div>
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-lg text-emerald-600 leading-none">{submitted}</span>
+                <span className="text-[10px] font-bold text-emerald-600/70 uppercase tracking-wider">Submitted</span>
+              </div>
+              <div className="w-px h-6 bg-border hidden sm:block"></div>
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-lg text-amber-600 leading-none">{inProgress}</span>
+                <span className="text-[10px] font-bold text-amber-600/70 uppercase tracking-wider">In Progress</span>
+              </div>
+              <div className="w-px h-6 bg-border hidden sm:block"></div>
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-lg text-muted-foreground leading-none">{notStarted}</span>
+                <span className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-wider">
+                  Not Started
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 w-full sm:w-48 shrink-0 mt-2 sm:mt-0">
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
+                {progressPct}% Done
+              </span>
+              <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
                 <div
                   className="h-full rounded-full bg-emerald-500 transition-all duration-500"
                   style={{ width: `${progressPct}%` }}
                 />
               </div>
             </div>
-          </>
+          </div>
         )}
 
         {/* Deadline picker & Team Roster Actions */}
@@ -1194,7 +1185,7 @@ export default function Roster() {
                   <UserPlus className="h-4 w-4" /> Add Doctor
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
+              <DialogContent className="w-[92vw] sm:max-w-[425px] rounded-2xl">
                 <DialogHeader>
                   <DialogTitle>Add New Doctor</DialogTitle>
                 </DialogHeader>
@@ -1378,12 +1369,29 @@ export default function Roster() {
             return (
               <div key={doctor.id} className="bg-card">
                 {/* ── Desktop Row (lg and up) ── */}
-                <div className="hidden lg:flex items-center gap-4 py-3 px-4 w-full">
-                  <div className="w-[20%] font-semibold truncate text-base">
-                    {doctor.last_name}, {doctor.first_name}
+                <div className="hidden lg:flex items-center gap-3 py-3 px-4 w-full text-sm hover:bg-muted/30 transition-colors">
+                  <div
+                    className="w-[20%] font-semibold truncate text-[15px] cursor-pointer hover:text-primary transition-colors flex items-center gap-1.5"
+                    onClick={() => toggleExpand(doctor.id)}
+                  >
+                    {isExpanded ? (
+                      <ChevronUp className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    )}
+                    <span className="truncate">
+                      {doctor.last_name}, {doctor.first_name}
+                    </span>
                   </div>
-                  <div className="w-[10%] text-sm text-muted-foreground truncate">{doctor.grade || "—"}</div>
-                  <div className="w-[12%]">
+                  <div className="w-[10%] text-muted-foreground truncate">{doctor.grade || "—"}</div>
+                  <div className="w-[8%] text-muted-foreground truncate">
+                    {cached ? `${cached.wte_percent ?? 100}%` : "—"}
+                  </div>
+                  <div className="w-[20%] text-muted-foreground truncate">
+                    {cached?.nhs_email ?? doctor.email ?? "—"}
+                  </div>
+                  <div className="w-[15%] text-muted-foreground truncate">{cached?.phone_number ?? "—"}</div>
+                  <div className="w-[12%] shrink-0">
                     {doctor.survey_status === "submitted" && (
                       <Badge className="bg-emerald-500/15 text-emerald-600 border-emerald-500/20 shadow-none pointer-events-none">
                         Submitted
@@ -1395,45 +1403,12 @@ export default function Roster() {
                       </Badge>
                     )}
                     {(!doctor.survey_status || doctor.survey_status === "not_started") && (
-                      <Badge className="bg-muted text-muted-foreground border-border shadow-none pointer-events-none text-xs">
+                      <Badge className="bg-muted text-muted-foreground border-border shadow-none pointer-events-none">
                         Not Started
                       </Badge>
                     )}
                   </div>
-                  <div className="w-[15%] text-xs truncate text-muted-foreground">{doctor.email || "—"}</div>
-                  <div className="flex-1 min-w-0 flex items-center">
-                    {cached ? (
-                      <div className="flex items-center gap-3 text-xs">
-                        <span className="font-medium whitespace-nowrap">WTE: {cached.wte_percent ?? "100"}%</span>
-                        <span className="truncate max-w-[120px] text-muted-foreground">
-                          Off: {cached.ltft_days_off?.join(",") || "None"}
-                        </span>
-                        <div className="flex gap-1">
-                          {(["iac", "iaoc", "icu", "transfer"] as const).map((k) => {
-                            const achieved = cached[`${k}_achieved`] ?? cached.competencies_json?.[k]?.achieved;
-                            return achieved ? (
-                              <span
-                                key={k}
-                                className="bg-emerald-100 text-emerald-700 px-1 rounded uppercase text-[9px] font-bold"
-                              >
-                                {k}
-                              </span>
-                            ) : null;
-                          })}
-                        </div>
-                      </div>
-                    ) : (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 text-xs text-muted-foreground hover:text-foreground"
-                        onClick={() => toggleExpand(doctor.id)}
-                      >
-                        {surveyLoading[doctor.id] ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : "Load details"}
-                      </Button>
-                    )}
-                  </div>
-                  <div className="flex gap-1.5 shrink-0">{renderDoctorMenu(doctor)}</div>
+                  <div className="flex-1 flex justify-end items-center gap-1 min-w-0">{renderDoctorMenu(doctor)}</div>
                 </div>
 
                 {/* ── Mobile/Tablet Row (below lg) ── */}
@@ -1441,10 +1416,10 @@ export default function Roster() {
                   <div className="flex flex-col gap-1 cursor-pointer" onClick={() => toggleExpand(doctor.id)}>
                     {/* Top line */}
                     <div className="flex justify-between items-center">
-                      <span className="font-semibold text-base">
+                      <span className="font-semibold text-base truncate">
                         {doctor.last_name}, {doctor.first_name}
                       </span>
-                      <div>
+                      <div className="shrink-0 ml-2">
                         {doctor.survey_status === "submitted" && <Check className="h-5 w-5 text-emerald-600" />}
                         {doctor.survey_status === "in_progress" && <Pencil className="h-5 w-5 text-amber-600" />}
                         {(!doctor.survey_status || doctor.survey_status === "not_started") && (
@@ -1453,9 +1428,24 @@ export default function Roster() {
                       </div>
                     </div>
                     {/* Bottom line */}
-                    <div className="flex justify-between items-center text-sm text-muted-foreground">
-                      <span>{doctor.grade || "No grade"}</span>
-                      <div onClick={(e) => e.stopPropagation()}>{renderDoctorMenu(doctor)}</div>
+                    <div className="flex justify-between items-center text-sm text-muted-foreground mt-1">
+                      <div className="flex items-center gap-2 truncate text-xs sm:text-sm">
+                        <span className="font-medium">{doctor.grade || "No grade"}</span>
+                        {/* Only visible on sm to lg (Tablet mode) */}
+                        <span className="hidden sm:inline-block w-1 h-1 rounded-full bg-border shrink-0"></span>
+                        <span className="hidden sm:inline-block truncate max-w-[150px]">
+                          {cached?.nhs_email ?? doctor.email ?? "—"}
+                        </span>
+                        <span className="hidden sm:inline-block w-1 h-1 rounded-full bg-border shrink-0"></span>
+                        <span className="hidden sm:inline-block truncate">{cached?.phone_number ?? "—"}</span>
+                        <span className="hidden sm:inline-block w-1 h-1 rounded-full bg-border shrink-0"></span>
+                        <span className="hidden sm:inline-block shrink-0">
+                          WTE: {cached?.wte_percent ? `${cached.wte_percent}%` : "—"}
+                        </span>
+                      </div>
+                      <div onClick={(e) => e.stopPropagation()} className="shrink-0 ml-2">
+                        {renderDoctorMenu(doctor)}
+                      </div>
                     </div>
                   </div>
                   {/* Extended details */}
@@ -1662,23 +1652,32 @@ export default function Roster() {
 
       {/* Global Send Invite Dialog */}
       <Dialog open={!!doctorToSend} onOpenChange={(open) => !open && setDoctorToSend(null)}>
-        <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader>
-            <DialogTitle>
-              Send invite to {doctorToSend?.first_name} {doctorToSend?.last_name}?
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
+        <DialogContent className="w-[92vw] sm:max-w-[425px] p-0 overflow-hidden rounded-2xl shadow-xl">
+          <div className="bg-primary/5 p-6 border-b border-primary/10">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 shrink-0">
+                <Send className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <DialogTitle className="text-lg text-foreground">Send Survey Invite</DialogTitle>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  {doctorToSend?.first_name} {doctorToSend?.last_name}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="p-6 space-y-4 bg-background">
             {formattedDeadline && (
-              <p className="text-sm text-foreground font-medium">
-                Deadline: <span className="font-normal text-muted-foreground">{formattedDeadline}</span>
-              </p>
+              <div className="flex items-center justify-between text-sm p-3 rounded-lg bg-muted/50 border border-border">
+                <span className="font-medium text-foreground">Deadline</span>
+                <span className="text-muted-foreground">{formattedDeadline}</span>
+              </div>
             )}
             <p className="text-sm text-muted-foreground">
               They will receive an email containing their unique, secure survey link.
             </p>
             {doctorToSend?.survey_status === "submitted" && (
-              <div className="p-3 bg-amber-50 rounded border border-amber-200 text-sm text-amber-800 flex gap-2 mt-2">
+              <div className="p-3 bg-amber-50 rounded-lg border border-amber-200 text-sm text-amber-800 flex gap-2.5">
                 <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
                 <p>
                   This doctor has already submitted their survey. Resending will allow them to edit and resubmit their
@@ -1686,57 +1685,66 @@ export default function Roster() {
                 </p>
               </div>
             )}
+            <div className="pt-4 flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => setDoctorToSend(null)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  if (doctorToSend) sendInvite(doctorToSend);
+                  setDoctorToSend(null);
+                }}
+              >
+                Send Invite
+              </Button>
+            </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDoctorToSend(null)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                if (doctorToSend) sendInvite(doctorToSend);
-                setDoctorToSend(null);
-              }}
-            >
-              Send Invite
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Global Remove Doctor Dialog */}
       <Dialog open={!!doctorToRemove} onOpenChange={(open) => !open && setDoctorToRemove(null)}>
-        <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader>
-            <DialogTitle>
-              Remove {doctorToRemove?.first_name} {doctorToRemove?.last_name}?
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <p className="text-sm text-muted-foreground">What would you like to do with this doctor?</p>
-            <div className="flex flex-col gap-2">
-              <Button
-                variant="outline"
-                className="w-full justify-start text-left"
+        <DialogContent className="w-[92vw] sm:max-w-[425px] p-0 overflow-hidden rounded-2xl border-border shadow-xl">
+          <div className="bg-red-50/50 p-6 border-b border-red-100">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 shrink-0">
+                <Trash2 className="h-5 w-5 text-red-600" />
+              </div>
+              <div>
+                <DialogTitle className="text-lg text-foreground">Remove Doctor</DialogTitle>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  {doctorToRemove?.first_name} {doctorToRemove?.last_name}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="p-6 space-y-4 bg-background">
+            <p className="text-sm text-foreground font-medium">What would you like to do?</p>
+            <div className="flex flex-col gap-3">
+              <button
+                type="button"
+                className="flex flex-col items-start p-3 rounded-lg border border-border hover:border-muted-foreground/30 hover:bg-muted/30 transition-colors text-left w-full"
                 onClick={() => doctorToRemove && deactivateDoctor(doctorToRemove.id)}
               >
-                <div className="flex flex-col items-start gap-1">
-                  <span>Move to Inactive</span>
-                  <span className="text-xs font-normal text-muted-foreground">
-                    Keeps data but removes them from the active scheduling.
-                  </span>
-                </div>
-              </Button>
-              <Button
-                variant="destructive"
-                className="w-full justify-start text-left"
+                <span className="text-sm font-semibold text-foreground">Move to Inactive</span>
+                <span className="text-xs text-muted-foreground mt-1">
+                  Keeps their data but removes them from the active scheduling.
+                </span>
+              </button>
+              <button
+                type="button"
+                className="flex flex-col items-start p-3 rounded-lg border border-red-200 bg-red-50/30 hover:bg-red-50 hover:border-red-300 transition-colors text-left w-full group"
                 onClick={() => doctorToRemove && removeDoctor(doctorToRemove.id)}
               >
-                <div className="flex flex-col items-start gap-1">
-                  <span>Delete Permanently</span>
-                  <span className="text-xs font-normal text-red-200">
-                    Deletes the doctor and ALL their survey responses entirely.
-                  </span>
-                </div>
+                <span className="text-sm font-semibold text-red-600 group-hover:text-red-700">Delete Permanently</span>
+                <span className="text-xs text-red-600/70 mt-1">
+                  Deletes the doctor and ALL their survey responses entirely. Cannot be undone.
+                </span>
+              </button>
+            </div>
+            <div className="pt-2 flex justify-end">
+              <Button variant="ghost" size="sm" onClick={() => setDoctorToRemove(null)}>
+                Cancel
               </Button>
             </div>
           </div>
