@@ -31,9 +31,8 @@ export function AdminLayout({ children, title, subtitle, accentColor = 'blue', p
   }
 
   // Non-step pages (Dashboard, Roster, Setup etc): scrollable with padding.
-  // pb-20 on mobile preserves clearance above the fixed bottom dashboard nav.
   return (
-    <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-20 md:pb-6">
+    <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-6">
       {children}
     </div>
   );
