@@ -18,6 +18,7 @@ import {
   CalendarRange,
   ChevronUp,
   RefreshCw,
+  MonitorSmartphone,
 } from "lucide-react";
 import {
   getTodayISO,
@@ -39,10 +40,20 @@ import {
 const DAY_NAMES = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
 
 const FULL_DAY_NAMES: Record<string, string> = {
-  sun: "sunday", mon: "monday", tue: "tuesday", wed: "wednesday",
-  thu: "thursday", fri: "friday", sat: "saturday",
-  sunday: "sunday", monday: "monday", tuesday: "tuesday", wednesday: "wednesday",
-  thursday: "thursday", friday: "friday", saturday: "saturday",
+  sun: "sunday",
+  mon: "monday",
+  tue: "tuesday",
+  wed: "wednesday",
+  thu: "thursday",
+  fri: "friday",
+  sat: "saturday",
+  sunday: "sunday",
+  monday: "monday",
+  tuesday: "tuesday",
+  wednesday: "wednesday",
+  thursday: "thursday",
+  friday: "friday",
+  saturday: "saturday",
 };
 
 function normaliseDayName(raw: string): string {
@@ -83,7 +94,7 @@ function isDoctorEligible(
   doctor: CalendarDoctor,
   date: string,
   shift: { badge_night: boolean; badge_oncall: boolean },
-  surveys: Record<string, SurveyMap>
+  surveys: Record<string, SurveyMap>,
 ): boolean {
   const cell = doctor.availability[date];
   const primary = cell?.primary ?? "AVAILABLE";
@@ -136,7 +147,9 @@ const BADGE_STYLES = {
 function LeaveBadge({ type, className = "" }: { type: keyof typeof BADGE_STYLES; className?: string }) {
   const s = BADGE_STYLES[type];
   return (
-    <span className={`inline-block px-1 sm:px-1.5 py-0.5 rounded text-[8px] sm:text-[10px] font-bold tracking-tighter sm:tracking-wider leading-none sm:leading-tight ${s.classes} ${className}`}>
+    <span
+      className={`inline-block px-1 sm:px-1.5 py-0.5 rounded text-[8px] sm:text-[10px] font-bold tracking-tighter sm:tracking-wider leading-none sm:leading-tight ${s.classes} ${className}`}
+    >
       {s.label}
     </span>
   );
@@ -158,8 +171,12 @@ function getMergedCellBackground(mergedCell: MergedCell | undefined, isLtftDay: 
 function CalendarLegend() {
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-4 text-xs text-muted-foreground bg-card border border-border rounded-lg px-4 py-3 shadow-sm">
-      <div className="flex items-center gap-1.5"><LeaveBadge type="AL" /> <span>Annual Leave</span></div>
-      <div className="flex items-center gap-1.5"><LeaveBadge type="SL" /> <span>Study Leave</span></div>
+      <div className="flex items-center gap-1.5">
+        <LeaveBadge type="AL" /> <span>Annual Leave</span>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <LeaveBadge type="SL" /> <span>Study Leave</span>
+      </div>
       <div className="flex items-center gap-1.5">
         <div className="w-8 h-5 flex items-center justify-center rounded bg-orange-50 border border-orange-200">
           <LeaveBadge type="ROT" className="text-[9px] px-1 py-0" />
@@ -172,7 +189,9 @@ function CalendarLegend() {
         </div>
         <span>Parental Leave</span>
       </div>
-      <div className="flex items-center gap-1.5"><LeaveBadge type="NOC" /> <span>Not On-Call</span></div>
+      <div className="flex items-center gap-1.5">
+        <LeaveBadge type="NOC" /> <span>Not On-Call</span>
+      </div>
       <div className="w-px h-4 bg-border mx-0.5" />
       <div className="flex items-center gap-1.5">
         <div className="w-8 h-5 flex items-center justify-center rounded bg-yellow-50 border border-yellow-200">
@@ -187,9 +206,15 @@ function CalendarLegend() {
         </span>
         <span>Coordinator override</span>
       </div>
-      <div className="flex items-center gap-1.5"><div className="w-3.5 h-3.5 rounded bg-blue-100 border border-blue-200 shrink-0" /> <span>Today</span></div>
-      <div className="flex items-center gap-1.5"><div className="w-3.5 h-3.5 rounded bg-red-100 border border-red-200 shrink-0" /> <span>Bank Holiday</span></div>
-      <div className="flex items-center gap-1.5"><div className="w-3.5 h-3.5 rounded bg-muted border border-border shrink-0" /> <span>Weekend</span></div>
+      <div className="flex items-center gap-1.5">
+        <div className="w-3.5 h-3.5 rounded bg-blue-100 border border-blue-200 shrink-0" /> <span>Today</span>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <div className="w-3.5 h-3.5 rounded bg-red-100 border border-red-200 shrink-0" /> <span>Bank Holiday</span>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <div className="w-3.5 h-3.5 rounded bg-muted border border-border shrink-0" /> <span>Weekend</span>
+      </div>
     </div>
   );
 }
@@ -244,8 +269,12 @@ function WeekCellContent({
 const MONTH_DAY_ABBR = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 const MONTH_EVENT_COLOURS: Record<string, string> = {
-  AL: "#16a34a", SL: "#2563eb", NOC: "#ec4899",
-  ROT: "#ea580c", PL: "#7c3aed", LTFT: "#ca8a04",
+  AL: "#16a34a",
+  SL: "#2563eb",
+  NOC: "#ec4899",
+  ROT: "#ea580c",
+  PL: "#7c3aed",
+  LTFT: "#ca8a04",
 };
 
 function buildMonthGrid(yearMonth: string): string[] {
@@ -403,7 +432,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
         setShiftTypes(shifts);
 
         const bhSet = new Set(
-          (cachedBankHolidays ?? []).filter((r: any) => r.is_active !== false).map((r: any) => r.date as string)
+          (cachedBankHolidays ?? []).filter((r: any) => r.is_active !== false).map((r: any) => r.date as string),
         );
         setBankHolidays(bhSet);
 
@@ -424,24 +453,17 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
 
         const mergedDoctors = (cd.doctors ?? []).map((doc: any) => ({
           ...doc,
-          ltftDaysOff: (
-            doc.ltftDaysOff ??
-            doc.ltft_days_off ??
-            sMap[doc.doctorId]?.ltftDaysOff ??
-            []
-          ).map(normaliseDayName),
+          ltftDaysOff: (doc.ltftDaysOff ?? doc.ltft_days_off ?? sMap[doc.doctorId]?.ltftDaysOff ?? []).map(
+            normaliseDayName,
+          ),
         }));
         const mergedCd = { ...cd, doctors: mergedDoctors };
         setCalendarData(mergedCd);
 
         // Start from current date logic
         const initialDate =
-          todayISO >= mergedCd.rotaStartDate && todayISO <= mergedCd.rotaEndDate
-            ? todayISO
-            : mergedCd.rotaStartDate;
-        const initialWeekIdx = mergedCd.weeks.findIndex(
-          (w) => w.startDate <= initialDate && initialDate <= w.endDate
-        );
+          todayISO >= mergedCd.rotaStartDate && todayISO <= mergedCd.rotaEndDate ? todayISO : mergedCd.rotaStartDate;
+        const initialWeekIdx = mergedCd.weeks.findIndex((w) => w.startDate <= initialDate && initialDate <= w.endDate);
         setCurrentWeekIndex(initialWeekIdx >= 0 ? initialWeekIdx : 0);
         const allDatesFlat = mergedCd.weeks.flatMap((w) => w.dates);
         const initialDayIdx = allDatesFlat.indexOf(initialDate);
@@ -499,7 +521,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
         const pr = preRota as any;
         if (pr.status === "blocked") {
           setErrorMsg(
-            "Pre-rota is blocked due to critical issues. Resolve them on the dashboard before viewing the calendar."
+            "Pre-rota is blocked due to critical issues. Resolve them on the dashboard before viewing the calendar.",
           );
           setLoading(false);
           return;
@@ -527,7 +549,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
           .select("date, is_active")
           .eq("rota_config_id", rotaConfigId);
         const bhSet = new Set(
-          (bhRows ?? []).filter((r: any) => r.is_active !== false).map((r: any) => r.date as string)
+          (bhRows ?? []).filter((r: any) => r.is_active !== false).map((r: any) => r.date as string),
         );
         setBankHolidays(bhSet);
 
@@ -547,11 +569,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
         }
         setSurveysMap(sMap);
 
-        const { data: config } = await supabase
-          .from("rota_configs")
-          .select("owned_by")
-          .eq("id", rotaConfigId)
-          .single();
+        const { data: config } = await supabase.from("rota_configs").select("owned_by").eq("id", rotaConfigId).single();
         if (config) {
           const { data: acct } = await supabase
             .from("account_settings")
@@ -564,24 +582,17 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
 
         const mergedDoctors = (cd.doctors ?? []).map((doc: any) => ({
           ...doc,
-          ltftDaysOff: (
-            doc.ltftDaysOff ??
-            doc.ltft_days_off ??
-            sMap[doc.doctorId]?.ltftDaysOff ??
-            []
-          ).map(normaliseDayName),
+          ltftDaysOff: (doc.ltftDaysOff ?? doc.ltft_days_off ?? sMap[doc.doctorId]?.ltftDaysOff ?? []).map(
+            normaliseDayName,
+          ),
         }));
         const mergedCd = { ...cd, doctors: mergedDoctors };
         setCalendarData(mergedCd);
 
         // Start from current date logic
         const initialDate =
-          todayISO >= mergedCd.rotaStartDate && todayISO <= mergedCd.rotaEndDate
-            ? todayISO
-            : mergedCd.rotaStartDate;
-        const initialWeekIdx = mergedCd.weeks.findIndex(
-          (w) => w.startDate <= initialDate && initialDate <= w.endDate
-        );
+          todayISO >= mergedCd.rotaStartDate && todayISO <= mergedCd.rotaEndDate ? todayISO : mergedCd.rotaStartDate;
+        const initialWeekIdx = mergedCd.weeks.findIndex((w) => w.startDate <= initialDate && initialDate <= w.endDate);
         setCurrentWeekIndex(initialWeekIdx >= 0 ? initialWeekIdx : 0);
         const allDatesFlat = mergedCd.weeks.flatMap((w) => w.dates);
         const initialDayIdx = allDatesFlat.indexOf(initialDate);
@@ -722,7 +733,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
       setPanelOpen(false);
       setSelectedCell(null);
       refreshResolvedAvailabilityForDoctor(rotaConfigId, doctorId).catch((err) =>
-        console.error("refreshResolvedAvailability failed:", err)
+        console.error("refreshResolvedAvailability failed:", err),
       );
     } catch (err) {
       console.error("Failed to save override:", err);
@@ -744,7 +755,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
       setPanelOpen(false);
       setSelectedCell(null);
       refreshResolvedAvailabilityForDoctor(rotaConfigId, doctorId).catch((err) =>
-        console.error("refreshResolvedAvailability failed:", err)
+        console.error("refreshResolvedAvailability failed:", err),
       );
     } catch (err) {
       console.error("Failed to delete override:", err);
@@ -778,7 +789,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
       setPanelOpen(false);
       setSelectedCell(null);
       refreshResolvedAvailabilityForDoctor(rotaConfigId, doctorId).catch((err) =>
-        console.error("refreshResolvedAvailability failed:", err)
+        console.error("refreshResolvedAvailability failed:", err),
       );
     } catch (err) {
       console.error("Failed to remove survey event:", err);
@@ -816,7 +827,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
         doctor.availability,
         doctorOverrides,
         calendarData.rotaStartDate,
-        calendarData.rotaEndDate
+        calendarData.rotaEndDate,
       );
     }
     return result;
@@ -869,10 +880,10 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
   const currentDate = allDates[currentDayIndex] ?? allDates[0];
 
   const weekLabel = currentWeek
-    ? `Wk ${currentWeek.weekNumber} · ${new Date(currentWeek.dates[0] + "T00:00:00").toLocaleDateString(
-        "en-GB",
-        { day: "2-digit", month: "short" }
-      )}–${new Date(currentWeek.dates[currentWeek.dates.length - 1] + "T00:00:00").toLocaleDateString("en-GB", {
+    ? `Wk ${currentWeek.weekNumber} · ${new Date(currentWeek.dates[0] + "T00:00:00").toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+      })}–${new Date(currentWeek.dates[currentWeek.dates.length - 1] + "T00:00:00").toLocaleDateString("en-GB", {
         day: "2-digit",
         month: "short",
       })}`
@@ -886,7 +897,18 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
       })
     : "";
   const MONTH_NAMES_LONG = [
-    "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December",
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
   ];
   const monthLabel = currentMonthKey
     ? `${MONTH_NAMES_LONG[Number(currentMonthKey.split("-")[1]) - 1]} ${currentMonthKey.split("-")[0]}`
@@ -897,14 +919,14 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
     viewMode === "week"
       ? currentWeekIndex === 0
       : viewMode === "day"
-      ? currentDayIndex === 0
-      : !currentMonthKey || currentMonthKey <= (calendarData?.rotaStartDate.slice(0, 7) ?? "");
+        ? currentDayIndex === 0
+        : !currentMonthKey || currentMonthKey <= (calendarData?.rotaStartDate.slice(0, 7) ?? "");
   const nextDisabled =
     viewMode === "week"
       ? currentWeekIndex >= weeks.length - 1
       : viewMode === "day"
-      ? currentDayIndex >= allDates.length - 1
-      : !currentMonthKey || currentMonthKey >= (calendarData?.rotaEndDate.slice(0, 7) ?? "");
+        ? currentDayIndex >= allDates.length - 1
+        : !currentMonthKey || currentMonthKey >= (calendarData?.rotaEndDate.slice(0, 7) ?? "");
 
   const goPrev = () => {
     if (viewMode === "week") setCurrentWeekIndex((i) => Math.max(0, i - 1));
@@ -940,13 +962,13 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
   // Day view pre-computed values
   const totalAvailable = doctors.filter((doc) => {
     const mc = mergedAvailabilityByDoctor[doc.doctorId]?.[currentDate];
-    const p = mc?.isDeleted ? "AVAILABLE" : mc?.primary ?? "AVAILABLE";
+    const p = mc?.isDeleted ? "AVAILABLE" : (mc?.primary ?? "AVAILABLE");
     return !["AL", "SL", "ROT", "PL", "NOC"].includes(p);
   }).length;
-  
+
   const nocOnlyCount = doctors.filter((doc) => {
     const mc = mergedAvailabilityByDoctor[doc.doctorId]?.[currentDate];
-    const p = mc?.isDeleted ? "AVAILABLE" : mc?.primary ?? "AVAILABLE";
+    const p = mc?.isDeleted ? "AVAILABLE" : (mc?.primary ?? "AVAILABLE");
     return p === "NOC";
   }).length;
 
@@ -1014,9 +1036,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
-            <span className="text-sm font-semibold text-foreground min-w-[150px] text-center">
-              {navLabel}
-            </span>
+            <span className="text-sm font-semibold text-foreground min-w-[150px] text-center">{navLabel}</span>
             <button
               onClick={goNext}
               disabled={nextDisabled}
@@ -1058,10 +1078,10 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                     const hdrColor = isToday
                       ? "text-blue-800"
                       : isBH
-                      ? "text-red-800"
-                      : isWknd
-                      ? "text-muted-foreground"
-                      : "text-foreground";
+                        ? "text-red-800"
+                        : isWknd
+                          ? "text-muted-foreground"
+                          : "text-foreground";
 
                     return (
                       <th
@@ -1071,9 +1091,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                         <div className="text-[8px] sm:text-[10px] uppercase tracking-tighter sm:tracking-wider truncate">
                           {dd.toLocaleDateString("en-GB", { weekday: "short" })}
                         </div>
-                        <div
-                          className={`text-[9px] sm:text-[10px] truncate ${isToday ? "font-bold" : "font-normal"}`}
-                        >
+                        <div className={`text-[9px] sm:text-[10px] truncate ${isToday ? "font-bold" : "font-normal"}`}>
                           {dd.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
                         </div>
                         {isBH && (
@@ -1107,9 +1125,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                           <div className="mt-1">
                             <span className="inline-block text-[8px] sm:text-[9px] font-semibold text-yellow-800 bg-yellow-100 border border-yellow-200 rounded px-1.5 py-0.5 truncate max-w-full">
                               LTFT:{" "}
-                              {ltftDays
-                                .map((d) => d.slice(0, 3).charAt(0).toUpperCase() + d.slice(1, 3))
-                                .join(", ")}
+                              {ltftDays.map((d) => d.slice(0, 3).charAt(0).toUpperCase() + d.slice(1, 3)).join(", ")}
                             </span>
                           </div>
                         )}
@@ -1119,8 +1135,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                         const primary = mergedCell?.primary ?? "AVAILABLE";
                         const isLtftDay = ltftDays.includes(getDayNameFromISO(date));
                         const cellBg = getMergedCellBackground(mergedCell, isLtftDay);
-                        const isSelected =
-                          selectedCell?.doctorId === doctor.doctorId && selectedCell?.date === date;
+                        const isSelected = selectedCell?.doctorId === doctor.doctorId && selectedCell?.date === date;
 
                         return (
                           <td
@@ -1158,14 +1173,14 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                         !["AL", "SL", "ROT", "PL", "NOC"].includes(
                           mergedAvailabilityByDoctor[doc.doctorId]?.[date]?.isDeleted
                             ? "AVAILABLE"
-                            : mergedAvailabilityByDoctor[doc.doctorId]?.[date]?.primary ?? "AVAILABLE"
-                        )
+                            : (mergedAvailabilityByDoctor[doc.doctorId]?.[date]?.primary ?? "AVAILABLE"),
+                        ),
                     ).length;
                     const availableNocOnly = doctors.filter(
                       (doc) =>
                         (mergedAvailabilityByDoctor[doc.doctorId]?.[date]?.isDeleted
                           ? "AVAILABLE"
-                          : mergedAvailabilityByDoctor[doc.doctorId]?.[date]?.primary ?? "AVAILABLE") === "NOC"
+                          : (mergedAvailabilityByDoctor[doc.doctorId]?.[date]?.primary ?? "AVAILABLE")) === "NOC",
                     ).length;
                     const bgClass = getAvailabilityColorClass(availableAll, maxMinDoctors);
 
@@ -1202,8 +1217,8 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                         count < shift.min_doctors
                           ? "text-red-600"
                           : count === shift.min_doctors
-                          ? "text-amber-500"
-                          : "text-green-600";
+                            ? "text-amber-500"
+                            : "text-green-600";
                       return (
                         <td
                           key={date}
@@ -1232,48 +1247,51 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                 <span className="text-xs text-muted-foreground ml-auto">{doctors.length} total</span>
               </div>
 
-              {/* Extremely dense adaptive grid layout for desktop scaling */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-2">
+              {/* Single row list layout per doctor for day view */}
+              <div className="flex flex-col divide-y divide-border/60 border border-border/50 rounded-lg">
                 {doctors.map((doctor) => {
                   const mergedCell = mergedAvailabilityByDoctor[doctor.doctorId]?.[currentDate];
-                  const primary = mergedCell?.isDeleted ? "AVAILABLE" : mergedCell?.primary ?? "AVAILABLE";
+                  const primary = mergedCell?.isDeleted ? "AVAILABLE" : (mergedCell?.primary ?? "AVAILABLE");
                   const isLtftDay = getLtftDaysOff(doctor).includes(getDayNameFromISO(currentDate));
                   const cellBg = getMergedCellBackground(mergedCell, isLtftDay);
                   const isUnavailable = ["AL", "SL", "ROT", "PL"].includes(primary);
                   const isSelected = selectedCell?.doctorId === doctor.doctorId && selectedCell?.date === currentDate;
+                  const nameColor = isUnavailable ? "text-gray-500" : "text-blue-600";
 
                   return (
                     <div
                       key={doctor.doctorId}
                       onClick={() => handleCellTap(doctor.doctorId, currentDate)}
-                      className={`flex flex-col justify-center px-2 py-1.5 rounded-md border border-border/50 cursor-pointer transition-colors hover:bg-muted/50 ${
+                      className={`flex items-center justify-between px-3 py-2.5 cursor-pointer transition-colors hover:bg-muted/50 ${
                         isSelected ? "bg-blue-50 ring-2 ring-inset ring-blue-500 z-10 relative" : cellBg
-                      } ${isUnavailable ? "opacity-60" : ""}`}
+                      }`}
                     >
-                      <div
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/admin/doctor-calendar/${doctor.doctorId}`);
-                        }}
-                        className="font-semibold text-blue-600 text-xs hover:underline cursor-pointer truncate w-full"
-                        title={doctor.doctorName}
-                      >
-                        {doctor.doctorName.replace("Dr ", "")}
+                      <div className="flex-1 min-w-0 pr-4">
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/admin/doctor-calendar/${doctor.doctorId}`);
+                          }}
+                          className={`font-semibold text-sm hover:underline cursor-pointer truncate w-full ${nameColor}`}
+                          title={doctor.doctorName}
+                        >
+                          {doctor.doctorName.replace("Dr ", "")}
+                        </div>
                       </div>
 
-                      <div className="flex items-center gap-1 mt-0.5 min-h-[18px] overflow-hidden">
+                      <div className="flex items-center gap-1.5 shrink-0">
                         {mergedCell?.isDeleted && mergedCell.deletedCode ? (
-                          <span className="bg-muted text-muted-foreground text-[9px] font-bold px-1 py-0.5 rounded line-through truncate">
+                          <span className="bg-muted text-muted-foreground text-[9px] font-bold px-1.5 py-0.5 rounded line-through">
                             {mergedCell.deletedCode}
                           </span>
                         ) : (
                           <>
-                            {primary === "AL" && <LeaveBadge type="AL" className="text-[9px] px-1 py-0" />}
-                            {primary === "SL" && <LeaveBadge type="SL" className="text-[9px] px-1 py-0" />}
-                            {primary === "ROT" && <LeaveBadge type="ROT" className="text-[9px] px-1 py-0" />}
-                            {primary === "PL" && <LeaveBadge type="PL" className="text-[9px] px-1 py-0" />}
-                            {primary === "NOC" && <LeaveBadge type="NOC" className="text-[9px] px-1 py-0" />}
-                            {isLtftDay && <LeaveBadge type="LTFT" className="text-[9px] px-1 py-0" />}
+                            {primary === "AL" && <LeaveBadge type="AL" />}
+                            {primary === "SL" && <LeaveBadge type="SL" />}
+                            {primary === "ROT" && <LeaveBadge type="ROT" />}
+                            {primary === "PL" && <LeaveBadge type="PL" />}
+                            {primary === "NOC" && <LeaveBadge type="NOC" />}
+                            {isLtftDay && <LeaveBadge type="LTFT" />}
                             {(mergedCell?.overrideAction === "add" || mergedCell?.overrideAction === "modify") && (
                               <RotaOverrideDot />
                             )}
@@ -1296,7 +1314,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                   <span
                     className={`inline-flex items-center justify-center w-7 h-7 rounded text-white font-bold text-sm shadow-sm ${getAvailabilityColorClass(
                       totalAvailable,
-                      maxMinDoctors
+                      maxMinDoctors,
                     )}`}
                   >
                     {totalAvailable}
@@ -1323,7 +1341,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                         <span
                           className={`inline-flex items-center justify-center w-6 h-6 rounded text-white font-bold text-xs shadow-sm ${getAvailabilityColorClass(
                             count,
-                            shift.min_doctors
+                            shift.min_doctors,
                           )}`}
                         >
                           {count}
@@ -1341,11 +1359,12 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
         {/* ── MONTH VIEW ── */}
         {viewMode === "month" &&
           (isMobile ? (
-            <div className="p-8 flex flex-col items-center justify-center text-center border border-border rounded-xl bg-card shadow-sm min-h-[40vh]">
-              <CalendarRange className="h-12 w-12 text-muted-foreground/50 mb-4" />
-              <p className="font-semibold text-foreground text-lg mb-2">Monthly View Unavailable</p>
-              <p className="text-sm text-muted-foreground max-w-[250px]">
-                The monthly view is too large for mobile screens. Please use a tablet or desktop device to see the full month overview.
+            <div className="p-6 sm:p-8 flex flex-col items-center justify-center text-center border border-border rounded-xl bg-card shadow-sm min-h-[40vh]">
+              <MonitorSmartphone className="h-14 w-14 text-muted-foreground/30 mb-4" strokeWidth={1.5} />
+              <p className="font-bold text-foreground text-lg sm:text-xl mb-2">Monthly View Unavailable</p>
+              <p className="text-sm text-muted-foreground max-w-[280px]">
+                The monthly view is too large for a mobile phone screen. Please use a tablet or desktop device to see
+                the full month overview.
               </p>
             </div>
           ) : calendarData && currentMonthKey ? (
@@ -1373,12 +1392,12 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                             !inRota || !inMonth
                               ? "text-muted-foreground/40"
                               : isToday
-                              ? "text-blue-800"
-                              : isBH
-                              ? "text-red-800"
-                              : isWknd
-                              ? "text-muted-foreground"
-                              : "text-foreground";
+                                ? "text-blue-800"
+                                : isBH
+                                  ? "text-red-800"
+                                  : isWknd
+                                    ? "text-muted-foreground"
+                                    : "text-foreground";
 
                           return (
                             <th
@@ -1419,13 +1438,19 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                             {gridDates.map((date, idx) => {
                               const inRota = date >= calendarData.rotaStartDate && date <= calendarData.rotaEndDate;
                               const inMonth = date.startsWith(currentMonthKey);
-                              const mergedCell = inRota ? mergedAvailabilityByDoctor[doctor.doctorId]?.[date] : undefined;
-                              const primary = mergedCell?.isDeleted ? "AVAILABLE" : mergedCell?.primary ?? "AVAILABLE";
+                              const mergedCell = inRota
+                                ? mergedAvailabilityByDoctor[doctor.doctorId]?.[date]
+                                : undefined;
+                              const primary = mergedCell?.isDeleted
+                                ? "AVAILABLE"
+                                : (mergedCell?.primary ?? "AVAILABLE");
                               const isLtftDay = getLtftDaysOff(doctor).includes(getDayNameFromISO(date));
                               const bg = inRota ? getMergedCellBackground(mergedCell, isLtftDay) : "bg-card";
                               const hasOverride = !!mergedCell?.overrideId;
                               const isSelected =
                                 selectedCell?.doctorId === doctor.doctorId && selectedCell?.date === date;
+
+                              const eventChar = primary === "NOC" ? "N" : primary === "ROT" ? "R" : primary.charAt(0);
 
                               return (
                                 <td
@@ -1433,43 +1458,44 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                                   onClick={() => {
                                     if (inRota && inMonth) handleCellTap(doctor.doctorId, date);
                                   }}
-                                  className={`border-l border-border/50 p-0 text-center cursor-default h-6 sm:h-8 ${bg} ${
+                                  className={`border-l border-border/50 p-0 sm:p-0.5 text-center cursor-default h-6 sm:h-8 ${bg} ${
                                     !inRota || !inMonth
                                       ? "opacity-20"
                                       : inRota && inMonth
-                                      ? "cursor-pointer hover:bg-muted/50"
-                                      : ""
+                                        ? "cursor-pointer hover:bg-muted/50"
+                                        : ""
                                   } ${isSelected ? "ring-2 ring-inset ring-blue-500 z-10 relative" : ""}`}
                                 >
-                                  {inRota && inMonth && (
-                                    mergedCell?.isDeleted && mergedCell.deletedCode ? (
+                                  {inRota &&
+                                    inMonth &&
+                                    (mergedCell?.isDeleted && mergedCell.deletedCode ? (
                                       <span className="text-[6px] sm:text-[8px] font-bold text-muted-foreground line-through block truncate">
-                                        {mergedCell.deletedCode}
+                                        {mergedCell.deletedCode.charAt(0)}
                                       </span>
                                     ) : primary !== "AVAILABLE" && primary !== "BH" ? (
-                                      <span className="inline-flex items-center gap-px">
+                                      <div className="flex justify-center items-center relative w-full h-full">
                                         <span
+                                          className="flex items-center justify-center rounded shadow-sm"
                                           style={{
-                                            fontSize: 8,
+                                            width: "16px",
+                                            height: "16px",
+                                            fontSize: "9px",
                                             fontWeight: 700,
                                             color: "#fff",
                                             background: MONTH_EVENT_COLOURS[primary] ?? "#6b7280",
-                                            borderRadius: 2,
-                                            padding: "1px 2px",
-                                            display: "inline-block",
                                             lineHeight: 1,
                                           }}
+                                          title={primary}
                                         >
-                                          {primary}
+                                          {eventChar}
                                         </span>
                                         {hasOverride && (
-                                          <span className="w-1 h-1 rounded-full bg-orange-500 shrink-0 hidden sm:inline-block" />
+                                          <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-orange-500 border border-white hidden sm:inline-block" />
                                         )}
-                                      </span>
+                                      </div>
                                     ) : isLtftDay ? (
-                                      <span className="text-[8px] sm:text-[9px] font-bold text-yellow-800">L</span>
-                                    ) : null
-                                  )}
+                                      <span className="text-[9px] sm:text-[10px] font-bold text-yellow-800">L</span>
+                                    ) : null)}
                                 </td>
                               );
                             })}
