@@ -1180,6 +1180,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
             <td
               key={date}
               onClick={() => handleCellTap(doctor.doctorId, date)}
+              onDoubleClick={() => handleDoubleTap(doctor.doctorId, date)}
               className={`border-l border-border/50 p-0.5 text-center align-middle cursor-pointer transition-colors hover:bg-muted/50 ${cellBg} ${
                 isSelected ? "ring-2 ring-inset ring-blue-500 z-10 relative" : ""
               }`}
