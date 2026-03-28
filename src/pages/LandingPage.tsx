@@ -119,8 +119,9 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              {/* 4. Mock Rota - Dynamically scales up on lg and xl screens */}
-              <div className="order-4 md:order-3 fade-up-3 float-anim w-full max-w-xs md:max-w-sm lg:max-w-md xl:max-w-lg mx-auto overflow-hidden rounded-xl border border-border bg-card shadow-2xl mt-1 md:mt-0">
+              {/* 4. Mock Rota - Dynamically scales up on lg and xl screens.
+                   Added mt-24 on mobile to push it below the fold, ensuring the first screen isn't crowded. */}
+              <div className="order-4 md:order-3 fade-up-3 float-anim w-full max-w-xs md:max-w-sm lg:max-w-md xl:max-w-lg mx-auto overflow-hidden rounded-xl border border-border bg-card shadow-2xl mt-24 md:mt-0">
                 <div className="flex h-5 md:h-6 lg:h-8 items-center gap-1.5 lg:gap-2 px-2 md:px-3 lg:px-4 bg-slate-800">
                   <span className="h-1.5 w-1.5 md:h-2 md:w-2 lg:h-3 lg:w-3 rounded-full bg-red-400" />
                   <span className="h-1.5 w-1.5 md:h-2 md:w-2 lg:h-3 lg:w-3 rounded-full bg-amber-400" />
@@ -346,7 +347,7 @@ export default function LandingPage() {
               onClick={() => navigate("/register")}
               className="mt-8 rounded-md bg-primary px-6 py-3 text-sm font-semibold text-white transition-all hover:scale-[1.02] hover:bg-primary/90 active:scale-[0.98]"
             >
-              Request early access →
+              Request early access
             </button>
             <p className="mt-3 text-xs text-blue-400">No payment details · No IT procurement · Cancel anytime</p>
           </div>
