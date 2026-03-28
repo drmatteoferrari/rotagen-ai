@@ -86,79 +86,148 @@ export default function LandingPage() {
       />
 
       <main>
-        {/* Compressed py-16 to py-6 and removed items-center to move content up */}
-        <section id="hero" className="flex flex-col bg-blue-100 px-6 py-6 md:py-10">
-          <div className="mx-auto w-full max-w-6xl text-center">
-            {/* 1. REMOVED: Early access badge div */}
+        <section id="hero" className="flex flex-col bg-blue-100 px-6 py-8 md:py-12 lg:py-16">
+          <div className="mx-auto w-full max-w-6xl grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+            {/* Left Column: Logo, Tagline, and Mock Rota */}
+            <div className="flex flex-col w-full">
+              {/* Logo lockup */}
+              <div className="fade-up-1 flex justify-center lg:justify-start">
+                <RotaGenLogo size="lg" />
+              </div>
 
-            {/* 2. Logo lockup - Moved up by reducing mt-6 to mt-2 */}
-            <div className="fade-up-2 flex justify-center mt-2">
-              <RotaGenLogo size="lg" />
+              {/* Tagline */}
+              <div className="fade-up-2 mt-4 text-lg md:text-xl text-center lg:text-left">
+                <p className="text-muted-foreground" style={{ lineHeight: 1.4 }}>
+                  Your doctors' preferences.
+                </p>
+                <p className="text-muted-foreground" style={{ lineHeight: 1.4 }}>
+                  Your department's rules.
+                </p>
+                <p style={{ lineHeight: 1.4 }}>
+                  One{" "}
+                  <span className="shimmer-text-dark" style={{ fontFamily: "Poppins, sans-serif", fontWeight: 700 }}>
+                    ROTA
+                  </span>
+                  .{" "}
+                  <span className="shimmer-text-blue" style={{ fontFamily: "Poppins, sans-serif", fontWeight: 700 }}>
+                    GEN
+                  </span>
+                  erated for you.
+                </p>
+              </div>
+
+              {/* Mock rota */}
+              <div className="fade-up-3 float-anim mx-auto lg:mx-0 mt-8 md:mt-10 w-full max-w-xs md:max-w-lg overflow-hidden rounded-xl border border-border bg-card shadow-2xl">
+                <div className="flex h-8 items-center gap-2 bg-slate-800 px-4">
+                  <span className="h-3 w-3 rounded-full bg-red-400" />
+                  <span className="h-3 w-3 rounded-full bg-amber-400" />
+                  <span className="h-3 w-3 rounded-full bg-green-400" />
+                  <span className="ml-2 text-[10px] text-slate-400 font-medium hidden sm:inline">
+                    RotaGen — Final Rota · August 2025
+                  </span>
+                </div>
+                <div className="space-y-2 p-3 md:space-y-4 md:p-5 relative">
+                  <div className="grid grid-cols-5 gap-1 md:gap-2 text-[9px] md:text-[11px] font-semibold text-muted-foreground">
+                    <div>Doctor</div>
+                    <div>Mon</div>
+                    <div>Tue</div>
+                    <div>Wed</div>
+                    <div>Thu</div>
+                  </div>
+                  {[
+                    ["Dr Patel", "Long Day", "Short Day", "On-Call", "Night"],
+                    ["Dr Khan", "Short Day", "Long Day", "Night", "Short Day"],
+                    ["Dr Smith", "On-Call", "Short Day", "Long Day", "Long Day"],
+                  ].map((row) => (
+                    <div key={row[0]} className="grid grid-cols-5 gap-1 md:gap-2">
+                      <div className="flex items-center rounded-lg bg-muted px-1.5 py-2 md:px-3 md:py-3 text-[9px] md:text-sm font-medium text-foreground">
+                        {row[0]}
+                      </div>
+                      {row.slice(1).map((shift) => {
+                        const badgeClass =
+                          shift === "Long Day"
+                            ? "bg-green-100 text-green-700"
+                            : shift === "Night"
+                              ? "bg-red-100 text-red-700"
+                              : shift === "On-Call"
+                                ? "bg-amber-100 text-amber-700"
+                                : "bg-blue-100 text-blue-700";
+                        return (
+                          <div key={`${row[0]}-${shift}`} className="rounded-lg bg-muted px-1 py-2 md:px-2 md:py-3">
+                            <span
+                              className={`inline-flex rounded-full px-1.5 py-0.5 md:px-2 md:py-1 text-[8px] md:text-[10px] font-semibold ${badgeClass}`}
+                            >
+                              {shift}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))}
+                  {/* ECG line */}
+                  <svg
+                    className="absolute bottom-2 left-0 w-full h-8 pointer-events-none"
+                    viewBox="0 0 400 30"
+                    preserveAspectRatio="none"
+                  >
+                    <polyline
+                      className="ecg-draw"
+                      fill="none"
+                      stroke="hsl(213 94% 48% / 0.15)"
+                      strokeWidth="2"
+                      points="0,20 60,20 80,20 90,5 100,25 110,12 120,20 180,20 200,20 210,5 220,25 230,12 240,20 300,20 320,20 330,5 340,25 350,12 360,20 400,20"
+                    />
+                  </svg>
+                </div>
+              </div>
             </div>
 
-            {/* 3. Tagline - Squeezed mt-6 to mt-3 and reduced lineHeight from 1.9 to 1.4 */}
-            <div className="fade-up-3 mt-3 text-lg md:text-xl">
-              <p className="text-muted-foreground" style={{ lineHeight: 1.4 }}>
-                Your doctors' preferences.
-              </p>
-              <p className="text-muted-foreground" style={{ lineHeight: 1.4 }}>
-                Your department's rules.
-              </p>
-              <p style={{ lineHeight: 1.4 }}>
-                One{" "}
-                <span className="shimmer-text-dark" style={{ fontFamily: "Poppins, sans-serif", fontWeight: 700 }}>
-                  ROTA
-                </span>
-                .{" "}
-                <span className="shimmer-text-blue" style={{ fontFamily: "Poppins, sans-serif", fontWeight: 700 }}>
-                  GEN
-                </span>
-                erated for you.
-              </p>
-            </div>
+            {/* Right Column: Pricing & Feedback Cards */}
+            <div className="flex flex-col gap-6 w-full max-w-md mx-auto lg:ml-auto lg:mr-0">
+              {/* Pricing card */}
+              <div
+                ref={pricingRef}
+                className="fade-up-4 rounded-2xl border-2 border-primary/20 bg-card p-6 text-center shadow-lg"
+              >
+                <div className="inline-block rounded-full p-[2px] pricing-badge-shimmer">
+                  <div className="inline-flex items-center gap-2 rounded-full bg-green-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-green-700">
+                    <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                    Early Access — Free
+                  </div>
+                </div>
 
-            {/* 4. Pricing card - Squeezed mt-8 to mt-4 and padding p-8 to p-5 */}
-            <div
-              ref={pricingRef}
-              className="fade-up-4 mx-auto mt-4 max-w-md rounded-2xl border-2 border-primary/20 bg-card p-5 text-center shadow-lg"
-            >
-              <div className="inline-block rounded-full p-[2px] pricing-badge-shimmer">
-                <div className="inline-flex items-center gap-2 rounded-full bg-green-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-green-700">
-                  <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                  Early Access — Free
+                <h3 className="mt-4 text-xl font-bold text-foreground">FREE for Founding Departments</h3>
+                <p className="mt-3 text-sm leading-snug text-muted-foreground">
+                  Join our early testing group for anaesthetic departments. Zero cost. No commitment. Just your honest
+                  feedback.
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() => navigate("/register")}
+                  className="mt-6 w-full rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground transition-all hover:scale-[1.02] hover:bg-primary/90 active:scale-[0.98]"
+                >
+                  Request early access →
+                </button>
+
+                <div className="mt-3 inline-block rounded-xl p-[2px] pricing-blue-shimmer w-full">
+                  <button
+                    type="button"
+                    onClick={() => navigate("/pricing")}
+                    className="w-full rounded-[9px] bg-primary px-6 py-2 text-sm font-semibold text-white transition-all hover:opacity-90"
+                  >
+                    Full pricing details →
+                  </button>
                 </div>
               </div>
 
-              <h3 className="mt-4 text-xl font-bold text-foreground">Free for founding departments</h3>
-              <p className="mt-2 text-sm leading-snug text-muted-foreground">
-                We're onboarding a small group of anaesthetic departments to test RotaGen. No cost, no commitment — just
-                your honest feedback.
-              </p>
-
-              <button
-                type="button"
-                onClick={() => navigate("/register")}
-                className="mt-5 w-full rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-primary-foreground transition-all hover:scale-[1.02] hover:bg-primary/90 active:scale-[0.98]"
-              >
-                Request early access →
-              </button>
-
-              <div className="mt-3 inline-block rounded-xl p-[2px] pricing-blue-shimmer w-full">
-                <button
-                  type="button"
-                  onClick={() => navigate("/pricing")}
-                  className="w-full rounded-[9px] bg-primary px-6 py-2 text-sm font-semibold text-white transition-all hover:opacity-90"
-                >
-                  Full pricing details →
-                </button>
-              </div>
-
-              <div className="mt-4 border-t border-border pt-3">
-                <p className="text-xs font-semibold text-muted-foreground mb-1.5">Already using RotaGen?</p>
+              {/* Separated Feedback Card */}
+              <div className="fade-up-5 rounded-2xl border border-border bg-card p-5 text-center shadow-md">
+                <p className="text-sm font-semibold text-muted-foreground mb-3">Already using RotaGen?</p>
                 <button
                   type="button"
                   onClick={() => navigate("/feedback")}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white transition-all hover:opacity-90"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-all hover:opacity-90"
                   style={{ backgroundColor: "#16A34A" }}
                 >
                   <span className="flex h-5 w-5 items-center justify-center rounded-md bg-white/20">
@@ -166,71 +235,6 @@ export default function LandingPage() {
                   </span>
                   Give us your feedback
                 </button>
-              </div>
-            </div>
-
-            {/* Mock rota - Reduced mt-12 to mt-8 to keep verticality tight */}
-            <div className="fade-up-5 float-anim mx-auto mt-8 max-w-xs md:max-w-lg overflow-hidden rounded-xl border border-border bg-card shadow-2xl">
-              <div className="flex h-8 items-center gap-2 bg-slate-800 px-4">
-                <span className="h-3 w-3 rounded-full bg-red-400" />
-                <span className="h-3 w-3 rounded-full bg-amber-400" />
-                <span className="h-3 w-3 rounded-full bg-green-400" />
-                <span className="ml-2 text-[10px] text-slate-400 font-medium hidden sm:inline">
-                  RotaGen — Final Rota · August 2025
-                </span>
-              </div>
-              <div className="space-y-2 p-3 md:space-y-4 md:p-5 relative">
-                <div className="grid grid-cols-5 gap-1 md:gap-2 text-[9px] md:text-[11px] font-semibold text-muted-foreground">
-                  <div>Doctor</div>
-                  <div>Mon</div>
-                  <div>Tue</div>
-                  <div>Wed</div>
-                  <div>Thu</div>
-                </div>
-                {[
-                  ["Dr Patel", "Long Day", "Short Day", "On-Call", "Night"],
-                  ["Dr Khan", "Short Day", "Long Day", "Night", "Short Day"],
-                  ["Dr Smith", "On-Call", "Short Day", "Long Day", "Long Day"],
-                ].map((row) => (
-                  <div key={row[0]} className="grid grid-cols-5 gap-1 md:gap-2">
-                    <div className="flex items-center rounded-lg bg-muted px-1.5 py-2 md:px-3 md:py-3 text-[9px] md:text-sm font-medium text-foreground">
-                      {row[0]}
-                    </div>
-                    {row.slice(1).map((shift) => {
-                      const badgeClass =
-                        shift === "Long Day"
-                          ? "bg-green-100 text-green-700"
-                          : shift === "Night"
-                            ? "bg-red-100 text-red-700"
-                            : shift === "On-Call"
-                              ? "bg-amber-100 text-amber-700"
-                              : "bg-blue-100 text-blue-700";
-                      return (
-                        <div key={`${row[0]}-${shift}`} className="rounded-lg bg-muted px-1 py-2 md:px-2 md:py-3">
-                          <span
-                            className={`inline-flex rounded-full px-1.5 py-0.5 md:px-2 md:py-1 text-[8px] md:text-[10px] font-semibold ${badgeClass}`}
-                          >
-                            {shift}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ))}
-                {/* ECG line */}
-                <svg
-                  className="absolute bottom-2 left-0 w-full h-8 pointer-events-none"
-                  viewBox="0 0 400 30"
-                  preserveAspectRatio="none"
-                >
-                  <polyline
-                    className="ecg-draw"
-                    fill="none"
-                    stroke="hsl(213 94% 48% / 0.15)"
-                    strokeWidth="2"
-                    points="0,20 60,20 80,20 90,5 100,25 110,12 120,20 180,20 200,20 210,5 220,25 230,12 240,20 300,20 320,20 330,5 340,25 350,12 360,20 400,20"
-                  />
-                </svg>
               </div>
             </div>
           </div>
