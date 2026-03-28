@@ -931,15 +931,6 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
   const currentWeek = weeks[currentWeekIndex];
   const currentDate = allDates[currentDayIndex] ?? allDates[0];
 
-  // Sync unmanaged date inputs securely safely inside an effect to prevent rendering loops
-  useEffect(() => {
-    if (dateInputDesktopRef.current && dateInputDesktopRef.current.value !== currentDate) {
-      dateInputDesktopRef.current.value = currentDate;
-    }
-    if (dateInputMobileRef.current && dateInputMobileRef.current.value !== currentDate) {
-      dateInputMobileRef.current.value = currentDate;
-    }
-  }, [currentDate]);
 
   const weekLabel = currentWeek
     ? `Wk ${currentWeek.weekNumber} · ${new Date(currentWeek.dates[0] + "T00:00:00").toLocaleDateString("en-GB", {
