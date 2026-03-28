@@ -1,4 +1,4 @@
-import { useEffect, type MutableRefObject } from "rimport { useEffect, type MutableRefObject } from "react";
+import { useEffect, type MutableRefObject } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { BarChart3, Mail, ShieldCheck, Star, Wand2 } from "lucide-react";
 import { useScrollReveal } from "@/lib/useScrollReveal";
@@ -119,8 +119,9 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              {/* 4. Mock Rota - Desktop/Tablet Only. Hidden on mobile to be moved to its own section below. */}
-              <div className="hidden md:block order-4 md:order-3 fade-up-3 float-anim w-full max-w-xs md:max-w-sm lg:max-w-md xl:max-w-lg mx-auto overflow-hidden rounded-xl border border-border bg-card shadow-2xl">
+              {/* 4. Mock Rota - Dynamically scales up on lg and xl screens.
+                   Added mt-24 on mobile to push it below the fold, ensuring the first screen isn't crowded. */}
+              <div className="order-4 md:order-3 fade-up-3 float-anim w-full max-w-xs md:max-w-sm lg:max-w-md xl:max-w-lg mx-auto overflow-hidden rounded-xl border border-border bg-card shadow-2xl mt-24 md:mt-0">
                 <div className="flex h-5 md:h-6 lg:h-8 items-center gap-1.5 lg:gap-2 px-2 md:px-3 lg:px-4 bg-slate-800">
                   <span className="h-1.5 w-1.5 md:h-2 md:w-2 lg:h-3 lg:w-3 rounded-full bg-red-400" />
                   <span className="h-1.5 w-1.5 md:h-2 md:w-2 lg:h-3 lg:w-3 rounded-full bg-amber-400" />
@@ -248,76 +249,6 @@ export default function LandingPage() {
                   Give us your feedback
                 </button>
               </div>
-            </div>
-          </div>
-        </section>
-
-        {/* --- MOBILE ONLY: Dedicated Mock Rota Section Below the Fold --- */}
-        <section className="md:hidden bg-blue-100 px-4 pb-12 pt-2">
-          <div className="fade-up-3 float-anim w-full max-w-xs mx-auto overflow-hidden rounded-xl border border-border bg-card shadow-2xl">
-            <div className="flex h-5 items-center gap-1.5 px-2 bg-slate-800">
-              <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-              <span className="h-1.5 w-1.5 rounded-full bg-green-400" />
-              <span className="ml-1 text-[7px] text-slate-400 font-medium hidden sm:inline">
-                RotaGen — Final Rota · August 2025
-              </span>
-            </div>
-            <div className="space-y-1 p-1.5 relative">
-              <div className="grid grid-cols-5 gap-1 text-[7px] font-semibold text-muted-foreground">
-                <div>Doctor</div>
-                <div>Mon</div>
-                <div>Tue</div>
-                <div>Wed</div>
-                <div>Thu</div>
-              </div>
-              {[
-                ["Dr Patel", "Long Day", "Short Day", "On-Call", "Night"],
-                ["Dr Khan", "Short Day", "Long Day", "Night", "Short Day"],
-                ["Dr Smith", "On-Call", "Short Day", "Long Day", "Long Day"],
-              ].map((row) => (
-                <div key={row[0]} className="grid grid-cols-5 gap-1">
-                  <div className="flex items-center rounded-lg bg-muted px-1 py-1 text-[7px] font-medium text-foreground">
-                    {row[0]}
-                  </div>
-                  {row.slice(1).map((shift) => {
-                    const badgeClass =
-                      shift === "Long Day"
-                        ? "bg-green-100 text-green-700"
-                        : shift === "Night"
-                          ? "bg-red-100 text-red-700"
-                          : shift === "On-Call"
-                            ? "bg-amber-100 text-amber-700"
-                            : "bg-blue-100 text-blue-700";
-                    return (
-                      <div
-                        key={`${row[0]}-${shift}`}
-                        className="rounded-lg bg-muted px-0.5 py-1 flex items-center justify-center"
-                      >
-                        <span
-                          className={`inline-flex rounded-full px-1 py-0.5 text-[5px] font-semibold ${badgeClass}`}
-                        >
-                          {shift}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              ))}
-              {/* ECG line */}
-              <svg
-                className="absolute bottom-1 left-0 w-full h-4 pointer-events-none"
-                viewBox="0 0 400 30"
-                preserveAspectRatio="none"
-              >
-                <polyline
-                  className="ecg-draw"
-                  fill="none"
-                  stroke="hsl(213 94% 48% / 0.15)"
-                  strokeWidth="2"
-                  points="0,20 60,20 80,20 90,5 100,25 110,12 120,20 180,20 200,20 210,5 220,25 230,12 240,20 300,20 320,20 330,5 340,25 350,12 360,20 400,20"
-                />
-              </svg>
             </div>
           </div>
         </section>
