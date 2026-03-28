@@ -39,18 +39,18 @@ const EVENT_LABELS: Record<string, string> = {
 const SKIP_CODES = new Set(["AVAILABLE", "BH"]);
 
 const MONTH_NAMES = [
-  "January",
-  "February",
-  "March",
-  "April",
+  "Jan", // Abbreviated for compactness
+  "Feb",
+  "Mar",
+  "Apr",
   "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
 ];
 
 const DAY_ABBR = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -125,9 +125,9 @@ function fmtShort(iso: string): string {
 
 function fmtFull(iso: string): string {
   return isoToUTCDate(iso).toLocaleDateString("en-GB", {
-    weekday: "long",
+    weekday: "short", // Shortened for compactness on mobile
     day: "numeric",
-    month: "long",
+    month: "short",
     year: "numeric",
     timeZone: "UTC",
   });
@@ -149,10 +149,10 @@ function LeaveBadge({
   if (!s) return null;
   const sizeClasses =
     size === "large"
-      ? "px-2 py-1 text-[11px] sm:text-xs"
+      ? "px-2 py-0.5 sm:py-1 text-[10px] sm:text-xs"
       : short
-        ? "w-[14px] h-[14px] sm:w-[16px] sm:h-[16px] flex items-center justify-center text-[8px] sm:text-[9px]"
-        : "px-1.5 py-[2px] text-[9px] sm:text-[10px]";
+        ? "w-3 h-3 sm:w-4 sm:h-4 flex items-center justify-center text-[7px] sm:text-[9px]"
+        : "px-1 sm:px-1.5 py-[1px] sm:py-[2px] text-[8px] sm:text-[10px]";
 
   const shortLabels: Record<string, string> = { AL: "A", SL: "S", ROT: "R", PL: "P", NOC: "N", LTFT: "L" };
   const label = short ? shortLabels[type] : s.label;
@@ -187,12 +187,12 @@ function ViewToggle({
   setViewMode: (v: "day" | "week" | "month") => void;
 }) {
   return (
-    <div className="inline-flex rounded-md overflow-hidden border border-border shadow-sm shrink-0">
+    <div className="inline-flex rounded-md overflow-hidden border border-border shadow-sm shrink-0 w-full sm:w-auto">
       {(["day", "week", "month"] as const).map((v, i) => (
         <button
           key={v}
           onClick={() => setViewMode(v)}
-          className={`px-3 py-1.5 text-xs capitalize transition-colors ${i < 2 ? "border-r border-border" : ""} ${
+          className={`flex-1 sm:flex-none px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs capitalize transition-colors ${i < 2 ? "border-r border-border" : ""} ${
             viewMode === v
               ? "bg-teal-600 text-white font-semibold"
               : "bg-card text-muted-foreground hover:bg-muted/50 font-medium"
@@ -600,16 +600,16 @@ export default function DoctorCalendarPage() {
     const rows = getMonthWeekRows(currentMonthKey);
     return (
       <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden w-full">
-        <table className="w-full table-fixed text-[10px] sm:text-xs border-collapse">
+        <table className="w-full table-fixed border-collapse">
           <thead>
             <tr className="border-b border-border text-left">
-              <th className="bg-muted/30 py-1 sm:py-2 px-1 font-medium text-muted-foreground border-r border-border w-[12%] sm:w-[10%] truncate text-center align-middle">
+              <th className="bg-muted/30 py-1 sm:py-2 px-0.5 sm:px-1 font-medium text-muted-foreground border-r border-border w-[10%] sm:w-[8%] truncate text-center align-middle text-[9px] sm:text-xs">
                 Wk
               </th>
               {DAY_ABBR.map((d) => (
                 <th
                   key={d}
-                  className="bg-muted/30 py-1 sm:py-2 px-1 font-medium text-muted-foreground border-l border-border/50 text-center uppercase tracking-tighter"
+                  className="bg-muted/30 py-1 sm:py-2 px-0.5 sm:px-1 font-medium text-muted-foreground border-l border-border/50 text-center uppercase tracking-tighter text-[9px] sm:text-xs"
                 >
                   {d}
                 </th>
@@ -619,7 +619,7 @@ export default function DoctorCalendarPage() {
           <tbody>
             {rows.map((week, ri) => (
               <tr key={ri} className="border-b border-border/50 bg-card">
-                <td className="p-1 sm:p-2 border-r border-border text-center align-middle text-muted-foreground/70 font-medium">
+                <td className="p-0.5 sm:p-2 border-r border-border text-center align-middle text-muted-foreground/70 font-medium text-[9px] sm:text-xs">
                   {getISOWeekNumber(week[0])}
                 </td>
                 {week.map((date) => {
@@ -632,7 +632,6 @@ export default function DoctorCalendarPage() {
                   const mergedCell = inRota ? mergedAvailability[date] : undefined;
                   const primary = mergedCell?.isDeleted ? "AVAILABLE" : (mergedCell?.primary ?? "AVAILABLE");
 
-                  // Compute background similar to PreRota table cell
                   const rawLtftDays = Array.isArray(doctor?.ltftDaysOff) ? doctor.ltftDaysOff : [];
                   const isLtftDay =
                     rawLtftDays.includes(DAY_ABBR[(dow + 6) % 7].toLowerCase()) ||
@@ -661,28 +660,27 @@ export default function DoctorCalendarPage() {
                       onClick={() => {
                         if (inRota && inMonth) handleCellTap(date);
                       }}
-                      className={`border-l border-border/50 p-1 sm:p-2 align-top h-16 sm:h-20 ${cellBg} ${
+                      className={`border-l border-border/50 p-0.5 sm:p-2 align-top h-10 sm:h-14 md:h-20 ${cellBg} ${
                         !inRota || !inMonth ? "opacity-30" : inRota && inMonth ? "cursor-pointer hover:bg-muted/50" : ""
                       } ${isSelected ? "ring-2 ring-inset ring-teal-500 z-10 relative" : ""}`}
                     >
-                      <div className="flex flex-col h-full">
-                        <div className={`text-xs text-right mb-1 ${hdrColor}`}>{isoToUTCDate(date).getUTCDate()}</div>
+                      <div className="flex flex-col h-full justify-between">
+                        <div className={`text-[8px] sm:text-xs text-right ${hdrColor}`}>
+                          {isoToUTCDate(date).getUTCDate()}
+                        </div>
 
                         <div className="flex flex-col items-center justify-center flex-1 w-full relative">
                           {inRota &&
                             inMonth &&
                             (mergedCell?.isDeleted && mergedCell.deletedCode ? (
-                              <span className="text-[10px] sm:text-xs font-bold text-muted-foreground line-through block truncate">
+                              <span className="text-[7px] sm:text-[10px] font-bold text-muted-foreground line-through block truncate">
                                 {mergedCell.deletedCode.charAt(0)}
                               </span>
                             ) : primary !== "AVAILABLE" && primary !== "BH" ? (
                               <div className="flex justify-center items-center relative">
                                 <span
-                                  className="flex items-center justify-center rounded shadow-sm"
+                                  className="flex items-center justify-center rounded shadow-sm w-4 h-4 sm:w-5 sm:h-5 text-[8px] sm:text-[10px]"
                                   style={{
-                                    width: "20px",
-                                    height: "20px",
-                                    fontSize: "11px",
                                     fontWeight: 700,
                                     color: "#fff",
                                     background: MONTH_EVENT_COLOURS[primary] ?? "#6b7280",
@@ -693,11 +691,11 @@ export default function DoctorCalendarPage() {
                                   {eventChar}
                                 </span>
                                 {hasOverride && (
-                                  <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-orange-500 border border-white" />
+                                  <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-orange-500 border border-white" />
                                 )}
                               </div>
                             ) : isLtftDay ? (
-                              <span className="text-xs sm:text-sm font-bold text-yellow-800">L</span>
+                              <span className="text-[9px] sm:text-xs font-bold text-yellow-800">L</span>
                             ) : null)}
                         </div>
                       </div>
@@ -738,16 +736,16 @@ export default function DoctorCalendarPage() {
                 return (
                   <th
                     key={date}
-                    className={`py-2 px-1 sm:px-2 text-center font-medium border-l border-border first:border-l-0 ${hdrBg} ${hdrColor}`}
+                    className={`py-1.5 sm:py-2 px-0.5 sm:px-2 text-center font-medium border-l border-border first:border-l-0 ${hdrBg} ${hdrColor}`}
                   >
-                    <div className="text-[10px] sm:text-xs uppercase tracking-tighter sm:tracking-wider truncate">
+                    <div className="text-[9px] sm:text-xs uppercase tracking-tighter sm:tracking-wider truncate">
                       {dd.toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" })}
                     </div>
-                    <div className={`text-[11px] sm:text-sm truncate mt-0.5 ${isToday ? "font-bold" : "font-normal"}`}>
+                    <div className={`text-[10px] sm:text-sm truncate mt-0.5 ${isToday ? "font-bold" : "font-normal"}`}>
                       {dd.toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" })}
                     </div>
                     {isBH && (
-                      <span className="inline-block bg-red-700 text-white text-[8px] sm:text-[9px] font-bold px-1 rounded mt-1 tracking-tighter">
+                      <span className="inline-block bg-red-700 text-white text-[7px] sm:text-[9px] font-bold px-1 rounded mt-0.5 sm:mt-1 tracking-tighter">
                         BH
                       </span>
                     )}
@@ -776,13 +774,13 @@ export default function DoctorCalendarPage() {
                   <td
                     key={date}
                     onClick={() => handleCellTap(date)}
-                    className={`border-l border-border/50 first:border-l-0 p-2 align-top min-h-[100px] h-[100px] cursor-pointer transition-colors hover:bg-muted/50 ${cellBg} ${
+                    className={`border-l border-border/50 first:border-l-0 p-1 sm:p-2 align-top h-16 sm:h-24 md:h-[100px] cursor-pointer transition-colors hover:bg-muted/50 ${cellBg} ${
                       isSelected ? "ring-2 ring-inset ring-teal-500 z-10 relative" : ""
                     }`}
                   >
-                    <div className="flex flex-col gap-1.5 items-center justify-center w-full h-full">
+                    <div className="flex flex-col gap-1 sm:gap-1.5 items-center justify-center w-full h-full">
                       {mergedCell?.isDeleted && mergedCell.deletedCode ? (
-                        <span className="bg-muted text-muted-foreground text-[10px] sm:text-xs font-bold px-1.5 py-0.5 rounded line-through">
+                        <span className="bg-muted text-muted-foreground text-[8px] sm:text-xs font-bold px-1 sm:px-1.5 py-0.5 rounded line-through">
                           {mergedCell.deletedCode}
                         </span>
                       ) : (
@@ -819,7 +817,9 @@ export default function DoctorCalendarPage() {
     const inRota = currentDateISO >= calendarData!.rotaStartDate && currentDateISO <= calendarData!.rotaEndDate;
     const mergedCell = mergedAvailability[currentDateISO];
     const showDeleted = mergedCell?.isDeleted && !!mergedCell?.deletedCode;
-    const codes =
+
+    // Deduplicate LTFT by merging it directly into the general codes structure for DayView
+    const baseCodes =
       !mergedCell?.isDeleted && mergedCell
         ? ([mergedCell.primary, mergedCell.secondary] as (string | null)[]).filter(
             (c): c is string => !!c && !SKIP_CODES.has(c),
@@ -832,11 +832,17 @@ export default function DoctorCalendarPage() {
       rawLtftDays.includes(DAY_ABBR[(dow + 6) % 7].toLowerCase()) ||
       rawLtftDays.includes(new Date(currentDateISO).toLocaleDateString("en-GB", { weekday: "long" }).toLowerCase());
 
+    const codesSet = new Set(baseCodes);
+    if (isLtftDay && !showDeleted) {
+      codesSet.add("LTFT");
+    }
+    const finalCodes = Array.from(codesSet);
+
     return (
       <div className="rounded-xl border border-border bg-card shadow-sm p-4 sm:p-5">
-        <div className="flex items-center justify-between mb-4 pb-4 border-b border-border/50">
-          <p className="text-lg font-semibold text-foreground flex items-center gap-2">
-            <CalendarRange className="h-5 w-5 text-teal-600" />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-4 border-b border-border/50">
+          <p className="text-[15px] sm:text-lg font-semibold text-foreground flex items-center gap-2">
+            <CalendarRange className="h-4 w-4 sm:h-5 sm:w-5 text-teal-600" />
             {fmtFull(currentDateISO)}
           </p>
           {inRota && (
@@ -851,63 +857,60 @@ export default function DoctorCalendarPage() {
                 setModalInitialDate(currentDateISO);
                 setModalOpen(true);
               }}
-              className="text-teal-700 bg-teal-50 hover:bg-teal-100 border-teal-200"
+              className="text-teal-700 bg-teal-50 hover:bg-teal-100 border-teal-200 h-8 text-xs sm:text-sm w-full sm:w-auto"
             >
               + Add Event
             </Button>
           )}
         </div>
         {!inRota ? (
-          <p className="text-sm text-muted-foreground italic text-center py-4">This date is outside the rota period.</p>
+          <p className="text-xs sm:text-sm text-muted-foreground italic text-center py-4">
+            This date is outside the rota period.
+          </p>
         ) : showDeleted ? (
           <div
-            className="rounded-lg border border-border bg-muted/30 p-4 flex items-center gap-3"
+            className="rounded-lg border border-border bg-muted/30 p-3 sm:p-4 flex items-center gap-3"
             style={{ borderLeft: `4px solid #d1d5db` }}
           >
             <span
-              className="inline-block rounded-full px-2.5 py-1 text-xs font-bold"
+              className="inline-block rounded-full px-2 sm:px-2.5 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold"
               style={{ backgroundColor: "#d1d5db", color: "#6b7280", textDecoration: "line-through" }}
             >
               {EVENT_LABELS[mergedCell!.deletedCode!] ?? mergedCell!.deletedCode}
             </span>
-            <span className="text-sm text-muted-foreground font-medium">Removed by coordinator</span>
+            <span className="text-xs sm:text-sm text-muted-foreground font-medium">Removed by coordinator</span>
           </div>
-        ) : codes.length === 0 && !isLtftDay ? (
-          <p className="text-sm text-muted-foreground italic text-center py-4">No events scheduled. Fully available.</p>
+        ) : finalCodes.length === 0 ? (
+          <p className="text-xs sm:text-sm text-muted-foreground italic text-center py-4">
+            No events scheduled. Fully available.
+          </p>
         ) : (
           <div className="space-y-3">
-            {codes.map((code) => {
-              const s = BADGE_STYLES[code as keyof typeof BADGE_STYLES];
-              const bg = s ? s.classes.split(" ")[0].replace("bg-", "") : "gray-500";
+            {finalCodes.map((code) => {
+              const isExplicitOverride =
+                (code === mergedCell?.primary || code === mergedCell?.secondary) &&
+                (mergedCell?.overrideAction === "add" || mergedCell?.overrideAction === "modify");
+
               return (
                 <div
                   key={code}
                   onClick={() => handleCellTap(currentDateISO)}
-                  className={`rounded-lg border border-border bg-card p-4 cursor-pointer hover:bg-muted/30 transition-colors flex items-center justify-between ${selectedDate === currentDateISO ? "ring-2 ring-inset ring-teal-500" : ""}`}
+                  className={`rounded-lg border border-border bg-card p-3 sm:p-4 cursor-pointer hover:bg-muted/30 transition-colors flex items-center justify-between ${selectedDate === currentDateISO ? "ring-2 ring-inset ring-teal-500" : ""}`}
                   style={{ borderLeftWidth: "4px", borderLeftColor: MONTH_EVENT_COLOURS[code] ?? "#6b7280" }}
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 sm:gap-3">
                     <LeaveBadge type={code} size="large" />
-                    <span className="text-sm font-semibold">{EVENT_LABELS[code] ?? code}</span>
+                    <span className="text-xs sm:text-sm font-semibold">{EVENT_LABELS[code] ?? code}</span>
                   </div>
-                  {(mergedCell?.overrideAction === "add" || mergedCell?.overrideAction === "modify") && (
-                    <span className="text-xs text-orange-600 font-bold bg-orange-50 px-2 py-1 rounded border border-orange-200 flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-orange-500"></span>
-                      Coordinator override
+                  {isExplicitOverride && (
+                    <span className="text-[9px] sm:text-xs text-orange-600 font-bold bg-orange-50 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded border border-orange-200 flex items-center gap-1 sm:gap-1.5">
+                      <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-orange-500"></span>
+                      Override
                     </span>
                   )}
                 </div>
               );
             })}
-            {isLtftDay && (
-              <div
-                className="rounded-lg border border-border bg-card p-4 flex items-center gap-3"
-                style={{ borderLeft: `4px solid #ca8a04` }}
-              >
-                <LeaveBadge type="LTFT" size="large" />
-                <span className="text-sm font-semibold">LTFT day off</span>
-              </div>
-            )}
           </div>
         )}
       </div>
@@ -917,33 +920,33 @@ export default function DoctorCalendarPage() {
   // ─── Main render ───────────────────────────────────────────
   return (
     <AdminLayout title="Doctor Calendar" subtitle={doctor?.doctorName} accentColor="teal" pageIcon={CalendarDays}>
-      <div className="space-y-4" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+      <div className="space-y-3 sm:space-y-4" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
         {/* Header / Nav Container */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
           <button
             onClick={() => navigate("/admin/pre-rota-calendar")}
-            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors bg-transparent border-none cursor-pointer"
+            className="flex items-center gap-1.5 text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors bg-transparent border-none cursor-pointer"
           >
-            <ArrowLeft className="h-4 w-4" /> Back to Pre-rota
+            <ArrowLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Back to Pre-rota
           </button>
         </div>
 
         {/* Doctor Info Block */}
-        <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-card shadow-sm">
+        <div className="flex items-center justify-between p-3 sm:p-4 rounded-xl border border-border bg-card shadow-sm">
           <div>
-            <h2 className="text-xl font-bold text-foreground">{doctor.doctorName}</h2>
-            <p className="text-sm text-muted-foreground font-medium mt-0.5">
+            <h2 className="text-lg sm:text-xl font-bold text-foreground leading-tight">{doctor.doctorName}</h2>
+            <p className="text-xs sm:text-sm text-muted-foreground font-medium mt-0.5">
               {doctor.grade} · {doctor.wte}% WTE
             </p>
           </div>
           {doctor.ltftDaysOff && Array.isArray(doctor.ltftDaysOff) && doctor.ltftDaysOff.length > 0 && (
             <div className="hidden sm:flex flex-col items-end">
-              <span className="text-xs text-muted-foreground font-medium mb-1">LTFT Days:</span>
+              <span className="text-[10px] sm:text-xs text-muted-foreground font-medium mb-1">LTFT Days:</span>
               <div className="flex gap-1">
                 {doctor.ltftDaysOff.map((d: string) => (
                   <span
                     key={d}
-                    className="uppercase text-[9px] font-bold bg-yellow-100 text-yellow-800 border border-yellow-200 px-1.5 py-0.5 rounded"
+                    className="uppercase text-[8px] sm:text-[9px] font-bold bg-yellow-100 text-yellow-800 border border-yellow-200 px-1 sm:px-1.5 py-0.5 rounded"
                   >
                     {d.slice(0, 3)}
                   </span>
@@ -954,24 +957,26 @@ export default function DoctorCalendarPage() {
         </div>
 
         {/* Unified Nav Bar */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 p-3 bg-card rounded-xl border border-border shadow-sm">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-card rounded-xl border border-border shadow-sm">
           <ViewToggle viewMode={viewMode} setViewMode={setViewMode} />
 
-          <div className="flex items-center justify-center gap-2 flex-1">
+          <div className="flex items-center justify-between sm:justify-center gap-1 sm:gap-2 flex-1">
             <button
               type="button"
               onClick={goPrev}
               disabled={prevDisabled}
-              className="p-1.5 rounded-md hover:bg-muted disabled:opacity-30 transition-colors"
+              className="p-1 sm:p-1.5 rounded-md hover:bg-muted disabled:opacity-30 transition-colors"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
-            <span className="text-sm font-semibold text-foreground min-w-[160px] text-center">{currentLabel}</span>
+            <span className="text-[11px] sm:text-sm font-semibold text-foreground min-w-[100px] sm:min-w-[140px] text-center truncate">
+              {currentLabel}
+            </span>
             <button
               type="button"
               onClick={goNext}
               disabled={nextDisabled}
-              className="p-1.5 rounded-md hover:bg-muted disabled:opacity-30 transition-colors"
+              className="p-1 sm:p-1.5 rounded-md hover:bg-muted disabled:opacity-30 transition-colors"
             >
               <ChevronRight className="h-4 w-4" />
             </button>
@@ -985,7 +990,7 @@ export default function DoctorCalendarPage() {
             onChange={(e) => {
               if (e.target.value) navigateToDate(e.target.value);
             }}
-            className="text-xs px-3 py-1.5 border border-border rounded-md bg-card text-foreground cursor-pointer focus:outline-none focus:ring-2 focus:ring-teal-500 h-[34px] sm:ml-auto w-full sm:w-auto"
+            className="text-[10px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5 border border-border rounded-md bg-card text-foreground cursor-pointer focus:outline-none focus:ring-2 focus:ring-teal-500 h-8 sm:h-[34px] sm:ml-auto w-full sm:w-auto"
           />
         </div>
 
