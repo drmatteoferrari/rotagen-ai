@@ -818,27 +818,37 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
     }
   };
 
+  const handleDoubleTap = useCallback((doctorId: string, date: string) => {
+    if (singleTapTimerRef.current) clearTimeout(singleTapTimerRef.current);
+    lastTapRef.current = null;
+    setPanelOpen(false);
+    setSelectedCell(null);
+    navigate(`/admin/doctor-calendar/${doctorId}?date=${date}&view=day`);
+  }, [navigate]);
+
   const handleCellTap = (doctorId: string, date: string) => {
     const now = Date.now();
     const last = lastTapRef.current;
 
-    // Check if double-tap happened
+    // Double-tap detected
     if (last && last.doctorId === doctorId && last.date === date && now - last.time < 500) {
-      lastTapRef.current = null;
-      navigate(`/admin/doctor-calendar/${doctorId}?date=${date}&view=day`);
+      handleDoubleTap(doctorId, date);
       return;
     }
 
     lastTapRef.current = { doctorId, date, time: now };
 
-    if (selectedCell?.doctorId === doctorId && selectedCell?.date === date && panelOpen) {
-      setPanelOpen(false);
-      setSelectedCell(null);
-    } else {
-      setSelectedCell({ doctorId, date });
-      setPanelOpen(true);
-      setModalOpen(false);
-    }
+    if (singleTapTimerRef.current) clearTimeout(singleTapTimerRef.current);
+    singleTapTimerRef.current = setTimeout(() => {
+      if (selectedCell?.doctorId === doctorId && selectedCell?.date === date && panelOpen) {
+        setPanelOpen(false);
+        setSelectedCell(null);
+      } else {
+        setSelectedCell({ doctorId, date });
+        setPanelOpen(true);
+        setModalOpen(false);
+      }
+    }, 200);
   };
 
   const allDates = useMemo(() => calendarData?.weeks.flatMap((w) => w.dates) ?? [], [calendarData]);
