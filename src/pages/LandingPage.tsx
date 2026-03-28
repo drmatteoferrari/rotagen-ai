@@ -119,18 +119,18 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              {/* 4. Mock Rota - Extremely squashed vertically */}
-              <div className="order-4 md:order-3 fade-up-3 float-anim w-full max-w-xs md:max-w-sm mx-auto overflow-hidden rounded-xl border border-border bg-card shadow-2xl mt-1 md:mt-0">
-                <div className="flex h-5 md:h-6 items-center gap-1.5 px-2 md:px-3 bg-slate-800">
-                  <span className="h-1.5 w-1.5 md:h-2 md:w-2 rounded-full bg-red-400" />
-                  <span className="h-1.5 w-1.5 md:h-2 md:w-2 rounded-full bg-amber-400" />
-                  <span className="h-1.5 w-1.5 md:h-2 md:w-2 rounded-full bg-green-400" />
-                  <span className="ml-1 md:ml-2 text-[7px] md:text-[9px] text-slate-400 font-medium hidden sm:inline">
+              {/* 4. Mock Rota - Dynamically scales up on lg and xl screens */}
+              <div className="order-4 md:order-3 fade-up-3 float-anim w-full max-w-xs md:max-w-sm lg:max-w-md xl:max-w-lg mx-auto overflow-hidden rounded-xl border border-border bg-card shadow-2xl mt-1 md:mt-0">
+                <div className="flex h-5 md:h-6 lg:h-8 items-center gap-1.5 lg:gap-2 px-2 md:px-3 lg:px-4 bg-slate-800">
+                  <span className="h-1.5 w-1.5 md:h-2 md:w-2 lg:h-3 lg:w-3 rounded-full bg-red-400" />
+                  <span className="h-1.5 w-1.5 md:h-2 md:w-2 lg:h-3 lg:w-3 rounded-full bg-amber-400" />
+                  <span className="h-1.5 w-1.5 md:h-2 md:w-2 lg:h-3 lg:w-3 rounded-full bg-green-400" />
+                  <span className="ml-1 md:ml-2 text-[7px] md:text-[9px] lg:text-xs text-slate-400 font-medium hidden sm:inline">
                     RotaGen — Final Rota · August 2025
                   </span>
                 </div>
-                <div className="space-y-1 md:space-y-2 p-1.5 md:p-3 relative">
-                  <div className="grid grid-cols-5 gap-1 text-[7px] md:text-[9px] font-semibold text-muted-foreground">
+                <div className="space-y-1 md:space-y-2 lg:space-y-3 p-1.5 md:p-3 lg:p-5 relative">
+                  <div className="grid grid-cols-5 gap-1 lg:gap-2 text-[7px] md:text-[9px] lg:text-xs font-semibold text-muted-foreground">
                     <div>Doctor</div>
                     <div>Mon</div>
                     <div>Tue</div>
@@ -142,8 +142,8 @@ export default function LandingPage() {
                     ["Dr Khan", "Short Day", "Long Day", "Night", "Short Day"],
                     ["Dr Smith", "On-Call", "Short Day", "Long Day", "Long Day"],
                   ].map((row) => (
-                    <div key={row[0]} className="grid grid-cols-5 gap-1">
-                      <div className="flex items-center rounded-lg bg-muted px-1 py-1 md:px-2 md:py-1.5 text-[7px] md:text-[10px] font-medium text-foreground">
+                    <div key={row[0]} className="grid grid-cols-5 gap-1 lg:gap-2">
+                      <div className="flex items-center rounded-lg bg-muted px-1 py-1 md:px-2 md:py-1.5 lg:px-3 lg:py-2 text-[7px] md:text-[10px] lg:text-sm font-medium text-foreground">
                         {row[0]}
                       </div>
                       {row.slice(1).map((shift) => {
@@ -158,10 +158,10 @@ export default function LandingPage() {
                         return (
                           <div
                             key={`${row[0]}-${shift}`}
-                            className="rounded-lg bg-muted px-0.5 py-1 md:px-1 md:py-1.5 flex items-center justify-center"
+                            className="rounded-lg bg-muted px-0.5 py-1 md:px-1 md:py-1.5 lg:px-2 lg:py-2 flex items-center justify-center"
                           >
                             <span
-                              className={`inline-flex rounded-full px-1 py-0.5 md:px-1.5 md:py-0.5 text-[5px] md:text-[8px] font-semibold ${badgeClass}`}
+                              className={`inline-flex rounded-full px-1 py-0.5 md:px-1.5 md:py-0.5 lg:px-2 lg:py-1 text-[5px] md:text-[8px] lg:text-[11px] font-semibold ${badgeClass}`}
                             >
                               {shift}
                             </span>
@@ -172,7 +172,7 @@ export default function LandingPage() {
                   ))}
                   {/* ECG line */}
                   <svg
-                    className="absolute bottom-1 md:bottom-2 left-0 w-full h-4 md:h-6 pointer-events-none"
+                    className="absolute bottom-1 md:bottom-2 lg:bottom-3 left-0 w-full h-4 md:h-6 lg:h-8 pointer-events-none"
                     viewBox="0 0 400 30"
                     preserveAspectRatio="none"
                   >
