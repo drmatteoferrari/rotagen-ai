@@ -41,14 +41,14 @@ export default function PublicTopBar({ menuItems = [] }: PublicTopBarProps) {
         }`}
       >
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-3 sm:px-6">
-          {/* Left: Logo - Protected with shrink-0 to prevent squashing on narrow screens */}
+          {/* Left: Logo - Protected with shrink-0 and min-w-0 */}
           <button type="button" onClick={() => navigate("/")} className="flex items-center gap-2 shrink-0 min-w-0">
             <RotaGenLogo size="sm" />
           </button>
 
-          {/* Right: Action buttons + hamburger - Optimized with tight gap-1 for mobile */}
+          {/* Right: action buttons + hamburger - Tighter gap on mobile to prevent crowding */}
           <div className="flex items-center gap-1 sm:gap-3">
-            {/* 1 & 2: Feedback - Accent Green. Responsive: Icon only on mobile, Icon+Text on tablet/desktop */}
+            {/* Feedback: Accent Green. Star only on mobile, Star+Text on tablet/desktop */}
             {!isFeedback && (
               <button
                 type="button"
@@ -61,31 +61,31 @@ export default function PublicTopBar({ menuItems = [] }: PublicTopBarProps) {
               </button>
             )}
 
-            {/* 3: Sign in - Accent Blue, smaller on mobile */}
+            {/* Sign in: Accent Blue, blue outline, smaller font/padding on mobile */}
             {!isLogin && (
               <button
                 type="button"
                 onClick={() => navigate("/login")}
-                className="shrink-0 rounded-lg px-2 py-1.5 sm:px-3 sm:py-2 text-[10px] sm:text-sm font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors"
+                className="shrink-0 rounded-lg px-2 py-1.5 sm:px-3 sm:py-2 text-[10px] sm:text-sm font-bold text-blue-700 bg-blue-50 border border-blue-400 hover:bg-blue-100 transition-colors"
               >
                 Sign in
               </button>
             )}
 
-            {/* 4: Request access - Accent Blue + Thick Shimmer Outline effect */}
+            {/* Request access: Accent Blue + Thick Shimmer Outline effect. Hidden on mobile to save space. */}
             {!isRegister && (
-              <div className="nav-cta-shimmer-wrap">
+              <div className="hidden sm:inline-block nav-cta-shimmer-wrap">
                 <button
                   type="button"
                   onClick={() => navigate("/register")}
-                  className="block shrink-0 rounded-[8px] bg-blue-600 px-2 py-1.5 sm:px-4 sm:py-2 text-[10px] sm:text-sm font-bold text-white transition-all hover:bg-blue-700 active:scale-[0.98] whitespace-nowrap"
+                  className="block shrink-0 rounded-[8px] bg-blue-600 px-2 py-1 sm:px-4 sm:py-2 text-[10px] sm:text-sm font-bold text-white transition-all hover:bg-blue-700 active:scale-[0.98] whitespace-nowrap"
                 >
                   Request access
                 </button>
               </div>
             )}
 
-            {/* Hamburger - Sized for space efficiency on mobile */}
+            {/* Hamburger: sized for space efficiency on mobile */}
             <button
               type="button"
               onClick={() => setMenuOpen(!menuOpen)}
@@ -96,7 +96,7 @@ export default function PublicTopBar({ menuItems = [] }: PublicTopBarProps) {
           </div>
         </div>
 
-        {/* Dropdown menu - Restored logic to ensure functionality isn't lost */}
+        {/* Dropdown menu - Original logic preserved */}
         {menuOpen && (
           <div className="border-t border-border bg-white px-4 pb-3 pt-2">
             <nav className="flex flex-col gap-1">
