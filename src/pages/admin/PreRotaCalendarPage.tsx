@@ -629,7 +629,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
         setCurrentDayIndex(initialDayIdx >= 0 ? initialDayIdx : 0);
         setCurrentMonthKey(initialDate.slice(0, 7));
 
-        if (mergedCd.doctors && mergedCd.weeks) {
+        if (mergedCd?.doctors && mergedCd?.weeks) {
           const allDates: string[] = [];
           for (const w of mergedCd.weeks) allDates.push(...w.dates);
           const elig: Record<string, Record<string, number>> = {};
@@ -822,9 +822,12 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
   const handleCellTap = (doctorId: string, date: string) => {
     const now = Date.now();
     const last = lastTapRef.current;
-    if (last && last.doctorId === doctorId && last.date === date && now - last.time < 350) {
+    if (last && last.doctorId === doctorId && last.date === date && now - last.time < 500) {
       lastTapRef.current = null;
-      navigate(`/admin/doctor-calendar/${doctorId}`);
+      // Navigate to Doctor Calendar using specific date and view context
+      navigate(`/admin/doctor-calendar/${doctorId}?date=${date}&view=day`, {
+        state: { selectedDate: date, view: "day" },
+      });
       return;
     }
     lastTapRef.current = { doctorId, date, time: now };
@@ -860,32 +863,23 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
   const sortedAndFilteredDoctors = useMemo(() => {
     if (!calendarData?.doctors) return [];
     let docs = [...calendarData.doctors];
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      docs = docs.filter((d) => d.doctorName.toLowerCase().includes(q) || (d.grade ?? "").toLowerCase().includes(q));
+
+    if (searchQuery.trim() !== "") {
+      const lowerQuery = searchQuery.toLowerCase();
+      docs = docs.filter((d) => d.doctorName.toLowerCase().includes(lowerQuery));
     }
-    if (sortConfig.key === "name") {
-      docs.sort((a, b) => {
-        const valA = a.doctorName.toLowerCase();
-        const valB = b.doctorName.toLowerCase();
-        if (valA < valB) return sortConfig.direction === "asc" ? -1 : 1;
-        if (valA > valB) return sortConfig.direction === "asc" ? 1 : -1;
-        return 0;
-      });
-    }
+
+    docs.sort((a, b) => {
+      const valA = sortConfig.key === "name" ? a.doctorName : a.grade || "";
+      const valB = sortConfig.key === "name" ? b.doctorName : b.grade || "";
+
+      if (valA < valB) return sortConfig.direction === "asc" ? -1 : 1;
+      if (valA > valB) return sortConfig.direction === "asc" ? 1 : -1;
+      return 0;
+    });
+
     return docs;
   }, [calendarData, searchQuery, sortConfig]);
-
-  // Sync unmanaged date inputs — must be before early returns to maintain hook count
-  const currentDateForSync = allDates[currentDayIndex] ?? allDates[0] ?? "";
-  useEffect(() => {
-    if (dateInputDesktopRef.current && dateInputDesktopRef.current.value !== currentDateForSync) {
-      dateInputDesktopRef.current.value = currentDateForSync;
-    }
-    if (dateInputMobileRef.current && dateInputMobileRef.current.value !== currentDateForSync) {
-      dateInputMobileRef.current.value = currentDateForSync;
-    }
-  }, [currentDateForSync]);
 
   const Wrapper = embedded
     ? ({ children }: { children: React.ReactNode }) => <>{children}</>
@@ -931,6 +925,15 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
   const currentWeek = weeks[currentWeekIndex];
   const currentDate = allDates[currentDayIndex] ?? allDates[0];
 
+  // Sync unmanaged date inputs securely safely inside an effect to prevent rendering loops
+  useEffect(() => {
+    if (dateInputDesktopRef.current && dateInputDesktopRef.current.value !== currentDate) {
+      dateInputDesktopRef.current.value = currentDate;
+    }
+    if (dateInputMobileRef.current && dateInputMobileRef.current.value !== currentDate) {
+      dateInputMobileRef.current.value = currentDate;
+    }
+  }, [currentDate]);
 
   const weekLabel = currentWeek
     ? `Wk ${currentWeek.weekNumber} · ${new Date(currentWeek.dates[0] + "T00:00:00").toLocaleDateString("en-GB", {
@@ -1392,12 +1395,13 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
         {!embedded && (
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
             <button
+              type="button"
               onClick={() => navigate("/admin/pre-rota")}
               className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors bg-transparent border-none cursor-pointer"
             >
               <ArrowLeft className="h-4 w-4" /> Back to Pre-rota
             </button>
-            <Button variant="outline" size="sm" onClick={handleDownload}>
+            <Button variant="outline" size="sm" onClick={handleDownload} type="button">
               <Download className="h-4 w-4 mr-2" /> Export Calendar
             </Button>
           </div>
@@ -1434,6 +1438,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
 
             <div className="flex items-center justify-center gap-2 flex-1">
               <button
+                type="button"
                 onClick={goPrev}
                 disabled={prevDisabled}
                 className="p-1.5 rounded-md hover:bg-muted disabled:opacity-30 transition-colors"
@@ -1442,6 +1447,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
               </button>
               <span className="text-sm font-semibold text-foreground min-w-[150px] text-center">{navLabel}</span>
               <button
+                type="button"
                 onClick={goNext}
                 disabled={nextDisabled}
                 className="p-1.5 rounded-md hover:bg-muted disabled:opacity-30 transition-colors"
@@ -1478,6 +1484,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
             </div>
             <div className="flex items-center gap-3 justify-between sm:justify-end flex-wrap w-full sm:w-auto">
               <button
+                type="button"
                 onClick={() => setGroupAvailability(!groupAvailability)}
                 className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border font-medium transition-all shadow-sm ${
                   groupAvailability
@@ -1834,6 +1841,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
         {/* Global Collapsible Summary Table */}
         <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden mt-6 mb-2">
           <button
+            type="button"
             onClick={() => setShowBreakdown((v) => !v)}
             className="w-full flex items-center justify-between px-4 py-3 bg-card hover:bg-muted/30 transition-colors border-none cursor-pointer"
           >
