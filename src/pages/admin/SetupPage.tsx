@@ -141,12 +141,15 @@ export default function SetupPage() {
       `}</style>
 
       {/*
-        Outer wrapper fills the AdminLayout scroll area exactly.
-        flex-col with the engine card set to flex-1 ensures the page
-        uses all available vertical space without overflowing on desktop/tablet.
-        overflow-hidden prevents any child from creating horizontal scroll.
+        Outer wrapper:
+        - min-h-full (not h-full): on desktop/tablet this fills the viewport exactly;
+          on mobile it can grow beyond if content is tall, letting AdminLayout's
+          overflow-y-auto scroll container handle the scroll naturally.
+        - flex flex-col so footer is always pushed to the bottom.
+        - overflow-x-hidden prevents any child causing horizontal scroll.
+        - No overflow-hidden (vertical) so mobile content isn't clipped.
       */}
-      <div className="w-full max-w-5xl mx-auto h-full flex flex-col gap-3 animate-fadeSlideUp overflow-hidden">
+      <div className="w-full max-w-5xl mx-auto min-h-full flex flex-col gap-3 animate-fadeSlideUp overflow-x-hidden">
         {/* ── PROGRESS BAR ── */}
         <div className="flex items-center gap-3 bg-card px-4 py-3 rounded-xl border border-border shadow-sm shrink-0">
           <div className="flex items-center gap-2 shrink-0">
@@ -172,7 +175,10 @@ export default function SetupPage() {
             <ClipboardList className="w-3.5 h-3.5" /> Configuration
           </p>
 
-          {/* 2 cols mobile, 4 cols sm+ */}
+          {/*
+            2 columns on mobile, 4 on sm+.
+            Each tile has min-w-0 to prevent text overflow causing horizontal scroll.
+          */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             {/* Step 1 — Department */}
             <div
@@ -181,7 +187,7 @@ export default function SetupPage() {
                   isDepartmentComplete ? "/admin/department/summary?mode=post-submit" : "/admin/department/step-1",
                 )
               }
-              className={`group cursor-pointer rounded-xl border p-3 flex flex-col gap-2 transition-all ${
+              className={`group cursor-pointer rounded-xl border p-3 flex flex-col gap-2 transition-all min-w-0 ${
                 isDepartmentComplete
                   ? "border-border bg-card hover:border-primary/30"
                   : "border-primary/20 bg-primary/5 shadow-sm"
@@ -192,18 +198,18 @@ export default function SetupPage() {
                   <Building2 className="w-3.5 h-3.5" />
                 </div>
                 <span
-                  className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-md whitespace-nowrap truncate ${getStepStyle(isDepartmentComplete).bg} ${getStepStyle(isDepartmentComplete).color}`}
+                  className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-md whitespace-nowrap overflow-hidden text-ellipsis max-w-[70px] ${getStepStyle(isDepartmentComplete).bg} ${getStepStyle(isDepartmentComplete).color}`}
                 >
                   {getStepStyle(isDepartmentComplete).text}
                 </span>
               </div>
-              <p className="text-xs font-bold text-foreground leading-tight">1. Department</p>
+              <p className="text-xs font-bold text-foreground leading-tight truncate">1. Department</p>
             </div>
 
             {/* Step 2 — Contract (WTR) */}
             <div
               onClick={() => navigate(isWtrComplete ? "/admin/wtr/summary?mode=post-submit" : "/admin/wtr/step-1")}
-              className={`group cursor-pointer rounded-xl border p-3 flex flex-col gap-2 transition-all ${
+              className={`group cursor-pointer rounded-xl border p-3 flex flex-col gap-2 transition-all min-w-0 ${
                 isWtrComplete
                   ? "border-border bg-card hover:border-primary/30"
                   : isDepartmentComplete
@@ -216,12 +222,12 @@ export default function SetupPage() {
                   <CalendarCheck className="w-3.5 h-3.5" />
                 </div>
                 <span
-                  className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-md whitespace-nowrap truncate ${getStepStyle(isWtrComplete).bg} ${getStepStyle(isWtrComplete).color}`}
+                  className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-md whitespace-nowrap overflow-hidden text-ellipsis max-w-[70px] ${getStepStyle(isWtrComplete).bg} ${getStepStyle(isWtrComplete).color}`}
                 >
                   {getStepStyle(isWtrComplete).text}
                 </span>
               </div>
-              <p className="text-xs font-bold text-foreground leading-tight">2. Contract (WTR)</p>
+              <p className="text-xs font-bold text-foreground leading-tight truncate">2. Contract (WTR)</p>
             </div>
 
             {/* Step 3 — Rota Period */}
@@ -229,7 +235,7 @@ export default function SetupPage() {
               onClick={() =>
                 navigate(isPeriodComplete ? "/admin/rota-period/summary?mode=post-submit" : "/admin/rota-period/step-1")
               }
-              className={`group cursor-pointer rounded-xl border p-3 flex flex-col gap-2 transition-all ${
+              className={`group cursor-pointer rounded-xl border p-3 flex flex-col gap-2 transition-all min-w-0 ${
                 isPeriodComplete
                   ? "border-border bg-card hover:border-primary/30"
                   : isDepartmentComplete && isWtrComplete
@@ -242,18 +248,18 @@ export default function SetupPage() {
                   <CalendarDays className="w-3.5 h-3.5" />
                 </div>
                 <span
-                  className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-md whitespace-nowrap truncate ${getStepStyle(isPeriodComplete).bg} ${getStepStyle(isPeriodComplete).color}`}
+                  className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-md whitespace-nowrap overflow-hidden text-ellipsis max-w-[70px] ${getStepStyle(isPeriodComplete).bg} ${getStepStyle(isPeriodComplete).color}`}
                 >
                   {getStepStyle(isPeriodComplete).text}
                 </span>
               </div>
-              <p className="text-xs font-bold text-foreground leading-tight">3. Rota Period</p>
+              <p className="text-xs font-bold text-foreground leading-tight truncate">3. Rota Period</p>
             </div>
 
             {/* Step 4 — Doctor Surveys */}
             <div
               onClick={() => navigate("/admin/roster")}
-              className={`group cursor-pointer rounded-xl border p-3 flex flex-col gap-2 transition-all ${
+              className={`group cursor-pointer rounded-xl border p-3 flex flex-col gap-2 transition-all min-w-0 ${
                 surveysDone
                   ? "border-border bg-card hover:border-primary/30"
                   : isPeriodComplete
@@ -266,13 +272,13 @@ export default function SetupPage() {
                   <Users className="w-3.5 h-3.5" />
                 </div>
                 <span
-                  className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-md whitespace-nowrap truncate ${surveyStatus.bg} ${surveyStatus.color}`}
+                  className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-md whitespace-nowrap overflow-hidden text-ellipsis max-w-[80px] ${surveyStatus.bg} ${surveyStatus.color}`}
                 >
                   {surveyStatus.text}
                 </span>
               </div>
-              <p className="text-xs font-bold text-foreground leading-tight">4. Doctor Surveys</p>
-              {/* Mini survey progress bar */}
+              <p className="text-xs font-bold text-foreground leading-tight truncate">4. Doctor Surveys</p>
+              {/* Mini survey completion bar */}
               <div className="h-1 rounded-full bg-secondary overflow-hidden">
                 <div
                   className={`h-full rounded-full transition-all duration-500 ${surveyBarColor}`}
@@ -283,32 +289,42 @@ export default function SetupPage() {
           </div>
         </div>
 
-        {/* ── GENERATION ENGINE — flex-1 fills remaining vertical space ── */}
-        <div className="flex-1 min-h-0 flex flex-col gap-2">
+        {/* ── GENERATION ENGINE ──
+            flex-1 so it absorbs all remaining vertical space on desktop/tablet.
+            min-h-[280px] ensures the engine card is never squashed below a usable
+            height on small screens — mobile can scroll below this if needed.
+        */}
+        <div className="flex-1 min-h-[280px] flex flex-col gap-2">
           <p className="text-[10px] font-bold uppercase tracking-widest text-primary flex items-center gap-1.5 px-0.5 shrink-0">
             <Target className="w-3.5 h-3.5" /> Generation Engine
           </p>
 
           {/*
             Engine card:
-            - flex-1 min-h-0 expands to fill all remaining space between section label and footer
-            - flex-col mobile, flex-row lg+
-            - overflow-hidden clips panels cleanly at the card boundary
+            - flex-1 min-h-0: expands to fill the section wrapper on desktop/tablet.
+            - flex-col on mobile (panels stack vertically, each natural height).
+            - lg:flex-row on desktop (panels side by side, each takes half width).
+            - No overflow-hidden here — we need Panel A's "last built" row visible on mobile.
           */}
           <div
-            className={`flex-1 min-h-0 flex flex-col lg:flex-row rounded-2xl border bg-card shadow-sm transition-all duration-300 overflow-hidden ${
+            className={`flex-1 min-h-0 flex flex-col lg:flex-row rounded-2xl border bg-card shadow-sm transition-all duration-300 ${
               canGeneratePreRota ? "border-primary/20" : "border-border/50 opacity-80"
             }`}
           >
-            {/* ── PANEL A: Build Blueprint ── */}
+            {/* ── PANEL A: Pre-Rota Plan ── */}
+            {/*
+              On mobile: natural height flex-col, no constraints.
+              On desktop: lg:w-1/2 + lg:flex-1 so it shares width and grows to card height.
+              border-b on mobile becomes border-r on desktop via responsive classes.
+            */}
             <div className="flex flex-col p-4 sm:p-5 lg:w-1/2 border-b lg:border-b-0 lg:border-r border-border bg-gradient-to-br from-transparent to-muted/10">
-              {/* Header */}
+              {/* Header row: title + status pill */}
               <div className="flex items-start justify-between gap-2 mb-2 shrink-0">
                 <h3 className="text-sm sm:text-base font-bold text-foreground flex items-center gap-2">
                   <span className="flex items-center justify-center w-5 h-5 rounded bg-muted text-muted-foreground text-xs font-bold shrink-0">
                     A
                   </span>
-                  Build Blueprint
+                  Pre-Rota Plan
                 </h3>
                 {preRotaResult && (
                   <span
@@ -339,11 +355,12 @@ export default function SetupPage() {
                 )}
               </div>
 
+              {/* Description — hidden on mobile to save space */}
               <p className="text-xs text-muted-foreground leading-relaxed mb-3 shrink-0 hidden sm:block">
                 Generates the master calendar framework and calculates shift targets based on your rules.
               </p>
 
-              {/* Error banner — directly above button */}
+              {/* Error banner — shown directly above the button */}
               {preRotaError && (
                 <div className="mb-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 flex items-center gap-2 shrink-0">
                   <XCircle className="h-3.5 w-3.5 text-destructive shrink-0" />
@@ -351,7 +368,7 @@ export default function SetupPage() {
                 </div>
               )}
 
-              {/* Stale banner — directly above button */}
+              {/* Stale banner — shown directly above the button */}
               {isStale && preRotaResult && (
                 <div className="mb-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 flex items-center gap-2 shrink-0">
                   <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
@@ -359,7 +376,7 @@ export default function SetupPage() {
                 </div>
               )}
 
-              {/* Build Blueprint button */}
+              {/* Action button */}
               <Button
                 variant={preRotaResult ? "outline" : "default"}
                 className="w-full h-10 shadow-sm text-sm shrink-0"
@@ -372,20 +389,20 @@ export default function SetupPage() {
                 {!canGeneratePreRota && <Lock className="mr-2 h-4 w-4 text-muted-foreground" />}
                 {preRotaLoading ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Building Blueprint…
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Building Pre-Rota…
                   </>
                 ) : preRotaResult ? (
                   <>
-                    <RefreshCw className="mr-2 h-4 w-4 text-muted-foreground" /> Re-build Blueprint
+                    <RefreshCw className="mr-2 h-4 w-4 text-muted-foreground" /> Rebuild Pre-Rota Plan
                   </>
                 ) : (
                   <>
-                    <Play className="mr-2 h-4 w-4" /> Build Blueprint Data
+                    <Play className="mr-2 h-4 w-4" /> Build Pre-Rota Plan
                   </>
                 )}
               </Button>
 
-              {/* Last built + shortcut buttons */}
+              {/* Last built row + shortcut navigation buttons */}
               {preRotaResult && !isStale && (
                 <div className="mt-3 flex flex-wrap items-center justify-between border-t border-border/50 pt-3 gap-2 shrink-0">
                   <span className="text-xs text-muted-foreground font-medium truncate">
@@ -426,14 +443,18 @@ export default function SetupPage() {
               )}
             </div>
 
-            {/* ── DESKTOP SEPARATOR — hidden on mobile ── */}
+            {/* ── DESKTOP SEPARATOR: visible only on lg+ ── */}
             <div className="hidden lg:flex items-center justify-center w-9 shrink-0 bg-muted/20">
               <ArrowRight className="w-4 h-4 text-muted-foreground/40" />
             </div>
 
-            {/* ── PANEL B: Final Allocation ── */}
-            <div className="flex flex-col p-4 sm:p-5 lg:w-1/2">
-              {/* Header */}
+            {/* ── PANEL B: Final Allocation ──
+                lg:flex-1 is the key fix: on desktop the card is flex-row, so Panel B
+                needs flex-1 to stretch to full card height, giving mt-auto something to
+                push against. On mobile (flex-col card) Panel B is natural height — fine.
+            */}
+            <div className="flex flex-col p-4 sm:p-5 lg:w-1/2 lg:flex-1">
+              {/* Header row */}
               <div className="flex items-start justify-between gap-2 mb-2 shrink-0">
                 <h3 className="text-sm sm:text-base font-bold text-foreground flex items-center gap-2">
                   <span className="flex items-center justify-center w-5 h-5 rounded bg-primary/10 text-primary text-xs font-bold shrink-0">
@@ -443,20 +464,26 @@ export default function SetupPage() {
                 </h3>
               </div>
 
+              {/* Description — hidden on mobile to save space */}
               <p className="text-xs text-muted-foreground leading-relaxed mb-3 shrink-0 hidden sm:block">
                 Runs the core algorithm to assign doctors to shifts, respecting WTR rules and survey preferences.
               </p>
 
-              {/* Lock banner — only when config is complete but Blueprint not yet built */}
+              {/* Lock banner — only shown when config is complete but Pre-Rota not yet built */}
               {canGeneratePreRota && !preRotaResult && (
                 <div className="mb-2 flex items-center gap-2 rounded-lg border border-border/50 bg-muted/40 px-3 py-2 shrink-0">
                   <Lock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                  <span className="text-xs text-muted-foreground">Complete Blueprint (step A) first</span>
+                  <span className="text-xs text-muted-foreground">Build Pre-Rota Plan (step A) first</span>
                 </div>
               )}
 
-              {/* mt-auto pushes button to bottom of panel on desktop */}
-              <div className="mt-auto">
+              {/*
+                mt-auto works here because Panel B has lg:flex-1 on desktop,
+                making its height equal to the card height, so mt-auto pushes
+                the button to the bottom. On mobile there's no extra space so
+                the button renders naturally below the lock banner / description.
+              */}
+              <div className="mt-auto pt-2">
                 <Button
                   size="lg"
                   className={`w-full h-11 sm:h-12 text-sm relative overflow-hidden group transition-all ${
@@ -467,6 +494,7 @@ export default function SetupPage() {
                   disabled={!canGeneratePreRota || finalLoading || !preRotaResult}
                   onClick={() => setShowFinalChecklist(true)}
                 >
+                  {/* Shimmer — only shown when button is fully active */}
                   {canGeneratePreRota && preRotaResult && !finalLoading && (
                     <div className="absolute inset-0 w-full animate-shimmer-btn bg-gradient-to-r from-transparent via-white/20 to-transparent" />
                   )}
@@ -488,9 +516,13 @@ export default function SetupPage() {
           </div>
         </div>
 
-        {/* ── FOOTER — pinned at bottom of flex column ── */}
+        {/* ── FOOTER — always at the bottom of the flex column ──
+            shrink-0 prevents it from being compressed.
+            On desktop/tablet: sits flush at the page bottom with no scroll.
+            On mobile: naturally at the end of content, scrolled to if needed.
+        */}
         <div className="shrink-0 flex items-center justify-between pt-3 border-t border-border/50">
-          {/* Feedback — green accent, matching app style */}
+          {/* Feedback — green accent */}
           <button
             type="button"
             onClick={() => navigate("/feedback")}
@@ -516,7 +548,7 @@ export default function SetupPage() {
         </div>
       </div>
 
-      {/* ── FINAL ROTA CHECKLIST MODAL — unchanged ── */}
+      {/* ── FINAL ROTA CHECKLIST MODAL — rendered outside layout div, above everything ── */}
       {showFinalChecklist && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-card rounded-2xl border border-border shadow-2xl p-6 w-full max-w-sm mx-4 animate-in zoom-in-95 duration-200">
@@ -531,7 +563,7 @@ export default function SetupPage() {
             </p>
 
             <div className="space-y-3 mb-6 bg-muted/40 p-4 rounded-xl border border-border/50">
-              {["Blueprint data is up-to-date", "All doctor surveys submitted", "No unresolvable conflicts"].map(
+              {["Pre-Rota Plan is up-to-date", "All doctor surveys submitted", "No unresolvable conflicts"].map(
                 (item) => (
                   <label key={item} className="flex items-start gap-3 text-sm cursor-pointer group">
                     <input
