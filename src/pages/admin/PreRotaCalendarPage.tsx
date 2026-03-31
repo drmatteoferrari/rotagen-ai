@@ -931,6 +931,21 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
     }
   };
 
+  const mergedAvailabilityByDoctor = useMemo<Record<string, Record<string, MergedCell>>>(() => {
+    if (!calendarData) return {};
+    const result: Record<string, Record<string, MergedCell>> = {};
+    for (const doctor of calendarData.doctors) {
+      const doctorOverrides = overrides.filter((o) => o.doctorId === doctor.doctorId);
+      result[doctor.doctorId] = mergeOverridesIntoAvailability(
+        doctor.availability,
+        doctorOverrides,
+        calendarData.rotaStartDate,
+        calendarData.rotaEndDate,
+      );
+    }
+    return result;
+  }, [calendarData, overrides]);
+
   const handleRemoveSurveyEvent = async () => {
     if (!selectedCell || !calendarData || !rotaConfigId) return;
     const doctorId = selectedCell.doctorId;
