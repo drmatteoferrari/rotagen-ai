@@ -113,8 +113,15 @@ export default function Login() {
                 </div>
                 <span className="font-['Poppins'] font-bold text-[36px] sm:text-[40px] flex tracking-tight items-center shadow-sm">
                   <span className="shimmer-text-dark">ROTA</span>
-                  <span className="shimmer-text">GEN</span>
+                  {/* Accent Blue Shimmer for GEN */}
+                  <span
+                    className="bg-clip-text text-transparent bg-gradient-to-r from-blue-700 via-blue-400 to-blue-700 bg-[length:200%_auto]"
+                    style={{ animation: "blueShimmer 3s linear infinite" }}
+                  >
+                    GEN
+                  </span>
                 </span>
+                <style>{`@keyframes blueShimmer { 0% { background-position: 200% center; } 100% { background-position: -200% center; } }`}</style>
               </button>
               <h2 className="text-[14px] font-medium text-slate-500 animate-in fade-in duration-700 delay-150 fill-mode-both">
                 Welcome back to your workspace
