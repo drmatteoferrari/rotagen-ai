@@ -31,8 +31,6 @@ export default function Login() {
     }
   }, [isAuthenticated, user?.mustChangePassword, navigate]);
 
-  // Removed the autofocus useEffect to prevent aggressive keyboard popup on mobile devices.
-
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (loading) return;
@@ -75,62 +73,62 @@ export default function Login() {
       {showSplash && (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-primary animate-in fade-in duration-300">
           <RotaGenLogo size="lg" variant="dark" />
-          <div className="mt-6 h-1 w-48 overflow-hidden rounded-full bg-white/20">
+          <div className="mt-5 h-1 w-48 overflow-hidden rounded-full bg-white/20">
             <div
               className="h-full rounded-full bg-white"
               style={{ animation: "splashBar 1.8s ease-in-out forwards" }}
             />
           </div>
-          <p className="mt-4 text-sm font-medium text-blue-100 animate-pulse">Loading your rota…</p>
+          <p className="mt-4 text-[13px] font-medium text-blue-100 animate-pulse">Loading your rota…</p>
           <style>{`@keyframes splashBar { from { width: 0% } to { width: 100% } }`}</style>
         </div>
       )}
 
-      {/* Main Layout Area */}
-      <div className="relative flex min-h-[100dvh] w-full flex-col bg-slate-50 overflow-hidden font-sans">
+      {/* Main Layout Area - Locked height & width, zero scroll */}
+      <div className="relative flex h-[100dvh] max-h-[100dvh] w-screen max-w-[100vw] flex-col bg-slate-50 overflow-hidden font-sans">
         {/* Soft Ambient Background Blobs for Visual Aesthetics */}
         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-blue-300/20 blur-[100px] pointer-events-none" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-300/20 blur-[100px] pointer-events-none" />
 
-        <PublicTopBar />
+        <div className="shrink-0 relative z-20">
+          <PublicTopBar />
+        </div>
 
-        {/* Center Section */}
-        <div className="flex flex-1 flex-col items-center justify-center px-4 py-8 sm:px-6 z-10">
-          <div className="w-full max-w-[420px] flex flex-col items-center">
+        {/* Center Section - Flex 1 handles available space without overflowing */}
+        <div className="flex flex-1 flex-col items-center justify-center px-4 w-full z-10">
+          <div className="w-full max-w-[380px] flex flex-col items-center">
             {/* Header / Logo - Staggered Animation 1 */}
-            <div className="flex flex-col items-center gap-3 text-center mb-8 animate-in fade-in slide-in-from-bottom-6 duration-700">
+            <div className="flex flex-col items-center gap-2 text-center mb-5 animate-in fade-in slide-in-from-bottom-6 duration-700">
               <button
                 onClick={() => navigate("/")}
-                className="group relative flex flex-col items-center gap-4 transition-transform active:scale-95"
+                className="group relative flex items-center gap-3 transition-transform active:scale-95"
               >
-                <div className="relative">
+                <div className="relative flex items-center justify-center">
                   <div className="absolute inset-0 rounded-full bg-primary/10 blur-xl group-hover:bg-primary/20 transition-colors duration-500" />
                   <RotaGenIcon
-                    size={68}
+                    size={52}
                     variant="light"
                     className="relative z-10 transition-transform group-hover:scale-105 duration-300"
                   />
                 </div>
-                <span className="font-['Poppins'] font-bold text-[38px] flex tracking-tight items-center shadow-sm">
-                  <span className="text-slate-800 dark:text-slate-100">ROTA</span>
-                  <span className="bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-600 bg-[length:200%_auto] animate-[pulse_3s_ease-in-out_infinite] bg-clip-text text-transparent ml-0.5">
-                    GEN
-                  </span>
+                <span className="font-['Poppins'] font-bold text-[36px] sm:text-[40px] flex tracking-tight items-center shadow-sm">
+                  <span className="shimmer-text-dark">ROTA</span>
+                  <span className="shimmer-text">GEN</span>
                 </span>
               </button>
-              <h2 className="text-[15px] sm:text-base font-medium text-slate-500 animate-in fade-in duration-700 delay-150 fill-mode-both">
+              <h2 className="text-[14px] font-medium text-slate-500 animate-in fade-in duration-700 delay-150 fill-mode-both">
                 Welcome back to your workspace
               </h2>
             </div>
 
             {/* Login Card - Staggered Animation 2 */}
-            <Card className="w-full border-white/60 bg-white/80 backdrop-blur-xl shadow-2xl shadow-blue-900/5 sm:rounded-2xl animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300 fill-mode-both">
-              <CardContent className="p-5 sm:p-7">
-                <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
-                  <div className="space-y-2">
+            <Card className="w-full border-white/60 bg-white/80 backdrop-blur-xl shadow-2xl shadow-blue-900/5 rounded-2xl animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300 fill-mode-both">
+              <CardContent className="p-5">
+                <form onSubmit={handleSubmit} className="space-y-3.5">
+                  <div className="space-y-1.5">
                     <Label
                       htmlFor="identifier"
-                      className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-500 ml-1"
+                      className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 ml-1"
                     >
                       Email or username
                     </Label>
@@ -143,23 +141,23 @@ export default function Login() {
                         setIdentifier(e.target.value);
                         setError(null);
                       }}
-                      className="h-12 sm:h-11 px-4 rounded-xl bg-slate-50/50 border-slate-200 text-base sm:text-sm focus:bg-white focus:ring-2 focus:ring-primary/20 transition-all"
+                      className="h-10 px-3 rounded-xl bg-slate-50/50 border-slate-200 text-base sm:text-sm focus:bg-white focus:ring-2 focus:ring-primary/20 transition-all"
                     />
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     <div className="flex items-center justify-between ml-1">
                       <Label
                         htmlFor="password"
                         title="password"
-                        className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-slate-500"
+                        className="text-[11px] font-semibold uppercase tracking-wider text-slate-500"
                       >
                         Password
                       </Label>
                       <button
                         type="button"
                         onClick={() => navigate("/forgot-password")}
-                        className="text-[11px] sm:text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+                        className="text-[11px] font-medium text-primary hover:text-primary/80 transition-colors"
                       >
                         Forgot password?
                       </button>
@@ -174,7 +172,7 @@ export default function Login() {
                           setPassword(e.target.value);
                           setError(null);
                         }}
-                        className="h-12 sm:h-11 px-4 pr-11 rounded-xl bg-slate-50/50 border-slate-200 text-base sm:text-sm focus:bg-white focus:ring-2 focus:ring-primary/20 transition-all"
+                        className="h-10 px-3 pr-10 rounded-xl bg-slate-50/50 border-slate-200 text-base sm:text-sm focus:bg-white focus:ring-2 focus:ring-primary/20 transition-all"
                       />
                       <button
                         type="button"
@@ -182,44 +180,40 @@ export default function Login() {
                         className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 transition-colors rounded-md"
                         tabIndex={-1}
                       >
-                        {showPassword ? (
-                          <EyeOff className="h-[18px] w-[18px]" />
-                        ) : (
-                          <Eye className="h-[18px] w-[18px]" />
-                        )}
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
                     </div>
                   </div>
 
                   {error && (
-                    <div className="p-3 rounded-lg bg-red-50 border border-red-100 animate-in fade-in slide-in-from-top-2 duration-300">
-                      <p className="text-[13px] font-medium text-red-600 text-center">{error}</p>
+                    <div className="p-2 rounded-lg bg-red-50 border border-red-100 animate-in fade-in slide-in-from-top-2 duration-300">
+                      <p className="text-[12px] font-medium text-red-600 text-center">{error}</p>
                     </div>
                   )}
 
                   <Button
                     type="submit"
-                    className="w-full h-12 sm:h-11 mt-2 text-sm sm:text-base font-semibold rounded-xl shadow-lg shadow-primary/20 transition-all active:scale-[0.98] group"
+                    className="w-full h-10 mt-1 text-sm font-semibold rounded-xl shadow-lg shadow-primary/20 transition-all active:scale-[0.98] group"
                     disabled={loading}
                   >
                     {loading ? "Signing in..." : "Sign in"}
                     {!loading && (
-                      <ArrowRight className="ml-2 h-4 w-4 opacity-70 group-hover:translate-x-1 transition-transform" />
+                      <ArrowRight className="ml-2 h-3.5 w-3.5 opacity-70 group-hover:translate-x-1 transition-transform" />
                     )}
                   </Button>
                 </form>
 
-                <div className="my-5 flex items-center gap-3">
+                <div className="my-4 flex items-center gap-3">
                   <div className="h-px flex-1 bg-slate-200" />
                   <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">or</span>
                   <div className="h-px flex-1 bg-slate-200" />
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   <Button
                     type="button"
                     variant="outline"
-                    className="w-full h-11 sm:h-10 rounded-xl border-slate-200 text-[13px] sm:text-sm font-medium hover:bg-slate-50 transition-colors"
+                    className="w-full h-10 rounded-xl border-slate-200 text-[13px] font-medium hover:bg-slate-50 transition-colors"
                     onClick={() => navigate("/signup")}
                     disabled={loading}
                   >
@@ -237,9 +231,9 @@ export default function Login() {
                         setLoading(false);
                       }
                     }}
-                    className="w-full flex items-center justify-center gap-1.5 py-2 text-[11px] font-medium text-slate-400 hover:text-slate-600 transition-colors"
+                    className="w-full flex items-center justify-center gap-1.5 py-1 text-[11px] font-medium text-slate-400 hover:text-slate-600 transition-colors"
                   >
-                    <Code className="h-3.5 w-3.5" />
+                    <Code className="h-3 w-3" />
                     Quick login (Dev)
                   </button>
                 </div>
@@ -249,13 +243,13 @@ export default function Login() {
         </div>
 
         {/* Footer */}
-        <div className="flex flex-col items-center gap-2 pb-8 sm:pb-6 text-center z-10 animate-in fade-in duration-1000 delay-700 fill-mode-both">
-          <div className="flex items-center gap-1.5 text-[11px] font-medium text-slate-400">
+        <div className="shrink-0 flex flex-col items-center justify-center pb-6 text-center z-10 animate-in fade-in duration-1000 delay-700 fill-mode-both">
+          <div className="flex items-center justify-center flex-wrap gap-1.5 text-[10px] sm:text-[11px] font-medium text-slate-400 px-4">
             <span>RotaGen</span>
             <span className="h-1 w-1 rounded-full bg-slate-300" />
             <span>NHS Rota Management</span>
-            <span className="h-1 w-1 rounded-full bg-slate-300" />
-            <span className="text-red-400/80 italic">Authorised users only</span>
+            <span className="h-1 w-1 rounded-full bg-slate-300 hidden sm:inline-block" />
+            <span className="text-red-400/80 italic w-full sm:w-auto">Authorised users only</span>
           </div>
         </div>
       </div>
