@@ -7,6 +7,7 @@ import type { CalendarData, CalendarDoctor, TargetsData, CellCode } from "@/lib/
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useRotaContext } from "@/contexts/RotaContext";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   ChevronLeft,
   ChevronRight,
@@ -17,9 +18,13 @@ import {
   ChevronDown,
   CalendarRange,
   ChevronUp,
-  MonitorSmartphone,
   Search,
   ArrowUpDown,
+  Plus,
+  Edit2,
+  Copy,
+  Trash2,
+  CalendarDays as CalendarIcon,
 } from "lucide-react";
 import {
   getTodayISO,
@@ -28,7 +33,6 @@ import {
   type CalendarOverride,
   type MergedCell,
 } from "@/lib/calendarOverrides";
-import { EventDetailPanel } from "@/components/calendar/EventDetailPanel";
 import { AddEventModal } from "@/components/calendar/AddEventModal";
 import { refreshResolvedAvailabilityForDoctor } from "@/lib/resolvedAvailability";
 import {
@@ -189,35 +193,76 @@ function getMergedCellBackground(mergedCell: MergedCell | undefined, isLtftDay: 
 
 // ── Legend components ─────────────────────────────────────────
 
-function CalendarLegend() {
+// CHANGE 8: Legend accepts viewMode to show letter variants for month view
+function CalendarLegend({ viewMode }: { viewMode: "day" | "week" | "month" }) {
+  const isMonth = viewMode === "month";
+
+  // Helper: renders the badge plus optional [X] letter variant used in month view
+  const LegendBadge = ({ type, label }: { type: keyof typeof BADGE_STYLES; label: string }) => {
+    const letterMap: Record<string, string> = { AL: "A", SL: "S", ROT: "R", PL: "P", NOC: "N", LTFT: "L" };
+    const colour = MONTH_EVENT_COLOURS[type] ?? "#6b7280";
+    return (
+      <div className="flex items-center gap-1.5">
+        <LeaveBadge type={type} />
+        {isMonth && (
+          <span
+            className="inline-flex items-center justify-center rounded font-bold text-white text-[9px] shrink-0"
+            style={{ width: 14, height: 14, background: colour, lineHeight: 1 }}
+          >
+            {letterMap[type]}
+          </span>
+        )}
+        <span>{label}</span>
+      </div>
+    );
+  };
+
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-4 text-xs text-muted-foreground bg-card border border-border rounded-lg px-4 py-3 shadow-sm">
-      <div className="flex items-center gap-1.5">
-        <LeaveBadge type="AL" /> <span>Annual Leave</span>
-      </div>
-      <div className="flex items-center gap-1.5">
-        <LeaveBadge type="SL" /> <span>Study Leave</span>
-      </div>
+      <LegendBadge type="AL" label="Annual Leave" />
+      <LegendBadge type="SL" label="Study Leave" />
       <div className="flex items-center gap-1.5">
         <div className="w-8 h-5 flex items-center justify-center rounded bg-orange-50 border border-orange-200">
           <LeaveBadge type="ROT" className="text-[9px] px-1 py-0" />
         </div>
+        {isMonth && (
+          <span
+            className="inline-flex items-center justify-center rounded font-bold text-white text-[9px] shrink-0"
+            style={{ width: 14, height: 14, background: MONTH_EVENT_COLOURS["ROT"], lineHeight: 1 }}
+          >
+            R
+          </span>
+        )}
         <span>Rotation</span>
       </div>
       <div className="flex items-center gap-1.5">
         <div className="w-8 h-5 flex items-center justify-center rounded bg-violet-50 border border-violet-200">
           <LeaveBadge type="PL" className="text-[9px] px-1 py-0" />
         </div>
+        {isMonth && (
+          <span
+            className="inline-flex items-center justify-center rounded font-bold text-white text-[9px] shrink-0"
+            style={{ width: 14, height: 14, background: MONTH_EVENT_COLOURS["PL"], lineHeight: 1 }}
+          >
+            P
+          </span>
+        )}
         <span>Parental Leave</span>
       </div>
-      <div className="flex items-center gap-1.5">
-        <LeaveBadge type="NOC" /> <span>Not On-Call</span>
-      </div>
+      <LegendBadge type="NOC" label="Not On-Call" />
       <div className="w-px h-4 bg-border mx-0.5" />
       <div className="flex items-center gap-1.5">
         <div className="w-8 h-5 flex items-center justify-center rounded bg-yellow-50 border border-yellow-200">
           <LeaveBadge type="LTFT" className="text-[9px] px-1 py-0 border-none" />
         </div>
+        {isMonth && (
+          <span
+            className="inline-flex items-center justify-center rounded font-bold text-yellow-800 text-[9px] shrink-0 bg-yellow-50 border border-yellow-300"
+            style={{ width: 14, height: 14, lineHeight: 1 }}
+          >
+            L
+          </span>
+        )}
         <span>LTFT day off</span>
       </div>
       <div className="flex items-center gap-1.5">
@@ -319,28 +364,37 @@ function buildMonthGrid(yearMonth: string): string[] {
 
 // ── View Toggle ───────────────────────────────────────────────
 
+// CHANGE 10: disable month button on mobile so it can never be selected
 function ViewToggle({
   viewMode,
   setViewMode,
+  isMobile,
 }: {
   viewMode: "day" | "week" | "month";
   setViewMode: (v: "day" | "week" | "month") => void;
+  isMobile: boolean;
 }) {
   return (
     <div className="inline-flex rounded-md overflow-hidden border border-border shadow-sm shrink-0">
-      {(["day", "week", "month"] as const).map((v, i) => (
-        <button
-          key={v}
-          onClick={() => setViewMode(v)}
-          className={`px-3 py-1.5 text-xs capitalize transition-colors ${i < 2 ? "border-r border-border" : ""} ${
-            viewMode === v
-              ? "bg-blue-600 text-white font-semibold"
-              : "bg-card text-muted-foreground hover:bg-muted/50 font-medium"
-          }`}
-        >
-          {v}
-        </button>
-      ))}
+      {(["day", "week", "month"] as const).map((v, i) => {
+        const disabled = v === "month" && isMobile;
+        return (
+          <button
+            key={v}
+            onClick={() => !disabled && setViewMode(v)}
+            disabled={disabled}
+            className={`px-3 py-1.5 text-xs capitalize transition-colors ${i < 2 ? "border-r border-border" : ""} ${
+              disabled
+                ? "bg-card text-muted-foreground/40 cursor-not-allowed font-medium"
+                : viewMode === v
+                  ? "bg-blue-600 text-white font-semibold"
+                  : "bg-card text-muted-foreground hover:bg-muted/50 font-medium"
+            }`}
+          >
+            {v}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -418,7 +472,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
   });
 
   const lastTapRef = useRef<{ doctorId: string; date: string; time: number } | null>(null);
-  const singleTapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // CHANGE 6: singleTapTimerRef removed — no debounce needed with popover pattern
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
   const navRef = useRef<{ goPrev: () => void; goNext: () => void }>({
@@ -428,13 +482,12 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
   const dateInputDesktopRef = useRef<HTMLInputElement>(null);
   const dateInputMobileRef = useRef<HTMLInputElement>(null);
   const embeddedInitialisedRef = useRef(false);
+  // CHANGE 7: standalone cache-first ref
+  const standaloneInitialisedRef = useRef(false);
 
-  // Fallback if resizing window to mobile while on month view
-  useEffect(() => {
-    if (isMobile === true && viewMode === "month") {
-      setViewMode("day");
-    }
-  }, [isMobile, viewMode]);
+  // CHANGE 1: Remove the useEffect that redirected month→day on mobile.
+  // Instead, ViewToggle disables the month button on mobile (change 10),
+  // and effectiveViewMode below prevents month rendering even if state is stale.
 
   // Data Loading Logic
   useEffect(() => {
@@ -532,9 +585,103 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
         return;
       }
 
+      // CHANGE 7: cache-first branch for standalone route
+      if (
+        !embedded &&
+        !standaloneInitialisedRef.current &&
+        cachedPreRota &&
+        cachedPreRota.status !== "blocked" &&
+        cachedShiftTypes !== undefined &&
+        cachedBankHolidays !== undefined &&
+        cachedSurveys !== undefined
+      ) {
+        standaloneInitialisedRef.current = true;
+        const cd = cachedPreRota.calendarData as CalendarData;
+        const td = cachedPreRota.targetsData as TargetsData;
+        setTargetsData(td);
+
+        const shifts: ShiftTypeRow[] = (cachedShiftTypes ?? []).map((s: any) => ({
+          id: s.id,
+          name: s.name,
+          min_doctors: s.min_doctors ?? 1,
+          badge_night: s.badge_night ?? false,
+          badge_oncall: s.badge_oncall ?? false,
+        }));
+        setShiftTypes(shifts);
+
+        const bhSet = new Set(
+          (cachedBankHolidays ?? []).filter((r: any) => r.is_active !== false).map((r: any) => r.date as string),
+        );
+        setBankHolidays(bhSet);
+
+        const sMap: Record<string, SurveyMap> = {};
+        for (const s of cachedSurveys ?? []) {
+          sMap[(s as any).doctor_id] = {
+            ltftDaysOff: ((s as any).ltft_days_off ?? []).map(normaliseDayName),
+            ltftNightFlexibility: ((s as any).ltft_night_flexibility ?? []).map((f: any) => ({
+              ...f,
+              day: normaliseDayName(f.day ?? ""),
+            })),
+          };
+        }
+        setSurveysMap(sMap);
+
+        setDeptName(cd.departmentName ?? "Department");
+        setHospitalName(cd.hospitalName ?? "Trust");
+
+        const mergedDoctors = (cd.doctors ?? []).map((doc: any) => ({
+          ...doc,
+          ltftDaysOff: (doc.ltftDaysOff ?? doc.ltft_days_off ?? sMap[doc.doctorId]?.ltftDaysOff ?? []).map(
+            normaliseDayName,
+          ),
+        }));
+        const mergedCd = { ...cd, doctors: mergedDoctors };
+        setCalendarData(mergedCd);
+
+        const initialDate =
+          todayISO >= mergedCd.rotaStartDate && todayISO <= mergedCd.rotaEndDate ? todayISO : mergedCd.rotaStartDate;
+        const initialWeekIdx = mergedCd.weeks.findIndex((w) => w.startDate <= initialDate && initialDate <= w.endDate);
+        setCurrentWeekIndex(initialWeekIdx >= 0 ? initialWeekIdx : 0);
+        const allDatesFlat = mergedCd.weeks.flatMap((w) => w.dates);
+        const initialDayIdx = allDatesFlat.indexOf(initialDate);
+        setCurrentDayIndex(initialDayIdx >= 0 ? initialDayIdx : 0);
+        setCurrentMonthKey(initialDate.slice(0, 7));
+
+        if (mergedCd.doctors && mergedCd.weeks) {
+          const allDates: string[] = [];
+          for (const w of mergedCd.weeks) allDates.push(...w.dates);
+          const elig: Record<string, Record<string, number>> = {};
+          for (const shift of shifts) {
+            elig[shift.id] = {};
+            for (const date of allDates) {
+              let count = 0;
+              for (const doctor of mergedCd.doctors) {
+                if (isDoctorEligible(doctor, date, shift, sMap)) count++;
+              }
+              elig[shift.id][date] = count;
+            }
+          }
+          setEligibility(elig);
+        }
+
+        setLoading(false);
+
+        if (rotaConfigId) {
+          supabase
+            .from("coordinator_calendar_overrides")
+            .select("*")
+            .eq("rota_config_id", rotaConfigId)
+            .then(({ data }) => setOverrides((data ?? []).map(mapOverrideRow)));
+        }
+        return;
+      }
+
       if (!rotaConfigId) {
         return;
       }
+
+      // Guard: don't re-run the DB fetch if standalone cache branch already ran
+      if (!embedded && standaloneInitialisedRef.current) return;
 
       try {
         const { data: preRota } = await supabase
@@ -818,28 +965,149 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
     }
   };
 
-  const handleDoubleTap = useCallback((doctorId: string, date: string) => {
-    if (singleTapTimerRef.current) clearTimeout(singleTapTimerRef.current);
-    lastTapRef.current = null;
+  // CHANGE 5: Four action handlers for popover buttons
+  const handleActionAdd = useCallback((doctorId: string, date: string) => {
+    setSelectedCell({ doctorId, date });
+    setModalPrefill(null);
+    setModalCopyFrom(null);
+    setModalInitialDate(date);
+    setModalOpen(true);
     setPanelOpen(false);
-    setSelectedCell(null);
-    navigate(`/admin/doctor-calendar/${doctorId}?date=${date}&view=day`);
-  }, [navigate]);
+  }, []);
 
-  const handleCellTap = (doctorId: string, date: string) => {
-    const now = Date.now();
-    const last = lastTapRef.current;
+  const handleActionEdit = useCallback(
+    (doctorId: string, date: string, mergedCell: MergedCell) => {
+      setSelectedCell({ doctorId, date });
+      const dayOverride = overrides.find((o) => o.id === mergedCell.overrideId);
+      if (dayOverride) {
+        setModalPrefill({
+          eventType: dayOverride.eventType,
+          startDate: dayOverride.startDate,
+          endDate: dayOverride.endDate,
+          note: dayOverride.note ?? "",
+          overrideId: dayOverride.id,
+          originalEventType: dayOverride.originalEventType,
+        });
+      } else {
+        setModalPrefill({
+          eventType: mergedCell.primary ?? "AVAILABLE",
+          startDate: date,
+          endDate: date,
+          note: "",
+          overrideId: "",
+          originalEventType: mergedCell.primary ?? "AVAILABLE",
+        });
+      }
+      setModalCopyFrom(null);
+      setModalInitialDate(null);
+      setModalOpen(true);
+      setPanelOpen(false);
+    },
+    [overrides],
+  );
 
-    // Double-tap detected
-    if (last && last.doctorId === doctorId && last.date === date && now - last.time < 500) {
-      handleDoubleTap(doctorId, date);
-      return;
-    }
+  const handleActionCopy = useCallback(
+    (doctorId: string, date: string, mergedCell: MergedCell) => {
+      setSelectedCell({ doctorId, date });
+      const dayOverride = overrides.find((o) => o.id === mergedCell.overrideId);
+      if (dayOverride) {
+        setModalCopyFrom({
+          eventType: dayOverride.eventType,
+          startDate: dayOverride.startDate,
+          endDate: dayOverride.endDate,
+        });
+      } else {
+        setModalCopyFrom({
+          eventType: mergedCell.primary ?? "AVAILABLE",
+          startDate: date,
+          endDate: date,
+        });
+      }
+      setModalPrefill(null);
+      setModalInitialDate(null);
+      setModalOpen(true);
+      setPanelOpen(false);
+    },
+    [overrides],
+  );
 
-    lastTapRef.current = { doctorId, date, time: now };
+  const handleActionDelete = useCallback(
+    (doctorId: string, date: string, mergedCell: MergedCell) => {
+      setSelectedCell({ doctorId, date });
+      const dayOverride = overrides.find((o) => o.id === mergedCell.overrideId);
+      if (dayOverride) {
+        // Call delete directly — selectedCell is set above so handleDeleteOverride will read it
+        if (!rotaConfigId) return;
+        supabase.auth.getUser().then(({ data: { user } }) => {
+          if (!user) return;
+          supabase
+            .from("coordinator_calendar_overrides")
+            .delete()
+            .eq("id", dayOverride.id)
+            .then(() => {
+              reloadOverrides();
+              setPanelOpen(false);
+              setSelectedCell(null);
+              refreshResolvedAvailabilityForDoctor(rotaConfigId, doctorId).catch(console.error);
+            });
+        });
+      } else {
+        // Survey event removal — call inline with explicit params, no state dependency
+        if (!rotaConfigId) return;
+        const cellCode = mergedAvailabilityByDoctor[doctorId]?.[date]?.primary ?? "AVAILABLE";
+        if (cellCode === "AVAILABLE") {
+          setPanelOpen(false);
+          return;
+        }
+        supabase.auth.getUser().then(({ data: { user } }) => {
+          if (!user) return;
+          supabase
+            .from("coordinator_calendar_overrides")
+            .insert({
+              rota_config_id: rotaConfigId,
+              doctor_id: doctorId,
+              event_type: cellCode,
+              start_date: date,
+              end_date: date,
+              action: "delete",
+              original_event_type: cellCode,
+              original_start_date: date,
+              original_end_date: date,
+              note: null,
+              created_by: user.id,
+            })
+            .then(() => {
+              reloadOverrides();
+              setPanelOpen(false);
+              setSelectedCell(null);
+              refreshResolvedAvailabilityForDoctor(rotaConfigId, doctorId).catch(console.error);
+            });
+        });
+      }
+      setPanelOpen(false);
+    },
+    [overrides, rotaConfigId, mergedAvailabilityByDoctor],
+  );
 
-    if (singleTapTimerRef.current) clearTimeout(singleTapTimerRef.current);
-    singleTapTimerRef.current = setTimeout(() => {
+  // CHANGE 6: Immediate open on click; double-tap/double-click navigates to doctor calendar
+  // No debounce timer. Uses timestamp comparison for touch double-tap.
+  const handleCellTap = useCallback(
+    (doctorId: string, date: string) => {
+      const now = Date.now();
+      const last = lastTapRef.current;
+
+      // Double-tap on touch (within 400ms on same cell) → navigate
+      if (last && last.doctorId === doctorId && last.date === date && now - last.time < 400) {
+        lastTapRef.current = null;
+        setPanelOpen(false);
+        setSelectedCell(null);
+        navigate(`/admin/doctor-calendar/${doctorId}?date=${date}&view=day`);
+        return;
+      }
+
+      lastTapRef.current = { doctorId, date, time: now };
+
+      // Toggle: if same cell already open, close it; otherwise open
       if (selectedCell?.doctorId === doctorId && selectedCell?.date === date && panelOpen) {
         setPanelOpen(false);
         setSelectedCell(null);
@@ -848,8 +1116,20 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
         setPanelOpen(true);
         setModalOpen(false);
       }
-    }, 200);
-  };
+    },
+    [selectedCell, panelOpen, navigate],
+  );
+
+  // CHANGE 3/6: double-click handler for desktop — navigates directly
+  const handleDoubleTap = useCallback(
+    (doctorId: string, date: string) => {
+      lastTapRef.current = null;
+      setPanelOpen(false);
+      setSelectedCell(null);
+      navigate(`/admin/doctor-calendar/${doctorId}?date=${date}&view=day`);
+    },
+    [navigate],
+  );
 
   const allDates = useMemo(() => calendarData?.weeks.flatMap((w) => w.dates) ?? [], [calendarData]);
   const maxMinDoctors = useMemo(() => Math.max(...shiftTypes.map((s) => s.min_doctors), 1), [shiftTypes]);
@@ -946,6 +1226,10 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
   const currentWeek = weeks[currentWeekIndex];
   const currentDate = allDates[currentDayIndex] ?? allDates[0];
 
+  // CHANGE 1: effectiveViewMode prevents month view rendering on mobile
+  // even if viewMode state is momentarily stale (eliminates flash)
+  const effectiveViewMode: "day" | "week" | "month" = isMobile && viewMode === "month" ? "day" : viewMode;
+
   const weekLabel = currentWeek
     ? `Wk ${currentWeek.weekNumber} · ${new Date(currentWeek.dates[0] + "T00:00:00").toLocaleDateString("en-GB", {
         day: "2-digit",
@@ -980,25 +1264,26 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
   const monthLabel = currentMonthKey
     ? `${MONTH_NAMES_LONG[Number(currentMonthKey.split("-")[1]) - 1]} ${currentMonthKey.split("-")[0]}`
     : "Month view";
-  const navLabel = viewMode === "week" ? weekLabel : viewMode === "day" ? dayLabel : monthLabel;
+  // Use effectiveViewMode for nav label too
+  const navLabel = effectiveViewMode === "week" ? weekLabel : effectiveViewMode === "day" ? dayLabel : monthLabel;
 
   const prevDisabled =
-    viewMode === "week"
+    effectiveViewMode === "week"
       ? currentWeekIndex === 0
-      : viewMode === "day"
+      : effectiveViewMode === "day"
         ? currentDayIndex === 0
         : !currentMonthKey || currentMonthKey <= (calendarData?.rotaStartDate.slice(0, 7) ?? "");
   const nextDisabled =
-    viewMode === "week"
+    effectiveViewMode === "week"
       ? currentWeekIndex >= weeks.length - 1
-      : viewMode === "day"
+      : effectiveViewMode === "day"
         ? currentDayIndex >= allDates.length - 1
         : !currentMonthKey || currentMonthKey >= (calendarData?.rotaEndDate.slice(0, 7) ?? "");
 
   const goPrev = () => {
-    if (viewMode === "week") setCurrentWeekIndex((i) => Math.max(0, i - 1));
-    else if (viewMode === "day") setCurrentDayIndex((i) => Math.max(0, i - 1));
-    else if (viewMode === "month" && currentMonthKey) {
+    if (effectiveViewMode === "week") setCurrentWeekIndex((i) => Math.max(0, i - 1));
+    else if (effectiveViewMode === "day") setCurrentDayIndex((i) => Math.max(0, i - 1));
+    else if (effectiveViewMode === "month" && currentMonthKey) {
       const [y, m] = currentMonthKey.split("-").map(Number);
       const d = new Date(Date.UTC(y, m - 2, 1));
       const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
@@ -1006,9 +1291,9 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
     }
   };
   const goNext = () => {
-    if (viewMode === "week") setCurrentWeekIndex((i) => Math.min(weeks.length - 1, i + 1));
-    else if (viewMode === "day") setCurrentDayIndex((i) => Math.min(allDates.length - 1, i + 1));
-    else if (viewMode === "month" && currentMonthKey) {
+    if (effectiveViewMode === "week") setCurrentWeekIndex((i) => Math.min(weeks.length - 1, i + 1));
+    else if (effectiveViewMode === "day") setCurrentDayIndex((i) => Math.min(allDates.length - 1, i + 1));
+    else if (effectiveViewMode === "month" && currentMonthKey) {
       const [y, m] = currentMonthKey.split("-").map(Number);
       const d = new Date(Date.UTC(y, m, 1));
       const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
@@ -1065,7 +1350,110 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
     }
   });
 
+  // CHANGE 4/5: ActionButtonsPopover — inline popover content for all 3 views
+  const ActionButtonsPopover = ({
+    doctorId,
+    date,
+    mergedCell,
+  }: {
+    doctorId: string;
+    date: string;
+    mergedCell: MergedCell | undefined;
+  }) => {
+    const eventsExist =
+      mergedCell && !mergedCell.isDeleted && mergedCell.primary !== "AVAILABLE" && mergedCell.primary !== "BH";
+
+    const doctor = calendarData?.doctors.find((d) => d.doctorId === doctorId);
+    const doctorShortName = doctor ? doctor.doctorName.replace("Dr ", "") : "";
+
+    return (
+      <PopoverContent
+        className="w-52 p-1 z-50 shadow-xl border-border/50"
+        side="bottom"
+        align="center"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
+        {/* Header */}
+        <div className="px-2 py-1.5 border-b border-border/50 mb-1">
+          <p className="text-[11px] font-semibold text-foreground truncate">{doctorShortName}</p>
+          <p className="text-[10px] text-muted-foreground">
+            {new Date(date + "T00:00:00").toLocaleDateString("en-GB", {
+              weekday: "short",
+              day: "2-digit",
+              month: "short",
+            })}
+          </p>
+        </div>
+        <div className="flex flex-col gap-0.5">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="justify-start h-8 text-xs font-medium"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleActionAdd(doctorId, date);
+            }}
+          >
+            <Plus className="w-3.5 h-3.5 mr-2 text-muted-foreground" /> Add Event
+          </Button>
+          {eventsExist && (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="justify-start h-8 text-xs font-medium"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleActionEdit(doctorId, date, mergedCell!);
+                }}
+              >
+                <Edit2 className="w-3.5 h-3.5 mr-2 text-muted-foreground" /> Edit Event
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="justify-start h-8 text-xs font-medium"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleActionCopy(doctorId, date, mergedCell!);
+                }}
+              >
+                <Copy className="w-3.5 h-3.5 mr-2 text-muted-foreground" /> Copy Event
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="justify-start h-8 text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-50"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleActionDelete(doctorId, date, mergedCell!);
+                }}
+              >
+                <Trash2 className="w-3.5 h-3.5 mr-2 text-red-500" /> Remove Event
+              </Button>
+            </>
+          )}
+          <div className="h-px bg-border my-1" />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="justify-start h-8 text-xs font-medium"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/admin/doctor-calendar/${doctorId}?date=${date}&view=day`);
+              setPanelOpen(false);
+              setSelectedCell(null);
+            }}
+          >
+            <CalendarIcon className="w-3.5 h-3.5 mr-2 text-muted-foreground" /> View Doctor
+          </Button>
+        </div>
+      </PopoverContent>
+    );
+  };
+
   // Renderer for Day Doctor Card
+  // CHANGE 4: wrapped with Popover; double-click navigates
   const renderDayDoctorCard = (doctor: CalendarDoctor) => {
     const mergedCell = mergedAvailabilityByDoctor[doctor.doctorId]?.[currentDate];
     const primary = mergedCell?.isDeleted ? "AVAILABLE" : (mergedCell?.primary ?? "AVAILABLE");
@@ -1099,52 +1487,66 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
     const isSingleEvent = totalItems === 1;
 
     return (
-      <div
+      <Popover
         key={doctor.doctorId}
-        onClick={() => handleCellTap(doctor.doctorId, currentDate)}
-        onDoubleClick={() => handleDoubleTap(doctor.doctorId, currentDate)}
-        className={`flex flex-row items-center justify-between px-2 py-1.5 rounded-md border border-border/50 cursor-pointer transition-colors hover:bg-muted/50 ${
-          isSelected ? "bg-blue-50 ring-2 ring-inset ring-blue-500 z-10 relative" : cellBg
-        } ${isUnavailable ? "opacity-70 grayscale-[20%]" : ""}`}
+        open={isSelected && panelOpen}
+        onOpenChange={(o) => {
+          if (!o) {
+            setPanelOpen(false);
+            setSelectedCell(null);
+          }
+        }}
       >
-        <div
-          onClick={(e) => {
-            e.stopPropagation();
-            navigate(`/admin/doctor-calendar/${doctor.doctorId}?date=${currentDate}&view=day`);
-          }}
-          className={`flex flex-col min-w-0 pr-1 shrink cursor-pointer hover:underline ${nameColor}`}
-          title={doctor.doctorName}
-        >
-          <div className="font-semibold text-xs truncate w-full">{firstName}</div>
-          {lastName && <div className="font-semibold text-[11px] truncate w-full">{lastName}</div>}
-        </div>
-
-        <div className={`${layoutClass} shrink-0 relative`}>
-          {hasDeleted && (
-            <span
-              className={`bg-muted text-muted-foreground font-bold rounded line-through flex items-center justify-center ${useShort ? "text-[8px] w-4 h-4 sm:w-[16px] sm:h-[16px]" : "text-[9px] px-1.5 py-0.5"}`}
+        <PopoverTrigger asChild>
+          <div
+            onClick={() => handleCellTap(doctor.doctorId, currentDate)}
+            onDoubleClick={() => handleDoubleTap(doctor.doctorId, currentDate)}
+            className={`flex flex-row items-center justify-between px-2 py-1.5 rounded-md border border-border/50 cursor-pointer transition-colors hover:bg-muted/50 ${
+              isSelected ? "bg-blue-50 ring-2 ring-inset ring-blue-500 z-10 relative" : cellBg
+            } ${isUnavailable ? "opacity-70 grayscale-[20%]" : ""}`}
+          >
+            <div
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/admin/doctor-calendar/${doctor.doctorId}?date=${currentDate}&view=day`);
+              }}
+              className={`flex flex-col min-w-0 pr-1 shrink cursor-pointer hover:underline ${nameColor}`}
+              title={doctor.doctorName}
             >
-              {useShort ? mergedCell.deletedCode.charAt(0) : mergedCell.deletedCode}
-            </span>
-          )}
-          {activeBadges.map((b) => (
-            <LeaveBadge
-              key={b}
-              type={b}
-              size={isSingleEvent ? "large" : "small"}
-              short={useShort}
-              className={useShort ? "" : ""}
-            />
-          ))}
-          {hasOverride && (
-            <span className="absolute -top-[3px] -right-[3px] w-1.5 h-1.5 rounded-full bg-orange-500 border border-white" />
-          )}
-        </div>
-      </div>
+              <div className="font-semibold text-xs truncate w-full">{firstName}</div>
+              {lastName && <div className="font-semibold text-[11px] truncate w-full">{lastName}</div>}
+            </div>
+
+            <div className={`${layoutClass} shrink-0 relative`}>
+              {hasDeleted && (
+                <span
+                  className={`bg-muted text-muted-foreground font-bold rounded line-through flex items-center justify-center ${useShort ? "text-[8px] w-4 h-4 sm:w-[16px] sm:h-[16px]" : "text-[9px] px-1.5 py-0.5"}`}
+                >
+                  {useShort ? mergedCell.deletedCode.charAt(0) : mergedCell.deletedCode}
+                </span>
+              )}
+              {activeBadges.map((b) => (
+                <LeaveBadge
+                  key={b}
+                  type={b}
+                  size={isSingleEvent ? "large" : "small"}
+                  short={useShort}
+                  className={useShort ? "" : ""}
+                />
+              ))}
+              {hasOverride && (
+                <span className="absolute -top-[3px] -right-[3px] w-1.5 h-1.5 rounded-full bg-orange-500 border border-white" />
+              )}
+            </div>
+          </div>
+        </PopoverTrigger>
+        <ActionButtonsPopover doctorId={doctor.doctorId} date={currentDate} mergedCell={mergedCell} />
+      </Popover>
     );
   };
 
   // Renderer for Week Table Row
+  // CHANGE 2: fix isDeleted in primary; CHANGE 4: wrap cells in Popover
   const renderWeekRow = (doctor: CalendarDoctor, i: number) => {
     const rowBg = i % 2 === 0 ? "bg-card" : "bg-muted/20";
     const ltftDays = getLtftDaysOff(doctor);
@@ -1171,23 +1573,38 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
         </td>
         {currentWeek.dates.map((date) => {
           const mergedCell = mergedAvailabilityByDoctor[doctor.doctorId]?.[date];
-          const primary = mergedCell?.primary ?? "AVAILABLE";
+          // CHANGE 2: correctly respect isDeleted flag (was missing in week view)
+          const primary = mergedCell?.isDeleted ? "AVAILABLE" : (mergedCell?.primary ?? "AVAILABLE");
           const isLtftDay = ltftDays.includes(getDayNameFromISO(date));
           const cellBg = getMergedCellBackground(mergedCell, isLtftDay);
           const isSelected = selectedCell?.doctorId === doctor.doctorId && selectedCell?.date === date;
 
           return (
+            // CHANGE 4: Popover wraps each week cell; onDoubleClick still navigates
             <td
               key={date}
-              onClick={() => handleCellTap(doctor.doctorId, date)}
               onDoubleClick={() => handleDoubleTap(doctor.doctorId, date)}
-              className={`border-l border-border/50 p-0.5 text-center align-middle cursor-pointer transition-colors hover:bg-muted/50 ${cellBg} ${
-                isSelected ? "ring-2 ring-inset ring-blue-500 z-10 relative" : ""
-              }`}
+              className={`border-l border-border/50 p-0 text-center align-middle cursor-pointer transition-colors ${cellBg}`}
             >
-              <div className="flex flex-row flex-wrap items-center justify-center gap-[1px] min-h-[18px] sm:min-h-[22px] overflow-hidden w-full">
-                <WeekCellContent mergedCell={mergedCell} isLtftDay={isLtftDay} primary={primary} />
-              </div>
+              <Popover
+                open={isSelected && panelOpen}
+                onOpenChange={(o) => {
+                  if (!o) {
+                    setPanelOpen(false);
+                    setSelectedCell(null);
+                  }
+                }}
+              >
+                <PopoverTrigger asChild>
+                  <div
+                    className="w-full flex flex-row flex-wrap items-center justify-center gap-[1px] min-h-[18px] sm:min-h-[22px] overflow-hidden p-0.5 hover:bg-muted/50 transition-colors"
+                    onClick={() => handleCellTap(doctor.doctorId, date)}
+                  >
+                    <WeekCellContent mergedCell={mergedCell} isLtftDay={isLtftDay} primary={primary} />
+                  </div>
+                </PopoverTrigger>
+                <ActionButtonsPopover doctorId={doctor.doctorId} date={date} mergedCell={mergedCell} />
+              </Popover>
             </td>
           );
         })}
@@ -1196,6 +1613,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
   };
 
   // Renderer for Month Table Row
+  // CHANGE 4: wrap active cells in Popover; onDoubleClick navigates
   const renderMonthRow = (doctor: CalendarDoctor, i: number, gridDates: string[]) => {
     const rowBg = i % 2 === 0 ? "bg-card" : "bg-muted/10";
     return (
@@ -1224,49 +1642,67 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
 
           const eventChar = primary === "NOC" ? "N" : primary === "ROT" ? "R" : primary.charAt(0);
 
+          if (!inRota || !inMonth) {
+            return (
+              <td
+                key={`${doctor.doctorId}-${idx}`}
+                className={`border-l border-border/50 p-0 sm:p-0.5 text-center cursor-default h-6 sm:h-8 ${bg} opacity-20`}
+              />
+            );
+          }
+
           return (
             <td
               key={`${doctor.doctorId}-${idx}`}
-              onClick={() => {
-                if (inRota && inMonth) handleCellTap(doctor.doctorId, date);
-              }}
-              onDoubleClick={() => {
-                if (inRota && inMonth) handleDoubleTap(doctor.doctorId, date);
-              }}
-              className={`border-l border-border/50 p-0 sm:p-0.5 text-center cursor-default h-6 sm:h-8 ${bg} ${
-                !inRota || !inMonth ? "opacity-20" : inRota && inMonth ? "cursor-pointer hover:bg-muted/50" : ""
-              } ${isSelected ? "ring-2 ring-inset ring-blue-500 z-10 relative" : ""}`}
+              onDoubleClick={() => handleDoubleTap(doctor.doctorId, date)}
+              className={`border-l border-border/50 p-0 text-center cursor-pointer h-6 sm:h-8 ${bg}`}
             >
-              {inRota &&
-                inMonth &&
-                (mergedCell?.isDeleted && mergedCell.deletedCode ? (
-                  <span className="text-[6px] sm:text-[8px] font-bold text-muted-foreground line-through block truncate">
-                    {mergedCell.deletedCode.charAt(0)}
-                  </span>
-                ) : primary !== "AVAILABLE" && primary !== "BH" ? (
-                  <div className="flex justify-center items-center relative w-full h-full">
-                    <span
-                      className="flex items-center justify-center rounded shadow-sm"
-                      style={{
-                        width: "16px",
-                        height: "16px",
-                        fontSize: "9px",
-                        fontWeight: 700,
-                        color: "#fff",
-                        background: MONTH_EVENT_COLOURS[primary] ?? "#6b7280",
-                        lineHeight: 1,
-                      }}
-                      title={primary}
-                    >
-                      {eventChar}
-                    </span>
-                    {hasOverride && (
-                      <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-orange-500 border border-white hidden sm:inline-block" />
-                    )}
+              <Popover
+                open={isSelected && panelOpen}
+                onOpenChange={(o) => {
+                  if (!o) {
+                    setPanelOpen(false);
+                    setSelectedCell(null);
+                  }
+                }}
+              >
+                <PopoverTrigger asChild>
+                  <div
+                    className="w-full h-full flex items-center justify-center hover:bg-muted/50 transition-colors overflow-hidden relative"
+                    onClick={() => handleCellTap(doctor.doctorId, date)}
+                  >
+                    {mergedCell?.isDeleted && mergedCell.deletedCode ? (
+                      <span className="text-[6px] sm:text-[8px] font-bold text-muted-foreground line-through block truncate">
+                        {mergedCell.deletedCode.charAt(0)}
+                      </span>
+                    ) : primary !== "AVAILABLE" && primary !== "BH" ? (
+                      <div className="flex justify-center items-center relative w-full h-full">
+                        <span
+                          className="flex items-center justify-center rounded shadow-sm"
+                          style={{
+                            width: "16px",
+                            height: "16px",
+                            fontSize: "9px",
+                            fontWeight: 700,
+                            color: "#fff",
+                            background: MONTH_EVENT_COLOURS[primary] ?? "#6b7280",
+                            lineHeight: 1,
+                          }}
+                          title={primary}
+                        >
+                          {eventChar}
+                        </span>
+                        {hasOverride && (
+                          <span className="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 rounded-full bg-orange-500 border border-white hidden sm:inline-block" />
+                        )}
+                      </div>
+                    ) : isLtftDay ? (
+                      <span className="text-[9px] sm:text-[10px] font-bold text-yellow-800">L</span>
+                    ) : null}
                   </div>
-                ) : isLtftDay ? (
-                  <span className="text-[9px] sm:text-[10px] font-bold text-yellow-800">L</span>
-                ) : null)}
+                </PopoverTrigger>
+                <ActionButtonsPopover doctorId={doctor.doctorId} date={date} mergedCell={mergedCell} />
+              </Popover>
             </td>
           );
         })}
@@ -1276,7 +1712,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
 
   // Dynamic Content logic for Collapsible Summary Table
   const renderSummaryContent = () => {
-    if (viewMode === "day") {
+    if (effectiveViewMode === "day") {
       return (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 p-4 border-t border-border bg-card">
           <div className="col-span-full flex items-center gap-3 p-3 bg-muted/20 rounded-lg border border-border/50 mb-2">
@@ -1309,7 +1745,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
     }
 
     const summaryDates =
-      viewMode === "week"
+      effectiveViewMode === "week"
         ? currentWeek.dates
         : buildMonthGrid(currentMonthKey).filter(
             (d) => d >= calendarData.rotaStartDate && d <= calendarData.rotaEndDate && d.startsWith(currentMonthKey),
@@ -1406,10 +1842,19 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
 
   return (
     <Wrapper>
-      <div className="space-y-4" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+      {/* CHANGE 3: fixed-height viewport layout for standalone; embedded keeps space-y-4 */}
+      <div
+        className={
+          embedded
+            ? "space-y-4"
+            : "flex flex-col gap-2 sm:gap-3 h-[calc(100dvh-8rem)] sm:h-[calc(100dvh-9rem)] overflow-hidden"
+        }
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
         {/* Top bar — non-embedded only */}
         {!embedded && (
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 shrink-0">
             <button
               type="button"
               onClick={() => navigate("/admin/pre-rota")}
@@ -1423,21 +1868,16 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
           </div>
         )}
 
-        {/* Info strip */}
-        <div className="flex items-start gap-2 rounded-lg bg-blue-50 border border-blue-200 px-3 py-2 text-xs text-blue-800">
-          <CalendarRange className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-          <span>
-            {isMobile
-              ? "Double-tap a cell to view doctor details. Switch to week view for context."
-              : "Double-click any cell to jump to that doctor's calendar. Use the navigation to change dates."}
-          </span>
-        </div>
+        {/* CHANGE 9: info strip removed */}
 
         {/* Unified Nav Bar */}
-        <div className="flex flex-col gap-3 p-3 bg-card rounded-xl border border-border shadow-sm">
+        <div
+          className={`flex flex-col gap-3 p-3 bg-card rounded-xl border border-border shadow-sm ${!embedded ? "shrink-0" : ""}`}
+        >
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <div className="flex items-center justify-between sm:justify-start w-full sm:w-auto">
-              <ViewToggle viewMode={viewMode} setViewMode={setViewMode} />
+              {/* CHANGE 10: pass isMobile to ViewToggle to disable month on mobile */}
+              <ViewToggle viewMode={effectiveViewMode} setViewMode={setViewMode} isMobile={isMobile} />
               {isMobile && (
                 <input
                   ref={dateInputMobileRef}
@@ -1535,406 +1975,355 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
           </div>
         </div>
 
-        {/* ── WEEK VIEW ── */}
-        {viewMode === "week" && currentWeek && (
-          <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden w-full">
-            <table className="w-full table-fixed text-xs border-collapse">
-              <thead>
-                <tr className="border-b border-border text-left">
-                  <th className="bg-card py-2 px-1 sm:px-2 font-medium text-muted-foreground border-r border-border w-[25%] sm:w-[20%] align-bottom">
-                    Doctor
-                  </th>
-                  {currentWeek.dates.map((date) => {
-                    const dd = new Date(date + "T00:00:00");
-                    const isWknd = dd.getDay() === 0 || dd.getDay() === 6;
-                    const isBH = bankHolidays.has(date);
-                    const isToday = date === todayISO;
+        {/* CHANGE 3: scrollable view area for standalone; normal flow for embedded */}
+        <div className={!embedded ? "flex-1 min-h-0 overflow-y-auto" : undefined}>
+          {/* ── WEEK VIEW ── */}
+          {effectiveViewMode === "week" && currentWeek && (
+            <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden w-full">
+              <table className="w-full table-fixed text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-border text-left">
+                    <th className="bg-card py-2 px-1 sm:px-2 font-medium text-muted-foreground border-r border-border w-[25%] sm:w-[20%] align-bottom">
+                      Doctor
+                    </th>
+                    {currentWeek.dates.map((date) => {
+                      const dd = new Date(date + "T00:00:00");
+                      const isWknd = dd.getDay() === 0 || dd.getDay() === 6;
+                      const isBH = bankHolidays.has(date);
+                      const isToday = date === todayISO;
 
-                    const hdrBg = isToday ? "bg-blue-100" : isBH ? "bg-red-100" : isWknd ? "bg-muted" : "bg-card";
-                    const hdrColor = isToday
-                      ? "text-blue-800"
-                      : isBH
-                        ? "text-red-800"
-                        : isWknd
-                          ? "text-muted-foreground"
-                          : "text-foreground";
+                      const hdrBg = isToday ? "bg-blue-100" : isBH ? "bg-red-100" : isWknd ? "bg-muted" : "bg-card";
+                      const hdrColor = isToday
+                        ? "text-blue-800"
+                        : isBH
+                          ? "text-red-800"
+                          : isWknd
+                            ? "text-muted-foreground"
+                            : "text-foreground";
 
-                    return (
-                      <th
-                        key={date}
-                        className={`py-1 px-0.5 sm:px-1 text-center font-medium border-l border-border w-[10.7%] md:w-[11.4%] ${hdrBg} ${hdrColor}`}
-                      >
-                        <div className="text-[8px] sm:text-[10px] uppercase tracking-tighter sm:tracking-wider truncate">
-                          {dd.toLocaleDateString("en-GB", { weekday: "short" })}
-                        </div>
-                        <div className={`text-[9px] sm:text-[10px] truncate ${isToday ? "font-bold" : "font-normal"}`}>
-                          {dd.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
-                        </div>
-                        {isBH && (
-                          <span className="inline-block bg-red-700 text-white text-[8px] font-bold px-0.5 rounded mt-0.5 tracking-tighter">
-                            BH
-                          </span>
-                        )}
-                      </th>
-                    );
-                  })}
-                </tr>
-              </thead>
-              <tbody>
-                {groupAvailability ? (
-                  <>
-                    {fullyAvailableDocs.length > 0 && (
-                      <>
-                        <tr>
-                          <td
-                            colSpan={currentWeek.dates.length + 1}
-                            className="bg-muted/30 px-2 py-1.5 font-bold text-[10px] text-muted-foreground uppercase tracking-wider border-b border-border/50"
+                      return (
+                        <th
+                          key={date}
+                          className={`py-1 px-0.5 sm:px-1 text-center font-medium border-l border-border w-[10.7%] md:w-[11.4%] ${hdrBg} ${hdrColor}`}
+                        >
+                          <div className="text-[8px] sm:text-[10px] uppercase tracking-tighter sm:tracking-wider truncate">
+                            {dd.toLocaleDateString("en-GB", { weekday: "short" })}
+                          </div>
+                          <div
+                            className={`text-[9px] sm:text-[10px] truncate ${isToday ? "font-bold" : "font-normal"}`}
                           >
-                            Fully Available ({fullyAvailableDocs.length})
-                          </td>
-                        </tr>
-                        {fullyAvailableDocs.map((doc, i) => renderWeekRow(doc, i))}
-                      </>
-                    )}
-                    {partiallyAvailableDocs.length > 0 && (
-                      <>
-                        <tr
-                          className="bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors border-b border-border/50"
-                          onClick={() => setCollapsePartial(!collapsePartial)}
-                        >
-                          <td colSpan={currentWeek.dates.length + 1} className="px-2 py-1.5">
-                            <div className="flex items-center justify-between font-bold text-[10px] text-muted-foreground uppercase tracking-wider">
-                              <span>Partially Available ({partiallyAvailableDocs.length})</span>
-                              {collapsePartial ? (
-                                <ChevronDown className="h-4 w-4" />
-                              ) : (
-                                <ChevronUp className="h-4 w-4" />
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                        {!collapsePartial && partiallyAvailableDocs.map((doc, i) => renderWeekRow(doc, i))}
-                      </>
-                    )}
-                    {unavailableDocs.length > 0 && (
-                      <>
-                        <tr
-                          className="bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors border-b border-border/50"
-                          onClick={() => setCollapseUnavailable(!collapseUnavailable)}
-                        >
-                          <td colSpan={currentWeek.dates.length + 1} className="px-2 py-1.5">
-                            <div className="flex items-center justify-between font-bold text-[10px] text-muted-foreground uppercase tracking-wider">
-                              <span>Unavailable ({unavailableDocs.length})</span>
-                              {collapseUnavailable ? (
-                                <ChevronDown className="h-4 w-4" />
-                              ) : (
-                                <ChevronUp className="h-4 w-4" />
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                        {!collapseUnavailable && unavailableDocs.map((doc, i) => renderWeekRow(doc, i))}
-                      </>
-                    )}
-                  </>
-                ) : (
-                  sortedAndFilteredDoctors.map((doc, i) => renderWeekRow(doc, i))
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* ── DAY VIEW ── */}
-        {viewMode === "day" && (
-          <div className="space-y-3">
-            <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden p-2 sm:p-3">
-              <div className="flex items-center gap-2 px-2 py-2 mb-2 border-b border-border/50">
-                <CalendarRange className="h-4 w-4 text-primary" />
-                <span className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
-                  Doctors Availability
-                </span>
-                <span className="text-xs text-muted-foreground ml-auto">{sortedAndFilteredDoctors.length} found</span>
-              </div>
-
-              {groupAvailability ? (
-                <div className="space-y-4">
-                  {/* Group 1: Fully Available */}
-                  <div>
-                    <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2 ml-1">
-                      Fully Available ({fullyAvailableDocs.length})
-                    </h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-2">
-                      {fullyAvailableDocs.map(renderDayDoctorCard)}
-                    </div>
-                  </div>
-
-                  {/* Group 2: Partially Available */}
-                  <div className="border-t border-border/50 pt-3">
-                    <div
-                      className="flex items-center justify-between cursor-pointer mb-2 px-1 hover:bg-muted/30 rounded transition-colors"
-                      onClick={() => setCollapsePartial(!collapsePartial)}
-                    >
-                      <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
-                        Partially Available ({partiallyAvailableDocs.length})
-                      </h3>
-                      {collapsePartial ? (
-                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                      ) : (
-                        <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                      )}
-                    </div>
-                    {!collapsePartial && (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-2">
-                        {partiallyAvailableDocs.map(renderDayDoctorCard)}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Group 3: Unavailable */}
-                  <div className="border-t border-border/50 pt-3">
-                    <div
-                      className="flex items-center justify-between cursor-pointer mb-2 px-1 hover:bg-muted/30 rounded transition-colors"
-                      onClick={() => setCollapseUnavailable(!collapseUnavailable)}
-                    >
-                      <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
-                        Unavailable ({unavailableDocs.length})
-                      </h3>
-                      {collapseUnavailable ? (
-                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                      ) : (
-                        <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                      )}
-                    </div>
-                    {!collapseUnavailable && (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-2">
-                        {unavailableDocs.map(renderDayDoctorCard)}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                /* Un-grouped standard view */
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-2">
-                  {sortedAndFilteredDoctors.map(renderDayDoctorCard)}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* ── MONTH VIEW ── */}
-        {viewMode === "month" &&
-          (isMobile ? (
-            <div className="p-6 sm:p-8 flex flex-col items-center justify-center text-center border border-border rounded-xl bg-card shadow-sm min-h-[40vh]">
-              <MonitorSmartphone className="h-14 w-14 text-muted-foreground/30 mb-4" strokeWidth={1.5} />
-              <p className="font-bold text-foreground text-lg sm:text-xl mb-2">Monthly View Unavailable</p>
-              <p className="text-sm text-muted-foreground max-w-[280px]">
-                The monthly view is too large for a mobile phone screen. Please use a tablet or desktop device to see
-                the full month overview.
-              </p>
-            </div>
-          ) : calendarData && currentMonthKey ? (
-            (() => {
-              const gridDates = buildMonthGrid(currentMonthKey);
-              return (
-                <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden w-full">
-                  <table className="w-full table-fixed text-[10px] sm:text-xs border-collapse">
-                    <thead>
-                      <tr className="border-b border-border text-left">
-                        <th className="bg-muted/30 py-1 sm:py-2 px-1 font-medium text-muted-foreground border-r border-border w-[12%] sm:w-[15%] truncate align-bottom">
-                          Doctor
+                            {dd.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                          </div>
+                          {isBH && (
+                            <span className="inline-block bg-red-700 text-white text-[8px] font-bold px-0.5 rounded mt-0.5 tracking-tighter">
+                              BH
+                            </span>
+                          )}
                         </th>
-                        {gridDates.map((date, idx) => {
-                          const inRota = date >= calendarData.rotaStartDate && date <= calendarData.rotaEndDate;
-                          const inMonth = date.startsWith(currentMonthKey);
-                          const d = new Date(date + "T00:00:00Z");
-                          const dow = d.getUTCDay();
-                          const isWknd = dow === 0 || dow === 6;
-                          const isBH = bankHolidays.has(date);
-                          const isToday = date === todayISO;
-
-                          const hdrBg = isToday ? "bg-blue-100" : isBH ? "bg-red-100" : isWknd ? "bg-muted" : "bg-card";
-                          const hdrColor =
-                            !inRota || !inMonth
-                              ? "text-muted-foreground/40"
-                              : isToday
-                                ? "text-blue-800"
-                                : isBH
-                                  ? "text-red-800"
-                                  : isWknd
-                                    ? "text-muted-foreground"
-                                    : "text-foreground";
-
-                          return (
-                            <th
-                              key={`h${idx}`}
-                              style={{ width: `${85 / gridDates.length}%` }}
-                              className={`py-1 px-0 text-center font-medium border-l border-border/50 overflow-hidden ${hdrBg} ${hdrColor} ${
-                                !inRota || !inMonth ? "opacity-50" : ""
-                              }`}
-                            >
-                              <div className="text-[7px] sm:text-[9px] uppercase tracking-tighter truncate">
-                                {MONTH_DAY_ABBR[(dow + 6) % 7][0]}
-                              </div>
-                              <div className={`text-[8px] sm:text-[10px] ${isToday ? "font-bold" : "font-normal"}`}>
-                                {d.getUTCDate()}
-                              </div>
-                            </th>
-                          );
-                        })}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {groupAvailability ? (
+                      );
+                    })}
+                  </tr>
+                </thead>
+                <tbody>
+                  {groupAvailability ? (
+                    <>
+                      {fullyAvailableDocs.length > 0 && (
                         <>
-                          {fullyAvailableDocs.length > 0 && (
-                            <>
-                              <tr>
-                                <td
-                                  colSpan={gridDates.length + 1}
-                                  className="bg-muted/30 px-2 py-1.5 font-bold text-[10px] text-muted-foreground uppercase tracking-wider border-b border-border/50"
-                                >
-                                  Fully Available ({fullyAvailableDocs.length})
-                                </td>
-                              </tr>
-                              {fullyAvailableDocs.map((doc, i) => renderMonthRow(doc, i, gridDates))}
-                            </>
-                          )}
-                          {partiallyAvailableDocs.length > 0 && (
-                            <>
-                              <tr
-                                className="bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors border-b border-border/50"
-                                onClick={() => setCollapsePartial(!collapsePartial)}
-                              >
-                                <td colSpan={gridDates.length + 1} className="px-2 py-1.5">
-                                  <div className="flex items-center justify-between font-bold text-[10px] text-muted-foreground uppercase tracking-wider">
-                                    <span>Partially Available ({partiallyAvailableDocs.length})</span>
-                                    {collapsePartial ? (
-                                      <ChevronDown className="h-4 w-4" />
-                                    ) : (
-                                      <ChevronUp className="h-4 w-4" />
-                                    )}
-                                  </div>
-                                </td>
-                              </tr>
-                              {!collapsePartial &&
-                                partiallyAvailableDocs.map((doc, i) => renderMonthRow(doc, i, gridDates))}
-                            </>
-                          )}
-                          {unavailableDocs.length > 0 && (
-                            <>
-                              <tr
-                                className="bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors border-b border-border/50"
-                                onClick={() => setCollapseUnavailable(!collapseUnavailable)}
-                              >
-                                <td colSpan={gridDates.length + 1} className="px-2 py-1.5">
-                                  <div className="flex items-center justify-between font-bold text-[10px] text-muted-foreground uppercase tracking-wider">
-                                    <span>Unavailable ({unavailableDocs.length})</span>
-                                    {collapseUnavailable ? (
-                                      <ChevronDown className="h-4 w-4" />
-                                    ) : (
-                                      <ChevronUp className="h-4 w-4" />
-                                    )}
-                                  </div>
-                                </td>
-                              </tr>
-                              {!collapseUnavailable &&
-                                unavailableDocs.map((doc, i) => renderMonthRow(doc, i, gridDates))}
-                            </>
-                          )}
+                          <tr>
+                            <td
+                              colSpan={currentWeek.dates.length + 1}
+                              className="bg-muted/30 px-2 py-1.5 font-bold text-[10px] text-muted-foreground uppercase tracking-wider border-b border-border/50"
+                            >
+                              Fully Available ({fullyAvailableDocs.length})
+                            </td>
+                          </tr>
+                          {fullyAvailableDocs.map((doc, i) => renderWeekRow(doc, i))}
                         </>
-                      ) : (
-                        sortedAndFilteredDoctors.map((doc, i) => renderMonthRow(doc, i, gridDates))
                       )}
-                    </tbody>
-                  </table>
-                </div>
-              );
-            })()
-          ) : null)}
-
-        {/* Global Collapsible Summary Table */}
-        <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden mt-6 mb-2">
-          <button
-            type="button"
-            onClick={() => setShowBreakdown((v) => !v)}
-            className="w-full flex items-center justify-between px-4 py-3 bg-card hover:bg-muted/30 transition-colors border-none cursor-pointer"
-          >
-            <div className="flex items-center gap-3">
-              <CalendarRange className="h-5 w-5 text-primary" />
-              <span className="text-sm font-bold text-foreground">Availability Breakdown & Targets</span>
+                      {partiallyAvailableDocs.length > 0 && (
+                        <>
+                          <tr
+                            className="bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors border-b border-border/50"
+                            onClick={() => setCollapsePartial(!collapsePartial)}
+                          >
+                            <td colSpan={currentWeek.dates.length + 1} className="px-2 py-1.5">
+                              <div className="flex items-center justify-between font-bold text-[10px] text-muted-foreground uppercase tracking-wider">
+                                <span>Partially Available ({partiallyAvailableDocs.length})</span>
+                                {collapsePartial ? (
+                                  <ChevronDown className="h-4 w-4" />
+                                ) : (
+                                  <ChevronUp className="h-4 w-4" />
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                          {!collapsePartial && partiallyAvailableDocs.map((doc, i) => renderWeekRow(doc, i))}
+                        </>
+                      )}
+                      {unavailableDocs.length > 0 && (
+                        <>
+                          <tr
+                            className="bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors border-b border-border/50"
+                            onClick={() => setCollapseUnavailable(!collapseUnavailable)}
+                          >
+                            <td colSpan={currentWeek.dates.length + 1} className="px-2 py-1.5">
+                              <div className="flex items-center justify-between font-bold text-[10px] text-muted-foreground uppercase tracking-wider">
+                                <span>Unavailable ({unavailableDocs.length})</span>
+                                {collapseUnavailable ? (
+                                  <ChevronDown className="h-4 w-4" />
+                                ) : (
+                                  <ChevronUp className="h-4 w-4" />
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                          {!collapseUnavailable && unavailableDocs.map((doc, i) => renderWeekRow(doc, i))}
+                        </>
+                      )}
+                    </>
+                  ) : (
+                    sortedAndFilteredDoctors.map((doc, i) => renderWeekRow(doc, i))
+                  )}
+                </tbody>
+              </table>
             </div>
-            {showBreakdown ? (
-              <ChevronUp className="h-4 w-4 text-muted-foreground" />
-            ) : (
-              <ChevronDown className="h-4 w-4 text-muted-foreground" />
-            )}
-          </button>
+          )}
 
-          {showBreakdown && renderSummaryContent()}
-        </div>
+          {/* ── DAY VIEW ── */}
+          {effectiveViewMode === "day" && (
+            <div className="space-y-3">
+              <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden p-2 sm:p-3">
+                <div className="flex items-center gap-2 px-2 py-2 mb-2 border-b border-border/50">
+                  <CalendarRange className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
+                    Doctors Availability
+                  </span>
+                  <span className="text-xs text-muted-foreground ml-auto">{sortedAndFilteredDoctors.length} found</span>
+                </div>
 
-        {/* Full legend — always shown */}
-        <CalendarLegend />
+                {groupAvailability ? (
+                  <div className="space-y-4">
+                    {/* Group 1: Fully Available */}
+                    <div>
+                      <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-2 ml-1">
+                        Fully Available ({fullyAvailableDocs.length})
+                      </h3>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-2">
+                        {fullyAvailableDocs.map(renderDayDoctorCard)}
+                      </div>
+                    </div>
 
-        {/* Detail/Action Panel (renders below legend) */}
-        {panelOpen &&
-          selectedCell &&
-          calendarData &&
-          (() => {
-            const selDoctor = calendarData.doctors.find((d) => d.doctorId === selectedCell.doctorId);
-            const mergedCell = mergedAvailabilityByDoctor[selectedCell.doctorId]?.[selectedCell.date];
-            if (!selDoctor || !mergedCell) return null;
-            return (
-              <div className="mt-4 pb-4">
-                <EventDetailPanel
-                  mergedCell={mergedCell}
-                  date={selectedCell.date}
-                  doctorName={selDoctor.doctorName}
-                  overrides={overrides.filter((o) => o.doctorId === selectedCell.doctorId)}
-                  onEdit={(override) => {
-                    setModalPrefill({
-                      eventType: override.eventType,
-                      startDate: override.startDate,
-                      endDate: override.endDate,
-                      note: override.note ?? "",
-                      overrideId: override.id,
-                      originalEventType: override.originalEventType,
-                    });
-                    setModalCopyFrom(null);
-                    setModalInitialDate(null);
-                    setModalOpen(true);
-                  }}
-                  onDelete={handleDeleteOverride}
-                  onCopy={(override) => {
-                    setModalCopyFrom({
-                      eventType: override.eventType,
-                      startDate: override.startDate,
-                      endDate: override.endDate,
-                    });
-                    setModalPrefill(null);
-                    setModalInitialDate(null);
-                    setModalOpen(true);
-                  }}
-                  onAddNew={() => {
-                    setModalPrefill(null);
-                    setModalCopyFrom(null);
-                    setModalInitialDate(selectedCell.date);
-                    setModalOpen(true);
-                  }}
-                  onRemoveSurveyEvent={handleRemoveSurveyEvent}
-                  onGoToDate={() => {
-                    navigate(`/admin/doctor-calendar/${selectedCell!.doctorId}?date=${selectedCell.date}&view=day`);
-                  }}
-                  onClose={() => {
-                    setPanelOpen(false);
-                    setSelectedCell(null);
-                  }}
-                />
+                    {/* Group 2: Partially Available */}
+                    <div className="border-t border-border/50 pt-3">
+                      <div
+                        className="flex items-center justify-between cursor-pointer mb-2 px-1 hover:bg-muted/30 rounded transition-colors"
+                        onClick={() => setCollapsePartial(!collapsePartial)}
+                      >
+                        <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+                          Partially Available ({partiallyAvailableDocs.length})
+                        </h3>
+                        {collapsePartial ? (
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </div>
+                      {!collapsePartial && (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-2">
+                          {partiallyAvailableDocs.map(renderDayDoctorCard)}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Group 3: Unavailable */}
+                    <div className="border-t border-border/50 pt-3">
+                      <div
+                        className="flex items-center justify-between cursor-pointer mb-2 px-1 hover:bg-muted/30 rounded transition-colors"
+                        onClick={() => setCollapseUnavailable(!collapseUnavailable)}
+                      >
+                        <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+                          Unavailable ({unavailableDocs.length})
+                        </h3>
+                        {collapseUnavailable ? (
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </div>
+                      {!collapseUnavailable && (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-2">
+                          {unavailableDocs.map(renderDayDoctorCard)}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  /* Un-grouped standard view */
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-8 gap-2">
+                    {sortedAndFilteredDoctors.map(renderDayDoctorCard)}
+                  </div>
+                )}
               </div>
-            );
-          })()}
+            </div>
+          )}
+
+          {/* ── MONTH VIEW ── */}
+          {/* CHANGE 1: effectiveViewMode === "month" — isMobile can never reach this branch
+              because effectiveViewMode collapses "month" to "day" when isMobile is true */}
+          {effectiveViewMode === "month" &&
+            (calendarData && currentMonthKey
+              ? (() => {
+                  const gridDates = buildMonthGrid(currentMonthKey);
+                  return (
+                    <div className="rounded-xl border border-border bg-card shadow-sm overflow-x-auto w-full">
+                      <table className="w-full table-fixed text-[10px] sm:text-xs border-collapse">
+                        <thead>
+                          <tr className="border-b border-border text-left">
+                            <th className="bg-muted/30 py-1 sm:py-2 px-1 font-medium text-muted-foreground border-r border-border w-[12%] sm:w-[15%] truncate align-bottom">
+                              Doctor
+                            </th>
+                            {gridDates.map((date, idx) => {
+                              const inRota = date >= calendarData.rotaStartDate && date <= calendarData.rotaEndDate;
+                              const inMonth = date.startsWith(currentMonthKey);
+                              const d = new Date(date + "T00:00:00Z");
+                              const dow = d.getUTCDay();
+                              const isWknd = dow === 0 || dow === 6;
+                              const isBH = bankHolidays.has(date);
+                              const isToday = date === todayISO;
+
+                              const hdrBg = isToday
+                                ? "bg-blue-100"
+                                : isBH
+                                  ? "bg-red-100"
+                                  : isWknd
+                                    ? "bg-muted"
+                                    : "bg-card";
+                              const hdrColor =
+                                !inRota || !inMonth
+                                  ? "text-muted-foreground/40"
+                                  : isToday
+                                    ? "text-blue-800"
+                                    : isBH
+                                      ? "text-red-800"
+                                      : isWknd
+                                        ? "text-muted-foreground"
+                                        : "text-foreground";
+
+                              return (
+                                <th
+                                  key={`h${idx}`}
+                                  style={{ width: `${85 / gridDates.length}%` }}
+                                  className={`py-1 px-0 text-center font-medium border-l border-border/50 overflow-hidden ${hdrBg} ${hdrColor} ${
+                                    !inRota || !inMonth ? "opacity-50" : ""
+                                  }`}
+                                >
+                                  <div className="text-[7px] sm:text-[9px] uppercase tracking-tighter truncate">
+                                    {MONTH_DAY_ABBR[(dow + 6) % 7][0]}
+                                  </div>
+                                  <div className={`text-[8px] sm:text-[10px] ${isToday ? "font-bold" : "font-normal"}`}>
+                                    {d.getUTCDate()}
+                                  </div>
+                                </th>
+                              );
+                            })}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {groupAvailability ? (
+                            <>
+                              {fullyAvailableDocs.length > 0 && (
+                                <>
+                                  <tr>
+                                    <td
+                                      colSpan={gridDates.length + 1}
+                                      className="bg-muted/30 px-2 py-1.5 font-bold text-[10px] text-muted-foreground uppercase tracking-wider border-b border-border/50"
+                                    >
+                                      Fully Available ({fullyAvailableDocs.length})
+                                    </td>
+                                  </tr>
+                                  {fullyAvailableDocs.map((doc, i) => renderMonthRow(doc, i, gridDates))}
+                                </>
+                              )}
+                              {partiallyAvailableDocs.length > 0 && (
+                                <>
+                                  <tr
+                                    className="bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors border-b border-border/50"
+                                    onClick={() => setCollapsePartial(!collapsePartial)}
+                                  >
+                                    <td colSpan={gridDates.length + 1} className="px-2 py-1.5">
+                                      <div className="flex items-center justify-between font-bold text-[10px] text-muted-foreground uppercase tracking-wider">
+                                        <span>Partially Available ({partiallyAvailableDocs.length})</span>
+                                        {collapsePartial ? (
+                                          <ChevronDown className="h-4 w-4" />
+                                        ) : (
+                                          <ChevronUp className="h-4 w-4" />
+                                        )}
+                                      </div>
+                                    </td>
+                                  </tr>
+                                  {!collapsePartial &&
+                                    partiallyAvailableDocs.map((doc, i) => renderMonthRow(doc, i, gridDates))}
+                                </>
+                              )}
+                              {unavailableDocs.length > 0 && (
+                                <>
+                                  <tr
+                                    className="bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors border-b border-border/50"
+                                    onClick={() => setCollapseUnavailable(!collapseUnavailable)}
+                                  >
+                                    <td colSpan={gridDates.length + 1} className="px-2 py-1.5">
+                                      <div className="flex items-center justify-between font-bold text-[10px] text-muted-foreground uppercase tracking-wider">
+                                        <span>Unavailable ({unavailableDocs.length})</span>
+                                        {collapseUnavailable ? (
+                                          <ChevronDown className="h-4 w-4" />
+                                        ) : (
+                                          <ChevronUp className="h-4 w-4" />
+                                        )}
+                                      </div>
+                                    </td>
+                                  </tr>
+                                  {!collapseUnavailable &&
+                                    unavailableDocs.map((doc, i) => renderMonthRow(doc, i, gridDates))}
+                                </>
+                              )}
+                            </>
+                          ) : (
+                            sortedAndFilteredDoctors.map((doc, i) => renderMonthRow(doc, i, gridDates))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  );
+                })()
+              : null)}
+
+          {/* Global Collapsible Summary Table */}
+          <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden mt-6 mb-2">
+            <button
+              type="button"
+              onClick={() => setShowBreakdown((v) => !v)}
+              className="w-full flex items-center justify-between px-4 py-3 bg-card hover:bg-muted/30 transition-colors border-none cursor-pointer"
+            >
+              <div className="flex items-center gap-3">
+                <CalendarRange className="h-5 w-5 text-primary" />
+                <span className="text-sm font-bold text-foreground">Availability Breakdown & Targets</span>
+              </div>
+              {showBreakdown ? (
+                <ChevronUp className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              )}
+            </button>
+
+            {showBreakdown && renderSummaryContent()}
+          </div>
+
+          {/* CHANGE 8: legend now receives viewMode to show letter variants in month view */}
+          <CalendarLegend viewMode={effectiveViewMode} />
+
+          {/* CHANGE 4: Bottom EventDetailPanel removed entirely — replaced by cell popovers */}
+        </div>
+        {/* end scrollable view area */}
       </div>
 
       {/* Floating Modal Layer */}
