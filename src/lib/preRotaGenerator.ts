@@ -39,7 +39,7 @@ export async function generatePreRota(
 
     // 5. Fetch doctors
     const { data: doctors } = await supabase
-      .from('doctors').select('*').eq('rota_config_id', rotaConfigId)
+      .from('doctors').select('*').eq('rota_config_id', rotaConfigId).eq('is_active', true)
     if (!doctors?.length) return { success: false, error: 'No doctors in roster.' }
 
     // 6. Fetch survey responses (scalar fields + flat competency bools)

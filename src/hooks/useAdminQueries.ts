@@ -95,7 +95,8 @@ export function usePreRotaResultQuery() {
         supabase
           .from("doctors")
           .select("id, first_name, last_name, grade, updated_at")
-          .eq("rota_config_id", currentRotaConfigId),
+          .eq("rota_config_id", currentRotaConfigId)
+          .eq("is_active", true),
         supabase
           .from("doctor_survey_responses")
           .select("updated_at")
