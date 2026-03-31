@@ -1,40 +1,69 @@
 
+## Plan
 
-## Plan: Fix Navigation Boundary Layout
+### What I found
+There are two concrete issues to fix:
 
-### Problem
-Two issues cause content to hide behind navigation:
-1. **Desktop `StepNavBar`** uses `fixed bottom-0` positioning, overlaying content instead of acting as a boundary. `AdminLayout` only applies `pb-6` on desktop (md+), insufficient to clear the ~52px bar.
-2. **`AdminLayout`** uses a `pb-20` padding hack on mobile to try to clear the bottom nav, but since the shell already uses a proper flex layout with `shrink-0` bottom nav, this is redundant and inconsistent.
+1. `src/hooks/useAdminQueries.ts`  
+   `usePreRotaResultQuery` still:
+   - reads doctor names/grades from the stored `pre_rota_results` JSON snapshot
+   - only fetches a single `updated_at` row from `doctors`, which is too weak for stale detection
 
-### Current Architecture (already correct)
-- **AdminShell mobile/tablet**: `flex flex-col h-dvh` → header (`shrink-0`) + main (`flex-1 overflow-hidden`) + bottom nav (`shrink-0`) — correct boundary.
-- **AdminShell desktop**: `flex h-dvh` → sidebar (fixed width) + content column (`flex-1 flex-col`) — correct boundary.
-- **DoctorLayout**: `h-dvh flex flex-col overflow-hidden` — already correct.
+2. `src/pages/Login.tsx` / `src/components/brand/RotaGenIcon.tsx`  
+   The build is currently blocked because `Login.tsx` passes `className` to `RotaGenIcon`, but `RotaGenIconProps` does not include it.
 
-### Changes
+### Implementation plan
 
-**1. `StepNavBar` — Remove `fixed` on desktop, use `shrink-0` universally**
+#### 1) Add read-time hydration in `usePreRotaResultQuery`
+Update the doctors fetch inside the existing `Promise.all` to load all live doctors for the current rota config:
 
-Replace the desktop branch (currently `fixed bottom-0 left-0 right-0 z-40`) with the same `shrink-0` flex-sibling pattern used on mobile. This makes it a natural boundary in the flex column rather than an overlay.
-
-Both mobile and desktop will render:
-```tsx
-<div className="shrink-0 w-full bg-card border-t border-border shadow-... px-4 py-3 flex items-center justify-between gap-3">
+```ts
+.select("id, first_name, last_name, grade, updated_at")
 ```
 
-**2. `AdminLayout` — Remove `pb-20` padding hacks**
+Remove the current `.order(...).limit(1)` from the doctors query.
 
-- Step pages: change `pb-20 md:pb-6` → `pb-6` (the StepNavBar is now a flex sibling, no clearance needed)
-- Non-step pages: change `pb-20 md:pb-6` → `pb-6` (bottom nav is already a `shrink-0` sibling in AdminShell)
+#### 2) Strengthen staleness detection
+Replace the current single-row `latestDoctorUpdate` logic with:
+- compute the max `updated_at` across all fetched doctors
+- keep the existing latest survey lookup
+- preserve `result.isStale` so it becomes true if either:
+  - any doctor was updated after pre-rota generation, or
+  - any survey was updated after pre-rota generation
 
-### Files changed
-| File | Change |
-|------|--------|
-| `src/components/StepNavBar.tsx` | Remove mobile/desktop branching; single `shrink-0` layout for all sizes |
-| `src/components/AdminLayout.tsx` | Remove `pb-20` hack, use consistent `pb-6` |
+#### 3) Hydrate snapshot doctor data before returning
+Before `return result`:
+- build a `Map` keyed by live doctor `id`
+- create a small `hydrateDoctor` helper that checks both `doc.id` and `doc.doctorId`
+- update:
+  - `result.calendarData.doctors`
+  - `result.targetsData.doctors`
+- overwrite:
+  - `doctorName` with `Dr ${first_name} ${last_name}`
+  - `grade` with the live doctor grade when available
+
+This keeps the existing stored JSON shape intact while ensuring the UI/export layer always reflects current doctor identity data.
+
+#### 4) Fix the current TypeScript build blocker
+Update `RotaGenIcon` to accept an optional `className` prop and pass it through to the root `<svg>`.
+
+This is the lowest-risk fix because:
+- `Login.tsx` already expects `className` support
+- it preserves the current visual behavior
+- it avoids touching branding markup in the login page
+
+### Files to update
+- `src/hooks/useAdminQueries.ts`
+- `src/components/brand/RotaGenIcon.tsx`
+
+### Expected outcome
+After implementation:
+- Pre-Rota calendar and targets screens will show live doctor names/grades even when `pre_rota_results` contains stale snapshots
+- `isStale` will remain accurate using the latest doctor update across the whole config
+- exports that consume hydrated query data will also reflect current names/grades
+- the current Login build error will be resolved
 
 ### Technical notes
-- No changes to AdminShell or DoctorLayout — their flex structures are already correct boundaries.
-- The `index.css` `body, #root` styles remain as-is (`min-height: 100dvh`).
-
+- No database/schema changes are needed
+- No auth/RLS changes are needed
+- This is a read-layer fix only, aligned with your request to avoid refactoring stored JSON blobs
