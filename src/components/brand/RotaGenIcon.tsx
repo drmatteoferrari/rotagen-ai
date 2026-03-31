@@ -1,9 +1,10 @@
 interface RotaGenIconProps {
   size?: number;
   variant?: "light" | "dark";
+  className?: string;
 }
 
-export default function RotaGenIcon({ size = 44, variant = "light" }: RotaGenIconProps) {
+export default function RotaGenIcon({ size = 44, variant = "light", className }: RotaGenIconProps) {
   const isLight = variant === "light";
   const frameStroke = isLight ? "#2563EB" : "white";
   const topBandFill = isLight ? "#dbeafe" : "#1e3a8a";
@@ -15,7 +16,7 @@ export default function RotaGenIcon({ size = 44, variant = "light" }: RotaGenIco
   const clipId = `rotagen-icon-clip-${variant}`;
 
   return (
-    <svg width={size} height={size} viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg width={size} height={size} viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
       <defs>
         <clipPath id={clipId}>
           <rect x="2" y="4" width="40" height="36" rx="6" />

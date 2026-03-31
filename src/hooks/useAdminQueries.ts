@@ -91,13 +91,11 @@ export function usePreRotaResultQuery() {
         isStale: false,
       };
 
-      const [{ data: latestDoctors }, { data: latestSurveys }] = await Promise.all([
+      const [{ data: liveDoctors }, { data: latestSurveys }] = await Promise.all([
         supabase
           .from("doctors")
-          .select("updated_at")
-          .eq("rota_config_id", currentRotaConfigId)
-          .order("updated_at", { ascending: false })
-          .limit(1),
+          .select("id, first_name, last_name, grade, updated_at")
+          .eq("rota_config_id", currentRotaConfigId),
         supabase
           .from("doctor_survey_responses")
           .select("updated_at")
@@ -107,12 +105,40 @@ export function usePreRotaResultQuery() {
       ]);
 
       const generatedAt = new Date(pr.generated_at);
-      const latestDoctorUpdate = latestDoctors?.[0]?.updated_at ? new Date(latestDoctors[0].updated_at) : null;
+
+      let latestDoctorUpdate: Date | null = null;
+      if (liveDoctors && liveDoctors.length > 0) {
+        const maxTime = Math.max(...liveDoctors.map(d => new Date(d.updated_at!).getTime()));
+        latestDoctorUpdate = new Date(maxTime);
+      }
       const latestSurveyUpdate = latestSurveys?.[0]?.updated_at ? new Date(latestSurveys[0].updated_at) : null;
       result.isStale = !!(
         (latestDoctorUpdate && latestDoctorUpdate > generatedAt) ||
         (latestSurveyUpdate && latestSurveyUpdate > generatedAt)
       );
+
+      // Read-time hydration: patch snapshot doctor names/grades with live data
+      if (liveDoctors) {
+        const liveDocMap = new Map(liveDoctors.map(d => [d.id, d]));
+        const hydrateDoctor = (doc: any) => {
+          const docId = doc.id || doc.doctorId;
+          const liveDoc = liveDocMap.get(docId);
+          if (liveDoc) {
+            return {
+              ...doc,
+              doctorName: `Dr ${liveDoc.first_name} ${liveDoc.last_name}`.trim(),
+              grade: liveDoc.grade ?? doc.grade,
+            };
+          }
+          return doc;
+        };
+        if (result.calendarData?.doctors) {
+          (result.calendarData as any).doctors = (result.calendarData as any).doctors.map(hydrateDoctor);
+        }
+        if (result.targetsData?.doctors) {
+          (result.targetsData as any).doctors = (result.targetsData as any).doctors.map(hydrateDoctor);
+        }
+      }
 
       return result;
     },
