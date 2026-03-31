@@ -290,32 +290,29 @@ export default function SetupPage() {
         </div>
 
         {/* ── GENERATION ENGINE ──
-            flex-1 so it absorbs all remaining vertical space on desktop/tablet.
-            min-h-[280px] ensures the engine card is never squashed below a usable
-            height on small screens — mobile can scroll below this if needed.
+            shrink-0: natural content height on ALL screen sizes.
+            The card height is driven by its content, not by the viewport.
+            A flex-1 spacer below this pushes the footer to the page bottom.
         */}
-        <div className="flex-1 min-h-[280px] flex flex-col gap-2">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-primary flex items-center gap-1.5 px-0.5 shrink-0">
+        <div className="shrink-0 flex flex-col gap-2">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-primary flex items-center gap-1.5 px-0.5">
             <Target className="w-3.5 h-3.5" /> Generation Engine
           </p>
 
           {/*
-            Engine card:
-            - flex-1 min-h-0: expands to fill the section wrapper on desktop/tablet.
-            - flex-col on mobile (panels stack vertically, each natural height).
-            - lg:flex-row on desktop (panels side by side, each takes half width).
-            - No overflow-hidden here — we need Panel A's "last built" row visible on mobile.
+            Engine card: natural height, flex-col mobile / flex-row desktop.
+            Both panels are equal height because flex-row makes siblings
+            stretch to the tallest panel (Panel A with "last built" row sets height).
+            Panel B uses that height for mt-auto to work.
           */}
           <div
-            className={`flex-1 min-h-0 flex flex-col lg:flex-row rounded-2xl border bg-card shadow-sm transition-all duration-300 ${
+            className={`flex flex-col lg:flex-row rounded-2xl border bg-card shadow-sm transition-all duration-300 ${
               canGeneratePreRota ? "border-primary/20" : "border-border/50 opacity-80"
             }`}
           >
-            {/* ── PANEL A: Pre-Rota Plan ── */}
-            {/*
-              On mobile: natural height flex-col, no constraints.
-              On desktop: lg:w-1/2 + lg:flex-1 so it shares width and grows to card height.
-              border-b on mobile becomes border-r on desktop via responsive classes.
+            {/* ── PANEL A: Pre-Rota Plan ──
+              On desktop: lg:w-1/2, natural height set by content.
+              In flex-row, both panels auto-stretch to equal height (CSS default).
             */}
             <div className="flex flex-col p-4 sm:p-5 lg:w-1/2 border-b lg:border-b-0 lg:border-r border-border bg-gradient-to-br from-transparent to-muted/10">
               {/* Header row: title + status pill */}
@@ -449,11 +446,12 @@ export default function SetupPage() {
             </div>
 
             {/* ── PANEL B: Final Allocation ──
-                lg:flex-1 is the key fix: on desktop the card is flex-row, so Panel B
-                needs flex-1 to stretch to full card height, giving mt-auto something to
-                push against. On mobile (flex-col card) Panel B is natural height — fine.
+                lg:w-1/2: shares equal width with Panel A on desktop.
+                In flex-row both panels auto-stretch to equal height, so mt-auto
+                on the button wrapper correctly pins it to the bottom of Panel B,
+                matching Panel A's "last built" row visually.
             */}
-            <div className="flex flex-col p-4 sm:p-5 lg:w-1/2 lg:flex-1">
+            <div className="flex flex-col p-4 sm:p-5 lg:w-1/2">
               {/* Header row */}
               <div className="flex items-start justify-between gap-2 mb-2 shrink-0">
                 <h3 className="text-sm sm:text-base font-bold text-foreground flex items-center gap-2">
@@ -478,10 +476,13 @@ export default function SetupPage() {
               )}
 
               {/*
-                mt-auto works here because Panel B has lg:flex-1 on desktop,
-                making its height equal to the card height, so mt-auto pushes
-                the button to the bottom. On mobile there's no extra space so
-                the button renders naturally below the lock banner / description.
+                mt-auto works here because in a flex-row card both panels
+                auto-stretch to equal height (tallest panel wins — Panel A
+                with its "last built" row sets the height). Panel B's flex-col
+                fills that same height, so mt-auto correctly pins the button
+                to the bottom, creating visual symmetry with Panel A.
+                On mobile (flex-col card) Panel B is natural height — mt-auto
+                has minimal space to push but the button still renders correctly.
               */}
               <div className="mt-auto pt-2">
                 <Button
@@ -515,6 +516,10 @@ export default function SetupPage() {
             </div>
           </div>
         </div>
+
+        {/* Spacer: pushes footer to the bottom of the page on desktop/tablet
+            without requiring the engine card to stretch to fill the viewport */}
+        <div className="flex-1" />
 
         {/* ── FOOTER — always at the bottom of the flex column ──
             shrink-0 prevents it from being compressed.
