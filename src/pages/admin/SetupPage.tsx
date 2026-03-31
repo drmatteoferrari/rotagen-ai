@@ -21,6 +21,7 @@ import {
   RotateCcw,
   Wand2,
   Star,
+  CalendarCheck,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { generatePreRota } from "@/lib/preRotaGenerator";
@@ -32,16 +33,8 @@ import { ResetModal } from "@/components/ResetModal";
 
 export default function SetupPage() {
   const navigate = useNavigate();
-  const {
-    isDepartmentComplete,
-    isWtrComplete,
-    isPeriodComplete,
-    areSurveysDone,
-    restoredFromDb,
-    rotaStartDate,
-    rotaEndDate,
-  } = useAdminSetup();
-  const { restoredConfig, currentRotaConfigId } = useRotaContext();
+  const { isDepartmentComplete, isWtrComplete, isPeriodComplete, areSurveysDone } = useAdminSetup();
+  const { currentRotaConfigId } = useRotaContext();
   const { user } = useAuth();
   const { invalidatePreRota } = useInvalidateQuery();
 
@@ -121,137 +114,163 @@ export default function SetupPage() {
 
   const surveyStatus = getSurveyStatus();
   const surveysDone = surveySubmitted === surveyTotal && surveyTotal > 0;
-
   const stepsComplete = [isDepartmentComplete, isWtrComplete, isPeriodComplete, surveysDone].filter(Boolean).length;
 
   return (
     <AdminLayout title="Rota Setup" subtitle="Complete all steps to generate" accentColor="blue" pageIcon={Wand2}>
-      <div className="mx-auto max-w-6xl h-full min-h-[calc(100vh-12rem)] flex flex-col space-y-6 animate-fadeSlideUp pb-4">
-        {/* Minimal progress bar */}
-        <div className="flex items-center gap-3 shrink-0">
-          <div className="flex-1 h-1.5 rounded-full bg-secondary overflow-hidden">
+      {/* Inline style for the shimmering effect to guarantee it works without tailwind.config changes */}
+      <style>{`
+        @keyframes shimmer-slide {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
+        }
+        .animate-shimmer-btn {
+          animation: shimmer-slide 2.5s infinite linear;
+        }
+      `}</style>
+
+      {/* Main Container: Locked to viewport height to prevent scrolling, flex-col for internal layout */}
+      <div className="mx-auto w-full max-w-6xl flex flex-col gap-4 animate-fadeSlideUp lg:h-[calc(100vh-10rem)]">
+        {/* Progress Bar Header */}
+        <div className="flex items-center gap-4 bg-card px-4 py-2.5 rounded-xl border border-border shadow-sm shrink-0">
+          <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground whitespace-nowrap">
+            Setup Progress
+          </span>
+          <div className="flex-1 h-2 rounded-full bg-secondary overflow-hidden">
             <div
-              className="h-full bg-primary rounded-full transition-all duration-500"
+              className="h-full bg-primary rounded-full transition-all duration-700 ease-out"
               style={{ width: `${(stepsComplete / 4) * 100}%` }}
             />
           </div>
-          <span className="text-xs text-muted-foreground font-medium whitespace-nowrap">{stepsComplete}/4</span>
+          <span className="text-sm font-bold text-foreground whitespace-nowrap">{stepsComplete} / 4</span>
         </div>
 
-        {/* Main 3-Column Grid for Desktop (2 for tablet, 1 for mobile) */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 flex-1 min-h-0">
-          {/* COLUMN 1: Department & Rules */}
-          <div className="flex flex-col gap-2">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">
-              Configuration
-            </p>
-            <div className="rounded-xl border border-border bg-card p-3 shadow-sm flex flex-col gap-2 flex-1">
-              {/* Department */}
+        {/* Two-Panel Layout: Left (Inputs/Steps) -> Right (Engine/Outputs) */}
+        <div className="flex flex-col lg:flex-row gap-6 flex-1 min-h-0">
+          {/* LEFT PANEL: 4 Steps Grid */}
+          <div className="flex-1 flex flex-col min-h-0">
+            <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3 shrink-0 flex items-center gap-2">
+              <ClipboardList className="w-4 h-4" /> 1. Configuration & Data
+            </h2>
+
+            {/* 2x2 Grid fits perfectly in the space without scrolling */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 flex-1 min-h-0 content-start">
+              {/* Step 1: Department */}
               <div
-                className="flex items-center gap-3 rounded-lg px-2 py-2 cursor-pointer hover:bg-muted/50 transition-colors border border-transparent hover:border-border"
                 onClick={() =>
                   navigate(
                     isDepartmentComplete ? "/admin/department/summary?mode=post-submit" : "/admin/department/step-1",
                   )
                 }
+                className="group flex flex-col p-4 rounded-xl border border-border bg-card hover:border-primary/40 hover:shadow-md cursor-pointer transition-all"
               >
-                <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
-                <div className="flex-1 flex flex-col">
-                  <span className="text-sm font-medium text-foreground">1. Department</span>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: getStepColor(isDepartmentComplete) }}>
+                <div className="flex items-start justify-between mb-3">
+                  <div className="p-2 rounded-lg bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                    <Building2 className="w-5 h-5" />
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate("/admin/department/step-1");
+                    }}
+                    className="p-1 text-muted-foreground hover:text-foreground"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-foreground mb-1">1. Department</h3>
+                  <span className="text-xs font-semibold" style={{ color: getStepColor(isDepartmentComplete) }}>
                     {isDepartmentComplete ? "Complete" : "Not started"}
                   </span>
                 </div>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate("/admin/department/step-1");
-                  }}
-                  className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                </button>
               </div>
 
-              {/* Contract Rules (WTR) */}
+              {/* Step 2: Contract Rules */}
               <div
-                className="flex items-center gap-3 rounded-lg px-2 py-2 cursor-pointer hover:bg-muted/50 transition-colors border border-transparent hover:border-border"
                 onClick={() => navigate(isWtrComplete ? "/admin/wtr/summary?mode=post-submit" : "/admin/wtr/step-1")}
+                className="group flex flex-col p-4 rounded-xl border border-border bg-card hover:border-primary/40 hover:shadow-md cursor-pointer transition-all"
               >
-                <ClipboardList className="h-4 w-4 text-muted-foreground shrink-0" />
-                <div className="flex-1 flex flex-col">
-                  <span className="text-sm font-medium text-foreground">2. Contract (WTR)</span>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: getStepColor(isWtrComplete) }}>
+                <div className="flex items-start justify-between mb-3">
+                  <div className="p-2 rounded-lg bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                    <CalendarCheck className="w-5 h-5" />
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate("/admin/wtr/step-1");
+                    }}
+                    className="p-1 text-muted-foreground hover:text-foreground"
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-foreground mb-1">2. Contract (WTR)</h3>
+                  <span className="text-xs font-semibold" style={{ color: getStepColor(isWtrComplete) }}>
                     {isWtrComplete ? "Complete" : "Not started"}
                   </span>
                 </div>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate("/admin/wtr/step-1");
-                  }}
-                  className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                >
-                  <Pencil className="h-3.5 w-3.5" />
-                </button>
               </div>
-            </div>
-          </div>
 
-          {/* COLUMN 2: Dates & Surveys */}
-          <div className="flex flex-col gap-2">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">
-              Availability
-            </p>
-            <div className="rounded-xl border border-border bg-card p-3 shadow-sm flex flex-col gap-2 flex-1">
-              {/* Rota Period */}
+              {/* Step 3: Rota Period */}
               <div
-                className="flex items-center gap-3 rounded-lg px-2 py-2 cursor-pointer hover:bg-muted/50 transition-colors border border-transparent hover:border-border"
                 onClick={() =>
                   navigate(
                     isPeriodComplete ? "/admin/rota-period/summary?mode=post-submit" : "/admin/rota-period/step-1",
                   )
                 }
+                className="group flex flex-col p-4 rounded-xl border border-border bg-card hover:border-primary/40 hover:shadow-md cursor-pointer transition-all"
               >
-                <CalendarDays className="h-4 w-4 text-muted-foreground shrink-0" />
-                <div className="flex-1 flex flex-col">
-                  <span className="text-sm font-medium text-foreground">3. Rota Period</span>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: getStepColor(isPeriodComplete) }}>
+                <div className="flex items-start justify-between mb-3">
+                  <div className="p-2 rounded-lg bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                    <CalendarDays className="w-5 h-5" />
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-foreground mb-1">3. Rota Period</h3>
+                  <span className="text-xs font-semibold" style={{ color: getStepColor(isPeriodComplete) }}>
                     {isPeriodComplete ? "Complete" : "Not started"}
                   </span>
                 </div>
               </div>
 
-              {/* Doctor Surveys */}
+              {/* Step 4: Doctor Surveys */}
               <div
-                className="flex items-center gap-3 rounded-lg px-2 py-2 cursor-pointer hover:bg-muted/50 transition-colors border border-transparent hover:border-border"
                 onClick={() => navigate("/admin/roster")}
+                className="group flex flex-col p-4 rounded-xl border border-border bg-card hover:border-primary/40 hover:shadow-md cursor-pointer transition-all"
               >
-                <Users className="h-4 w-4 text-muted-foreground shrink-0" />
-                <div className="flex-1 flex flex-col">
-                  <span className="text-sm font-medium text-foreground">4. Doctor Surveys</span>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: surveyStatus.color }}>{surveyStatus.text}</span>
+                <div className="flex items-start justify-between mb-3">
+                  <div className="p-2 rounded-lg bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+                    <Users className="w-5 h-5" />
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-foreground mb-1">4. Doctor Surveys</h3>
+                  <span className="text-xs font-semibold" style={{ color: surveyStatus.color }}>
+                    {surveyStatus.text}
+                  </span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* COLUMN 3: Generation Station */}
-          <div
-            className={`flex flex-col gap-2 ${!canGeneratePreRota ? "opacity-60 grayscale-[0.5] transition-all" : ""}`}
-          >
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-primary mb-1">Engine</p>
-            <div className="rounded-xl border-2 border-primary/20 bg-card p-4 shadow-sm flex flex-col flex-1 relative overflow-hidden">
-              {/* Background Accent */}
-              <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 bg-primary/5 rounded-full blur-2xl pointer-events-none"></div>
+          {/* RIGHT PANEL: Generation Engine */}
+          <div className="flex-1 flex flex-col min-h-0">
+            <h2 className="text-xs font-bold uppercase tracking-widest text-primary mb-3 shrink-0 flex items-center gap-2">
+              <Target className="w-4 h-4" /> 2. Generation Engine
+            </h2>
 
-              {/* Pre-Rota Section */}
-              <div className="mb-4">
-                <div className="flex items-center justify-between mb-1">
-                  <h2 className="text-sm font-bold text-foreground">1. Blueprint (Pre-Rota)</h2>
+            <div
+              className={`flex flex-col flex-1 rounded-2xl border-2 bg-card overflow-hidden shadow-sm transition-all duration-300 ${canGeneratePreRota ? "border-primary/30" : "border-border opacity-70 grayscale-[0.3]"}`}
+            >
+              {/* Top Half: Pre-Rota Blueprint */}
+              <div className="flex-1 p-5 flex flex-col border-b border-border bg-gradient-to-br from-transparent to-muted/30 relative">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-base font-bold text-foreground">A. Build Blueprint</h3>
                   {preRotaResult && (
                     <span
-                      className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                      className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full ${
                         preRotaResult.status === "complete"
                           ? "text-emerald-700 bg-emerald-100"
                           : preRotaResult.status === "complete_with_warnings"
@@ -261,161 +280,162 @@ export default function SetupPage() {
                     >
                       {preRotaResult.status === "complete" && (
                         <>
-                          <CheckCircle className="h-3 w-3" /> Complete
+                          <CheckCircle className="w-3.5 h-3.5" /> Ready
                         </>
                       )}
                       {preRotaResult.status === "complete_with_warnings" && (
                         <>
-                          <AlertTriangle className="h-3 w-3" /> Warnings
+                          <AlertTriangle className="w-3.5 h-3.5" /> Warnings
                         </>
                       )}
                       {preRotaResult.status === "blocked" && (
                         <>
-                          <XCircle className="h-3 w-3" /> Blocked
+                          <XCircle className="w-3.5 h-3.5" /> Blocked
                         </>
                       )}
                     </span>
                   )}
                 </div>
-                <p className="text-[11px] text-muted-foreground mb-2 leading-tight">Master calendar & shift targets.</p>
+                <p className="text-xs text-muted-foreground mb-4 max-w-sm">
+                  Generates the master calendar framework and calculates necessary shift targets based on your rules.
+                </p>
+
                 <Button
-                  size="sm"
                   variant={preRotaResult ? "outline" : "default"}
-                  className="w-full h-8 text-xs"
+                  className="w-full h-10 mt-auto"
                   disabled={!canGeneratePreRota || preRotaLoading}
                   onClick={(e) => {
                     e.stopPropagation();
                     handleGeneratePreRota();
                   }}
                 >
-                  {!canGeneratePreRota && <Lock className="mr-2 h-3 w-3" />}
+                  {!canGeneratePreRota && <Lock className="mr-2 h-4 w-4" />}
                   {preRotaLoading ? (
                     <>
-                      <Loader2 className="mr-2 h-3 w-3 animate-spin" /> Generating…
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Building Blueprint…
                     </>
                   ) : preRotaResult ? (
                     <>
-                      <RefreshCw className="mr-2 h-3 w-3" /> Re-build Blueprint
+                      <RefreshCw className="mr-2 h-4 w-4" /> Re-build Blueprint
                     </>
                   ) : (
                     <>
-                      <Play className="mr-2 h-3 w-3" /> Build Blueprint
+                      <Play className="mr-2 h-4 w-4" /> Build Blueprint Data
                     </>
                   )}
                 </Button>
 
                 {preRotaError && (
-                  <div className="mt-2 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-1.5 flex items-center gap-2">
-                    <XCircle className="h-3.5 w-3.5 text-destructive shrink-0" />
-                    <p className="text-[11px] text-destructive">{preRotaError}</p>
+                  <div className="mt-3 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 flex items-center gap-2">
+                    <XCircle className="h-4 w-4 text-destructive shrink-0" />
+                    <p className="text-xs text-destructive">{preRotaError}</p>
                   </div>
                 )}
+
                 {isStale && preRotaResult && (
-                  <div className="mt-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 flex items-center justify-center gap-2">
-                    <AlertTriangle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
-                    <p className="text-[11px] text-amber-800">Data changed — re-generate to update.</p>
+                  <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 flex items-center justify-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+                    <p className="text-xs font-medium text-amber-800">Data changed — please re-build.</p>
                   </div>
                 )}
-                {preRotaResult && (
-                  <div className="mt-2 flex items-center justify-between">
-                    <span className="text-[10px] text-muted-foreground">
-                      Generated{" "}
-                      {new Date(preRotaResult.generatedAt).toLocaleDateString("en-GB", {
-                        day: "2-digit",
-                        month: "short",
-                        year: "numeric",
-                      })}
+
+                {preRotaResult && !isStale && (
+                  <div className="mt-3 flex items-center justify-between">
+                    <span className="text-[11px] text-muted-foreground font-medium">
+                      Built: {new Date(preRotaResult.generatedAt).toLocaleDateString("en-GB")}
                     </span>
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-2">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           navigate("/admin/pre-rota-calendar");
                         }}
-                        className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                        className="p-1.5 rounded bg-background border border-border text-muted-foreground hover:text-primary transition-colors"
                         title="View Calendar"
                       >
-                        <CalendarDays className="h-3.5 w-3.5" />
+                        <CalendarDays className="h-4 w-4" />
                       </button>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           navigate("/admin/pre-rota-targets");
                         }}
-                        className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                        className="p-1.5 rounded bg-background border border-border text-muted-foreground hover:text-primary transition-colors"
                         title="View Targets"
                       >
-                        <Target className="h-3.5 w-3.5" />
+                        <Target className="h-4 w-4" />
                       </button>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           navigate("/admin/pre-rota");
                         }}
-                        className="text-[10px] font-semibold text-primary bg-primary/10 hover:bg-primary/20 px-2.5 py-1 rounded-md transition-colors"
+                        className="text-xs font-bold text-primary hover:underline px-1"
                       >
-                        View details →
+                        Details →
                       </button>
                     </div>
                   </div>
                 )}
               </div>
 
-              <div className="h-px w-full bg-border my-2"></div>
+              {/* Bottom Half: Final Rota */}
+              <div className="flex-1 p-5 flex flex-col justify-end bg-card relative">
+                <div className="mb-auto">
+                  <h3 className="text-base font-bold text-foreground mb-1">B. Final Allocation</h3>
+                  <p className="text-xs text-muted-foreground max-w-sm">
+                    Runs the core algorithm to assign doctors to shifts, respecting WTR rules and survey preferences.
+                  </p>
+                </div>
 
-              {/* Final Rota Section */}
-              <div className="mt-2 flex-1 flex flex-col justify-end">
-                <h2 className="text-sm font-bold text-foreground mb-1">2. Final Allocation</h2>
-                <p className="text-[11px] text-muted-foreground mb-3 leading-tight">
-                  Run the core allocation algorithm.
-                </p>
                 <Button
-                  size="sm"
-                  className={`w-full h-9 transition-all relative overflow-hidden group ${
+                  size="lg"
+                  className={`w-full mt-4 h-12 text-sm relative overflow-hidden group transition-all ${
                     canGeneratePreRota && preRotaResult && !finalLoading
-                      ? "bg-primary text-primary-foreground shadow-md hover:shadow-lg"
+                      ? "bg-primary text-primary-foreground shadow-lg hover:shadow-primary/25"
                       : ""
                   }`}
                   disabled={!canGeneratePreRota || finalLoading || !preRotaResult}
                   onClick={() => setShowFinalChecklist(true)}
                 >
-                  {/* Shimmer Effect Span */}
+                  {/* The Shimmer Effect Layer */}
                   {canGeneratePreRota && preRotaResult && !finalLoading && (
-                    <span className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/20 to-transparent"></span>
+                    <div className="absolute inset-0 w-[200%] animate-shimmer-btn bg-gradient-to-r from-transparent via-white/25 to-transparent skew-x-12" />
                   )}
 
-                  {finalLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin relative z-10" />{" "}
-                      <span className="relative z-10">Building…</span>
-                    </>
-                  ) : (
-                    <>
-                      <Wand2 className="mr-2 h-3.5 w-3.5 relative z-10 group-hover:scale-110 transition-transform" />{" "}
-                      <span className="relative z-10">Generate Final Rota</span>
-                    </>
-                  )}
+                  <span className="relative z-10 flex items-center justify-center font-bold tracking-wide">
+                    {finalLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" /> EXECUTING ALGORITHM…
+                      </>
+                    ) : (
+                      <>
+                        <Wand2 className="mr-2 h-5 w-5 group-hover:scale-110 transition-transform" /> GENERATE FINAL
+                        ROTA
+                      </>
+                    )}
+                  </span>
                 </Button>
               </div>
             </div>
           </div>
         </div>
 
-        {/* FOOTER: Feedback & Reset (Same Row) */}
-        <div className="mt-auto pt-4 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-4 shrink-0">
+        {/* Footer Actions (Feedback & Reset on same row) */}
+        <div className="shrink-0 flex items-center justify-between pt-2 mt-auto">
           <button
             type="button"
             onClick={() => navigate("/feedback")}
-            className="inline-flex items-center gap-2 text-xs font-medium transition-colors hover:bg-green-50 px-3 py-1.5 rounded-lg text-green-700"
+            className="inline-flex items-center gap-2 text-xs font-bold transition-colors hover:bg-green-50 px-3 py-2 rounded-lg text-green-700"
           >
-            <span className="flex h-5 w-5 items-center justify-center rounded-md bg-green-100">
-              <Star className="h-3 w-3 text-green-600" />
+            <span className="flex h-6 w-6 items-center justify-center rounded bg-green-100">
+              <Star className="h-3.5 w-3.5 text-green-600" />
             </span>
-            Give feedback on RotaGen
+            Give Feedback on RotaGen
           </button>
 
           <button
-            className="flex items-center gap-2 text-xs font-medium text-destructive hover:bg-destructive/10 px-3 py-1.5 rounded-lg transition-colors"
+            className="flex items-center gap-2 text-xs font-bold text-destructive hover:bg-destructive/10 px-3 py-2 rounded-lg transition-colors"
             onClick={() => setResetModalOpen(true)}
           >
             <RotateCcw className="h-3.5 w-3.5" />
@@ -423,34 +443,49 @@ export default function SetupPage() {
           </button>
         </div>
 
-        {/* Modals */}
+        {/* Final Rota Checklist Modal */}
         {showFinalChecklist && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-            <div className="bg-card rounded-xl border border-border shadow-xl p-6 w-full max-w-sm mx-4">
-              <h3 className="text-sm font-bold mb-3">Before you generate</h3>
-              <p className="text-xs text-muted-foreground mb-4">Confirm the following before running the final rota:</p>
-              <div className="space-y-3 mb-5">
-                {["Pre-rota data generated", "All surveys completed", "No scheduling conflicts"].map((item) => (
-                  <label key={item} className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input type="checkbox" className="rounded border-border accent-primary" />
-                    {item}
-                  </label>
-                ))}
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-card rounded-2xl border border-border shadow-2xl p-6 w-full max-w-sm mx-4 animate-in zoom-in-95 duration-200">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2 bg-primary/10 text-primary rounded-lg">
+                  <Wand2 className="w-5 h-5" />
+                </div>
+                <h3 className="text-base font-bold text-foreground">Confirm Generation</h3>
               </div>
-              <div className="flex gap-2">
-                <Button size="sm" variant="outline" className="flex-1" onClick={() => setShowFinalChecklist(false)}>
+              <p className="text-xs text-muted-foreground mb-5 pl-1">
+                Ensure the following are complete before executing the algorithm:
+              </p>
+
+              <div className="space-y-3 mb-6 bg-muted/40 p-4 rounded-xl border border-border/50">
+                {["Blueprint data is up-to-date", "All doctor surveys submitted", "No unresolvable conflicts"].map(
+                  (item) => (
+                    <label key={item} className="flex items-start gap-3 text-sm cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        className="mt-0.5 rounded border-border accent-primary w-4 h-4 cursor-pointer"
+                      />
+                      <span className="text-foreground group-hover:text-primary transition-colors font-medium">
+                        {item}
+                      </span>
+                    </label>
+                  ),
+                )}
+              </div>
+
+              <div className="flex gap-3">
+                <Button variant="outline" className="flex-1 font-bold" onClick={() => setShowFinalChecklist(false)}>
                   Cancel
                 </Button>
                 <Button
-                  size="sm"
-                  className="flex-1"
+                  className="flex-1 font-bold"
                   disabled={finalLoading}
                   onClick={() => {
                     setShowFinalChecklist(false);
                     handleGenerateFinalRota();
                   }}
                 >
-                  {finalLoading ? "Building…" : "Confirm & Generate"}
+                  {finalLoading ? "Executing…" : "Execute"}
                 </Button>
               </div>
             </div>
