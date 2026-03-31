@@ -65,6 +65,7 @@ export default function PreRotaPage() {
           .from("doctors")
           .select("updated_at")
           .eq("rota_config_id", currentRotaConfigId)
+          .eq("is_active", true)
           .order("updated_at", { ascending: false })
           .limit(1);
 

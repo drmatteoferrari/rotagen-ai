@@ -280,8 +280,9 @@ export interface DoctorSurveyResponse {
 export async function getSurveyResponsesForConfig(configId: string): Promise<DoctorSurveyResponse[]> {
   const { data, error } = await supabase
     .from("doctor_survey_responses")
-    .select("*")
-    .eq("rota_config_id", configId);
+    .select("*, doctors!inner(is_active)")
+    .eq("rota_config_id", configId)
+    .eq("doctors.is_active", true);
 
   if (error) {
     console.error("Failed to fetch survey responses:", error);
