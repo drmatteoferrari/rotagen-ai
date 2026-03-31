@@ -279,57 +279,110 @@ export default function SetupPage() {
             >
               {/* TOP HALF: Blueprint (Pre-Rota) */}
               <div className="flex-1 p-6 flex flex-col border-b border-border bg-gradient-to-br from-transparent to-muted/20">
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <h3 className="text-base font-bold text-foreground flex items-center gap-2">
-                      <span className="flex items-center justify-center w-5 h-5 rounded bg-muted text-muted-foreground text-xs font-bold">
-                        A
-                      </span>
-                      Build Blueprint
-                    </h3>
-                    <p className="text-xs text-muted-foreground mt-1 max-w-sm leading-relaxed">
-                      Generates the master calendar framework and calculates shift targets based on your rules.
-                    </p>
-                  </div>
-                  {preRotaResult && (
-                    <span
-                      className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full border ${
-                        preRotaResult.status === "complete"
-                          ? "border-emerald-200 text-emerald-700 bg-emerald-50"
-                          : preRotaResult.status === "complete_with_warnings"
-                            ? "border-amber-200 text-amber-700 bg-amber-50"
-                            : "border-red-200 text-red-700 bg-red-50"
-                      }`}
-                    >
-                      {preRotaResult.status === "complete" && (
-                        <>
-                          <CheckCircle className="w-3.5 h-3.5" /> Ready
-                        </>
-                      )}
-                      {preRotaResult.status === "complete_with_warnings" && (
-                        <>
-                          <AlertTriangle className="w-3.5 h-3.5" /> Warnings
-                        </>
-                      )}
-                      {preRotaResult.status === "blocked" && (
-                        <>
-                          <XCircle className="w-3.5 h-3.5" /> Blocked
-                        </>
-                      )}
+                <div className="mb-2">
+                  <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+                    <span className="flex items-center justify-center w-5 h-5 rounded bg-muted text-muted-foreground text-xs font-bold">
+                      1
                     </span>
-                  )}
+                    Build Blueprint
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-1 max-w-sm leading-relaxed">
+                    Generates the master calendar framework and calculates necessary shift targets based on your rules.
+                  </p>
                 </div>
 
-                <div className="mt-auto pt-4">
+                {/* Dark Console Box for Blueprint Results */}
+                {preRotaResult && !isStale && (
+                  <div className="mt-3 mb-2 rounded-xl bg-[#0a0a0b] p-4 border border-zinc-800/60 shadow-inner flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-2">
+                    {/* Status Row */}
+                    <div className="flex items-center justify-between text-xs">
+                      <div
+                        className={`flex items-center gap-2 font-bold ${
+                          preRotaResult.status === "complete"
+                            ? "text-emerald-400"
+                            : preRotaResult.status === "complete_with_warnings"
+                              ? "text-amber-400"
+                              : "text-red-400"
+                        }`}
+                      >
+                        <span
+                          className={`w-2 h-2 rounded-full ${
+                            preRotaResult.status === "complete"
+                              ? "bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.4)]"
+                              : preRotaResult.status === "complete_with_warnings"
+                                ? "bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.4)]"
+                                : "bg-red-400 shadow-[0_0_8px_rgba(248,113,113,0.4)]"
+                          }`}
+                        ></span>
+                        Status:{" "}
+                        {preRotaResult.status === "complete"
+                          ? "Ready"
+                          : preRotaResult.status === "complete_with_warnings"
+                            ? "Warnings"
+                            : "Blocked"}
+                      </div>
+                      <span className="text-zinc-500 font-medium tracking-wide">
+                        Last built: {new Date(preRotaResult.generatedAt).toLocaleDateString("en-GB")}
+                      </span>
+                    </div>
+
+                    {/* Message */}
+                    <p className="text-sm text-zinc-300">
+                      {preRotaResult.status === "complete"
+                        ? "Blueprint is valid. You can proceed to final allocation."
+                        : preRotaResult.status === "complete_with_warnings"
+                          ? "Blueprint generated with warnings. Review targets before proceeding."
+                          : "Generation failed due to blocking errors. Please resolve."}
+                    </p>
+
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-2 mt-1">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate("/admin/pre-rota-calendar");
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-800/80 text-zinc-300 hover:text-white hover:bg-zinc-700 text-xs font-semibold transition-all border border-zinc-700/50"
+                        title="View Calendar"
+                      >
+                        <CalendarDays className="h-3.5 w-3.5" />
+                        View Calendar
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate("/admin/pre-rota-targets");
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-800/80 text-zinc-300 hover:text-white hover:bg-zinc-700 text-xs font-semibold transition-all border border-zinc-700/50"
+                        title="View Targets"
+                      >
+                        <Target className="h-3.5 w-3.5" />
+                        View Targets
+                      </button>
+                      <div className="flex-1" />
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate("/admin/pre-rota");
+                        }}
+                        className="text-xs font-bold text-primary hover:text-primary/80 transition-colors flex items-center gap-1"
+                      >
+                        View details <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-auto pt-4 flex flex-col gap-3">
                   {preRotaError && (
-                    <div className="mb-3 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 flex items-center gap-2">
+                    <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 flex items-center gap-2">
                       <XCircle className="h-4 w-4 text-destructive shrink-0" />
                       <p className="text-xs text-destructive">{preRotaError}</p>
                     </div>
                   )}
 
                   {isStale && preRotaResult && (
-                    <div className="mb-3 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 flex items-center gap-2">
+                    <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 flex items-center gap-2">
                       <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
                       <p className="text-xs font-medium text-amber-800">Settings changed. Re-build required.</p>
                     </div>
@@ -351,7 +404,7 @@ export default function SetupPage() {
                       </>
                     ) : preRotaResult ? (
                       <>
-                        <RefreshCw className="mr-2 h-4 w-4 text-muted-foreground" /> Re-build Blueprint
+                        <RefreshCw className="mr-2 h-4 w-4 text-muted-foreground" /> Re-build Blueprint Data
                       </>
                     ) : (
                       <>
@@ -359,45 +412,6 @@ export default function SetupPage() {
                       </>
                     )}
                   </Button>
-
-                  {preRotaResult && !isStale && (
-                    <div className="mt-3 flex items-center justify-between border-t border-border/50 pt-3">
-                      <span className="text-[11px] text-muted-foreground font-medium">
-                        Last Built: {new Date(preRotaResult.generatedAt).toLocaleDateString("en-GB")}
-                      </span>
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate("/admin/pre-rota-calendar");
-                          }}
-                          className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                          title="View Calendar"
-                        >
-                          <CalendarDays className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate("/admin/pre-rota-targets");
-                          }}
-                          className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-                          title="View Targets"
-                        >
-                          <Target className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate("/admin/pre-rota");
-                          }}
-                          className="text-xs font-bold text-primary bg-primary/10 hover:bg-primary/20 px-3 py-1.5 rounded-md transition-colors ml-1"
-                        >
-                          View Details
-                        </button>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
 
@@ -406,7 +420,7 @@ export default function SetupPage() {
                 <div>
                   <h3 className="text-base font-bold text-foreground flex items-center gap-2 mb-1">
                     <span className="flex items-center justify-center w-5 h-5 rounded bg-primary/10 text-primary text-xs font-bold">
-                      B
+                      2
                     </span>
                     Final Allocation
                   </h3>
