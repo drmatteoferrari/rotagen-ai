@@ -131,6 +131,8 @@ export default function RotaPeriodSummary() {
     : "—";
 
   const activeBankHolidays = rotaBankHolidays.filter(h => h.isActive);
+  const inactiveBankHolidays = rotaBankHolidays.filter(h => !h.isActive);
+  const customBankHolidays = rotaBankHolidays.filter(h => !h.isAutoAdded && h.isActive);
 
   const navBarContent = isPostSubmit ? (
     <StepNavBar
