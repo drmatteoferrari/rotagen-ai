@@ -36,7 +36,7 @@ export default function PublicTopBar({ menuItems = [] }: PublicTopBarProps) {
   return (
     <>
       <header
-        className={`sticky top-0 z-50 border-b border-border bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 transition-shadow ${
+        className={`sticky top-0 z-50 border-b border-border bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 transition-shadow relative ${
           shadow ? "shadow-sm" : ""
         }`}
       >
