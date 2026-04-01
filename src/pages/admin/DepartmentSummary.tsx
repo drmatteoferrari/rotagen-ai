@@ -4,8 +4,15 @@ import { AdminLayout } from "@/components/AdminLayout";
 import { StepNavBar } from "@/components/StepNavBar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building2, CheckCircle, Loader2 } from "lucide-react";
-import { useDepartmentSetup } from "@/contexts/DepartmentSetupContext";
+import {
+  Building2, CheckCircle, Loader2, Clock, Users, Shield,
+  Stethoscope, BarChart2, Info
+} from "lucide-react";
+import {
+  useDepartmentSetup,
+  getShiftColor,
+  SHIFT_COLORS,
+} from "@/contexts/DepartmentSetupContext";
 import { useAdminSetup } from "@/contexts/AdminSetupContext";
 import { useRotaContext } from "@/contexts/RotaContext";
 import { useAuth } from "@/contexts/AuthContext";
