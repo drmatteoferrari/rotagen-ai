@@ -108,34 +108,229 @@ export default function DepartmentSummary() {
     }
   };
 
+  const DAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
+  const DAY_LABELS = ["M", "T", "W", "T", "F", "S", "S"];
+
+  const BADGE_CONFIG: {
+    key: "night" | "long" | "ooh" | "oncall" | "nonres";
+    label: string;
+    title: string;
+  }[] = [
+    { key: "night",  label: "🌙", title: "Night" },
+    { key: "long",   label: "⏱",  title: "Long (>10 h)" },
+    { key: "ooh",    label: "🌆", title: "Out of hours" },
+    { key: "oncall", label: "📟", title: "On-call (resident)" },
+    { key: "nonres", label: "🏠", title: "Non-resident on-call" },
+  ];
+
   const dataCards = (
     <>
+      {/* ── Card 1: Department Details ── */}
       <Card>
-        <CardHeader><CardTitle>Department Details</CardTitle></CardHeader>
-        <CardContent>
-          <div className="flex justify-between text-sm py-1.5 border-b border-border"><span className="text-muted-foreground">Department</span><span className="font-medium">{accountSettings.departmentName ?? "—"}</span></div>
-          <div className="flex justify-between text-sm py-1.5"><span className="text-muted-foreground">Hospital / Trust</span><span className="font-medium">{accountSettings.trustName ?? "—"}</span></div>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Building2 className="h-4 w-4 text-purple-600" />
+            Department Details
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-0">
+          <div className="flex justify-between text-sm py-2 border-b border-border">
+            <span className="text-muted-foreground">Department</span>
+            <span className="font-medium">{accountSettings.departmentName ?? "\u2014"}</span>
+          </div>
+          <div className="flex justify-between text-sm py-2">
+            <span className="text-muted-foreground">Hospital / Trust</span>
+            <span className="font-medium">{accountSettings.trustName ?? "\u2014"}</span>
+          </div>
         </CardContent>
       </Card>
+
+      {/* ── Card 2: Hour Distribution ── */}
       <Card>
-        <CardHeader><CardTitle>Shift Types</CardTitle></CardHeader>
-        <CardContent>
-          {displayShifts.map(s => (
-            <div key={s.id} className="flex items-center gap-3 py-2 border-b border-border last:border-0">
-              <span className="text-xs font-bold bg-muted px-2 py-0.5 rounded">{s.abbreviation}</span>
-              <span className="flex-1 text-sm font-medium">{s.name}</span>
-              <span className="text-xs text-muted-foreground">{s.startTime}–{s.endTime} ({s.durationHours}h)</span>
-              <span className="text-xs text-muted-foreground">{s.isOncall ? 'On-call' : 'Non-on-call'}</span>
-            </div>
-          ))}
-          {displayShifts.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No shift types defined.</p>}
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <BarChart2 className="h-4 w-4 text-purple-600" />
+            Hour Distribution
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-0">
+          <div className="flex justify-between text-sm py-2 border-b border-border">
+            <span className="text-muted-foreground">On-call fraction</span>
+            <span className="font-medium">{globalOncallPct}%</span>
+          </div>
+          <div className="flex justify-between text-sm py-2">
+            <span className="text-muted-foreground">Non-on-call fraction</span>
+            <span className="font-medium">{100 - globalOncallPct}%</span>
+          </div>
         </CardContent>
       </Card>
+
+      {/* ── Card 3: Shift Types (one sub-card per shift) ── */}
       <Card>
-        <CardHeader><CardTitle>Hour Distribution</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Stethoscope className="h-4 w-4 text-purple-600" />
+            Shift Types
+          </CardTitle>
+          {displayShifts.length > 0 && (
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {displayShifts.length} shift{displayShifts.length !== 1 ? "s" : ""} defined
+            </p>
+          )}
+        </CardHeader>
         <CardContent>
-          <div className="flex justify-between text-sm py-1.5 border-b border-border"><span className="text-muted-foreground">On-call fraction</span><span className="font-medium">{globalOncallPct}%</span></div>
-          <div className="flex justify-between text-sm py-1.5"><span className="text-muted-foreground">Non-on-call fraction</span><span className="font-medium">{100 - globalOncallPct}%</span></div>
+          {displayShifts.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-4">No shift types defined.</p>
+          )}
+
+          {displayShifts.map((s, index) => {
+            const color = getShiftColor(index);
+            const applicableDays: Record<string, boolean> =
+              s.applicableDays ?? {};
+            const hasCompetency =
+              (s.reqIac ?? 0) > 0 ||
+              (s.reqIaoc ?? 0) > 0 ||
+              (s.reqIcu ?? 0) > 0 ||
+              (s.reqTransfer ?? 0) > 0;
+            const hasMinGrade = s.reqMinGrade != null && s.reqMinGrade !== "";
+
+            return (
+              <div
+                key={s.id}
+                className="rounded-lg border border-border p-3 mb-3 last:mb-0"
+                style={{ borderLeftWidth: 4, borderLeftColor: color.solid }}
+              >
+                {/* Shift header bar */}
+                <div className="flex items-center gap-2 mb-2">
+                  <span
+                    className={`text-xs font-bold px-2 py-0.5 rounded ${color.bg} ${color.text}`}
+                  >
+                    {s.abbreviation}
+                  </span>
+                  <span className="text-sm font-semibold flex-1">
+                    {s.name}
+                  </span>
+                  <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Clock className="h-3 w-3" />
+                    {String(s.startTime).slice(0, 5)}{"\u2013"}{String(s.endTime).slice(0, 5)}
+                    {" "}({s.durationHours}h)
+                  </span>
+                </div>
+
+                <div className="space-y-2.5 text-sm">
+                  {/* 7-day applicable grid */}
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+                      Applicable days
+                    </p>
+                    <div className="flex gap-1">
+                      {DAY_KEYS.map((day, i) => {
+                        const active = !!applicableDays[day];
+                        const isWeekend = day === "sat" || day === "sun";
+                        return (
+                          <span
+                            key={day}
+                            className={`w-7 h-7 flex items-center justify-center rounded text-xs font-medium transition-colors ${
+                              active
+                                ? `${color.bg} ${color.text}`
+                                : isWeekend
+                                ? "bg-muted/60 text-muted-foreground/50"
+                                : "bg-muted text-muted-foreground/50"
+                            }`}
+                          >
+                            {DAY_LABELS[i]}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Staffing row */}
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+                      <Users className="h-3 w-3 inline mr-1" />
+                      Staffing
+                    </p>
+                    <div className="flex gap-2">
+                      {[
+                        { label: "Min",    value: s.staffing?.min    ?? s.staffing?.target ?? 1 },
+                        { label: "Target", value: s.staffing?.target ?? 1 },
+                        { label: "Max",    value: s.staffing?.max    != null ? s.staffing.max : "\u2014" },
+                      ].map(({ label, value }) => (
+                        <div key={label} className="text-center bg-muted rounded px-3 py-1.5">
+                          <p className="text-[10px] text-muted-foreground uppercase">{label}</p>
+                          <p className="text-sm font-semibold">{value}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Badges */}
+                  {s.badges && (
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+                        Shift characteristics
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {BADGE_CONFIG.map(({ key, label, title }) => {
+                          const active = !!(s.badges as any)[key];
+                          return (
+                            <span key={key} className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border ${active ? "bg-purple-100 text-purple-700 border-purple-200" : "bg-muted text-muted-foreground/50 line-through border-transparent"}`}>
+                              {label} {title}
+                            </span>
+                          );
+                        })}
+                        {/* On-call type pill */}
+                        <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-accent text-accent-foreground border border-border font-medium">
+                          {s.isOncall
+                            ? (s.isNonRes ? "Non-resident on-call" : "Resident on-call")
+                            : "Non-on-call"}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Competency requirements */}
+                  {(hasCompetency || hasMinGrade) && (
+                    <div>
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+                        Competency requirements
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {[
+                          { key: "reqIac",      label: "IAC",      val: s.reqIac      ?? 0 },
+                          { key: "reqIaoc",     label: "IAOC",     val: s.reqIaoc     ?? 0 },
+                          { key: "reqIcu",      label: "ICU",      val: s.reqIcu      ?? 0 },
+                          { key: "reqTransfer", label: "Transfer", val: s.reqTransfer ?? 0 },
+                        ]
+                          .filter(({ val }) => val > 0)
+                          .map(({ key, label, val }) => (
+                            <span key={key} className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 border border-blue-200">
+                              <Shield className="h-3 w-3" />
+                              {label}: {val}+
+                            </span>
+                          ))}
+                        {hasMinGrade && (
+                          <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-teal-100 text-teal-700 border border-teal-200">
+                            <Info className="h-3 w-3" />
+                            Min grade: {s.reqMinGrade}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Target override % */}
+                  {s.targetOverridePct != null && (
+                    <div className="flex justify-between text-sm py-1.5 border-t border-border mt-1">
+                      <span className="text-muted-foreground">Target allocation override</span>
+                      <span className="font-medium">{s.targetOverridePct}%</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </CardContent>
       </Card>
     </>
