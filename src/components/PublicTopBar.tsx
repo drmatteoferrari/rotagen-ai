@@ -36,7 +36,7 @@ export default function PublicTopBar({ menuItems = [] }: PublicTopBarProps) {
   return (
     <>
       <header
-        className={`sticky top-0 z-50 border-b border-border bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 transition-shadow ${
+        className={`sticky top-0 z-50 border-b border-border bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 transition-shadow relative ${
           shadow ? "shadow-sm" : ""
         }`}
       >
@@ -96,10 +96,10 @@ export default function PublicTopBar({ menuItems = [] }: PublicTopBarProps) {
           </div>
         </div>
 
-        {/* Dropdown menu - Original logic preserved */}
+        {/* Dropdown menu - overlay positioned */}
         {menuOpen && (
-          <div className="border-t border-border bg-white px-4 pb-3 pt-2">
-            <nav className="flex flex-col gap-1">
+          <div className="absolute right-3 top-full z-50 mt-1 w-56 rounded-md border border-border bg-white shadow-lg sm:right-6">
+            <nav className="flex flex-col gap-1 px-2 py-2">
               {allMenuLinks.map((item, i) => (
                 <button
                   key={i}
