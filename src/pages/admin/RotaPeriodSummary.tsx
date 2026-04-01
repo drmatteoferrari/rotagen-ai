@@ -166,34 +166,146 @@ export default function RotaPeriodSummary() {
         )}
 
         <Card>
-          <CardHeader><CardTitle>Rota Dates</CardTitle></CardHeader>
-          <CardContent>
-            <div className="flex justify-between text-sm py-1.5 border-b border-border"><span className="text-muted-foreground">Start</span><span className="font-medium">{rotaStartDate ? format(rotaStartDate, "dd MMM yyyy") : "—"}</span></div>
-            <div className="flex justify-between text-sm py-1.5 border-b border-border"><span className="text-muted-foreground">End</span><span className="font-medium">{rotaEndDate ? format(rotaEndDate, "dd MMM yyyy") : "—"}</span></div>
-            <div className="flex justify-between text-sm py-1.5"><span className="text-muted-foreground">Duration</span><span className="font-medium">{durationText}</span></div>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Calendar className="h-4 w-4 text-amber-600" />
+              Rota Dates
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-0">
+            <div className="flex justify-between text-sm py-2 border-b border-border">
+              <span className="text-muted-foreground">Start date</span>
+              <span className="font-medium">{rotaStartDate ? format(rotaStartDate, "EEEE dd MMM yyyy") : "\u2014"}</span>
+            </div>
+            <div className="flex justify-between text-sm py-2 border-b border-border">
+              <span className="text-muted-foreground">End date</span>
+              <span className="font-medium">{rotaEndDate ? format(rotaEndDate, "EEEE dd MMM yyyy") : "\u2014"}</span>
+            </div>
+            <div className="flex justify-between text-sm py-2">
+              <span className="text-muted-foreground">Duration</span>
+              <span className="font-medium">{durationText}</span>
+            </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader><CardTitle>Bank Holidays</CardTitle></CardHeader>
-          <CardContent>
-            <div className="flex justify-between text-sm py-1.5 border-b border-border">
-              <span className="text-muted-foreground">Treatment</span>
-              <span className="font-medium">{bhSameAsWeekend === true ? 'Same as weekends' : bhSameAsWeekend === false ? 'Custom shift rules' : 'Not set'}</span>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Info className="h-4 w-4 text-amber-600" />
+              Bank Holiday Treatment
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-0">
+            <div className="flex justify-between text-sm py-2 border-b border-border">
+              <span className="text-muted-foreground">Treatment rule</span>
+              <span className="font-medium">
+                {bhSameAsWeekend === true
+                  ? "Same as weekends"
+                  : bhSameAsWeekend === false
+                  ? "Custom shift rules"
+                  : "Not set"}
+              </span>
             </div>
-            {bhSameAsWeekend === false && bhShiftRules.filter(r => r.included).map(r => (
-              <div key={r.shift_key} className="flex justify-between text-sm py-1.5 border-b border-border">
-                <span className="text-muted-foreground">{r.name}</span>
-                <span className="font-medium">{r.target_doctors} doctors</span>
-              </div>
-            ))}
-            {activeBankHolidays.length > 0 ? activeBankHolidays.map(h => (
-              <div key={h.id} className="flex justify-between text-sm py-1.5 border-b border-border last:border-0">
-                <span className="text-muted-foreground">{h.name}</span>
-                <span className="font-medium">{format(h.date, "dd MMM yyyy")}</span>
-              </div>
-            )) : (
-              <p className="text-sm text-muted-foreground text-center py-4">No bank holidays in this rota period.</p>
+            {bhSameAsWeekend === false && (() => {
+              const includedRules = bhShiftRules.filter(r => r.included);
+              if (includedRules.length === 0) return null;
+              return (
+                <>
+                  <div className="pt-3 pb-1">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Shifts on bank holidays
+                    </p>
+                  </div>
+                  {includedRules.map((r, idx) => (
+                    <div
+                      key={r.shift_key}
+                      className={`py-2 ${idx < includedRules.length - 1 ? "border-b border-border" : ""}`}
+                    >
+                      <div className="flex justify-between text-sm">
+                        <span className="font-medium">{r.name}</span>
+                        <span className="flex items-center gap-1 text-muted-foreground text-xs">
+                          <Users className="h-3 w-3" />
+                          {r.target_doctors} {r.target_doctors === 1 ? "doctor" : "doctors"}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                        <Clock className="h-3 w-3" />
+                        {r.start_time} {"\u2013"} {r.end_time}
+                      </div>
+                    </div>
+                  ))}
+                </>
+              );
+            })()}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <CalendarDays className="h-4 w-4 text-amber-600" />
+              Bank Holiday Dates
+            </CardTitle>
+            {rotaBankHolidays.length > 0 && (
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {activeBankHolidays.length} active
+                {inactiveBankHolidays.length > 0 ? `, ${inactiveBankHolidays.length} excluded` : ""}
+                {customBankHolidays.length > 0 ? `, ${customBankHolidays.length} custom` : ""}
+              </p>
+            )}
+          </CardHeader>
+          <CardContent className="space-y-0">
+            {activeBankHolidays.length === 0 && inactiveBankHolidays.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                No bank holidays in this rota period.
+              </p>
+            ) : (
+              <>
+                {activeBankHolidays.length > 0 && (
+                  <>
+                    <div className="pt-1 pb-1">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Active</p>
+                    </div>
+                    {activeBankHolidays.map((h, idx) => (
+                      <div
+                        key={h.id}
+                        className={`flex justify-between items-center text-sm py-2 ${idx < activeBankHolidays.length - 1 ? "border-b border-border" : ""}`}
+                      >
+                        <div className="flex items-center gap-1.5">
+                          <span>{h.name}</span>
+                          {!h.isAutoAdded && (
+                            <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-medium px-1.5 py-0.5">
+                              <Tag className="h-2.5 w-2.5" />
+                              Custom
+                            </span>
+                          )}
+                        </div>
+                        <span className="font-medium text-right shrink-0">
+                          {format(h.date, "EEE dd MMM yyyy")}
+                        </span>
+                      </div>
+                    ))}
+                  </>
+                )}
+                {inactiveBankHolidays.length > 0 && (
+                  <>
+                    <div className={`pb-1 ${activeBankHolidays.length > 0 ? "pt-4 border-t border-border mt-2" : "pt-1"}`}>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Excluded</p>
+                    </div>
+                    {inactiveBankHolidays.map((h, idx) => (
+                      <div
+                        key={h.id}
+                        className={`flex justify-between items-center text-sm py-2 opacity-50 ${idx < inactiveBankHolidays.length - 1 ? "border-b border-border" : ""}`}
+                      >
+                        <span className="line-through">{h.name}</span>
+                        <span className="font-medium text-right shrink-0">
+                          {format(h.date, "EEE dd MMM yyyy")}
+                        </span>
+                      </div>
+                    ))}
+                  </>
+                )}
+              </>
             )}
           </CardContent>
         </Card>
