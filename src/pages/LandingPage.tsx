@@ -306,71 +306,40 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* --- MOBILE ONLY: Dedicated Mock Rota Section Below the Fold --- */}
-        {/* Mobile Animation: fade-up-5 */}
+        {/* --- MOBILE ONLY: Screenshot Carousel Below the Fold --- */}
         <section className="md:hidden bg-blue-100 px-4 pb-12 pt-2">
           <div className="fade-up-5 float-anim w-full max-w-xs mx-auto overflow-hidden rounded-xl border border-border bg-card shadow-2xl">
             <div className="flex h-5 items-center gap-1.5 px-2 bg-slate-800">
               <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
               <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
               <span className="h-1.5 w-1.5 rounded-full bg-green-400" />
-              <span className="ml-1 text-[7px] text-slate-400 font-medium hidden sm:inline">
-                RotaGen — Final Rota · August 2025
+              <span className="ml-auto flex gap-1">
+                {APP_SCREENSHOTS.map((_, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setActiveScreenshot(i)}
+                    className={`h-1.5 w-1.5 rounded-full transition-all duration-300 ${
+                      i === activeScreenshot ? "bg-blue-400 scale-125" : "bg-slate-500"
+                    }`}
+                  />
+                ))}
               </span>
             </div>
-            <div className="space-y-1 p-1.5 relative">
-              <div className="grid grid-cols-5 gap-1 text-[7px] font-semibold text-muted-foreground">
-                <div>Doctor</div>
-                <div>Mon</div>
-                <div>Tue</div>
-                <div>Wed</div>
-                <div>Thu</div>
-              </div>
-              {[
-                ["Dr Patel", "Long Day", "Short Day", "On-Call", "Night"],
-                ["Dr Khan", "Short Day", "Long Day", "Night", "Short Day"],
-                ["Dr Smith", "On-Call", "Short Day", "Long Day", "Long Day"],
-              ].map((row) => (
-                <div key={row[0]} className="grid grid-cols-5 gap-1">
-                  <div className="flex items-center rounded-lg bg-muted px-1 py-1 text-[7px] font-medium text-foreground">
-                    {row[0]}
-                  </div>
-                  {row.slice(1).map((shift, index) => {
-                    const badgeClass =
-                      shift === "Long Day"
-                        ? "bg-green-100 text-green-700"
-                        : shift === "Night"
-                          ? "bg-red-100 text-red-700"
-                          : shift === "On-Call"
-                            ? "bg-amber-100 text-amber-700"
-                            : "bg-blue-100 text-blue-700";
-                    return (
-                      <div
-                        key={`${row[0]}-${index}`}
-                        className="rounded-lg bg-muted px-0.5 py-1 flex items-center justify-center"
-                      >
-                        <span className={`inline-flex rounded-full px-1 py-0.5 text-[5px] font-semibold ${badgeClass}`}>
-                          {shift}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              ))}
-              {/* ECG line */}
-              <svg
-                className="absolute bottom-1 left-0 w-full h-4 pointer-events-none"
-                viewBox="0 0 400 30"
-                preserveAspectRatio="none"
-              >
-                <polyline
-                  className="ecg-draw"
-                  fill="none"
-                  stroke="hsl(213 94% 48% / 0.15)"
-                  strokeWidth="2"
-                  points="0,20 60,20 80,20 90,5 100,25 110,12 120,20 180,20 200,20 210,5 220,25 230,12 240,20 300,20 320,20 330,5 340,25 350,12 360,20 400,20"
+            <div className="relative w-full" style={{ aspectRatio: "800/520" }}>
+              {APP_SCREENSHOTS.map((shot, i) => (
+                <img
+                  key={i}
+                  src={shot.src}
+                  alt={shot.alt}
+                  className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${
+                    i === activeScreenshot ? "opacity-100" : "opacity-0"
+                  }`}
+                  width={800}
+                  height={520}
+                  loading={i === 0 ? undefined : "lazy"}
                 />
-              </svg>
+              ))}
             </div>
           </div>
         </section>
