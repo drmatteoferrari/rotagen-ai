@@ -123,6 +123,21 @@ export default function DepartmentSummary() {
     { key: "nonres", label: "🏠", title: "Non-resident on-call" },
   ];
 
+  const shiftIndexMap: Record<string, number> = {};
+  displayShifts.forEach((s, i) => { shiftIndexMap[s.id] = i; });
+
+  const oncallShifts = displayShifts.filter(s => s.isOncall);
+  const nonOncallShifts = displayShifts.filter(s => !s.isOncall);
+
+  function getEffectivePct(s: any): number {
+    if (s.targetOverridePct != null) return s.targetOverridePct;
+    const peers = s.isOncall ? oncallShifts : nonOncallShifts;
+    const overriddenPeers = peers.filter((p: any) => p.targetOverridePct != null);
+    const remainingPct = 100 - overriddenPeers.reduce((acc: number, p: any) => acc + (p.targetOverridePct ?? 0), 0);
+    const unoverriddenCount = peers.filter((p: any) => p.targetOverridePct == null).length;
+    return unoverriddenCount > 0 ? Math.round(remainingPct / unoverriddenCount) : 0;
+  }
+
   const dataCards = (
     <>
       {/* ── Card 1: Department Details ── */}
@@ -145,27 +160,56 @@ export default function DepartmentSummary() {
         </CardContent>
       </Card>
 
-      {/* ── Card 2: Hour Distribution ── */}
+      {/* ── Card 2: Weekly Schedule ── */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
-            <BarChart2 className="h-4 w-4 text-purple-600" />
-            Hour Distribution
+            <CalendarDays className="h-4 w-4 text-purple-600" />
+            Weekly Schedule
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-0">
-          <div className="flex justify-between text-sm py-2 border-b border-border">
-            <span className="text-muted-foreground">On-call fraction</span>
-            <span className="font-medium">{globalOncallPct}%</span>
-          </div>
-          <div className="flex justify-between text-sm py-2">
-            <span className="text-muted-foreground">Non-on-call fraction</span>
-            <span className="font-medium">{100 - globalOncallPct}%</span>
+        <CardContent className="pt-0">
+          <div className="grid grid-cols-7 w-full gap-0.5 sm:gap-1">
+            {DAY_KEYS.map((day, i) => {
+              const isWeekend = day === "sat" || day === "sun";
+              return (
+                <div key={day} className={`min-w-0 pb-1 ${isWeekend ? "border-t-2 border-border/40" : "border-t-2 border-purple-200"}`}>
+                  <p className={`text-[10px] font-semibold text-center truncate ${isWeekend ? "text-muted-foreground/50" : "text-muted-foreground"}`}>
+                    {DAY_LABELS[i]}
+                  </p>
+                </div>
+              );
+            })}
+            {DAY_KEYS.map((day) => {
+              const dayShifts = displayShifts.filter(s => (s.applicableDays ?? {})[day]);
+              return (
+                <div key={day} className="min-w-0 flex flex-col gap-0.5">
+                  {dayShifts.length === 0
+                    ? <span className="text-[10px] text-muted-foreground/30 text-center block">—</span>
+                    : dayShifts.map((s) => {
+                        const idx = shiftIndexMap[s.id] ?? 0;
+                        const color = getShiftColor(idx);
+                        const target = s.staffing?.target ?? s.staffing?.min ?? 1;
+                        return (
+                          <div
+                            key={s.id}
+                            className="rounded px-0.5 py-0.5 text-center w-full"
+                            style={{ backgroundColor: color.solid, color: "white" }}
+                          >
+                            <span className="text-[9px] font-bold leading-tight block truncate">{s.abbreviation}</span>
+                            <span className="text-[8px] leading-tight block opacity-90">{`\u00d7${target}`}</span>
+                          </div>
+                        );
+                      })
+                  }
+                </div>
+              );
+            })}
           </div>
         </CardContent>
       </Card>
 
-      {/* ── Card 3: Shift Types (one sub-card per shift) ── */}
+      {/* ── Card 3: Shift Types (compact) ── */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
@@ -174,163 +218,113 @@ export default function DepartmentSummary() {
           </CardTitle>
           {displayShifts.length > 0 && (
             <p className="text-xs text-muted-foreground mt-0.5">
-              {displayShifts.length} shift{displayShifts.length !== 1 ? "s" : ""} defined
+              {displayShifts.length} shift{displayShifts.length !== 1 ? "s" : ""}
             </p>
           )}
         </CardHeader>
         <CardContent>
-          {displayShifts.length === 0 && (
-            <p className="text-sm text-muted-foreground text-center py-4">No shift types defined.</p>
-          )}
+          <div className="space-y-0 divide-y-0">
+            {displayShifts.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-4">No shift types defined.</p>
+            )}
+            {displayShifts.map((s, index) => {
+              const color = getShiftColor(index);
+              return (
+                <div key={s.id} className="flex items-start gap-2 py-2 border-b border-border last:border-0">
+                  <div
+                    className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold text-white mt-0.5"
+                    style={{ backgroundColor: color.solid }}
+                  >
+                    {s.abbreviation}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-foreground leading-tight truncate">{s.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {s.startTime}–{s.endTime} · {typeof s.durationHours === "number" ? s.durationHours.toFixed(1) : "—"}h
+                    </p>
+                    {(() => {
+                      const activeBadges = BADGE_CONFIG.filter(({ key }) => !!(s.badges as any)?.[key]);
+                      if (activeBadges.length === 0) return null;
+                      return (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {activeBadges.map(({ key, label, title }) => (
+                            <span
+                              key={key}
+                              title={title}
+                              className="inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full border border-amber-300 bg-amber-50 text-amber-700 font-medium"
+                            >
+                              {label} {title}
+                            </span>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                    {((s.reqIac ?? 0) > 0 || (s.reqIaoc ?? 0) > 0 || (s.reqIcu ?? 0) > 0 || (s.reqTransfer ?? 0) > 0) && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {(s.reqIac ?? 0) > 0 && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 font-medium">IAC ×{s.reqIac}</span>}
+                        {(s.reqIaoc ?? 0) > 0 && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 font-medium">IAOC ×{s.reqIaoc}</span>}
+                        {(s.reqIcu ?? 0) > 0 && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 font-medium">ICU ×{s.reqIcu}</span>}
+                        {(s.reqTransfer ?? 0) > 0 && <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 font-medium">Transfer ×{s.reqTransfer}</span>}
+                      </div>
+                    )}
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="text-xs text-muted-foreground">target</p>
+                    <p className="text-sm font-bold">{s.staffing?.target ?? s.staffing?.min ?? 1}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── Card 4: Hour Distribution ── */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <BarChart2 className="h-4 w-4 text-purple-600" />
+            Hour Distribution
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-4">
+            <div className="flex justify-between text-xs text-muted-foreground mb-1">
+              <span>On-call</span>
+              <span>Non-on-call</span>
+            </div>
+            <div className="flex h-3 w-full rounded-full overflow-hidden">
+              <div className="bg-purple-500 transition-all" style={{ width: `${globalOncallPct}%` }} />
+              <div className="bg-slate-300 flex-1" />
+            </div>
+            <div className="flex justify-between text-xs font-semibold mt-1">
+              <span className="text-purple-700">{globalOncallPct}%</span>
+              <span className="text-slate-500">{100 - globalOncallPct}%</span>
+            </div>
+          </div>
+
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-2">Per-shift allocation</p>
 
           {displayShifts.map((s, index) => {
             const color = getShiftColor(index);
-            const applicableDays: Record<string, boolean> =
-              s.applicableDays ?? {};
-            const hasCompetency =
-              (s.reqIac ?? 0) > 0 ||
-              (s.reqIaoc ?? 0) > 0 ||
-              (s.reqIcu ?? 0) > 0 ||
-              (s.reqTransfer ?? 0) > 0;
-            const hasMinGrade = s.reqMinGrade != null && s.reqMinGrade !== "";
-
+            const withinBucketPct = getEffectivePct(s);
+            const bucketPct = s.isOncall ? globalOncallPct : (100 - globalOncallPct);
+            const globalSharePct = Math.round(bucketPct * withinBucketPct / 100);
             return (
-              <div
-                key={s.id}
-                className="rounded-lg border border-border p-3 mb-3 last:mb-0"
-                style={{ borderLeftWidth: 4, borderLeftColor: color.solid }}
-              >
-                {/* Shift header bar */}
-                <div className="flex items-center gap-2 mb-2">
-                  <span
-                    className={`text-xs font-bold px-2 py-0.5 rounded ${color.bg} ${color.text}`}
-                  >
-                    {s.abbreviation}
-                  </span>
-                  <span className="text-sm font-semibold flex-1">
-                    {s.name}
-                  </span>
-                  <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Clock className="h-3 w-3" />
-                    {String(s.startTime).slice(0, 5)}{"\u2013"}{String(s.endTime).slice(0, 5)}
-                    {" "}({s.durationHours}h)
-                  </span>
+              <div key={s.id} className="flex items-center gap-2 py-1.5 border-b border-border last:border-0">
+                <div className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold text-white" style={{ backgroundColor: color.solid }}>
+                  {s.abbreviation}
                 </div>
-
-                <div className="space-y-2.5 text-sm">
-                  {/* 7-day applicable grid */}
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
-                      Applicable days
-                    </p>
-                    <div className="flex gap-1">
-                      {DAY_KEYS.map((day, i) => {
-                        const active = !!applicableDays[day];
-                        const isWeekend = day === "sat" || day === "sun";
-                        return (
-                          <span
-                            key={day}
-                            className={`w-7 h-7 flex items-center justify-center rounded text-xs font-medium transition-colors ${
-                              active
-                                ? `${color.bg} ${color.text}`
-                                : isWeekend
-                                ? "bg-muted/60 text-muted-foreground/50"
-                                : "bg-muted text-muted-foreground/50"
-                            }`}
-                          >
-                            {DAY_LABELS[i]}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Staffing row */}
-                  <div>
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
-                      <Users className="h-3 w-3 inline mr-1" />
-                      Staffing
-                    </p>
-                    <div className="flex gap-2">
-                      {[
-                        { label: "Min",    value: s.staffing?.min    ?? s.staffing?.target ?? 1 },
-                        { label: "Target", value: s.staffing?.target ?? 1 },
-                        { label: "Max",    value: s.staffing?.max    != null ? s.staffing.max : "\u2014" },
-                      ].map(({ label, value }) => (
-                        <div key={label} className="text-center bg-muted rounded px-3 py-1.5">
-                          <p className="text-[10px] text-muted-foreground uppercase">{label}</p>
-                          <p className="text-sm font-semibold">{value}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Badges */}
-                  {s.badges && (
-                    <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
-                        Shift characteristics
-                      </p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {BADGE_CONFIG.map(({ key, label, title }) => {
-                          const active = !!(s.badges as any)[key];
-                          return (
-                            <span key={key} className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border ${active ? "bg-purple-100 text-purple-700 border-purple-200" : "bg-muted text-muted-foreground/50 line-through border-transparent"}`}>
-                              {label} {title}
-                            </span>
-                          );
-                        })}
-                        {/* On-call type pill */}
-                        <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-accent text-accent-foreground border border-border font-medium">
-                          {s.isOncall
-                            ? (s.isNonRes ? "Non-resident on-call" : "Resident on-call")
-                            : "Non-on-call"}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Competency requirements */}
-                  {(hasCompetency || hasMinGrade) && (
-                    <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
-                        Competency requirements
-                      </p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {[
-                          { key: "reqIac",      label: "IAC",      val: s.reqIac      ?? 0 },
-                          { key: "reqIaoc",     label: "IAOC",     val: s.reqIaoc     ?? 0 },
-                          { key: "reqIcu",      label: "ICU",      val: s.reqIcu      ?? 0 },
-                          { key: "reqTransfer", label: "Transfer", val: s.reqTransfer ?? 0 },
-                        ]
-                          .filter(({ val }) => val > 0)
-                          .map(({ key, label, val }) => (
-                            <span key={key} className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 border border-blue-200">
-                              <Shield className="h-3 w-3" />
-                              {label}: {val}+
-                            </span>
-                          ))}
-                        {hasMinGrade && (
-                          <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-teal-100 text-teal-700 border border-teal-200">
-                            <Info className="h-3 w-3" />
-                            Min grade: {s.reqMinGrade}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Target override % */}
-                  {s.targetOverridePct != null && (
-                    <div className="flex justify-between text-sm py-1.5 border-t border-border mt-1">
-                      <span className="text-muted-foreground">Target allocation override</span>
-                      <span className="font-medium">{s.targetOverridePct}%</span>
-                    </div>
-                  )}
-                </div>
+                <span className="flex-1 min-w-0 text-xs text-foreground truncate">{s.name}</span>
+                <span className="shrink-0 text-[10px] text-muted-foreground">{s.isOncall ? "On-call" : "Non-OC"}</span>
+                <span className="shrink-0 text-xs font-semibold text-foreground w-10 text-right">{globalSharePct}%</span>
               </div>
             );
           })}
+
+          <p className="text-[10px] text-muted-foreground mt-2 leading-relaxed">
+            Percentages show each shift's share of total rostered hours. Overrides set in Step 3 are applied first; remaining hours are split equally within each bucket.
+          </p>
         </CardContent>
       </Card>
     </>
