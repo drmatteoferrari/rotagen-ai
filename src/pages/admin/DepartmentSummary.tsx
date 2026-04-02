@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Building2, CheckCircle, Loader2, Clock, Users, Shield,
-  Stethoscope, BarChart2, Info
+  Stethoscope, BarChart2, Info, CalendarDays, Percent
 } from "lucide-react";
 import {
   useDepartmentSetup,
