@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Star, Menu, X } from "lucide-react";
+import { Star, Menu } from "lucide-react";
 import RotaGenLogo from "@/components/brand/RotaGenLogo";
 
 interface PublicTopBarProps {
@@ -23,13 +23,29 @@ export default function PublicTopBar({ menuItems = [] }: PublicTopBarProps) {
   const isLogin = pathname === "/login";
   const isRegister = pathname === "/register" || pathname === "/signup";
   const isFeedback = pathname === "/feedback";
+  const isLanding = pathname === "/";
+  const isPricing = pathname === "/pricing";
 
-  const defaultLinks = [
-    { label: "Home", onClick: () => navigate("/") },
-    { label: "Pricing", onClick: () => navigate("/pricing") },
-    { label: "Privacy Policy", onClick: () => navigate("/privacy") },
-    { label: "Terms of Use", onClick: () => navigate("/terms") },
-  ];
+  const defaultLinks: { label: string; onClick: () => void }[] = [];
+
+  if (!isLanding) {
+    defaultLinks.push({ label: "Home", onClick: () => navigate("/") });
+  }
+
+  if (!isPricing) {
+    defaultLinks.push({ label: "Pricing", onClick: () => navigate("/pricing") });
+  }
+
+  if (!isLogin) {
+    defaultLinks.push({ label: "Sign in", onClick: () => navigate("/login") });
+  }
+
+  if (!isRegister) {
+    defaultLinks.push({ label: "Request access", onClick: () => navigate("/register") });
+  }
+
+  defaultLinks.push({ label: "Privacy Policy", onClick: () => navigate("/privacy") });
+  defaultLinks.push({ label: "Terms of Use", onClick: () => navigate("/terms") });
 
   const allMenuLinks = [...menuItems, ...defaultLinks];
 
@@ -41,27 +57,23 @@ export default function PublicTopBar({ menuItems = [] }: PublicTopBarProps) {
         }`}
       >
         <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-3 sm:px-6">
-          {/* Left: Logo - Protected with shrink-0 and min-w-0 */}
           <button type="button" onClick={() => navigate("/")} className="flex items-center gap-2 shrink-0 min-w-0">
             <RotaGenLogo size="sm" />
           </button>
 
-          {/* Right: action buttons + hamburger - Tighter gap on mobile to prevent crowding */}
           <div className="flex items-center gap-1 sm:gap-3">
-            {/* Feedback: Accent Green. Star only on mobile, Star+Text on tablet/desktop */}
             {!isFeedback && (
               <button
                 type="button"
                 onClick={() => navigate("/feedback")}
-                className="flex items-center gap-1 px-1.5 py-1.5 sm:px-2.5 sm:py-1.5 rounded-lg bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 transition-colors"
+                className="hidden sm:flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 transition-colors"
                 title="Give feedback"
               >
                 <Star className="h-4 w-4 fill-green-700/20" />
-                <span className="hidden sm:inline text-sm font-semibold">Feedback</span>
+                <span className="text-sm font-semibold">Feedback</span>
               </button>
             )}
 
-            {/* Sign in: Accent Blue, blue outline, smaller font/padding on mobile */}
             {!isLogin && (
               <button
                 type="button"
@@ -72,7 +84,6 @@ export default function PublicTopBar({ menuItems = [] }: PublicTopBarProps) {
               </button>
             )}
 
-            {/* Request access: Accent Blue + Thick Shimmer Outline effect. Hidden on mobile to save space. */}
             {!isRegister && (
               <div className="hidden sm:inline-block nav-cta-shimmer-wrap">
                 <button
@@ -85,20 +96,35 @@ export default function PublicTopBar({ menuItems = [] }: PublicTopBarProps) {
               </div>
             )}
 
-            {/* Hamburger: sized for space efficiency on mobile */}
             <button
               type="button"
               onClick={() => setMenuOpen(!menuOpen)}
               className="flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              aria-label={menuOpen ? "Close menu" : "Open menu"}
             >
-              {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              <span className="relative flex h-5 w-5 items-center justify-center">
+                <span
+                  className={`absolute left-0 h-0.5 w-5 rounded-full bg-current transition-all duration-300 ease-in-out ${
+                    menuOpen ? "top-1/2 -translate-y-1/2 rotate-45" : "top-1"
+                  }`}
+                />
+                <span
+                  className={`absolute left-0 top-1/2 h-0.5 w-5 -translate-y-1/2 rounded-full bg-current transition-all duration-300 ease-in-out ${
+                    menuOpen ? "opacity-0 scale-x-0" : "opacity-100 scale-x-100"
+                  }`}
+                />
+                <span
+                  className={`absolute left-0 h-0.5 w-5 rounded-full bg-current transition-all duration-300 ease-in-out ${
+                    menuOpen ? "top-1/2 -translate-y-1/2 -rotate-45" : "bottom-1"
+                  }`}
+                />
+              </span>
             </button>
           </div>
         </div>
 
-        {/* Dropdown menu - overlay positioned */}
         {menuOpen && (
-          <div className="absolute right-3 top-full z-50 mt-1 w-56 rounded-md border border-border bg-white shadow-lg sm:right-6">
+          <div className="absolute right-3 top-full z-50 mt-1 w-56 rounded-md border border-border bg-white shadow-lg sm:right-6 animate-in fade-in-0 slide-in-from-top-2 duration-150">
             <nav className="flex flex-col gap-1 px-2 py-2">
               {allMenuLinks.map((item, i) => (
                 <button
