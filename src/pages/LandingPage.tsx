@@ -4,6 +4,15 @@ import { BarChart3, Mail, ShieldCheck, Star, Wand2 } from "lucide-react";
 import { useScrollReveal } from "@/lib/useScrollReveal";
 import RotaGenLogo from "@/components/brand/RotaGenLogo";
 import PublicTopBar from "@/components/PublicTopBar";
+import screenshotDashboard from "@/assets/screenshot-dashboard.jpg";
+import screenshotCalendar from "@/assets/screenshot-calendar.jpg";
+import screenshotShifts from "@/assets/screenshot-shifts.jpg";
+
+const APP_SCREENSHOTS = [
+  { src: screenshotDashboard, alt: "RotaGen setup wizard dashboard" },
+  { src: screenshotCalendar, alt: "Pre-rota calendar view" },
+  { src: screenshotShifts, alt: "Shift type configuration" },
+];
 
 const featureCards = [
   {
