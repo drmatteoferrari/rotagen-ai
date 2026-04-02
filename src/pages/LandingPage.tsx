@@ -45,6 +45,14 @@ export default function LandingPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const [activeScreenshot, setActiveScreenshot] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveScreenshot((prev) => (prev + 1) % APP_SCREENSHOTS.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
   const step1Ref = useScrollReveal() as MutableRefObject<HTMLDivElement | null>;
   const step2Ref = useScrollReveal() as MutableRefObject<HTMLDivElement | null>;
   const step3Ref = useScrollReveal() as MutableRefObject<HTMLDivElement | null>;
