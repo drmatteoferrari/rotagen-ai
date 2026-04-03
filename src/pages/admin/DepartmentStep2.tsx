@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Plus, Trash2, Pencil, Clock, Save, X, Info, AlertTriangle, ArrowLeft, ArrowRight, CalendarDays, ChevronRight, Loader2, Building2 } from "lucide-react";
 import {
   useDepartmentSetup, detectBadges, mergedBadges,
@@ -48,6 +50,15 @@ const BADGE_DEFS = [
   { key: "nonres" as BadgeKey, label: "NON-RES OC", emoji: "🏠", activeClasses: "bg-teal-700 text-white" },
 ] as const;
 
+const SHIFT_TEMPLATES = [
+  { label: "Standard Day", abbrev: "SD", start: "08:00", end: "17:30", isOncall: false },
+  { label: "Long Day",     abbrev: "LD", start: "08:00", end: "20:30", isOncall: true  },
+  { label: "Night",        abbrev: "N",  start: "20:00", end: "08:30", isOncall: true  },
+  { label: "Twilight",     abbrev: "Tw", start: "16:00", end: "00:00", isOncall: true  },
+] as const;
+
+type ShiftTemplate = typeof SHIFT_TEMPLATES[number];
+
 function getShiftErrors(shift: ShiftType, allShifts?: ShiftType[]): string[] {
   const errors: string[] = [];
   if (!shift.name.trim()) errors.push("Shift name is required.");
@@ -57,7 +68,6 @@ function getShiftErrors(shift: ShiftType, allShifts?: ShiftType[]): string[] {
   if (!Object.values(shift.applicableDays).some(Boolean)) errors.push("At least one day must be selected.");
   if (shift.staffing.target < shift.staffing.min) errors.push("Target cannot be less than minimum.");
   if (shift.staffing.max !== null && shift.staffing.max < shift.staffing.target) errors.push("Maximum cannot be less than target.");
-  // Unique abbreviation check
   if (allShifts && shift.abbreviation.trim()) {
     const dupes = allShifts.filter(s => s.id !== shift.id && s.abbreviation.trim().toUpperCase() === shift.abbreviation.trim().toUpperCase());
     if (dupes.length > 0) errors.push(`Abbreviation "${shift.abbreviation}" is already used by another shift.`);
@@ -65,14 +75,114 @@ function getShiftErrors(shift: ShiftType, allShifts?: ShiftType[]): string[] {
   return errors;
 }
 
+/* ─── AddShiftDialog ─── */
+
+interface AddShiftDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onAddTemplate: (template: ShiftTemplate, days: Record<DayKey, boolean>) => void;
+  onAddCustom: (days: Record<DayKey, boolean>) => void;
+}
+
+function AddShiftDialog({ open, onOpenChange, onAddTemplate, onAddCustom }: AddShiftDialogProps) {
+  const [selectedDays, setSelectedDays] = useState<Record<DayKey, boolean>>({
+    mon: true, tue: true, wed: true, thu: true, fri: true, sat: false, sun: false,
+  });
+
+  const toggleDay = (key: DayKey) => {
+    const next = { ...selectedDays, [key]: !selectedDays[key] };
+    if (!Object.values(next).some(Boolean)) return;
+    setSelectedDays(next);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Add Shift</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-5">
+          {/* Day selector */}
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Apply to days</p>
+            <div className="grid grid-cols-7 gap-1.5">
+              {DAY_KEYS.map((key, i) => {
+                const isWeekend = i >= 5;
+                const isSelected = selectedDays[key];
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => toggleDay(key)}
+                    className={`flex flex-col items-center gap-0.5 rounded-lg border py-2 text-[11px] font-semibold transition-colors ${
+                      isSelected
+                        ? isWeekend
+                          ? "border-purple-400 bg-purple-600 text-white"
+                          : "border-blue-400 bg-blue-600 text-white"
+                        : "border-border bg-muted text-muted-foreground hover:bg-muted/80"
+                    }`}
+                  >
+                    {DAY_SHORT_LABELS[i]}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[10px] text-muted-foreground">You can change days later in the shift editor.</p>
+          </div>
+
+          {/* Template picker */}
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Choose a template</p>
+            <div className="grid grid-cols-2 gap-2">
+              {SHIFT_TEMPLATES.map((t) => (
+                <button
+                  key={t.abbrev}
+                  type="button"
+                  onClick={() => onAddTemplate(t, selectedDays)}
+                  className="flex flex-col items-start gap-0.5 rounded-lg border border-purple-200 bg-purple-50/60 px-3 py-2.5 text-left hover:bg-purple-100 transition-colors"
+                >
+                  <span className="font-mono text-sm font-bold text-purple-700">{t.abbrev}</span>
+                  <span className="text-xs font-medium text-foreground">{t.label}</span>
+                  <span className="text-[10px] text-muted-foreground">{t.start}–{t.end}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Custom or cancel */}
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => onAddCustom(selectedDays)}
+              className="flex items-center gap-1.5 rounded-lg border border-dashed border-purple-300 px-3 py-2 text-xs font-medium text-purple-600 hover:bg-purple-50 transition-colors"
+            >
+              <Plus className="h-3.5 w-3.5" /> Custom shift
+            </button>
+            <button
+              type="button"
+              onClick={() => onOpenChange(false)}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ─── DayColumn ─── */
+
 interface DayColumnProps {
   dayKey: DayKey;
   dayLabel: string;
   shifts: ShiftType[];
   isWeekend: boolean;
-  activeChipId: string | null;
-  setActiveChipId: (id: string | null) => void;
-  longPressRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>;
+  openChipKey: string | null;
+  setOpenChipKey: (key: string | null) => void;
+  setShifts: React.Dispatch<React.SetStateAction<ShiftType[]>>;
   removeShiftFromDay: (shiftId: string, dayKey: keyof ApplicableDays) => void;
   dragOverDay: DayKey | null;
   setExpandedShiftId: (id: string | null) => void;
@@ -80,8 +190,8 @@ interface DayColumnProps {
 
 function DayColumn({
   dayKey, dayLabel, shifts, isWeekend,
-  activeChipId, setActiveChipId,
-  longPressRef, removeShiftFromDay, dragOverDay,
+  openChipKey, setOpenChipKey, setShifts,
+  removeShiftFromDay, dragOverDay,
   setExpandedShiftId,
 }: DayColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: dayKey });
@@ -93,7 +203,7 @@ function DayColumn({
   return (
     <div
       ref={setNodeRef}
-      className={`rounded-xl border p-3 min-h-[200px] transition-all ${
+      className={`rounded-xl border p-3 min-h-[240px] transition-all ${
         isDropTarget
           ? "ring-2 ring-purple-400 bg-purple-50/80 border-purple-300"
           : isWeekend
@@ -101,91 +211,139 @@ function DayColumn({
             : "border-border bg-card"
       }`}
     >
-      <div className="mb-3 flex items-center justify-center">
+      <div className="mb-1 flex flex-col items-center">
         <h3 className={`text-sm font-semibold text-center ${isWeekend ? "text-purple-700" : "text-slate-600"}`}>
           {dayLabel}
         </h3>
+        {dayShifts.length > 0 ? (
+          <span className="text-[10px] text-muted-foreground">
+            {dayShifts.length} shift{dayShifts.length !== 1 ? 's' : ''}
+          </span>
+        ) : (
+          <span className="text-[10px] text-muted-foreground/50">—</span>
+        )}
       </div>
 
       {dayShifts.length === 0 && (
-        <div className="rounded-lg border border-dashed border-border bg-muted/30 py-6 text-center text-xs text-muted-foreground">
-          Drop here
+        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border bg-muted/30 py-8 text-center text-xs text-muted-foreground">
+          <Plus className="h-4 w-4 mb-1 text-muted-foreground/40" />
+          <span>Drop here</span>
         </div>
       )}
 
       {dayShifts.map(({ shift, index }) => {
         const chipKey = `${shift.id}-${dayKey}`;
         const color = getShiftColor(index);
-        const isActive = activeChipId === chipKey;
-        const { min, max } = shift.staffing;
-        const countLabel = max === null ? `×${min}` : `×${min}–${max}`;
+        const isOpen = openChipKey === chipKey;
 
         return (
-          <div
+          <Popover
             key={chipKey}
-            className={`group relative flex min-h-[36px] items-center gap-2 rounded-full px-2 py-1.5 text-xs font-semibold transition-all mb-2 ${isActive ? "ring-2 ring-purple-300 ring-offset-1" : ""}`}
-            onTouchStart={() => { longPressRef.current = setTimeout(() => setActiveChipId(chipKey), 250); }}
-            onTouchEnd={() => { if (longPressRef.current) clearTimeout(longPressRef.current); }}
-            onTouchMove={() => { if (longPressRef.current) clearTimeout(longPressRef.current); }}
+            open={isOpen}
+            onOpenChange={(open) => setOpenChipKey(open ? chipKey : null)}
           >
-            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold tracking-widest ${color.bg} ${color.text} ${color.border} border`}>
-              {shift.abbreviation}
-            </span>
-            <span className="text-muted-foreground text-[11px]">{countLabel}</span>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className={`group relative flex min-h-[36px] w-full items-center gap-2 rounded-full px-2 py-1.5 text-xs font-semibold transition-all mb-2 hover:ring-1 hover:ring-purple-200 ${isOpen ? "ring-2 ring-purple-300 ring-offset-1" : ""}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setOpenChipKey(isOpen ? null : chipKey);
+                }}
+              >
+                <span
+                  className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold tracking-widest border"
+                  style={{ backgroundColor: color.solid, color: "white", borderColor: color.solid }}
+                >
+                  {shift.abbreviation}
+                </span>
+                <span className="text-muted-foreground text-[11px]">×{shift.staffing.target}</span>
+              </button>
+            </PopoverTrigger>
 
-            {/* Desktop: CSS group-hover — stays visible when moving cursor toward button */}
-            <button
-              type="button"
-              className="ml-auto hidden md:inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-destructive/10 text-destructive opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/20"
-              onClick={(e) => {
-                e.stopPropagation();
-                removeShiftFromDay(shift.id, dayKey as keyof ApplicableDays);
-              }}
-              aria-label={`Remove ${shift.abbreviation} from ${dayLabel}`}
+            <PopoverContent
+              className="w-52 p-3 space-y-3"
+              side="right"
+              align="start"
+              onOpenAutoFocus={(e) => e.preventDefault()}
             >
-              <X className="h-3 w-3" />
-            </button>
+              {/* Header */}
+              <p className="text-sm font-semibold text-foreground truncate">{shift.name}</p>
 
-            {/* Touch: long-press reveals edit + remove */}
-            {isActive && (
-              <div className="ml-auto flex items-center gap-1 md:hidden">
-                <button
-                  type="button"
-                  className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-purple-100 text-purple-700"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setActiveChipId(null);
-                    setExpandedShiftId(shift.id);
-                    setTimeout(() => {
-                      const el = document.getElementById(`shift-card-${shift.id}`);
-                      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                      else window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-                    }, 100);
-                  }}
-                  aria-label={`Edit ${shift.abbreviation}`}
-                >
-                  <Pencil className="h-3 w-3" />
-                </button>
-                <button
-                  type="button"
-                  className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-destructive/10 text-destructive"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeShiftFromDay(shift.id, dayKey as keyof ApplicableDays);
-                    setActiveChipId(null);
-                  }}
-                  aria-label={`Remove ${shift.abbreviation} from ${dayLabel}`}
-                >
-                  <X className="h-3 w-3" />
-                </button>
+              {/* Staffing stepper */}
+              <div className="space-y-1">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Doctors/day</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    className="flex h-7 w-7 items-center justify-center rounded-full border border-border text-sm font-bold hover:bg-muted disabled:opacity-30"
+                    disabled={shift.staffing.target <= shift.staffing.min}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const newTarget = Math.max(shift.staffing.min, shift.staffing.target - 1);
+                      setShifts(prev => prev.map(s =>
+                        s.id === shift.id ? { ...s, staffing: { ...s.staffing, target: newTarget } } : s
+                      ));
+                    }}
+                  >−</button>
+                  <span className="text-sm font-bold w-6 text-center">{shift.staffing.target}</span>
+                  <button
+                    type="button"
+                    className="flex h-7 w-7 items-center justify-center rounded-full border border-border text-sm font-bold hover:bg-muted disabled:opacity-30"
+                    disabled={shift.staffing.max !== null && shift.staffing.target >= shift.staffing.max}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const newTarget = shift.staffing.max !== null
+                        ? Math.min(shift.staffing.max, shift.staffing.target + 1)
+                        : shift.staffing.target + 1;
+                      setShifts(prev => prev.map(s =>
+                        s.id === shift.id ? { ...s, staffing: { ...s.staffing, target: newTarget } } : s
+                      ));
+                    }}
+                  >+</button>
+                </div>
               </div>
-            )}
-          </div>
+
+              <hr className="border-border" />
+
+              {/* Edit */}
+              <button
+                type="button"
+                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setOpenChipKey(null);
+                  setExpandedShiftId(shift.id);
+                  setTimeout(() => {
+                    const el = document.getElementById(`shift-card-${shift.id}`);
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }, 100);
+                }}
+              >
+                <Pencil className="h-3.5 w-3.5" /> Edit shift details
+              </button>
+
+              {/* Remove from day */}
+              <button
+                type="button"
+                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/10 transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setOpenChipKey(null);
+                  removeShiftFromDay(shift.id, dayKey as keyof ApplicableDays);
+                }}
+              >
+                <X className="h-3.5 w-3.5" /> Remove from {dayLabel}
+              </button>
+            </PopoverContent>
+          </Popover>
         );
       })}
     </div>
   );
 }
+
+/* ─── DraggableShiftChip ─── */
 
 function DraggableShiftChip({ shift, index }: { shift: ShiftType; index: number }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: shift.id });
@@ -203,6 +361,8 @@ function DraggableShiftChip({ shift, index }: { shift: ShiftType; index: number 
     </div>
   );
 }
+
+/* ─── ExpandedCard ─── */
 
 function ExpandedCard({
   shift: originalShift,
@@ -389,7 +549,7 @@ function ExpandedCard({
         </button>
       </div>
 
-      {/* ROW 5 — Badges: flex-wrap, no horizontal scroll */}
+      {/* ROW 5 — Badges */}
       <div className="space-y-2">
         <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Badges</Label>
         <p className="text-[10px] text-muted-foreground mt-0.5">Auto-detected · click to override · ✏️ = manually set</p>
@@ -414,7 +574,6 @@ function ExpandedCard({
             );
           })}
         </div>
-        
       </div>
 
       {/* ROW 6 — Staffing */}
@@ -423,7 +582,6 @@ function ExpandedCard({
           <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Staffing</Label>
           <p className="mt-1 text-xs text-muted-foreground">Set the hard minimum, preferred target, and optional maximum for this shift.</p>
         </div>
-
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div className="space-y-1.5">
             <Label className="text-xs font-medium">Minimum</Label>
@@ -441,7 +599,6 @@ function ExpandedCard({
             />
             <p className="text-xs text-muted-foreground">Below this = invalid</p>
           </div>
-
           <div className="space-y-1.5">
             <Label className="text-xs font-medium">Target</Label>
             <Input
@@ -457,7 +614,6 @@ function ExpandedCard({
             />
             <p className="text-xs text-muted-foreground">Algorithm targets this</p>
           </div>
-
           <div className="space-y-1.5">
             <Label className="text-xs font-medium">Maximum (optional)</Label>
             <Input
@@ -481,7 +637,6 @@ function ExpandedCard({
           <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Competency Requirements</Label>
           <p className="mt-1 text-xs text-muted-foreground">Minimum number of doctors with each competency required on this shift.</p>
         </div>
-
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {([
             { key: "reqIac" as const,      label: "Min IAC",      desc: "Independent anaesthesia" },
@@ -501,8 +656,6 @@ function ExpandedCard({
             </div>
           ))}
         </div>
-
-        {/* Competency sum warning */}
         {(() => {
           const compSum = draft.reqIac + draft.reqIaoc + draft.reqIcu + draft.reqTransfer;
           if (compSum > draft.staffing.min) {
@@ -548,7 +701,7 @@ function ExpandedCard({
         </div>
       )}
 
-      {/* ROW 10 — Actions: delete left, save/cancel right, single row */}
+      {/* ROW 10 — Actions */}
       <div className="flex items-center justify-between gap-3 pt-2">
         {canRemove ? (
           !confirmDelete ? (
@@ -580,6 +733,8 @@ function ExpandedCard({
   );
 }
 
+/* ─── CollapsedCard ─── */
+
 function CollapsedCard({
   shift,
   index,
@@ -593,6 +748,7 @@ function CollapsedCard({
   onRemove: () => void;
   canRemove: boolean;
 }) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const { min, target, max } = shift.staffing;
   const staffingSummary = max !== null ? `Min ${min} · Target ${target} · Max ${max}` : `Exactly ${min} doctor${min !== 1 ? "s" : ""} per day`;
   const auto = detectBadges(shift.startTime, shift.endTime, shift.applicableDays, shift.isOncall, shift.isNonRes);
@@ -621,7 +777,7 @@ function CollapsedCard({
             ))}
           </p>
           <div className="flex flex-wrap gap-1">
-            {BADGE_DEFS.map(({ key, label, emoji, activeClasses }) => {
+            {BADGE_DEFS.map(({ key, emoji, activeClasses }) => {
               const isActive = effective[key];
               return (
                 <span
@@ -638,13 +794,21 @@ function CollapsedCard({
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {canRemove && (
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); onRemove(); }}
-              className="flex h-11 w-11 items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:text-destructive"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
+            !confirmDelete ? (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}
+                className="flex h-11 w-11 items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            ) : (
+              <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                <span className="text-xs font-medium text-destructive">Remove?</span>
+                <button type="button" onClick={() => onRemove()} className="text-xs font-bold text-destructive underline underline-offset-2">Yes</button>
+                <button type="button" onClick={() => setConfirmDelete(false)} className="text-xs text-muted-foreground underline underline-offset-2">No</button>
+              </div>
+            )
           )}
           <button
             type="button"
@@ -659,19 +823,15 @@ function CollapsedCard({
   );
 }
 
+/* ─── Main Component ─── */
+
 export default function DepartmentStep2() {
   const [activeDayIndex, setActiveDayIndex] = useState(0);
-  const [activeChipId, setActiveChipId] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [openChipKey, setOpenChipKey] = useState<string | null>(null);
+  const [addShiftDialogOpen, setAddShiftDialogOpen] = useState(false);
   const [badgeMeaningsOpen, setBadgeMeaningsOpen] = useState(false);
-  const [showTemplatePicker, setShowTemplatePicker] = useState(false);
 
-  const SHIFT_TEMPLATES = [
-    { label: "Standard Day", abbrev: "SD", start: "08:00", end: "17:30", isOncall: false },
-    { label: "Long Day",     abbrev: "LD", start: "08:00", end: "20:30", isOncall: true  },
-    { label: "Night",        abbrev: "N",  start: "20:00", end: "08:30", isOncall: true  },
-    { label: "Twilight",     abbrev: "Tw", start: "16:00", end: "00:00", isOncall: true  },
-  ] as const;
-  const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -685,6 +845,8 @@ export default function DepartmentStep2() {
 
   const handleDragStart = (event: DragStartEvent) => {
     setDraggedShiftId(event.active.id as string);
+    setIsDragging(true);
+    setOpenChipKey(null);
   };
 
   const handleDragOver = (event: DragOverEvent) => {
@@ -700,6 +862,7 @@ export default function DepartmentStep2() {
     const { active, over } = event;
     setDraggedShiftId(null);
     setDragOverDay(null);
+    setIsDragging(false);
     if (!over) return;
     const shiftId = active.id as string;
     const dayKey = over.id as DayKey;
@@ -711,7 +874,7 @@ export default function DepartmentStep2() {
     }));
   };
 
-  const { shifts, setShifts, addShift, removeShift, expandedShiftId, setExpandedShiftId, isLoadingShifts, globalOncallPct, shiftTargetOverrides } = useDepartmentSetup();
+  const { shifts, setShifts, removeShift, expandedShiftId, setExpandedShiftId, isLoadingShifts, globalOncallPct, shiftTargetOverrides } = useDepartmentSetup();
   const { setDepartmentComplete } = useAdminSetup();
   const { currentRotaConfigId, setCurrentRotaConfigId } = useRotaContext();
   const { user } = useAuth();
@@ -729,6 +892,64 @@ export default function DepartmentStep2() {
   const handleSaveCard = (updated: ShiftType) => {
     setShifts(prev => prev.map(s => s.id === updated.id ? updated : s));
     setExpandedShiftId(null);
+  };
+
+  const handleAddTemplate = (template: ShiftTemplate, days: Record<DayKey, boolean>) => {
+    const id = String(Date.now());
+    const dur = calcDurationHours(template.start, template.end);
+    const autoBadges = detectBadges(template.start, template.end, days as ApplicableDays, template.isOncall, false);
+    const newShift: ShiftType = {
+      id,
+      name: template.label,
+      abbreviation: template.abbrev,
+      startTime: template.start,
+      endTime: template.end,
+      durationHours: dur,
+      applicableDays: days as ApplicableDays,
+      isOncall: template.isOncall,
+      isNonRes: false,
+      staffing: { min: 1, target: 1, max: null },
+      targetOverridePct: null,
+      badges: autoBadges,
+      badgeOverrides: {},
+      oncallManuallySet: false,
+      reqIac: 0, reqIaoc: 0, reqIcu: 0, reqTransfer: 0, reqMinGrade: null,
+    };
+    setShifts(prev => [...prev, newShift]);
+    setExpandedShiftId(id);
+    setAddShiftDialogOpen(false);
+    setTimeout(() => {
+      const el = document.getElementById(`shift-card-${id}`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 150);
+  };
+
+  const handleAddCustom = (days: Record<DayKey, boolean>) => {
+    const id = String(Date.now());
+    const newShift: ShiftType = {
+      id,
+      name: "New Shift",
+      abbreviation: "NS",
+      startTime: "09:00",
+      endTime: "17:00",
+      durationHours: 8,
+      applicableDays: days as ApplicableDays,
+      isOncall: false,
+      isNonRes: false,
+      staffing: { min: 1, target: 1, max: null },
+      targetOverridePct: null,
+      badges: detectBadges("09:00", "17:00", days as ApplicableDays, false, false),
+      badgeOverrides: {},
+      oncallManuallySet: false,
+      reqIac: 0, reqIaoc: 0, reqIcu: 0, reqTransfer: 0, reqMinGrade: null,
+    };
+    setShifts(prev => [...prev, newShift]);
+    setExpandedShiftId(id);
+    setAddShiftDialogOpen(false);
+    setTimeout(() => {
+      const el = document.getElementById(`shift-card-${id}`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 150);
   };
 
   const pageErrors = shifts.flatMap((shift) => getShiftErrors(shift, shifts).map((error) => `${shift.name || shift.abbreviation || shift.id}: ${error}`));
@@ -875,30 +1096,33 @@ export default function DepartmentStep2() {
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
-        <div className="mx-auto max-w-3xl space-y-6 animate-fadeSlideUp" onClick={() => { if (activeChipId && !draggedShiftId) setActiveChipId(null); }}>
+        <div className="mx-auto max-w-3xl space-y-6 animate-fadeSlideUp" onClick={() => { if (!isDragging) setOpenChipKey(null); }}>
 
-          {/* Merged Calendar + Palette Card */}
+          {/* Design Your Week Card */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <CalendarDays className="h-5 w-5 text-purple-600" />
                 Design Your Week
               </CardTitle>
-              <CardDescription>Drag chips onto columns to assign shifts.</CardDescription>
+              <CardDescription>
+                Drag shift chips onto day columns to assign them. Tap any chip to adjust staffing or remove it from a day.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
 
               {/* Palette row */}
-              <div className="flex gap-2 overflow-x-auto pb-2" style={{ scrollbarWidth: "thin" }}>
+              <div className="flex flex-wrap gap-2 pb-2">
+                <span className="flex items-center text-[10px] font-medium text-muted-foreground mr-1">Drag onto columns →</span>
                 {shifts.map((shift, index) => (
                   <DraggableShiftChip key={shift.id} shift={shift} index={index} />
                 ))}
                 <button
                   type="button"
-                  onClick={() => { setShowTemplatePicker(true); setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 150); }}
-                  className="inline-flex min-h-[32px] flex-shrink-0 items-center gap-1 rounded-full border border-dashed border-purple-300 px-3 py-1.5 text-xs font-medium text-purple-600 transition-colors hover:bg-purple-50"
+                  onClick={() => setAddShiftDialogOpen(true)}
+                  className="inline-flex min-h-[32px] flex-shrink-0 items-center gap-1 rounded-full border border-dashed border-purple-300 px-3 py-1.5 text-xs font-medium text-purple-600 transition-colors hover:bg-purple-50 active:bg-purple-100"
                 >
-                  <Plus className="h-3.5 w-3.5" /> Add shift type
+                  <Plus className="h-3.5 w-3.5" /> Add shift
                 </button>
               </div>
 
@@ -917,19 +1141,32 @@ export default function DepartmentStep2() {
                     className="md:hidden flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2"
                     onScroll={(e) => {
                       const el = e.currentTarget;
-                      setActiveDayIndex(Math.min(6, Math.max(0, Math.round(el.scrollLeft / 140))));
+                      const colWidth = el.scrollWidth / 7;
+                      setActiveDayIndex(Math.min(6, Math.max(0, Math.round(el.scrollLeft / colWidth))));
                     }}
-                    style={{ scrollbarWidth: 'none', overscrollBehavior: 'contain', touchAction: 'pan-x pan-y' } as React.CSSProperties}
+                    style={{
+                      scrollbarWidth: 'none',
+                      overscrollBehavior: 'contain',
+                      touchAction: isDragging ? 'none' : 'pan-x',
+                    } as React.CSSProperties}
                   >
                     {DAY_KEYS.map((dayKey, i) => (
-                      <div key={dayKey} className={`min-w-[132px] snap-start ${i >= 5 ? 'border-t-2 border-t-purple-400' : 'border-t-2 border-t-border'}`}>
+                      <div
+                        key={dayKey}
+                        className={`snap-start ${
+                          i >= 5 ? 'border-t-2 border-t-purple-400' : 'border-t-2 border-t-transparent'
+                        }`}
+                        style={{ minWidth: 'clamp(120px, calc((100vw - 3rem) / 2.3), 160px)' }}
+                      >
                         <DayColumn
                           dayKey={dayKey}
                           dayLabel={DAY_FULL_LABELS[i]}
                           shifts={shifts}
                           isWeekend={i >= 5}
-                          activeChipId={activeChipId} setActiveChipId={setActiveChipId}
-                          longPressRef={longPressRef} removeShiftFromDay={removeShiftFromDay}
+                          openChipKey={openChipKey}
+                          setOpenChipKey={setOpenChipKey}
+                          setShifts={setShifts}
+                          removeShiftFromDay={removeShiftFromDay}
                           dragOverDay={dragOverDay}
                           setExpandedShiftId={setExpandedShiftId}
                         />
@@ -937,30 +1174,77 @@ export default function DepartmentStep2() {
                     ))}
                   </div>
 
-                  {/* Dot indicator */}
-                  <div className="flex justify-center gap-1 md:hidden">
+                  {/* Mobile navigation row */}
+                  <div className="flex items-center justify-center gap-2 md:hidden">
+                    <button
+                      type="button"
+                      className="flex h-7 w-7 items-center justify-center rounded-full border border-border text-muted-foreground hover:bg-muted disabled:opacity-30"
+                      disabled={activeDayIndex === 0}
+                      onClick={() => {
+                        const el = scrollContainerRef.current;
+                        if (!el) return;
+                        const colWidth = el.scrollWidth / 7;
+                        const newIndex = Math.max(0, activeDayIndex - 1);
+                        el.scrollTo({ left: newIndex * colWidth, behavior: 'smooth' });
+                        setActiveDayIndex(newIndex);
+                      }}
+                    >
+                      <ArrowLeft className="h-3.5 w-3.5" />
+                    </button>
                     {DAY_KEYS.map((_, i) => (
                       <span key={i} className={`h-2 w-2 rounded-full transition-colors ${activeDayIndex === i ? "bg-purple-600" : "bg-purple-200"}`} />
                     ))}
+                    <button
+                      type="button"
+                      className="flex h-7 w-7 items-center justify-center rounded-full border border-border text-muted-foreground hover:bg-muted disabled:opacity-30"
+                      disabled={activeDayIndex === 6}
+                      onClick={() => {
+                        const el = scrollContainerRef.current;
+                        if (!el) return;
+                        const colWidth = el.scrollWidth / 7;
+                        const newIndex = Math.min(6, activeDayIndex + 1);
+                        el.scrollTo({ left: newIndex * colWidth, behavior: 'smooth' });
+                        setActiveDayIndex(newIndex);
+                      }}
+                    >
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </button>
                   </div>
 
-                  <p className="text-center text-[10px] text-muted-foreground md:hidden mt-1">Hold a chip in a column to edit or remove it</p>
+                  <p className="text-center text-[10px] text-muted-foreground md:hidden mt-1">Tap a chip to edit staffing or remove it</p>
 
                   {/* Desktop grid */}
-                  <div className="hidden grid-cols-7 gap-3 md:grid">
-                    {DAY_KEYS.map((dayKey, i) => (
-                      <DayColumn
-                        key={dayKey}
-                        dayKey={dayKey}
-                        dayLabel={DAY_SHORT_LABELS[i]}
-                        shifts={shifts}
-                        isWeekend={i >= 5}
-                        activeChipId={activeChipId} setActiveChipId={setActiveChipId}
-                        longPressRef={longPressRef} removeShiftFromDay={removeShiftFromDay}
-                        dragOverDay={dragOverDay}
-                        setExpandedShiftId={setExpandedShiftId}
-                      />
-                    ))}
+                  <div className="hidden md:block">
+                    {/* Section labels */}
+                    <div className="grid grid-cols-7 gap-3 mb-1">
+                      <div className="col-span-5">
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Weekdays</span>
+                        <hr className="mt-0.5 border-border" />
+                      </div>
+                      <div className="col-span-2">
+                        <hr className="mt-0.5 border-purple-300" />
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-purple-600">Weekend</span>
+                      </div>
+                    </div>
+                    {/* Grid */}
+                    <div className="grid grid-cols-7 gap-3">
+                      {DAY_KEYS.map((dayKey, i) => (
+                        <div key={dayKey} className={i === 5 ? "border-l-2 border-purple-200 pl-2" : ""}>
+                          <DayColumn
+                            dayKey={dayKey}
+                            dayLabel={DAY_SHORT_LABELS[i]}
+                            shifts={shifts}
+                            isWeekend={i >= 5}
+                            openChipKey={openChipKey}
+                            setOpenChipKey={setOpenChipKey}
+                            setShifts={setShifts}
+                            removeShiftFromDay={removeShiftFromDay}
+                            dragOverDay={dragOverDay}
+                            setExpandedShiftId={setExpandedShiftId}
+                          />
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </>
               )}
@@ -974,7 +1258,7 @@ export default function DepartmentStep2() {
                 <CalendarDays className="h-5 w-5 text-purple-600" />
                 Shift Types
               </CardTitle>
-              <CardDescription>Define each shift type. Days sync to the calendar above.</CardDescription>
+              <CardDescription>Define each shift type. Changes to days sync instantly to the calendar above.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="rounded-lg border border-border bg-muted/30 overflow-hidden">
@@ -1041,79 +1325,24 @@ export default function DepartmentStep2() {
                 ))}
               </div>
 
-              {!showTemplatePicker ? (
-                <button
-                  type="button"
-                  onClick={() => setShowTemplatePicker(true)}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-purple-300 p-3 text-sm font-medium text-purple-600 transition-colors hover:bg-purple-50"
-                >
-                  <Plus className="h-4 w-4" /> Add shift type
-                </button>
-              ) : (
-                <div className="rounded-lg border border-purple-200 bg-purple-50/50 p-3 space-y-3">
-                  <p className="text-xs font-semibold text-purple-700">Choose a template or add custom:</p>
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                    {SHIFT_TEMPLATES.map((t) => (
-                      <button
-                        key={t.abbrev}
-                        type="button"
-                        onClick={() => {
-                          const id = String(Date.now());
-                          const tplDays: ApplicableDays = { mon: true, tue: true, wed: true, thu: true, fri: true, sat: true, sun: true };
-                          const dur = calcDurationHours(t.start, t.end);
-                          const autoBadges = detectBadges(t.start, t.end, tplDays, t.isOncall, false);
-                          const newShift: ShiftType = {
-                            id, name: t.label, abbreviation: t.abbrev,
-                            startTime: t.start, endTime: t.end, durationHours: dur,
-                            applicableDays: tplDays, isOncall: t.isOncall, isNonRes: false,
-                            staffing: { min: 1, target: 1, max: null }, targetOverridePct: null,
-                            badges: autoBadges, badgeOverrides: {}, oncallManuallySet: false,
-                            reqIac: 0, reqIaoc: 0, reqIcu: 0, reqTransfer: 0, reqMinGrade: null,
-                          };
-                          setShifts(prev => [...prev, newShift]);
-                          setExpandedShiftId(id);
-                          setShowTemplatePicker(false);
-                          setTimeout(() => {
-                            const el = document.getElementById(`shift-card-${id}`);
-                            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                          }, 150);
-                        }}
-                        className="flex flex-col items-center gap-1 rounded-lg border border-purple-200 bg-white px-2 py-2.5 text-xs font-semibold text-purple-700 hover:bg-purple-50 transition-colors"
-                      >
-                        <span className="font-mono text-sm font-bold">{t.abbrev}</span>
-                        <span className="text-[10px] text-muted-foreground font-normal">{t.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const newId = addShift();
-                        setShowTemplatePicker(false);
-                        setTimeout(() => {
-                          const el = document.getElementById(`shift-card-${newId}`);
-                          if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        }, 150);
-                      }}
-                      className="flex items-center gap-1.5 rounded-lg border border-dashed border-purple-300 px-3 py-2 text-xs font-medium text-purple-600 hover:bg-purple-50 transition-colors"
-                    >
-                      <Plus className="h-3.5 w-3.5" /> Custom shift
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setShowTemplatePicker(false)}
-                      className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              )}
+              <button
+                type="button"
+                onClick={() => setAddShiftDialogOpen(true)}
+                className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-purple-300 p-3 text-sm font-medium text-purple-600 transition-colors hover:bg-purple-50 active:bg-purple-100"
+              >
+                <Plus className="h-4 w-4" /> Add shift type
+              </button>
             </CardContent>
           </Card>
 
         </div>
+
+        <AddShiftDialog
+          open={addShiftDialogOpen}
+          onOpenChange={setAddShiftDialogOpen}
+          onAddTemplate={handleAddTemplate}
+          onAddCustom={handleAddCustom}
+        />
 
         <DragOverlay>
           {draggedShiftId ? (() => {
