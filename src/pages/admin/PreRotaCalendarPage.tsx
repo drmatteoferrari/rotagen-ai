@@ -2018,37 +2018,52 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
             />
           </div>
           <div className="flex items-center gap-3 justify-between sm:justify-end flex-wrap w-full sm:w-auto">
-            <button
-              type="button"
-              onClick={() => setGroupAvailability(!groupAvailability)}
-              className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border font-medium transition-all shadow-sm ${
-                groupAvailability
-                  ? "bg-blue-600 text-white border-blue-600"
-                  : "bg-card text-muted-foreground border-border hover:bg-muted"
-              }`}
-            >
-              <div
-                className={`w-2 h-2 rounded-full transition-colors ${groupAvailability ? "bg-white" : "bg-muted-foreground"}`}
-              />
-              Availability
-            </button>
+            {effectiveViewMode === "day" && (
+              <button
+                type="button"
+                onClick={() => setGroupAvailability(!groupAvailability)}
+                className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border font-medium transition-all shadow-sm ${
+                  groupAvailability
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : "bg-card text-muted-foreground border-border hover:bg-muted"
+                }`}
+              >
+                <div
+                  className={`w-2 h-2 rounded-full transition-colors ${groupAvailability ? "bg-white" : "bg-muted-foreground"}`}
+                />
+                Availability
+              </button>
+            )}
 
             <div className="flex items-center gap-1.5">
-              <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
               <span className="text-[11px] text-muted-foreground font-medium hidden sm:inline">Sort:</span>
               <select
-                value={`${sortConfig.key}-${sortConfig.direction}`}
-                onChange={(e) => {
-                  const [k, d] = e.target.value.split("-");
-                  setSortConfig({ key: k as "name" | "grade", direction: d as "asc" | "desc" });
-                }}
+                value={sortConfig.key}
+                onChange={(e) =>
+                  setSortConfig((prev) => ({ ...prev, key: e.target.value as "name" | "grade" }))
+                }
                 className="text-xs px-2 py-1.5 border border-border rounded-md bg-card focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
               >
-                <option value="name-asc">Name (A-Z)</option>
-                <option value="name-desc">Name (Z-A)</option>
-                <option value="grade-asc">Grade (A-Z)</option>
-                <option value="grade-desc">Grade (Z-A)</option>
+                <option value="name">Name</option>
+                {effectiveViewMode === "day" && <option value="grade">Grade</option>}
               </select>
+              <button
+                type="button"
+                onClick={() =>
+                  setSortConfig((prev) => ({
+                    ...prev,
+                    direction: prev.direction === "asc" ? "desc" : "asc",
+                  }))
+                }
+                className="p-1.5 rounded-md border border-border bg-card hover:bg-muted transition-colors text-muted-foreground"
+                title={sortConfig.direction === "asc" ? "Ascending — click to reverse" : "Descending — click to reverse"}
+              >
+                {sortConfig.direction === "asc" ? (
+                  <ArrowUp className="h-3.5 w-3.5" />
+                ) : (
+                  <ArrowDown className="h-3.5 w-3.5" />
+                )}
+              </button>
             </div>
           </div>
         </div>
