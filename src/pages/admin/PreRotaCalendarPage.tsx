@@ -1294,6 +1294,20 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
     [navigate],
   );
 
+  const handleGoToDate = useCallback(
+    (_doctorId: string, date: string) => {
+      setPanelOpen(false);
+      setSelectedCell(null);
+      setViewMode("day");
+      const wIdx = weeks.findIndex((w) => w.startDate <= date && date <= w.endDate);
+      if (wIdx >= 0) setCurrentWeekIndex(wIdx);
+      const dIdx = allDates.indexOf(date);
+      if (dIdx >= 0) setCurrentDayIndex(dIdx);
+      setCurrentMonthKey(date.slice(0, 7));
+    },
+    [weeks, allDates],
+  );
+
   const allDates = useMemo(() => calendarData?.weeks.flatMap((w) => w.dates) ?? [], [calendarData]);
   const maxMinDoctors = useMemo(() => Math.max(...shiftTypes.map((s) => s.min_doctors), 1), [shiftTypes]);
 
