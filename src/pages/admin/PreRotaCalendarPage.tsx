@@ -1694,6 +1694,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                   onCopy={handleActionCopy}
                   onDelete={handleActionDelete}
                   onNavigate={handlePopoverNavigate}
+                  onGoToDate={handleGoToDate}
                 />
               </Popover>
             </td>
