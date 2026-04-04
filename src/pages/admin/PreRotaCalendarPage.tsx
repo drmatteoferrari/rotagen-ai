@@ -1715,7 +1715,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
           className={`p-1 sm:p-1.5 border-r border-border text-left align-middle cursor-pointer hover:underline overflow-hidden`}
           title={doctor.doctorName}
         >
-          <div className="font-semibold text-[10px] sm:text-[11px] text-blue-600 truncate w-full">
+          <div className="font-semibold text-[10px] sm:text-[11px] text-blue-600 break-words whitespace-normal w-full">
             {doctor.doctorName.replace("Dr ", "")}
           </div>
           <div className="text-[8px] sm:text-[9px] text-muted-foreground truncate mt-0.5 hidden sm:block">
