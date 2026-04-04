@@ -1856,8 +1856,8 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
           );
 
     return (
-      <div className="border-t border-border bg-card overflow-x-auto w-full">
-        <table className="w-full text-xs border-collapse min-w-[600px]">
+      <div className="border-t border-border bg-card w-full overflow-hidden">
+        <table className="w-full table-fixed text-xs border-collapse">
           <thead>
             <tr className="border-b border-border bg-muted/30">
               <th className="text-left py-2 px-3 font-semibold text-muted-foreground sticky left-0 bg-muted/30 border-r border-border">
