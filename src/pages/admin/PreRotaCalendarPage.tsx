@@ -431,6 +431,7 @@ function ActionButtonsPopover({
   onCopy,
   onDelete,
   onNavigate,
+  onGoToDate,
 }: ActionButtonsPopoverProps) {
   const eventsExist =
     mergedCell && !mergedCell.isDeleted && mergedCell.primary !== "AVAILABLE" && mergedCell.primary !== "BH";
