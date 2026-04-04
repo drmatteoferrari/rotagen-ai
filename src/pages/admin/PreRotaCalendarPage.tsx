@@ -13,6 +13,9 @@ import {
   ChevronRight,
   Download,
   ArrowLeft,
+  ArrowRight,
+  ArrowUp,
+  ArrowDown,
   Loader2,
   AlertTriangle,
   ChevronDown,
@@ -267,10 +270,7 @@ function CalendarLegend({ viewMode }: { viewMode: "day" | "week" | "month" }) {
         <span>LTFT day off</span>
       </div>
       <div className="flex items-center gap-1.5">
-        <span className="inline-flex items-center gap-0.5">
-          <LeaveBadge type="SL" className="text-[9px] px-1 py-0" />
-          <RotaOverrideDot />
-        </span>
+        <RotaOverrideDot />
         <span>Coordinator override</span>
       </div>
       <div className="flex items-center gap-1.5">
@@ -418,6 +418,7 @@ interface ActionButtonsPopoverProps {
   onCopy: (doctorId: string, date: string, mergedCell: MergedCell) => void;
   onDelete: (doctorId: string, date: string, mergedCell: MergedCell) => void;
   onNavigate: (doctorId: string, date: string) => void;
+  onGoToDate: (doctorId: string, date: string) => void;
 }
 
 function ActionButtonsPopover({
@@ -430,6 +431,7 @@ function ActionButtonsPopover({
   onCopy,
   onDelete,
   onNavigate,
+  onGoToDate,
 }: ActionButtonsPopoverProps) {
   const eventsExist =
     mergedCell && !mergedCell.isDeleted && mergedCell.primary !== "AVAILABLE" && mergedCell.primary !== "BH";
@@ -502,6 +504,17 @@ function ActionButtonsPopover({
           </>
         )}
         <div className="h-px bg-border my-1" />
+        <Button
+          variant="ghost"
+          size="sm"
+          className="justify-start h-8 text-xs font-medium"
+          onClick={(e) => {
+            e.stopPropagation();
+            onGoToDate(doctorId, date);
+          }}
+        >
+          <ArrowRight className="w-3.5 h-3.5 mr-2 text-muted-foreground" /> Go to date
+        </Button>
         <Button
           variant="ghost"
           size="sm"
@@ -589,6 +602,14 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
     key: "name",
     direction: "asc",
   });
+
+  useEffect(() => {
+    const effectiveMode = isMobile && viewMode === "month" ? "day" : viewMode;
+    if (effectiveMode !== "day") {
+      setSortConfig((prev) => prev.key === "grade" ? { key: "name", direction: prev.direction } : prev);
+      setGroupAvailability(false);
+    }
+  }, [viewMode, isMobile]);
 
   const lastTapRef = useRef<{ doctorId: string; date: string; time: number } | null>(null);
   // singleTapTimerRef removed — no debounce needed with popover pattern
@@ -1276,6 +1297,21 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
   const allDates = useMemo(() => calendarData?.weeks.flatMap((w) => w.dates) ?? [], [calendarData]);
   const maxMinDoctors = useMemo(() => Math.max(...shiftTypes.map((s) => s.min_doctors), 1), [shiftTypes]);
 
+  const handleGoToDate = useCallback(
+    (_doctorId: string, date: string) => {
+      setPanelOpen(false);
+      setSelectedCell(null);
+      setViewMode("day");
+      const cWeeks = calendarData?.weeks ?? [];
+      const wIdx = cWeeks.findIndex((w) => w.startDate <= date && date <= w.endDate);
+      if (wIdx >= 0) setCurrentWeekIndex(wIdx);
+      const dIdx = allDates.indexOf(date);
+      if (dIdx >= 0) setCurrentDayIndex(dIdx);
+      setCurrentMonthKey(date.slice(0, 7));
+    },
+    [calendarData, allDates],
+  );
+
   // Apply Search & Sort
   const sortedAndFilteredDoctors = useMemo(() => {
     if (!calendarData?.doctors) return [];
@@ -1568,6 +1604,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
           onCopy={handleActionCopy}
           onDelete={handleActionDelete}
           onNavigate={handlePopoverNavigate}
+          onGoToDate={handleGoToDate}
         />
       </Popover>
     );
@@ -1586,7 +1623,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
           <div className="flex flex-row items-center gap-1 sm:gap-1.5 w-full pr-1">
             <div
               onClick={() => navigate(`/admin/doctor-calendar/${doctor.doctorId}?date=${currentDate}&view=week`)}
-              className="font-semibold text-blue-600 truncate cursor-pointer hover:underline text-[9px] sm:text-[10px] shrink-0 max-w-[45%]"
+              className="font-semibold text-blue-600 break-words min-w-0 cursor-pointer hover:underline text-[9px] sm:text-[10px]"
               title={doctor.doctorName}
             >
               {doctor.doctorName.replace("Dr ", "")}
@@ -1658,6 +1695,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                   onCopy={handleActionCopy}
                   onDelete={handleActionDelete}
                   onNavigate={handlePopoverNavigate}
+                  onGoToDate={handleGoToDate}
                 />
               </Popover>
             </td>
@@ -1678,7 +1716,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
           className={`p-1 sm:p-1.5 border-r border-border text-left align-middle cursor-pointer hover:underline overflow-hidden`}
           title={doctor.doctorName}
         >
-          <div className="font-semibold text-[10px] sm:text-[11px] text-blue-600 truncate w-full">
+          <div className="font-semibold text-[10px] sm:text-[11px] text-blue-600 break-words whitespace-normal w-full">
             {doctor.doctorName.replace("Dr ", "")}
           </div>
           <div className="text-[8px] sm:text-[9px] text-muted-foreground truncate mt-0.5 hidden sm:block">
@@ -1767,6 +1805,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                   onCopy={handleActionCopy}
                   onDelete={handleActionDelete}
                   onNavigate={handlePopoverNavigate}
+                  onGoToDate={handleGoToDate}
                 />
               </Popover>
             </td>
@@ -1818,11 +1857,11 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
           );
 
     return (
-      <div className="border-t border-border bg-card overflow-x-auto w-full">
-        <table className="w-full text-xs border-collapse min-w-[600px]">
+      <div className="border-t border-border bg-card w-full overflow-hidden">
+        <table className="w-full table-fixed text-xs border-collapse">
           <thead>
             <tr className="border-b border-border bg-muted/30">
-              <th className="text-left py-2 px-3 font-semibold text-muted-foreground sticky left-0 bg-muted/30 border-r border-border">
+              <th className="text-left py-2 px-3 font-semibold text-muted-foreground sticky left-0 bg-muted/30 border-r border-border w-[18%]">
                 Shift Type
               </th>
               {summaryDates.map((date) => {
@@ -1842,7 +1881,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
           </thead>
           <tbody>
             <tr className="border-b border-border/50 bg-card">
-              <td className="py-2 px-3 font-semibold sticky left-0 bg-card border-r border-border">
+              <td className="py-2 px-3 font-semibold sticky left-0 bg-card border-r border-border w-[18%]">
                 All Available <span className="font-normal text-[9px] text-muted-foreground block">(Total Pool)</span>
               </td>
               {summaryDates.map((date) => {
@@ -1880,7 +1919,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
             {shiftTypes.map((shift, i) => (
               <tr key={shift.id} className={`border-b border-border/50 ${i % 2 === 0 ? "bg-muted/10" : "bg-card"}`}>
                 <td
-                  className={`py-2 px-3 text-muted-foreground sticky left-0 border-r border-border truncate max-w-[150px] ${i % 2 === 0 ? "bg-muted/10" : "bg-card"}`}
+                  className={`py-2 px-3 text-muted-foreground sticky left-0 border-r border-border w-[18%] truncate ${i % 2 === 0 ? "bg-muted/10" : "bg-card"}`}
                 >
                   {shift.name}
                 </td>
@@ -1980,37 +2019,52 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
             />
           </div>
           <div className="flex items-center gap-3 justify-between sm:justify-end flex-wrap w-full sm:w-auto">
-            <button
-              type="button"
-              onClick={() => setGroupAvailability(!groupAvailability)}
-              className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border font-medium transition-all shadow-sm ${
-                groupAvailability
-                  ? "bg-blue-600 text-white border-blue-600"
-                  : "bg-card text-muted-foreground border-border hover:bg-muted"
-              }`}
-            >
-              <div
-                className={`w-2 h-2 rounded-full transition-colors ${groupAvailability ? "bg-white" : "bg-muted-foreground"}`}
-              />
-              Availability
-            </button>
+            {effectiveViewMode === "day" && (
+              <button
+                type="button"
+                onClick={() => setGroupAvailability(!groupAvailability)}
+                className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border font-medium transition-all shadow-sm ${
+                  groupAvailability
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : "bg-card text-muted-foreground border-border hover:bg-muted"
+                }`}
+              >
+                <div
+                  className={`w-2 h-2 rounded-full transition-colors ${groupAvailability ? "bg-white" : "bg-muted-foreground"}`}
+                />
+                Availability
+              </button>
+            )}
 
             <div className="flex items-center gap-1.5">
-              <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
               <span className="text-[11px] text-muted-foreground font-medium hidden sm:inline">Sort:</span>
               <select
-                value={`${sortConfig.key}-${sortConfig.direction}`}
-                onChange={(e) => {
-                  const [k, d] = e.target.value.split("-");
-                  setSortConfig({ key: k as "name" | "grade", direction: d as "asc" | "desc" });
-                }}
+                value={sortConfig.key}
+                onChange={(e) =>
+                  setSortConfig((prev) => ({ ...prev, key: e.target.value as "name" | "grade" }))
+                }
                 className="text-xs px-2 py-1.5 border border-border rounded-md bg-card focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
               >
-                <option value="name-asc">Name (A-Z)</option>
-                <option value="name-desc">Name (Z-A)</option>
-                <option value="grade-asc">Grade (A-Z)</option>
-                <option value="grade-desc">Grade (Z-A)</option>
+                <option value="name">Name</option>
+                {effectiveViewMode === "day" && <option value="grade">Grade</option>}
               </select>
+              <button
+                type="button"
+                onClick={() =>
+                  setSortConfig((prev) => ({
+                    ...prev,
+                    direction: prev.direction === "asc" ? "desc" : "asc",
+                  }))
+                }
+                className="p-1.5 rounded-md border border-border bg-card hover:bg-muted transition-colors text-muted-foreground"
+                title={sortConfig.direction === "asc" ? "Ascending — click to reverse" : "Descending — click to reverse"}
+              >
+                {sortConfig.direction === "asc" ? (
+                  <ArrowUp className="h-3.5 w-3.5" />
+                ) : (
+                  <ArrowDown className="h-3.5 w-3.5" />
+                )}
+              </button>
             </div>
           </div>
         </div>
@@ -2224,7 +2278,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                   <table className="w-full table-fixed text-[10px] sm:text-xs border-collapse">
                     <thead>
                       <tr className="border-b border-border text-left">
-                        <th className="bg-muted/30 py-1 sm:py-2 px-1 font-medium text-muted-foreground border-r border-border w-[12%] sm:w-[15%] truncate align-bottom">
+                        <th className="bg-muted/30 py-1 sm:py-2 px-1 font-medium text-muted-foreground border-r border-border w-[12%] sm:w-[15%] align-bottom">
                           Doctor
                         </th>
                         {gridDates.map((date, idx) => {
