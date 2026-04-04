@@ -1918,7 +1918,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
             {shiftTypes.map((shift, i) => (
               <tr key={shift.id} className={`border-b border-border/50 ${i % 2 === 0 ? "bg-muted/10" : "bg-card"}`}>
                 <td
-                  className={`py-2 px-3 text-muted-foreground sticky left-0 border-r border-border truncate max-w-[150px] ${i % 2 === 0 ? "bg-muted/10" : "bg-card"}`}
+                  className={`py-2 px-3 text-muted-foreground sticky left-0 border-r border-border w-[18%] truncate ${i % 2 === 0 ? "bg-muted/10" : "bg-card"}`}
                 >
                   {shift.name}
                 </td>
