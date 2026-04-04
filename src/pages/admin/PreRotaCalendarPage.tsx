@@ -510,6 +510,17 @@ function ActionButtonsPopover({
           className="justify-start h-8 text-xs font-medium"
           onClick={(e) => {
             e.stopPropagation();
+            onGoToDate(doctorId, date);
+          }}
+        >
+          <ArrowRight className="w-3.5 h-3.5 mr-2 text-muted-foreground" /> Go to date
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="justify-start h-8 text-xs font-medium"
+          onClick={(e) => {
+            e.stopPropagation();
             onNavigate(doctorId, date);
           }}
         >
