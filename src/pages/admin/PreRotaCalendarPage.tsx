@@ -1302,13 +1302,14 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
       setPanelOpen(false);
       setSelectedCell(null);
       setViewMode("day");
-      const wIdx = weeks.findIndex((w) => w.startDate <= date && date <= w.endDate);
+      const cWeeks = calendarData?.weeks ?? [];
+      const wIdx = cWeeks.findIndex((w) => w.startDate <= date && date <= w.endDate);
       if (wIdx >= 0) setCurrentWeekIndex(wIdx);
       const dIdx = allDates.indexOf(date);
       if (dIdx >= 0) setCurrentDayIndex(dIdx);
       setCurrentMonthKey(date.slice(0, 7));
     },
-    [weeks, allDates],
+    [calendarData, allDates],
   );
 
   // Apply Search & Sort
