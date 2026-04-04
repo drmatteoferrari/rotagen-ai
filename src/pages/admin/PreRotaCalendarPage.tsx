@@ -270,10 +270,7 @@ function CalendarLegend({ viewMode }: { viewMode: "day" | "week" | "month" }) {
         <span>LTFT day off</span>
       </div>
       <div className="flex items-center gap-1.5">
-        <span className="inline-flex items-center gap-0.5">
-          <LeaveBadge type="SL" className="text-[9px] px-1 py-0" />
-          <RotaOverrideDot />
-        </span>
+        <RotaOverrideDot />
         <span>Coordinator override</span>
       </div>
       <div className="flex items-center gap-1.5">
