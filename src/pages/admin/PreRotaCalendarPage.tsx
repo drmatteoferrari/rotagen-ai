@@ -1860,7 +1860,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
         <table className="w-full table-fixed text-xs border-collapse">
           <thead>
             <tr className="border-b border-border bg-muted/30">
-              <th className="text-left py-2 px-3 font-semibold text-muted-foreground sticky left-0 bg-muted/30 border-r border-border">
+              <th className="text-left py-2 px-3 font-semibold text-muted-foreground sticky left-0 bg-muted/30 border-r border-border w-[18%]">
                 Shift Type
               </th>
               {summaryDates.map((date) => {
