@@ -1294,6 +1294,9 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
     [navigate],
   );
 
+  const allDates = useMemo(() => calendarData?.weeks.flatMap((w) => w.dates) ?? [], [calendarData]);
+  const maxMinDoctors = useMemo(() => Math.max(...shiftTypes.map((s) => s.min_doctors), 1), [shiftTypes]);
+
   const handleGoToDate = useCallback(
     (_doctorId: string, date: string) => {
       setPanelOpen(false);
@@ -1307,9 +1310,6 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
     },
     [weeks, allDates],
   );
-
-  const allDates = useMemo(() => calendarData?.weeks.flatMap((w) => w.dates) ?? [], [calendarData]);
-  const maxMinDoctors = useMemo(() => Math.max(...shiftTypes.map((s) => s.min_doctors), 1), [shiftTypes]);
 
   // Apply Search & Sort
   const sortedAndFilteredDoctors = useMemo(() => {
