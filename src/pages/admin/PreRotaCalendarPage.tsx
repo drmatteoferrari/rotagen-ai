@@ -1621,7 +1621,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
           <div className="flex flex-row items-center gap-1 sm:gap-1.5 w-full pr-1">
             <div
               onClick={() => navigate(`/admin/doctor-calendar/${doctor.doctorId}?date=${currentDate}&view=week`)}
-              className="font-semibold text-blue-600 truncate cursor-pointer hover:underline text-[9px] sm:text-[10px] shrink-0 max-w-[45%]"
+              className="font-semibold text-blue-600 break-words min-w-0 cursor-pointer hover:underline text-[9px] sm:text-[10px]"
               title={doctor.doctorName}
             >
               {doctor.doctorName.replace("Dr ", "")}
