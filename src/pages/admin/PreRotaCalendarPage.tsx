@@ -418,6 +418,7 @@ interface ActionButtonsPopoverProps {
   onCopy: (doctorId: string, date: string, mergedCell: MergedCell) => void;
   onDelete: (doctorId: string, date: string, mergedCell: MergedCell) => void;
   onNavigate: (doctorId: string, date: string) => void;
+  onGoToDate: (doctorId: string, date: string) => void;
 }
 
 function ActionButtonsPopover({
