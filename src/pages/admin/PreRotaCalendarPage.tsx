@@ -2277,7 +2277,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                   <table className="w-full table-fixed text-[10px] sm:text-xs border-collapse">
                     <thead>
                       <tr className="border-b border-border text-left">
-                        <th className="bg-muted/30 py-1 sm:py-2 px-1 font-medium text-muted-foreground border-r border-border w-[12%] sm:w-[15%] truncate align-bottom">
+                        <th className="bg-muted/30 py-1 sm:py-2 px-1 font-medium text-muted-foreground border-r border-border w-[12%] sm:w-[15%] align-bottom">
                           Doctor
                         </th>
                         {gridDates.map((date, idx) => {
