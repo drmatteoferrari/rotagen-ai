@@ -1880,7 +1880,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
           </thead>
           <tbody>
             <tr className="border-b border-border/50 bg-card">
-              <td className="py-2 px-3 font-semibold sticky left-0 bg-card border-r border-border">
+              <td className="py-2 px-3 font-semibold sticky left-0 bg-card border-r border-border w-[18%]">
                 All Available <span className="font-normal text-[9px] text-muted-foreground block">(Total Pool)</span>
               </td>
               {summaryDates.map((date) => {
