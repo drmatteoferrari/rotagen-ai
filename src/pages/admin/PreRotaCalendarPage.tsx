@@ -603,6 +603,14 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
     direction: "asc",
   });
 
+  useEffect(() => {
+    const effectiveMode = isMobile && viewMode === "month" ? "day" : viewMode;
+    if (effectiveMode !== "day") {
+      setSortConfig((prev) => prev.key === "grade" ? { key: "name", direction: prev.direction } : prev);
+      setGroupAvailability(false);
+    }
+  }, [viewMode, isMobile]);
+
   const lastTapRef = useRef<{ doctorId: string; date: string; time: number } | null>(null);
   // singleTapTimerRef removed — no debounce needed with popover pattern
   const touchStartX = useRef(0);
