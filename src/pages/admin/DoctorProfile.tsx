@@ -199,6 +199,8 @@ export default function DoctorProfile() {
   const [sendingInvite, setSendingInvite] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [removeDialogOpen, setRemoveDialogOpen] = useState(false);
+  const [resetSurveyDialogOpen, setResetSurveyDialogOpen] = useState(false);
+  const [resettingSurvey, setResettingSurvey] = useState(false);
 
   // Relational data state
   const [unavailBlocks, setUnavailBlocks] = useState<any[]>([]);
@@ -414,7 +416,85 @@ export default function DoctorProfile() {
     }
   };
 
-  const fmtDate = (d: string | null | undefined): string => {
+  const handleResetSurvey = async () => {
+    if (!doctor) return;
+    setResettingSurvey(true);
+    try {
+      await Promise.all([
+        supabase.from("unavailability_blocks").delete().eq("doctor_id", doctor.id).eq("rota_config_id", doctor.rota_config_id),
+        supabase.from("ltft_patterns").delete().eq("doctor_id", doctor.id).eq("rota_config_id", doctor.rota_config_id),
+        supabase.from("training_requests").delete().eq("doctor_id", doctor.id).eq("rota_config_id", doctor.rota_config_id),
+        supabase.from("dual_specialties").delete().eq("doctor_id", doctor.id).eq("rota_config_id", doctor.rota_config_id),
+        supabase.from("resolved_availability").delete().eq("doctor_id", doctor.id).eq("rota_config_id", doctor.rota_config_id),
+      ]);
+      await supabase
+        .from("doctor_survey_responses")
+        .update({
+          status: "not_started",
+          submitted_at: null,
+          signature_name: null,
+          signature_date: null,
+          wte_percent: null,
+          wte_other_value: null,
+          al_entitlement: null,
+          ltft_days_off: null,
+          ltft_night_flexibility: null,
+          annual_leave: null,
+          study_leave: null,
+          noc_dates: null,
+          other_unavailability: null,
+          competencies_json: null,
+          exempt_from_nights: null,
+          exempt_from_weekends: null,
+          exempt_from_oncall: null,
+          exemption_details: null,
+          other_restrictions: null,
+          additional_restrictions: null,
+          parental_leave_expected: null,
+          parental_leave_start: null,
+          parental_leave_end: null,
+          parental_leave_notes: null,
+          specialties_requested: null,
+          special_sessions: null,
+          signoff_needs: null,
+          dual_specialty: null,
+          dual_specialty_types: null,
+          additional_notes: null,
+          other_interests: null,
+          want_pain_sessions: null,
+          pain_session_notes: null,
+          want_preop: null,
+          iac_achieved: null,
+          iac_working: null,
+          iac_remote: null,
+          iaoc_achieved: null,
+          iaoc_working: null,
+          iaoc_remote: null,
+          icu_achieved: null,
+          icu_working: null,
+          icu_remote: null,
+          transfer_achieved: null,
+          transfer_working: null,
+          transfer_remote: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("doctor_id", doctor.id)
+        .eq("rota_config_id", doctor.rota_config_id);
+      await supabase
+        .from("doctors")
+        .update({ survey_status: "not_started", survey_submitted_at: null })
+        .eq("id", doctor.id);
+      toast.success("Survey reset — all responses cleared");
+      setResetSurveyDialogOpen(false);
+      loadAll();
+    } catch (err) {
+      console.error("Reset survey failed:", err);
+      toast.error("Failed to reset survey — please try again");
+    } finally {
+      setResettingSurvey(false);
+    }
+  };
+
     if (!d) return "\u2014";
     try {
       return format(parseISO(d), "d MMM yyyy");
@@ -1024,6 +1104,12 @@ export default function DoctorProfile() {
                       </TooltipContent>
                     </Tooltip>
 
+                    {(doctor.survey_invite_count ?? 0) > 0 && (
+                      <span className="inline-flex items-center text-xs text-muted-foreground self-center">
+                        Sent {doctor.survey_invite_count} {doctor.survey_invite_count === 1 ? "time" : "times"}
+                      </span>
+                    )}
+
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button
@@ -1083,18 +1169,29 @@ export default function DoctorProfile() {
           </CardContent>
         </Card>
 
-        {/* ── DANGER ZONE ─────────────────────────────────── */}
+        {/* ── DOCTOR MANAGEMENT ─────────────────────────── */}
         <div className="border-t border-border pt-6">
-          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Danger zone</p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setRemoveDialogOpen(true)}
-            className="gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/5 hover:text-destructive"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-            Remove doctor
-          </Button>
+          <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Doctor Management</p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setResetSurveyDialogOpen(true)}
+              className="gap-1.5 text-amber-600 border-amber-300 hover:bg-amber-50 hover:text-amber-700"
+            >
+              <ClipboardList className="h-3.5 w-3.5" />
+              Reset survey
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setRemoveDialogOpen(true)}
+              className="gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/5 hover:text-destructive"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Remove doctor
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -1140,6 +1237,32 @@ export default function DoctorProfile() {
             >
               Delete permanently
               <span className="ml-auto text-xs text-red-200 font-normal">Cannot be undone</span>
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Reset Survey Dialog ──────────────────────────── */}
+      <Dialog open={resetSurveyDialogOpen} onOpenChange={setResetSurveyDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Reset {doctor.first_name}'s survey?</DialogTitle>
+            <DialogDescription>
+              This will permanently delete all survey responses, leave blocks, LTFT patterns, training requests, and availability overrides for this rota period. The doctor will need to complete their survey again. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setResetSurveyDialogOpen(false)} disabled={resettingSurvey}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleResetSurvey}
+              disabled={resettingSurvey}
+              className="gap-1.5"
+            >
+              {resettingSurvey && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+              Yes, reset survey
             </Button>
           </div>
         </DialogContent>
