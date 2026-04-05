@@ -72,7 +72,7 @@ export default function SetupPage() {
     navigate("/admin/pre-rota");
   };
 
-  const canGeneratePreRota = isDepartmentComplete && isWtrComplete && isPeriodComplete && surveysDone;
+  
 
   const handleGenerateFinalRota = async () => {
     if (!currentRotaConfigId) {
@@ -137,6 +137,7 @@ export default function SetupPage() {
 
   const surveyStatus = getSurveyStatus();
   const surveysDone = surveySubmitted === surveyTotal && surveyTotal > 0;
+  const canGeneratePreRota = isDepartmentComplete && isWtrComplete && isPeriodComplete && surveysDone;
   const stepsComplete = [isDepartmentComplete, isWtrComplete, isPeriodComplete, surveysDone].filter(Boolean).length;
 
   const surveyBarColor = surveysDone ? "bg-emerald-500" : surveySubmitted > 0 ? "bg-amber-400" : "bg-red-400";
