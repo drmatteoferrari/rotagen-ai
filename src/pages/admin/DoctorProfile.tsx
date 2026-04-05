@@ -495,6 +495,7 @@ export default function DoctorProfile() {
     }
   };
 
+  const fmtDate = (d: string | null | undefined): string => {
     if (!d) return "\u2014";
     try {
       return format(parseISO(d), "d MMM yyyy");
