@@ -53,6 +53,8 @@ export default function SetupPage() {
 
   const [finalLoading, setFinalLoading] = useState(false);
   const [showFinalChecklist, setShowFinalChecklist] = useState(false);
+  const [checklistItems, setChecklistItems] = useState<boolean[]>([false, false, false]);
+  const allChecked = checklistItems.every(Boolean);
   const [resetModalOpen, setResetModalOpen] = useState(false);
 
   const handleGeneratePreRota = async () => {
@@ -70,7 +72,7 @@ export default function SetupPage() {
     navigate("/admin/pre-rota");
   };
 
-  const canGeneratePreRota = isDepartmentComplete && isWtrComplete && isPeriodComplete;
+  
 
   const handleGenerateFinalRota = async () => {
     if (!currentRotaConfigId) {
@@ -103,13 +105,29 @@ export default function SetupPage() {
     }
   };
 
-  const getSurveyStatus = (): { color: string; text: string; bg: string } => {
-    if (surveyTotal === 0) return { color: "text-red-700", bg: "bg-red-50", text: "No doctors added" };
+  const getSurveyStatus = (): { color: string; text: string; shortText: string; bg: string } => {
+    if (surveyTotal === 0)
+      return { color: "text-red-700", bg: "bg-red-50", text: "No doctors added", shortText: "0 doctors" };
     if (surveySubmitted === surveyTotal)
-      return { color: "text-emerald-700", bg: "bg-emerald-50", text: `${surveySubmitted} / ${surveyTotal} submitted` };
+      return {
+        color: "text-emerald-700",
+        bg: "bg-emerald-50",
+        text: `${surveySubmitted} / ${surveyTotal} submitted`,
+        shortText: `${surveySubmitted}/${surveyTotal}`,
+      };
     if (surveySubmitted > 0)
-      return { color: "text-amber-700", bg: "bg-amber-50", text: `${surveySubmitted} / ${surveyTotal} submitted` };
-    return { color: "text-red-700", bg: "bg-red-50", text: `${surveySubmitted} / ${surveyTotal} submitted` };
+      return {
+        color: "text-amber-700",
+        bg: "bg-amber-50",
+        text: `${surveySubmitted} / ${surveyTotal} submitted`,
+        shortText: `${surveySubmitted}/${surveyTotal}`,
+      };
+    return {
+      color: "text-red-700",
+      bg: "bg-red-50",
+      text: `${surveySubmitted} / ${surveyTotal} submitted`,
+      shortText: `${surveySubmitted}/${surveyTotal}`,
+    };
   };
 
   const getStepStyle = (done: boolean) =>
@@ -119,6 +137,7 @@ export default function SetupPage() {
 
   const surveyStatus = getSurveyStatus();
   const surveysDone = surveySubmitted === surveyTotal && surveyTotal > 0;
+  const canGeneratePreRota = isDepartmentComplete && isWtrComplete && isPeriodComplete && surveysDone;
   const stepsComplete = [isDepartmentComplete, isWtrComplete, isPeriodComplete, surveysDone].filter(Boolean).length;
 
   const surveyBarColor = surveysDone ? "bg-emerald-500" : surveySubmitted > 0 ? "bg-amber-400" : "bg-red-400";
@@ -198,12 +217,12 @@ export default function SetupPage() {
                   <Building2 className="w-3.5 h-3.5" />
                 </div>
                 <span
-                  className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-md whitespace-nowrap overflow-hidden text-ellipsis max-w-[70px] ${getStepStyle(isDepartmentComplete).bg} ${getStepStyle(isDepartmentComplete).color}`}
+                  className={`inline-block text-[11px] sm:text-xs font-semibold px-2 py-0.5 rounded-md whitespace-nowrap overflow-hidden text-ellipsis max-w-[80px] sm:max-w-none ${getStepStyle(isDepartmentComplete).bg} ${getStepStyle(isDepartmentComplete).color}`}
                 >
                   {getStepStyle(isDepartmentComplete).text}
                 </span>
               </div>
-              <p className="text-xs font-bold text-foreground leading-tight truncate">1. Department</p>
+              <p className="text-sm sm:text-base font-bold text-foreground leading-tight truncate">1. Department</p>
             </div>
 
             {/* Step 2 — Contract (WTR) */}
@@ -222,12 +241,12 @@ export default function SetupPage() {
                   <CalendarCheck className="w-3.5 h-3.5" />
                 </div>
                 <span
-                  className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-md whitespace-nowrap overflow-hidden text-ellipsis max-w-[70px] ${getStepStyle(isWtrComplete).bg} ${getStepStyle(isWtrComplete).color}`}
+                  className={`inline-block text-[11px] sm:text-xs font-semibold px-2 py-0.5 rounded-md whitespace-nowrap overflow-hidden text-ellipsis max-w-[80px] sm:max-w-none ${getStepStyle(isWtrComplete).bg} ${getStepStyle(isWtrComplete).color}`}
                 >
                   {getStepStyle(isWtrComplete).text}
                 </span>
               </div>
-              <p className="text-xs font-bold text-foreground leading-tight truncate">2. Contract (WTR)</p>
+              <p className="text-sm sm:text-base font-bold text-foreground leading-tight truncate">2. Contract (WTR)</p>
             </div>
 
             {/* Step 3 — Rota Period */}
@@ -248,12 +267,12 @@ export default function SetupPage() {
                   <CalendarDays className="w-3.5 h-3.5" />
                 </div>
                 <span
-                  className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-md whitespace-nowrap overflow-hidden text-ellipsis max-w-[70px] ${getStepStyle(isPeriodComplete).bg} ${getStepStyle(isPeriodComplete).color}`}
+                  className={`inline-block text-[11px] sm:text-xs font-semibold px-2 py-0.5 rounded-md whitespace-nowrap overflow-hidden text-ellipsis max-w-[80px] sm:max-w-none ${getStepStyle(isPeriodComplete).bg} ${getStepStyle(isPeriodComplete).color}`}
                 >
                   {getStepStyle(isPeriodComplete).text}
                 </span>
               </div>
-              <p className="text-xs font-bold text-foreground leading-tight truncate">3. Rota Period</p>
+              <p className="text-sm sm:text-base font-bold text-foreground leading-tight truncate">3. Rota Period</p>
             </div>
 
             {/* Step 4 — Doctor Surveys */}
@@ -272,12 +291,13 @@ export default function SetupPage() {
                   <Users className="w-3.5 h-3.5" />
                 </div>
                 <span
-                  className={`inline-block text-[10px] font-semibold px-2 py-0.5 rounded-md whitespace-nowrap overflow-hidden text-ellipsis max-w-[80px] ${surveyStatus.bg} ${surveyStatus.color}`}
+                  className={`inline-block text-[11px] sm:text-xs font-semibold px-2 py-0.5 rounded-md max-w-none ${surveyStatus.bg} ${surveyStatus.color}`}
                 >
-                  {surveyStatus.text}
+                  <span className="sm:hidden">{surveyStatus.shortText}</span>
+                  <span className="hidden sm:inline">{surveyStatus.text}</span>
                 </span>
               </div>
-              <p className="text-xs font-bold text-foreground leading-tight truncate">4. Doctor Surveys</p>
+              <p className="text-sm sm:text-base font-bold text-foreground leading-tight truncate">4. Doctor Surveys</p>
               {/* Mini survey completion bar */}
               <div className="h-1 rounded-full bg-secondary overflow-hidden">
                 <div
@@ -569,10 +589,14 @@ export default function SetupPage() {
 
             <div className="space-y-3 mb-6 bg-muted/40 p-4 rounded-xl border border-border/50">
               {["Pre-Rota Plan is up-to-date", "All doctor surveys submitted", "No unresolvable conflicts"].map(
-                (item) => (
+                (item, i) => (
                   <label key={item} className="flex items-start gap-3 text-sm cursor-pointer group">
                     <input
                       type="checkbox"
+                      checked={checklistItems[i]}
+                      onChange={() =>
+                        setChecklistItems((prev) => prev.map((v, idx) => (idx === i ? !v : v)))
+                      }
                       className="mt-0.5 rounded border-border accent-primary w-4 h-4 cursor-pointer shrink-0"
                     />
                     <span className="text-foreground group-hover:text-primary transition-colors font-medium">
@@ -584,14 +608,22 @@ export default function SetupPage() {
             </div>
 
             <div className="flex gap-3">
-              <Button variant="outline" className="flex-1 font-bold" onClick={() => setShowFinalChecklist(false)}>
+              <Button
+                variant="outline"
+                className="flex-1 font-bold"
+                onClick={() => {
+                  setShowFinalChecklist(false);
+                  setChecklistItems([false, false, false]);
+                }}
+              >
                 Cancel
               </Button>
               <Button
                 className="flex-1 font-bold"
-                disabled={finalLoading}
+                disabled={finalLoading || !allChecked}
                 onClick={() => {
                   setShowFinalChecklist(false);
+                  setChecklistItems([false, false, false]);
                   handleGenerateFinalRota();
                 }}
               >
