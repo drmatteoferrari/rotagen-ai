@@ -983,7 +983,7 @@ export default function DoctorProfile() {
                     )}
                     {survey.signature_name && survey.signature_date && (
                       <span>
-                        Signed: {survey.signature_name} \u2014 {fmtDate(survey.signature_date)}
+                        Signed: {survey.signature_name} — {fmtDate(survey.signature_date)}
                       </span>
                     )}
                   </div>
