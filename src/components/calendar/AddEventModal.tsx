@@ -66,15 +66,23 @@ export function AddEventModal({
     <div
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
       style={{
-        position: 'fixed', inset: 0, zIndex: 100,
-        background: 'rgba(0,0,0,0.3)',
-        display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+        position: 'fixed',
+        inset: 0,
+        zIndex: 100,
+        background: 'rgba(0,0,0,0.4)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '16px',
       }}
     >
       <div style={{
-        width: '100%', maxWidth: 480,
-        background: '#fff', borderRadius: '16px 16px 0 0',
-        padding: 20, boxShadow: '0 -4px 20px rgba(0,0,0,0.15)',
+        width: '100%',
+        maxWidth: 480,
+        background: '#fff',
+        borderRadius: '16px',
+        padding: 20,
+        boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
           <span style={{ fontSize: 15, fontWeight: 700, color: '#1e293b' }}>{title}</span>

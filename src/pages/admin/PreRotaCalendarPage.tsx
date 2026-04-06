@@ -414,11 +414,12 @@ interface ActionButtonsPopoverProps {
   date: string;
   mergedCell: MergedCell | undefined;
   doctorName: string;
-  allOverrides: CalendarOverride[];
   onAdd: (doctorId: string, date: string) => void;
-  onEdit: (doctorId: string, date: string, mergedCell: MergedCell) => void;
-  onCopy: (doctorId: string, date: string, mergedCell: MergedCell) => void;
-  onDelete: (doctorId: string, date: string, mergedCell: MergedCell) => void;
+  onTriggerAction: (
+    action: 'edit' | 'copy' | 'delete',
+    doctorId: string,
+    date: string
+  ) => void;
   onGoToDate: (doctorId: string, date: string) => void;
   onNavigateProfile: (doctorId: string) => void;
 }
@@ -428,35 +429,11 @@ function ActionButtonsPopover({
   date,
   mergedCell,
   doctorName,
-  allOverrides,
   onAdd,
-  onEdit,
-  onCopy,
-  onDelete,
+  onTriggerAction,
   onGoToDate,
   onNavigateProfile,
 }: ActionButtonsPopoverProps) {
-  const activeOverrides = allOverrides.filter(
-    (o) =>
-      o.doctorId === doctorId &&
-      (o.action === 'add' || o.action === 'modify') &&
-      o.startDate <= date && date <= o.endDate
-  );
-  const needsPicker = activeOverrides.length > 1;
-
-  const [pickerAction, setPickerAction] = useState<'edit' | 'copy' | 'delete' | null>(null);
-
-  const triggerAction = (action: 'edit' | 'copy' | 'delete') => {
-    if (!needsPicker) {
-      if (!mergedCell) return;
-      if (action === 'edit') onEdit(doctorId, date, mergedCell);
-      if (action === 'copy') onCopy(doctorId, date, mergedCell);
-      if (action === 'delete') onDelete(doctorId, date, mergedCell);
-    } else {
-      setPickerAction(action);
-    }
-  };
-
   const eventsExist =
     mergedCell && !mergedCell.isDeleted && mergedCell.primary !== "AVAILABLE" && mergedCell.primary !== "BH";
 
@@ -482,7 +459,18 @@ function ActionButtonsPopover({
         </p>
       </div>
       <div className="flex flex-col gap-0.5">
-        {pickerAction === null ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="justify-start h-8 text-xs font-medium"
+          onClick={(e) => {
+            e.stopPropagation();
+            onAdd(doctorId, date);
+          }}
+        >
+          <Plus className="w-3.5 h-3.5 mr-2 text-muted-foreground" /> Add Event
+        </Button>
+        {eventsExist && (
           <>
             <Button
               variant="ghost"
@@ -490,95 +478,32 @@ function ActionButtonsPopover({
               className="justify-start h-8 text-xs font-medium"
               onClick={(e) => {
                 e.stopPropagation();
-                onAdd(doctorId, date);
+                onTriggerAction('edit', doctorId, date);
               }}
             >
-              <Plus className="w-3.5 h-3.5 mr-2 text-muted-foreground" /> Add Event
+              <Edit2 className="w-3.5 h-3.5 mr-2 text-muted-foreground" /> Edit Event
             </Button>
-            {eventsExist && (
-              <>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="justify-start h-8 text-xs font-medium"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    triggerAction('edit');
-                  }}
-                >
-                  <Edit2 className="w-3.5 h-3.5 mr-2 text-muted-foreground" /> Edit Event
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="justify-start h-8 text-xs font-medium"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    triggerAction('copy');
-                  }}
-                >
-                  <Copy className="w-3.5 h-3.5 mr-2 text-muted-foreground" /> Copy Event
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="justify-start h-8 text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-50"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    triggerAction('delete');
-                  }}
-                >
-                  <Trash2 className="w-3.5 h-3.5 mr-2 text-red-500" /> Remove Event
-                </Button>
-              </>
-            )}
-          </>
-        ) : (
-          <>
-            <div className="px-2 py-1 text-[10px] text-muted-foreground font-medium border-b border-border/50 mb-1">
-              Select event to {pickerAction}:
-            </div>
-            {activeOverrides.map((ov) => {
-              const rangeLabel =
-                ov.startDate === ov.endDate
-                  ? ov.startDate
-                  : `${ov.startDate} \u2013 ${ov.endDate}`;
-              return (
-                <Button
-                  key={ov.id}
-                  variant="ghost"
-                  size="sm"
-                  className="justify-start h-auto min-h-[32px] py-1 text-xs font-medium w-full whitespace-normal text-left"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const action = pickerAction!;
-                    setPickerAction(null);
-                    const syntheticCell: MergedCell = {
-                      primary: ov.eventType,
-                      secondary: mergedCell?.secondary ?? null,
-                      label: ov.eventType,
-                      overrideId: ov.id,
-                      overrideAction: ov.action as 'add' | 'modify',
-                      isDeleted: false,
-                      deletedCode: null,
-                    };
-                    if (action === 'edit') onEdit(doctorId, date, syntheticCell);
-                    if (action === 'copy') onCopy(doctorId, date, syntheticCell);
-                    if (action === 'delete') onDelete(doctorId, date, syntheticCell);
-                  }}
-                >
-                  {ov.eventType} · {rangeLabel}
-                </Button>
-              );
-            })}
-            <div className="h-px bg-border my-1" />
             <Button
               variant="ghost"
               size="sm"
-              className="justify-start h-8 text-xs font-medium text-muted-foreground w-full"
-              onClick={(e) => { e.stopPropagation(); setPickerAction(null); }}
+              className="justify-start h-8 text-xs font-medium"
+              onClick={(e) => {
+                e.stopPropagation();
+                onTriggerAction('copy', doctorId, date);
+              }}
             >
-              ← Back
+              <Copy className="w-3.5 h-3.5 mr-2 text-muted-foreground" /> Copy Event
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="justify-start h-8 text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-50"
+              onClick={(e) => {
+                e.stopPropagation();
+                onTriggerAction('delete', doctorId, date);
+              }}
+            >
+              <Trash2 className="w-3.5 h-3.5 mr-2 text-red-500" /> Remove Event
             </Button>
           </>
         )}
@@ -656,6 +581,13 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
   const [collapseUnavailable, setCollapseUnavailable] = useState(true);
 
   const [overrides, setOverrides] = useState<CalendarOverride[]>([]);
+  const [pickerAction, setPickerAction] = useState<
+    'edit' | 'copy' | 'delete' | null
+  >(null);
+  const [pickerCell, setPickerCell] = useState<{
+    doctorId: string;
+    date: string;
+  } | null>(null);
   const [selectedCell, setSelectedCell] = useState<{ doctorId: string; date: string } | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -1321,6 +1253,32 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
     [overrides, rotaConfigId, mergedAvailabilityByDoctor],
   );
 
+  const handleTriggerAction = useCallback(
+    (action: 'edit' | 'copy' | 'delete', doctorId: string, date: string) => {
+      const activeOverrides = overrides.filter(
+        (o) =>
+          o.doctorId === doctorId &&
+          (o.action === 'add' || o.action === 'modify') &&
+          o.startDate <= date && date <= o.endDate
+      );
+      if (activeOverrides.length > 1) {
+        setPanelOpen(false);
+        setSelectedCell(null);
+        setPickerAction(action);
+        setPickerCell({ doctorId, date });
+      } else {
+        const mergedCell = mergedAvailabilityByDoctor[doctorId]?.[date];
+        if (!mergedCell) return;
+        setPanelOpen(false);
+        setSelectedCell(null);
+        if (action === 'edit') handleActionEdit(doctorId, date, mergedCell);
+        if (action === 'copy') handleActionCopy(doctorId, date, mergedCell);
+        if (action === 'delete') handleActionDelete(doctorId, date, mergedCell);
+      }
+    },
+    [overrides, mergedAvailabilityByDoctor, handleActionEdit, handleActionCopy, handleActionDelete],
+  );
+
   // CHANGE 6: Immediate open on click; double-tap/double-click navigates to doctor calendar
   // No debounce timer. Uses timestamp comparison for touch double-tap.
   const handleCellTap = useCallback(
@@ -1671,11 +1629,8 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
           date={currentDate}
           mergedCell={mergedCell}
           doctorName={doctor.doctorName.replace("Dr ", "")}
-          allOverrides={overrides}
           onAdd={handleActionAdd}
-          onEdit={handleActionEdit}
-          onCopy={handleActionCopy}
-          onDelete={handleActionDelete}
+          onTriggerAction={handleTriggerAction}
           onGoToDate={handleGoToDate}
           onNavigateProfile={handlePopoverNavigateProfile}
         />
@@ -1763,11 +1718,8 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                   date={date}
                   mergedCell={mergedCell}
                   doctorName={doctor.doctorName.replace("Dr ", "")}
-                  allOverrides={overrides}
                   onAdd={handleActionAdd}
-                  onEdit={handleActionEdit}
-                  onCopy={handleActionCopy}
-                  onDelete={handleActionDelete}
+                  onTriggerAction={handleTriggerAction}
                   onGoToDate={handleGoToDate}
                   onNavigateProfile={handlePopoverNavigateProfile}
                 />
@@ -1874,11 +1826,8 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                   date={date}
                   mergedCell={mergedCell}
                   doctorName={doctor.doctorName.replace("Dr ", "")}
-                  allOverrides={overrides}
                   onAdd={handleActionAdd}
-                  onEdit={handleActionEdit}
-                  onCopy={handleActionCopy}
-                  onDelete={handleActionDelete}
+                  onTriggerAction={handleTriggerAction}
                   onGoToDate={handleGoToDate}
                   onNavigateProfile={handlePopoverNavigateProfile}
                 />
@@ -2523,6 +2472,96 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
             />
           );
         })()}
+      {pickerAction !== null && pickerCell !== null && (() => {
+        const { doctorId, date } = pickerCell;
+        const activeOverrides = overrides.filter(
+          (o) =>
+            o.doctorId === doctorId &&
+            (o.action === 'add' || o.action === 'modify') &&
+            o.startDate <= date && date <= o.endDate
+        );
+        const doctorName =
+          calendarData?.doctors
+            .find((d) => d.doctorId === doctorId)
+            ?.doctorName.replace('Dr ', '') ?? '';
+        return (
+          <div
+            onClick={() => { setPickerAction(null); setPickerCell(null); }}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 200,
+              background: 'rgba(0,0,0,0.35)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: '16px',
+            }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                width: '100%', maxWidth: 340,
+                background: '#fff', borderRadius: '14px',
+                padding: '16px', boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+              }}
+            >
+              <p style={{ fontSize: 13, fontWeight: 700, color: '#1e293b', marginBottom: 4 }}>
+                {doctorName}
+              </p>
+              <p style={{ fontSize: 11, color: '#64748b', marginBottom: 12 }}>
+                Select event to {pickerAction}:
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {activeOverrides.map((ov) => {
+                  const rangeLabel =
+                    ov.startDate === ov.endDate
+                      ? ov.startDate
+                      : `${ov.startDate} \u2013 ${ov.endDate}`;
+                  return (
+                    <button
+                      key={ov.id}
+                      onClick={() => {
+                        const action = pickerAction;
+                        setPickerAction(null);
+                        setPickerCell(null);
+                        const syntheticCell: MergedCell = {
+                          primary: ov.eventType,
+                          secondary: null,
+                          label: ov.eventType,
+                          overrideId: ov.id,
+                          overrideAction: ov.action as 'add' | 'modify',
+                          isDeleted: false,
+                          deletedCode: null,
+                        };
+                        if (action === 'edit') handleActionEdit(doctorId, date, syntheticCell);
+                        if (action === 'copy') handleActionCopy(doctorId, date, syntheticCell);
+                        if (action === 'delete') handleActionDelete(doctorId, date, syntheticCell);
+                      }}
+                      style={{
+                        padding: '9px 14px', borderRadius: 8,
+                        fontSize: 12, fontWeight: 600,
+                        background: '#f8fafc', border: '1px solid #e2e8f0',
+                        cursor: 'pointer', textAlign: 'left', color: '#1e293b',
+                        width: '100%',
+                      }}
+                    >
+                      {ov.eventType} · {rangeLabel}
+                    </button>
+                  );
+                })}
+              </div>
+              <button
+                onClick={() => { setPickerAction(null); setPickerCell(null); }}
+                style={{
+                  marginTop: 12, width: '100%', padding: '8px',
+                  fontSize: 12, fontWeight: 500,
+                  background: '#fff', border: '1px solid #e2e8f0',
+                  borderRadius: 8, cursor: 'pointer', color: '#64748b',
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        );
+      })()}
       {embedded ? (
         pageContent
       ) : (
