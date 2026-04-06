@@ -581,6 +581,13 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
   const [collapseUnavailable, setCollapseUnavailable] = useState(true);
 
   const [overrides, setOverrides] = useState<CalendarOverride[]>([]);
+  const [pickerAction, setPickerAction] = useState<
+    'edit' | 'copy' | 'delete' | null
+  >(null);
+  const [pickerCell, setPickerCell] = useState<{
+    doctorId: string;
+    date: string;
+  } | null>(null);
   const [selectedCell, setSelectedCell] = useState<{ doctorId: string; date: string } | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -1246,6 +1253,32 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
     [overrides, rotaConfigId, mergedAvailabilityByDoctor],
   );
 
+  const handleTriggerAction = useCallback(
+    (action: 'edit' | 'copy' | 'delete', doctorId: string, date: string) => {
+      const activeOverrides = overrides.filter(
+        (o) =>
+          o.doctorId === doctorId &&
+          (o.action === 'add' || o.action === 'modify') &&
+          o.startDate <= date && date <= o.endDate
+      );
+      if (activeOverrides.length > 1) {
+        setPanelOpen(false);
+        setSelectedCell(null);
+        setPickerAction(action);
+        setPickerCell({ doctorId, date });
+      } else {
+        const mergedCell = mergedAvailabilityByDoctor[doctorId]?.[date];
+        if (!mergedCell) return;
+        setPanelOpen(false);
+        setSelectedCell(null);
+        if (action === 'edit') handleActionEdit(doctorId, date, mergedCell);
+        if (action === 'copy') handleActionCopy(doctorId, date, mergedCell);
+        if (action === 'delete') handleActionDelete(doctorId, date, mergedCell);
+      }
+    },
+    [overrides, mergedAvailabilityByDoctor, handleActionEdit, handleActionCopy, handleActionDelete],
+  );
+
   // CHANGE 6: Immediate open on click; double-tap/double-click navigates to doctor calendar
   // No debounce timer. Uses timestamp comparison for touch double-tap.
   const handleCellTap = useCallback(
@@ -1596,11 +1629,8 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
           date={currentDate}
           mergedCell={mergedCell}
           doctorName={doctor.doctorName.replace("Dr ", "")}
-          allOverrides={overrides}
           onAdd={handleActionAdd}
-          onEdit={handleActionEdit}
-          onCopy={handleActionCopy}
-          onDelete={handleActionDelete}
+          onTriggerAction={handleTriggerAction}
           onGoToDate={handleGoToDate}
           onNavigateProfile={handlePopoverNavigateProfile}
         />
@@ -1688,11 +1718,8 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                   date={date}
                   mergedCell={mergedCell}
                   doctorName={doctor.doctorName.replace("Dr ", "")}
-                  allOverrides={overrides}
                   onAdd={handleActionAdd}
-                  onEdit={handleActionEdit}
-                  onCopy={handleActionCopy}
-                  onDelete={handleActionDelete}
+                  onTriggerAction={handleTriggerAction}
                   onGoToDate={handleGoToDate}
                   onNavigateProfile={handlePopoverNavigateProfile}
                 />
@@ -1799,11 +1826,8 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                   date={date}
                   mergedCell={mergedCell}
                   doctorName={doctor.doctorName.replace("Dr ", "")}
-                  allOverrides={overrides}
                   onAdd={handleActionAdd}
-                  onEdit={handleActionEdit}
-                  onCopy={handleActionCopy}
-                  onDelete={handleActionDelete}
+                  onTriggerAction={handleTriggerAction}
                   onGoToDate={handleGoToDate}
                   onNavigateProfile={handlePopoverNavigateProfile}
                 />
