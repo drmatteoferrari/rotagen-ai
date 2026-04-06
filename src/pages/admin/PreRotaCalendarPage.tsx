@@ -414,11 +414,12 @@ interface ActionButtonsPopoverProps {
   date: string;
   mergedCell: MergedCell | undefined;
   doctorName: string;
-  allOverrides: CalendarOverride[];
   onAdd: (doctorId: string, date: string) => void;
-  onEdit: (doctorId: string, date: string, mergedCell: MergedCell) => void;
-  onCopy: (doctorId: string, date: string, mergedCell: MergedCell) => void;
-  onDelete: (doctorId: string, date: string, mergedCell: MergedCell) => void;
+  onTriggerAction: (
+    action: 'edit' | 'copy' | 'delete',
+    doctorId: string,
+    date: string
+  ) => void;
   onGoToDate: (doctorId: string, date: string) => void;
   onNavigateProfile: (doctorId: string) => void;
 }
@@ -428,35 +429,11 @@ function ActionButtonsPopover({
   date,
   mergedCell,
   doctorName,
-  allOverrides,
   onAdd,
-  onEdit,
-  onCopy,
-  onDelete,
+  onTriggerAction,
   onGoToDate,
   onNavigateProfile,
 }: ActionButtonsPopoverProps) {
-  const activeOverrides = allOverrides.filter(
-    (o) =>
-      o.doctorId === doctorId &&
-      (o.action === 'add' || o.action === 'modify') &&
-      o.startDate <= date && date <= o.endDate
-  );
-  const needsPicker = activeOverrides.length > 1;
-
-  const [pickerAction, setPickerAction] = useState<'edit' | 'copy' | 'delete' | null>(null);
-
-  const triggerAction = (action: 'edit' | 'copy' | 'delete') => {
-    if (!needsPicker) {
-      if (!mergedCell) return;
-      if (action === 'edit') onEdit(doctorId, date, mergedCell);
-      if (action === 'copy') onCopy(doctorId, date, mergedCell);
-      if (action === 'delete') onDelete(doctorId, date, mergedCell);
-    } else {
-      setPickerAction(action);
-    }
-  };
-
   const eventsExist =
     mergedCell && !mergedCell.isDeleted && mergedCell.primary !== "AVAILABLE" && mergedCell.primary !== "BH";
 
@@ -482,7 +459,18 @@ function ActionButtonsPopover({
         </p>
       </div>
       <div className="flex flex-col gap-0.5">
-        {pickerAction === null ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="justify-start h-8 text-xs font-medium"
+          onClick={(e) => {
+            e.stopPropagation();
+            onAdd(doctorId, date);
+          }}
+        >
+          <Plus className="w-3.5 h-3.5 mr-2 text-muted-foreground" /> Add Event
+        </Button>
+        {eventsExist && (
           <>
             <Button
               variant="ghost"
@@ -490,95 +478,32 @@ function ActionButtonsPopover({
               className="justify-start h-8 text-xs font-medium"
               onClick={(e) => {
                 e.stopPropagation();
-                onAdd(doctorId, date);
+                onTriggerAction('edit', doctorId, date);
               }}
             >
-              <Plus className="w-3.5 h-3.5 mr-2 text-muted-foreground" /> Add Event
+              <Edit2 className="w-3.5 h-3.5 mr-2 text-muted-foreground" /> Edit Event
             </Button>
-            {eventsExist && (
-              <>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="justify-start h-8 text-xs font-medium"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    triggerAction('edit');
-                  }}
-                >
-                  <Edit2 className="w-3.5 h-3.5 mr-2 text-muted-foreground" /> Edit Event
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="justify-start h-8 text-xs font-medium"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    triggerAction('copy');
-                  }}
-                >
-                  <Copy className="w-3.5 h-3.5 mr-2 text-muted-foreground" /> Copy Event
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="justify-start h-8 text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-50"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    triggerAction('delete');
-                  }}
-                >
-                  <Trash2 className="w-3.5 h-3.5 mr-2 text-red-500" /> Remove Event
-                </Button>
-              </>
-            )}
-          </>
-        ) : (
-          <>
-            <div className="px-2 py-1 text-[10px] text-muted-foreground font-medium border-b border-border/50 mb-1">
-              Select event to {pickerAction}:
-            </div>
-            {activeOverrides.map((ov) => {
-              const rangeLabel =
-                ov.startDate === ov.endDate
-                  ? ov.startDate
-                  : `${ov.startDate} \u2013 ${ov.endDate}`;
-              return (
-                <Button
-                  key={ov.id}
-                  variant="ghost"
-                  size="sm"
-                  className="justify-start h-auto min-h-[32px] py-1 text-xs font-medium w-full whitespace-normal text-left"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const action = pickerAction!;
-                    setPickerAction(null);
-                    const syntheticCell: MergedCell = {
-                      primary: ov.eventType,
-                      secondary: mergedCell?.secondary ?? null,
-                      label: ov.eventType,
-                      overrideId: ov.id,
-                      overrideAction: ov.action as 'add' | 'modify',
-                      isDeleted: false,
-                      deletedCode: null,
-                    };
-                    if (action === 'edit') onEdit(doctorId, date, syntheticCell);
-                    if (action === 'copy') onCopy(doctorId, date, syntheticCell);
-                    if (action === 'delete') onDelete(doctorId, date, syntheticCell);
-                  }}
-                >
-                  {ov.eventType} · {rangeLabel}
-                </Button>
-              );
-            })}
-            <div className="h-px bg-border my-1" />
             <Button
               variant="ghost"
               size="sm"
-              className="justify-start h-8 text-xs font-medium text-muted-foreground w-full"
-              onClick={(e) => { e.stopPropagation(); setPickerAction(null); }}
+              className="justify-start h-8 text-xs font-medium"
+              onClick={(e) => {
+                e.stopPropagation();
+                onTriggerAction('copy', doctorId, date);
+              }}
             >
-              ← Back
+              <Copy className="w-3.5 h-3.5 mr-2 text-muted-foreground" /> Copy Event
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="justify-start h-8 text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-50"
+              onClick={(e) => {
+                e.stopPropagation();
+                onTriggerAction('delete', doctorId, date);
+              }}
+            >
+              <Trash2 className="w-3.5 h-3.5 mr-2 text-red-500" /> Remove Event
             </Button>
           </>
         )}
