@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { AdminLayout } from "@/components/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { useRotaContext } from "@/contexts/RotaContext";
@@ -201,6 +201,9 @@ function ViewToggle({
 export default function DoctorCalendarPage() {
   const navigate = useNavigate();
   const { doctorId } = useParams<{ doctorId: string }>();
+  const [searchParams] = useSearchParams();
+  const requestedDate = searchParams.get("date");
+  const requestedView = searchParams.get("view");
   const { currentRotaConfigId } = useRotaContext();
   const isMobile = useIsMobile();
   const isTablet = useIsTablet();
@@ -213,7 +216,12 @@ export default function DoctorCalendarPage() {
   const [doctor, setDoctor] = useState<CalendarDoctor | null>(null);
   const [bankHolidaySet, setBankHolidaySet] = useState<Set<string>>(new Set());
 
-  const [viewMode, setViewMode] = useState<"day" | "week" | "month">("month");
+  const [viewMode, setViewMode] = useState<"day" | "week" | "month">(
+    () => {
+      if (requestedView === "day" || requestedView === "week") return requestedView;
+      return "month";
+    }
+  );
   const [currentDateISO, setCurrentDateISO] = useState("");
   const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
   const [currentMonthKey, setCurrentMonthKey] = useState("");
@@ -285,7 +293,18 @@ export default function DoctorCalendarPage() {
         setDoctor(found);
         setBankHolidaySet(new Set(cd.bankHolidays));
 
-        const initialDate = todayISO >= cd.rotaStartDate && todayISO <= cd.rotaEndDate ? todayISO : cd.rotaStartDate;
+        // Honour ?date= query param if present and within rota bounds;
+        // otherwise fall back to today → rota start.
+        const fallbackDate =
+          todayISO >= cd.rotaStartDate && todayISO <= cd.rotaEndDate
+            ? todayISO
+            : cd.rotaStartDate;
+        const initialDate =
+          requestedDate &&
+          requestedDate >= cd.rotaStartDate &&
+          requestedDate <= cd.rotaEndDate
+            ? requestedDate
+            : fallbackDate;
         setCurrentDateISO(initialDate);
         setCurrentMonthKey(initialDate.slice(0, 7));
         const wIdx = cd.weeks.findIndex((w) => w.startDate <= initialDate && initialDate <= w.endDate);
