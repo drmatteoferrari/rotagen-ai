@@ -27,6 +27,7 @@ import {
   Edit2,
   Copy,
   Trash2,
+  User,
   CalendarDays as CalendarIcon,
 } from "lucide-react";
 import {
@@ -413,12 +414,13 @@ interface ActionButtonsPopoverProps {
   date: string;
   mergedCell: MergedCell | undefined;
   doctorName: string;
+  allOverrides: CalendarOverride[];
   onAdd: (doctorId: string, date: string) => void;
   onEdit: (doctorId: string, date: string, mergedCell: MergedCell) => void;
   onCopy: (doctorId: string, date: string, mergedCell: MergedCell) => void;
   onDelete: (doctorId: string, date: string, mergedCell: MergedCell) => void;
-  onNavigate: (doctorId: string, date: string) => void;
   onGoToDate: (doctorId: string, date: string) => void;
+  onNavigateProfile: (doctorId: string) => void;
 }
 
 function ActionButtonsPopover({
@@ -426,13 +428,35 @@ function ActionButtonsPopover({
   date,
   mergedCell,
   doctorName,
+  allOverrides,
   onAdd,
   onEdit,
   onCopy,
   onDelete,
-  onNavigate,
   onGoToDate,
+  onNavigateProfile,
 }: ActionButtonsPopoverProps) {
+  const activeOverrides = allOverrides.filter(
+    (o) =>
+      o.doctorId === doctorId &&
+      (o.action === 'add' || o.action === 'modify') &&
+      o.startDate <= date && date <= o.endDate
+  );
+  const needsPicker = activeOverrides.length > 1;
+
+  const [pickerAction, setPickerAction] = useState<'edit' | 'copy' | 'delete' | null>(null);
+
+  const triggerAction = (action: 'edit' | 'copy' | 'delete') => {
+    if (!needsPicker) {
+      if (!mergedCell) return;
+      if (action === 'edit') onEdit(doctorId, date, mergedCell);
+      if (action === 'copy') onCopy(doctorId, date, mergedCell);
+      if (action === 'delete') onDelete(doctorId, date, mergedCell);
+    } else {
+      setPickerAction(action);
+    }
+  };
+
   const eventsExist =
     mergedCell && !mergedCell.isDeleted && mergedCell.primary !== "AVAILABLE" && mergedCell.primary !== "BH";
 
@@ -441,6 +465,9 @@ function ActionButtonsPopover({
       className="w-52 p-1 z-50 shadow-xl border-border/50"
       side="bottom"
       align="center"
+      sideOffset={4}
+      collisionPadding={12}
+      avoidCollisions={true}
       onOpenAutoFocus={(e) => e.preventDefault()}
     >
       {/* Header */}
@@ -455,18 +482,7 @@ function ActionButtonsPopover({
         </p>
       </div>
       <div className="flex flex-col gap-0.5">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="justify-start h-8 text-xs font-medium"
-          onClick={(e) => {
-            e.stopPropagation();
-            onAdd(doctorId, date);
-          }}
-        >
-          <Plus className="w-3.5 h-3.5 mr-2 text-muted-foreground" /> Add Event
-        </Button>
-        {eventsExist && (
+        {pickerAction === null ? (
           <>
             <Button
               variant="ghost"
@@ -474,32 +490,95 @@ function ActionButtonsPopover({
               className="justify-start h-8 text-xs font-medium"
               onClick={(e) => {
                 e.stopPropagation();
-                onEdit(doctorId, date, mergedCell!);
+                onAdd(doctorId, date);
               }}
             >
-              <Edit2 className="w-3.5 h-3.5 mr-2 text-muted-foreground" /> Edit Event
+              <Plus className="w-3.5 h-3.5 mr-2 text-muted-foreground" /> Add Event
             </Button>
+            {eventsExist && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="justify-start h-8 text-xs font-medium"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    triggerAction('edit');
+                  }}
+                >
+                  <Edit2 className="w-3.5 h-3.5 mr-2 text-muted-foreground" /> Edit Event
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="justify-start h-8 text-xs font-medium"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    triggerAction('copy');
+                  }}
+                >
+                  <Copy className="w-3.5 h-3.5 mr-2 text-muted-foreground" /> Copy Event
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="justify-start h-8 text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-50"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    triggerAction('delete');
+                  }}
+                >
+                  <Trash2 className="w-3.5 h-3.5 mr-2 text-red-500" /> Remove Event
+                </Button>
+              </>
+            )}
+          </>
+        ) : (
+          <>
+            <div className="px-2 py-1 text-[10px] text-muted-foreground font-medium border-b border-border/50 mb-1">
+              Select event to {pickerAction}:
+            </div>
+            {activeOverrides.map((ov) => {
+              const rangeLabel =
+                ov.startDate === ov.endDate
+                  ? ov.startDate
+                  : `${ov.startDate} \u2013 ${ov.endDate}`;
+              return (
+                <Button
+                  key={ov.id}
+                  variant="ghost"
+                  size="sm"
+                  className="justify-start h-auto min-h-[32px] py-1 text-xs font-medium w-full whitespace-normal text-left"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const action = pickerAction!;
+                    setPickerAction(null);
+                    const syntheticCell: MergedCell = {
+                      primary: ov.eventType,
+                      secondary: mergedCell?.secondary ?? null,
+                      label: ov.eventType,
+                      overrideId: ov.id,
+                      overrideAction: ov.action as 'add' | 'modify',
+                      isDeleted: false,
+                      deletedCode: null,
+                    };
+                    if (action === 'edit') onEdit(doctorId, date, syntheticCell);
+                    if (action === 'copy') onCopy(doctorId, date, syntheticCell);
+                    if (action === 'delete') onDelete(doctorId, date, syntheticCell);
+                  }}
+                >
+                  {ov.eventType} · {rangeLabel}
+                </Button>
+              );
+            })}
+            <div className="h-px bg-border my-1" />
             <Button
               variant="ghost"
               size="sm"
-              className="justify-start h-8 text-xs font-medium"
-              onClick={(e) => {
-                e.stopPropagation();
-                onCopy(doctorId, date, mergedCell!);
-              }}
+              className="justify-start h-8 text-xs font-medium text-muted-foreground w-full"
+              onClick={(e) => { e.stopPropagation(); setPickerAction(null); }}
             >
-              <Copy className="w-3.5 h-3.5 mr-2 text-muted-foreground" /> Copy Event
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="justify-start h-8 text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-50"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(doctorId, date, mergedCell!);
-              }}
-            >
-              <Trash2 className="w-3.5 h-3.5 mr-2 text-red-500" /> Remove Event
+              ← Back
             </Button>
           </>
         )}
@@ -513,7 +592,7 @@ function ActionButtonsPopover({
             onGoToDate(doctorId, date);
           }}
         >
-          <ArrowRight className="w-3.5 h-3.5 mr-2 text-muted-foreground" /> Go to date
+          <CalendarIcon className="w-3.5 h-3.5 mr-2 text-muted-foreground" /> View Doctor Calendar
         </Button>
         <Button
           variant="ghost"
@@ -521,10 +600,10 @@ function ActionButtonsPopover({
           className="justify-start h-8 text-xs font-medium"
           onClick={(e) => {
             e.stopPropagation();
-            onNavigate(doctorId, date);
+            onNavigateProfile(doctorId);
           }}
         >
-          <CalendarIcon className="w-3.5 h-3.5 mr-2 text-muted-foreground" /> View Doctor
+          <User className="w-3.5 h-3.5 mr-2 text-muted-foreground" /> View Doctor Profile
         </Button>
       </div>
     </PopoverContent>
@@ -1284,8 +1363,10 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
     [navigate],
   );
 
-  // Stable handler passed to ActionButtonsPopover for the "View Doctor" button
-  const handlePopoverNavigate = useCallback(
+  const allDates = useMemo(() => calendarData?.weeks.flatMap((w) => w.dates) ?? [], [calendarData]);
+  const maxMinDoctors = useMemo(() => Math.max(...shiftTypes.map((s) => s.min_doctors), 1), [shiftTypes]);
+
+  const handleGoToDate = useCallback(
     (doctorId: string, date: string) => {
       setPanelOpen(false);
       setSelectedCell(null);
@@ -1294,22 +1375,13 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
     [navigate],
   );
 
-  const allDates = useMemo(() => calendarData?.weeks.flatMap((w) => w.dates) ?? [], [calendarData]);
-  const maxMinDoctors = useMemo(() => Math.max(...shiftTypes.map((s) => s.min_doctors), 1), [shiftTypes]);
-
-  const handleGoToDate = useCallback(
-    (_doctorId: string, date: string) => {
+  const handlePopoverNavigateProfile = useCallback(
+    (doctorId: string) => {
       setPanelOpen(false);
       setSelectedCell(null);
-      setViewMode("day");
-      const cWeeks = calendarData?.weeks ?? [];
-      const wIdx = cWeeks.findIndex((w) => w.startDate <= date && date <= w.endDate);
-      if (wIdx >= 0) setCurrentWeekIndex(wIdx);
-      const dIdx = allDates.indexOf(date);
-      if (dIdx >= 0) setCurrentDayIndex(dIdx);
-      setCurrentMonthKey(date.slice(0, 7));
+      navigate(`/admin/doctor/${doctorId}`);
     },
-    [calendarData, allDates],
+    [navigate],
   );
 
   // Apply Search & Sort
@@ -1599,12 +1671,13 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
           date={currentDate}
           mergedCell={mergedCell}
           doctorName={doctor.doctorName.replace("Dr ", "")}
+          allOverrides={overrides}
           onAdd={handleActionAdd}
           onEdit={handleActionEdit}
           onCopy={handleActionCopy}
           onDelete={handleActionDelete}
-          onNavigate={handlePopoverNavigate}
           onGoToDate={handleGoToDate}
+          onNavigateProfile={handlePopoverNavigateProfile}
         />
       </Popover>
     );
@@ -1690,12 +1763,13 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                   date={date}
                   mergedCell={mergedCell}
                   doctorName={doctor.doctorName.replace("Dr ", "")}
+                  allOverrides={overrides}
                   onAdd={handleActionAdd}
                   onEdit={handleActionEdit}
                   onCopy={handleActionCopy}
                   onDelete={handleActionDelete}
-                  onNavigate={handlePopoverNavigate}
                   onGoToDate={handleGoToDate}
+                  onNavigateProfile={handlePopoverNavigateProfile}
                 />
               </Popover>
             </td>
@@ -1800,12 +1874,13 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
                   date={date}
                   mergedCell={mergedCell}
                   doctorName={doctor.doctorName.replace("Dr ", "")}
+                  allOverrides={overrides}
                   onAdd={handleActionAdd}
                   onEdit={handleActionEdit}
                   onCopy={handleActionCopy}
                   onDelete={handleActionDelete}
-                  onNavigate={handlePopoverNavigate}
                   onGoToDate={handleGoToDate}
+                  onNavigateProfile={handlePopoverNavigateProfile}
                 />
               </Popover>
             </td>
