@@ -2472,6 +2472,96 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
             />
           );
         })()}
+      {pickerAction !== null && pickerCell !== null && (() => {
+        const { doctorId, date } = pickerCell;
+        const activeOverrides = overrides.filter(
+          (o) =>
+            o.doctorId === doctorId &&
+            (o.action === 'add' || o.action === 'modify') &&
+            o.startDate <= date && date <= o.endDate
+        );
+        const doctorName =
+          calendarData?.doctors
+            .find((d) => d.doctorId === doctorId)
+            ?.doctorName.replace('Dr ', '') ?? '';
+        return (
+          <div
+            onClick={() => { setPickerAction(null); setPickerCell(null); }}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 200,
+              background: 'rgba(0,0,0,0.35)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: '16px',
+            }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                width: '100%', maxWidth: 340,
+                background: '#fff', borderRadius: '14px',
+                padding: '16px', boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+              }}
+            >
+              <p style={{ fontSize: 13, fontWeight: 700, color: '#1e293b', marginBottom: 4 }}>
+                {doctorName}
+              </p>
+              <p style={{ fontSize: 11, color: '#64748b', marginBottom: 12 }}>
+                Select event to {pickerAction}:
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {activeOverrides.map((ov) => {
+                  const rangeLabel =
+                    ov.startDate === ov.endDate
+                      ? ov.startDate
+                      : `${ov.startDate} \u2013 ${ov.endDate}`;
+                  return (
+                    <button
+                      key={ov.id}
+                      onClick={() => {
+                        const action = pickerAction;
+                        setPickerAction(null);
+                        setPickerCell(null);
+                        const syntheticCell: MergedCell = {
+                          primary: ov.eventType,
+                          secondary: null,
+                          label: ov.eventType,
+                          overrideId: ov.id,
+                          overrideAction: ov.action as 'add' | 'modify',
+                          isDeleted: false,
+                          deletedCode: null,
+                        };
+                        if (action === 'edit') handleActionEdit(doctorId, date, syntheticCell);
+                        if (action === 'copy') handleActionCopy(doctorId, date, syntheticCell);
+                        if (action === 'delete') handleActionDelete(doctorId, date, syntheticCell);
+                      }}
+                      style={{
+                        padding: '9px 14px', borderRadius: 8,
+                        fontSize: 12, fontWeight: 600,
+                        background: '#f8fafc', border: '1px solid #e2e8f0',
+                        cursor: 'pointer', textAlign: 'left', color: '#1e293b',
+                        width: '100%',
+                      }}
+                    >
+                      {ov.eventType} · {rangeLabel}
+                    </button>
+                  );
+                })}
+              </div>
+              <button
+                onClick={() => { setPickerAction(null); setPickerCell(null); }}
+                style={{
+                  marginTop: 12, width: '100%', padding: '8px',
+                  fontSize: 12, fontWeight: 500,
+                  background: '#fff', border: '1px solid #e2e8f0',
+                  borderRadius: 8, cursor: 'pointer', color: '#64748b',
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        );
+      })()}
       {embedded ? (
         pageContent
       ) : (
