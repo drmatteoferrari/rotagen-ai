@@ -99,7 +99,7 @@ export default function LandingPage() {
         menuItems={[
           { label: "How it works", onClick: () => scrollToSection("how-it-works") },
           { label: "Features", onClick: () => scrollToSection("features") },
-          { label: "Pricing", onClick: () => scrollToSection("pricing") },
+          { label: "Pricing overview", onClick: () => scrollToSection("pricing") },
         ]}
       />
 
