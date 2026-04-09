@@ -85,7 +85,7 @@ export default function PublicTopBar({ menuItems = [] }: PublicTopBarProps) {
             )}
 
             {!isRegister && (
-              <div className="hidden nav-cta-shimmer-wrap">
+              <div className="hidden sm:inline-block nav-cta-shimmer-wrap">
                 <button
                   type="button"
                   onClick={() => navigate("/register")}
