@@ -5,6 +5,9 @@ import { StepNavBar } from "@/components/StepNavBar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from "@/components/ui/dialog";
+import {
   Building2, CheckCircle, Loader2, Clock, Users, Shield,
   Stethoscope, BarChart2, Info, CalendarDays, Percent
 } from "lucide-react";
@@ -347,44 +350,53 @@ export default function DepartmentSummary() {
   );
 
   return (
-    <AdminLayout title="Department Setup" subtitle={isPostSubmit ? "Summary" : "Review & save"} accentColor="purple" pageIcon={Building2} navBar={navBarContent}>
-      <div className="mx-auto max-w-3xl space-y-4 animate-fadeSlideUp">
+    <>
+      <AdminLayout title="Department Setup" subtitle={isPostSubmit ? "Summary" : "Review & save"} accentColor="purple" pageIcon={Building2} navBar={navBarContent}>
+        <div className="mx-auto max-w-3xl space-y-4 animate-fadeSlideUp">
 
-        {isPostSubmit ? (
-          <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-700">
-            <CheckCircle className="h-4 w-4 shrink-0" />
-            Department setup complete{savedAt ? ` · ${savedAt}` : ''}
-          </div>
-        ) : (
-          <div className="flex items-center gap-2 rounded-lg border border-purple-200 bg-purple-50 px-4 py-2.5 text-sm font-medium text-purple-700">
-            Review your department configuration before saving.
-          </div>
-        )}
-
-        {dataCards}
-
-        {isPostSubmit && showEditConfirm && (
-          <div className="rounded-lg border border-amber-300 bg-amber-50 p-4">
-            <p className="text-sm text-amber-800 mb-3">Editing department setup may affect a rota already in progress. Continue?</p>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => setShowEditConfirm(false)}>Cancel</Button>
-              <Button size="sm" className="bg-amber-600 hover:bg-amber-700" onClick={() => navigate('/admin/department/step-1')}>Continue to Edit</Button>
+          {isPostSubmit ? (
+            <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-700">
+              <CheckCircle className="h-4 w-4 shrink-0" />
+              Department setup complete{savedAt ? ` · ${savedAt}` : ''}
             </div>
-          </div>
-        )}
-        {isPostSubmit && showResetConfirm && (
-          <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4">
-            <p className="text-sm text-destructive mb-3">This will delete all shift types and department settings. This cannot be undone.</p>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => setShowResetConfirm(false)}>Cancel</Button>
-              <Button variant="destructive" size="sm" disabled={saving} onClick={handleReset}>
-                {saving ? <><Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />Resetting…</> : "Reset"}
-              </Button>
+          ) : (
+            <div className="flex items-center gap-2 rounded-lg border border-purple-200 bg-purple-50 px-4 py-2.5 text-sm font-medium text-purple-700">
+              Review your department configuration before saving.
             </div>
-          </div>
-        )}
+          )}
 
-      </div>
-    </AdminLayout>
+          {dataCards}
+
+        </div>
+      </AdminLayout>
+
+      <Dialog open={showEditConfirm} onOpenChange={(open) => { if (!open) setShowEditConfirm(false); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit department setup?</DialogTitle>
+            <DialogDescription>Editing department setup may affect a rota already in progress.</DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setShowEditConfirm(false)}>Cancel</Button>
+            <Button onClick={() => navigate('/admin/department/step-1')}>Continue to Edit</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showResetConfirm} onOpenChange={(open) => { if (!open) setShowResetConfirm(false); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reset department setup?</DialogTitle>
+            <DialogDescription>This will permanently delete all shift types and department settings. This cannot be undone.</DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setShowResetConfirm(false)}>Cancel</Button>
+            <Button variant="destructive" disabled={saving} onClick={handleReset}>
+              {saving ? <>Resetting…</> : "Reset"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

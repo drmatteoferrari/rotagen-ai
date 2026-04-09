@@ -4,6 +4,9 @@ import { AdminLayout } from "@/components/AdminLayout";
 import { StepNavBar } from "@/components/StepNavBar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from "@/components/ui/dialog";
 import { CalendarDays, CheckCircle, Loader2, Clock, Users, Calendar, Info, Tag } from "lucide-react";
 import { useAdminSetup, type BankHolidayEntry, type BhShiftRule } from "@/contexts/AdminSetupContext";
 import { useRotaContext } from "@/contexts/RotaContext";
@@ -151,187 +154,196 @@ export default function RotaPeriodSummary() {
   );
 
   return (
-    <AdminLayout title="Rota Period" subtitle={isPostSubmit ? "Summary" : "Review & save"} accentColor="yellow" pageIcon={CalendarDays} navBar={navBarContent}>
-      <div className="mx-auto max-w-3xl space-y-4 animate-fadeSlideUp">
+    <>
+      <AdminLayout title="Rota Period" subtitle={isPostSubmit ? "Summary" : "Review & save"} accentColor="yellow" pageIcon={CalendarDays} navBar={navBarContent}>
+        <div className="mx-auto max-w-3xl space-y-4 animate-fadeSlideUp">
 
-        {isPostSubmit ? (
-          <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-700">
-            <CheckCircle className="h-4 w-4 shrink-0" />
-            Rota period saved{savedAt ? ` · ${savedAt}` : ''}
-          </div>
-        ) : (
-          <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-700">
-            Review your rota period configuration before saving.
-          </div>
-        )}
+          {isPostSubmit ? (
+            <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-700">
+              <CheckCircle className="h-4 w-4 shrink-0" />
+              Rota period saved{savedAt ? ` · ${savedAt}` : ''}
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-700">
+              Review your rota period configuration before saving.
+            </div>
+          )}
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Calendar className="h-4 w-4 text-amber-600" />
-              Rota Dates
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-0">
-            <div className="flex justify-between text-sm py-2 border-b border-border">
-              <span className="text-muted-foreground">Start date</span>
-              <span className="font-medium">{rotaStartDate ? format(rotaStartDate, "EEEE dd MMM yyyy") : "\u2014"}</span>
-            </div>
-            <div className="flex justify-between text-sm py-2 border-b border-border">
-              <span className="text-muted-foreground">End date</span>
-              <span className="font-medium">{rotaEndDate ? format(rotaEndDate, "EEEE dd MMM yyyy") : "\u2014"}</span>
-            </div>
-            <div className="flex justify-between text-sm py-2">
-              <span className="text-muted-foreground">Duration</span>
-              <span className="font-medium">{durationText}</span>
-            </div>
-          </CardContent>
-        </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Calendar className="h-4 w-4 text-amber-600" />
+                Rota Dates
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-0">
+              <div className="flex justify-between text-sm py-2 border-b border-border">
+                <span className="text-muted-foreground">Start date</span>
+                <span className="font-medium">{rotaStartDate ? format(rotaStartDate, "EEEE dd MMM yyyy") : "\u2014"}</span>
+              </div>
+              <div className="flex justify-between text-sm py-2 border-b border-border">
+                <span className="text-muted-foreground">End date</span>
+                <span className="font-medium">{rotaEndDate ? format(rotaEndDate, "EEEE dd MMM yyyy") : "\u2014"}</span>
+              </div>
+              <div className="flex justify-between text-sm py-2">
+                <span className="text-muted-foreground">Duration</span>
+                <span className="font-medium">{durationText}</span>
+              </div>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Info className="h-4 w-4 text-amber-600" />
-              Bank Holiday Treatment
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-0">
-            <div className="flex justify-between text-sm py-2 border-b border-border">
-              <span className="text-muted-foreground">Treatment rule</span>
-              <span className="font-medium">
-                {bhSameAsWeekend === true
-                  ? "Same as weekends"
-                  : bhSameAsWeekend === false
-                  ? "Custom shift rules"
-                  : "Not set"}
-              </span>
-            </div>
-            {bhSameAsWeekend === false && (() => {
-              const includedRules = bhShiftRules.filter(r => r.included);
-              if (includedRules.length === 0) return null;
-              return (
-                <>
-                  <div className="pt-3 pb-1">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      Shifts on bank holidays
-                    </p>
-                  </div>
-                  {includedRules.map((r, idx) => (
-                    <div
-                      key={r.shift_key}
-                      className={`py-2 ${idx < includedRules.length - 1 ? "border-b border-border" : ""}`}
-                    >
-                      <div className="flex justify-between text-sm">
-                        <span className="font-medium">{r.name}</span>
-                        <span className="flex items-center gap-1 text-muted-foreground text-xs">
-                          <Users className="h-3 w-3" />
-                          {r.target_doctors} {r.target_doctors === 1 ? "doctor" : "doctors"}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
-                        <Clock className="h-3 w-3" />
-                        {r.start_time} {"\u2013"} {r.end_time}
-                      </div>
-                    </div>
-                  ))}
-                </>
-              );
-            })()}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <CalendarDays className="h-4 w-4 text-amber-600" />
-              Bank Holiday Dates
-            </CardTitle>
-            {rotaBankHolidays.length > 0 && (
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {activeBankHolidays.length} active
-                {inactiveBankHolidays.length > 0 ? `, ${inactiveBankHolidays.length} excluded` : ""}
-                {customBankHolidays.length > 0 ? `, ${customBankHolidays.length} custom` : ""}
-              </p>
-            )}
-          </CardHeader>
-          <CardContent className="space-y-0">
-            {activeBankHolidays.length === 0 && inactiveBankHolidays.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                No bank holidays in this rota period.
-              </p>
-            ) : (
-              <>
-                {activeBankHolidays.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Info className="h-4 w-4 text-amber-600" />
+                Bank Holiday Treatment
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-0">
+              <div className="flex justify-between text-sm py-2 border-b border-border">
+                <span className="text-muted-foreground">Treatment rule</span>
+                <span className="font-medium">
+                  {bhSameAsWeekend === true
+                    ? "Same as weekends"
+                    : bhSameAsWeekend === false
+                    ? "Custom shift rules"
+                    : "Not set"}
+                </span>
+              </div>
+              {bhSameAsWeekend === false && (() => {
+                const includedRules = bhShiftRules.filter(r => r.included);
+                if (includedRules.length === 0) return null;
+                return (
                   <>
-                    <div className="pt-1 pb-1">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Active</p>
+                    <div className="pt-3 pb-1">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Shifts on bank holidays
+                      </p>
                     </div>
-                    {activeBankHolidays.map((h, idx) => (
+                    {includedRules.map((r, idx) => (
                       <div
-                        key={h.id}
-                        className={`flex justify-between items-center text-sm py-2 ${idx < activeBankHolidays.length - 1 ? "border-b border-border" : ""}`}
+                        key={r.shift_key}
+                        className={`py-2 ${idx < includedRules.length - 1 ? "border-b border-border" : ""}`}
                       >
-                        <div className="flex items-center gap-1.5">
-                          <span>{h.name}</span>
-                          {!h.isAutoAdded && (
-                            <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-medium px-1.5 py-0.5">
-                              <Tag className="h-2.5 w-2.5" />
-                              Custom
-                            </span>
-                          )}
+                        <div className="flex justify-between text-sm">
+                          <span className="font-medium">{r.name}</span>
+                          <span className="flex items-center gap-1 text-muted-foreground text-xs">
+                            <Users className="h-3 w-3" />
+                            {r.target_doctors} {r.target_doctors === 1 ? "doctor" : "doctors"}
+                          </span>
                         </div>
-                        <span className="font-medium text-right shrink-0">
-                          {format(h.date, "EEE dd MMM yyyy")}
-                        </span>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                          <Clock className="h-3 w-3" />
+                          {r.start_time} {"\u2013"} {r.end_time}
+                        </div>
                       </div>
                     ))}
                   </>
-                )}
-                {inactiveBankHolidays.length > 0 && (
-                  <>
-                    <div className={`pb-1 ${activeBankHolidays.length > 0 ? "pt-4 border-t border-border mt-2" : "pt-1"}`}>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Excluded</p>
-                    </div>
-                    {inactiveBankHolidays.map((h, idx) => (
-                      <div
-                        key={h.id}
-                        className={`flex justify-between items-center text-sm py-2 opacity-50 ${idx < inactiveBankHolidays.length - 1 ? "border-b border-border" : ""}`}
-                      >
-                        <span className="line-through">{h.name}</span>
-                        <span className="font-medium text-right shrink-0">
-                          {format(h.date, "EEE dd MMM yyyy")}
-                        </span>
+                );
+              })()}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <CalendarDays className="h-4 w-4 text-amber-600" />
+                Bank Holiday Dates
+              </CardTitle>
+              {rotaBankHolidays.length > 0 && (
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {activeBankHolidays.length} active
+                  {inactiveBankHolidays.length > 0 ? `, ${inactiveBankHolidays.length} excluded` : ""}
+                  {customBankHolidays.length > 0 ? `, ${customBankHolidays.length} custom` : ""}
+                </p>
+              )}
+            </CardHeader>
+            <CardContent className="space-y-0">
+              {activeBankHolidays.length === 0 && inactiveBankHolidays.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No bank holidays in this rota period.
+                </p>
+              ) : (
+                <>
+                  {activeBankHolidays.length > 0 && (
+                    <>
+                      <div className="pt-1 pb-1">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Active</p>
                       </div>
-                    ))}
-                  </>
-                )}
-              </>
-            )}
-          </CardContent>
-        </Card>
+                      {activeBankHolidays.map((h, idx) => (
+                        <div
+                          key={h.id}
+                          className={`flex justify-between items-center text-sm py-2 ${idx < activeBankHolidays.length - 1 ? "border-b border-border" : ""}`}
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <span>{h.name}</span>
+                            {!h.isAutoAdded && (
+                              <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-100 text-amber-700 text-[10px] font-medium px-1.5 py-0.5">
+                                <Tag className="h-2.5 w-2.5" />
+                                Custom
+                              </span>
+                            )}
+                          </div>
+                          <span className="font-medium text-right shrink-0">
+                            {format(h.date, "EEE dd MMM yyyy")}
+                          </span>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                  {inactiveBankHolidays.length > 0 && (
+                    <>
+                      <div className={`pb-1 ${activeBankHolidays.length > 0 ? "pt-4 border-t border-border mt-2" : "pt-1"}`}>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Excluded</p>
+                      </div>
+                      {inactiveBankHolidays.map((h, idx) => (
+                        <div
+                          key={h.id}
+                          className={`flex justify-between items-center text-sm py-2 opacity-50 ${idx < inactiveBankHolidays.length - 1 ? "border-b border-border" : ""}`}
+                        >
+                          <span className="line-through">{h.name}</span>
+                          <span className="font-medium text-right shrink-0">
+                            {format(h.date, "EEE dd MMM yyyy")}
+                          </span>
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
 
-        {isPostSubmit && showEditConfirm && (
-          <div className="rounded-lg border border-amber-300 bg-amber-50 p-4">
-            <p className="text-sm text-amber-800 mb-3">Editing rota period may affect a rota already in progress. Continue?</p>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => setShowEditConfirm(false)}>Cancel</Button>
-              <Button size="sm" className="bg-amber-600 hover:bg-amber-700" onClick={() => navigate('/admin/rota-period/step-1')}>Continue to Edit</Button>
-            </div>
-          </div>
-        )}
-        {isPostSubmit && showResetConfirm && (
-          <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4">
-            <p className="text-sm text-destructive mb-3">This will clear all rota period dates and bank holiday rules.</p>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => setShowResetConfirm(false)}>Cancel</Button>
-              <Button variant="destructive" size="sm" disabled={saving} onClick={handleReset}>
-                {saving ? <><Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />Resetting…</> : "Reset"}
-              </Button>
-            </div>
-          </div>
-        )}
+        </div>
+      </AdminLayout>
 
-      </div>
-    </AdminLayout>
+      <Dialog open={showEditConfirm} onOpenChange={(open) => { if (!open) setShowEditConfirm(false); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit rota period?</DialogTitle>
+            <DialogDescription>Editing rota period dates may affect a rota already in progress.</DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setShowEditConfirm(false)}>Cancel</Button>
+            <Button onClick={() => navigate('/admin/rota-period/step-1')}>Continue to Edit</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showResetConfirm} onOpenChange={(open) => { if (!open) setShowResetConfirm(false); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reset rota period?</DialogTitle>
+            <DialogDescription>This will clear all rota period dates and bank holiday rules. This cannot be undone.</DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setShowResetConfirm(false)}>Cancel</Button>
+            <Button variant="destructive" disabled={saving} onClick={handleReset}>
+              {saving ? <>Resetting…</> : "Reset"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
