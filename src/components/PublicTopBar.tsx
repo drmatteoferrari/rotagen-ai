@@ -139,6 +139,20 @@ export default function PublicTopBar({ menuItems = [] }: PublicTopBarProps) {
                   {item.label}
                 </button>
               ))}
+              {!isRegister && (
+                <div className="px-1 pt-1 pb-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      navigate("/register");
+                    }}
+                    className="w-full rounded-md px-3 py-2.5 text-left text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+                  >
+                    Request access
+                  </button>
+                </div>
+              )}
             </nav>
           </div>
         )}
