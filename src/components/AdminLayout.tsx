@@ -31,6 +31,14 @@ export function AdminLayout({ children, title, subtitle, accentColor = 'blue', p
     );
   }
 
+  if (fillHeight) {
+    return (
+      <div className="flex flex-col h-full min-h-0 overflow-hidden p-4 md:p-6">
+        {children}
+      </div>
+    );
+  }
+
   // Non-step pages (Dashboard, Roster, Setup etc): scrollable with padding.
   return (
     <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-6">
