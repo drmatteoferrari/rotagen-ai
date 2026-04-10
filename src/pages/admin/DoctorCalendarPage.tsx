@@ -25,8 +25,6 @@ import {
   Copy,
   Trash2,
   Calendar as CalendarIcon,
-  User,
-  ExternalLink,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { AddEventModal } from "@/components/calendar/AddEventModal";
@@ -763,7 +761,7 @@ export default function DoctorCalendarPage() {
           <div className="rounded-xl border border-border bg-card p-6 text-center space-y-4">
             <AlertTriangle className="h-8 w-8 text-amber-500 mx-auto" />
             <p className="text-sm text-foreground">{errorMsg ?? "Could not load calendar."}</p>
-            <Button variant="outline" size="sm" onClick={() => navigate(-1)}>
+            <Button variant="outline" size="sm" onClick={() => navigate("/admin/pre-rota-calendar")}>
               <ArrowLeft className="h-4 w-4 mr-1" /> Back to calendar
             </Button>
           </div>
@@ -1148,76 +1146,43 @@ export default function DoctorCalendarPage() {
   return (
     <AdminLayout title="Doctor Calendar" subtitle={doctor?.doctorName} accentColor="teal" pageIcon={CalendarDays}>
       <div
-        className="flex flex-col gap-2 sm:gap-3 h-[calc(100dvh-8rem)] sm:h-[calc(100dvh-9rem)] overflow-hidden w-full max-w-full"
+        className="flex flex-col gap-2 sm:gap-3 h-[calc(100dvh-8rem)] sm:h-[calc(100dvh-9rem)] overflow-hidden"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
         {/* Header / Nav Container */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 shrink-0 min-w-0 overflow-hidden">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 shrink-0">
           <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="flex items-center gap-1.5 text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors bg-transparent border-none cursor-pointer shrink-0"
+            onClick={() => navigate("/admin/pre-rota-calendar")}
+            className="flex items-center gap-1.5 text-xs sm:text-sm text-muted-foreground hover:text-foreground transition-colors bg-transparent border-none cursor-pointer"
           >
-            <ArrowLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Back
+            <ArrowLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Back to Pre-rota
           </button>
         </div>
 
         {/* Doctor Info Block */}
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 overflow-hidden">
-          {/* Avatar */}
-          <div
-            className="flex items-center justify-center rounded-full shrink-0"
-            style={{ width: 36, height: 36, backgroundColor: "#0f766e" }}
-          >
-            <User className="h-4 w-4 text-white" />
+        <div className="flex items-center justify-between p-2 sm:p-3 rounded-xl border border-border bg-card shadow-sm shrink-0">
+          <div>
+            <h2 className="text-lg sm:text-xl font-bold text-foreground leading-tight">{doctor.doctorName}</h2>
+            <p className="text-xs sm:text-sm text-muted-foreground font-medium mt-0.5">
+              {doctor.grade} · {doctor.wte}% WTE
+            </p>
           </div>
-
-          {/* Name + pills */}
-          <div className="flex flex-col min-w-0 flex-1 overflow-hidden">
-            <span className="text-sm sm:text-base font-semibold text-foreground truncate leading-tight">
-              {doctor?.doctorName ?? "—"}
-            </span>
-            {/* Info pills — hidden on mobile, visible sm+ */}
-            <div className="hidden sm:flex items-center gap-1.5 mt-0.5 flex-wrap overflow-hidden">
-              {doctor?.grade && (
-                <span
-                  className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium shrink-0"
-                  style={{ backgroundColor: "#f0fdfa", color: "#0f766e", border: "1px solid #99f6e4" }}
-                >
-                  {doctor.grade}
-                </span>
-              )}
-              {doctor?.wte != null && doctor.wte < 100 && (
-                <span
-                  className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium shrink-0"
-                  style={{ backgroundColor: "#fffbeb", color: "#92400e", border: "1px solid #fde68a" }}
-                >
-                  {doctor.wte}% WTE
-                </span>
-              )}
-              {Array.isArray(doctor?.ltftDaysOff) && doctor.ltftDaysOff.length > 0 && (
-                <span
-                  className="hidden md:inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium shrink-0"
-                  style={{ backgroundColor: "#fffbeb", color: "#92400e", border: "1px solid #fde68a" }}
-                >
-                  Off: {doctor.ltftDaysOff.map(d => d.charAt(0).toUpperCase() + d.slice(1, 3)).join(", ")}
-                </span>
-              )}
+          {doctor.ltftDaysOff && Array.isArray(doctor.ltftDaysOff) && doctor.ltftDaysOff.length > 0 && (
+            <div className="hidden sm:flex flex-col items-end">
+              <span className="text-[10px] sm:text-xs text-muted-foreground font-medium mb-1">LTFT Days:</span>
+              <div className="flex gap-1">
+                {doctor.ltftDaysOff.map((d: string) => (
+                  <span
+                    key={d}
+                    className="uppercase text-[8px] sm:text-[9px] font-bold bg-yellow-100 text-yellow-800 border border-yellow-200 px-1 sm:px-1.5 py-0.5 rounded"
+                  >
+                    {d.slice(0, 3)}
+                  </span>
+                ))}
+              </div>
             </div>
-          </div>
-
-          {/* Profile button — icon only on mobile, icon + label on sm+ */}
-          <button
-            type="button"
-            onClick={() => navigate(`/admin/doctor/${doctorId}`)}
-            className="flex items-center gap-1 sm:gap-1.5 shrink-0 rounded-md px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium transition-colors"
-            style={{ backgroundColor: "#f0fdfa", color: "#0f766e", border: "1px solid #99f6e4" }}
-            title="Go to Doctor Profile"
-          >
-            <ExternalLink className="h-3.5 w-3.5 shrink-0" />
-            <span className="hidden sm:inline">Profile</span>
-          </button>
+          )}
         </div>
 
         {/* Unified Nav Bar */}
