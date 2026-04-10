@@ -1146,9 +1146,9 @@ export default function DoctorCalendarPage() {
 
   // ─── Main render ───────────────────────────────────────────
   return (
-    <AdminLayout title="Doctor Calendar" subtitle={doctor?.doctorName} accentColor="teal" pageIcon={CalendarDays}>
+    <AdminLayout title="Doctor Calendar" subtitle={doctor?.doctorName} accentColor="teal" pageIcon={CalendarDays} fillHeight>
       <div
-        className="flex flex-col gap-2 sm:gap-3 h-[calc(100dvh-8rem)] sm:h-[calc(100dvh-9rem)] overflow-hidden"
+        className="flex flex-col gap-2 sm:gap-3 h-full min-h-0 overflow-hidden"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
