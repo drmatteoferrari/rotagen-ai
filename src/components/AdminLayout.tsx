@@ -9,9 +9,10 @@ interface AdminLayoutProps {
   accentColor?: 'blue' | 'red' | 'yellow' | 'purple' | 'teal' | 'pink' | 'green';
   pageIcon?: LucideIcon;
   navBar?: ReactNode;
+  fillHeight?: boolean;
 }
 
-export function AdminLayout({ children, title, subtitle, accentColor = 'blue', pageIcon, navBar }: AdminLayoutProps) {
+export function AdminLayout({ children, title, subtitle, accentColor = 'blue', pageIcon, navBar, fillHeight }: AdminLayoutProps) {
   const { setPageInfo } = useAdminShell();
 
   useLayoutEffect(() => {
