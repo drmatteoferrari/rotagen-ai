@@ -3,12 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "@/components/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,7 +36,6 @@ import {
   User,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
@@ -262,7 +259,11 @@ export default function Roster() {
   type SortKey = "surname_asc" | "surname_desc" | "status" | "grade";
   const [sortKey, setSortKey] = useState<SortKey>("surname_asc");
   const [bulkSending, setBulkSending] = useState(false);
-  const [bulkPopoverOpen, setBulkPopoverOpen] = useState(false);
+
+  // Smart send modal
+  const [sendModalOpen, setSendModalOpen] = useState(false);
+  type SendMode = "never_invited" | "not_started" | "in_progress";
+  const [sendMode, setSendMode] = useState<SendMode>("never_invited");
 
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
@@ -403,7 +404,7 @@ export default function Roster() {
   const formattedDeadline = surveyDeadline ? format(surveyDeadline, "EEEE, d MMMM yyyy") : null;
 
   // ─── Send invite core — all guards and DB/edge logic ───
-  const sendInviteCore = async (doctor: Doctor): Promise<void> => {
+  const sendInviteCore = async (doctor: Doctor, isReminder = false): Promise<void> => {
     if (!doctor.survey_token) {
       toast.error("No survey link available for this doctor — token missing");
       return;
@@ -427,6 +428,7 @@ export default function Roster() {
       to: doctor.email,
       doctorName: `${doctor.first_name} ${doctor.last_name}`,
       doctorId: doctor.id,
+      isReminder,
       rotaPeriod: {
         startDate: restoredConfig?.rotaPeriod?.startDate
           ? format(parseISO(restoredConfig.rotaPeriod.startDate), "dd MMM yyyy")
@@ -504,18 +506,15 @@ export default function Roster() {
   };
 
   // ─── Bulk send handler ───
-  const handleBulkSend = async () => {
-    const eligible = doctors.filter((d) => !d.survey_invite_sent_at && d.email && d.survey_status !== "submitted");
-    if (eligible.length === 0) {
-      setBulkPopoverOpen(false);
-      return;
-    }
-    setBulkPopoverOpen(false);
+  const handleBulkSend = async (mode: SendMode) => {
+    const eligible = getSendModeRecipients(mode);
+    if (eligible.length === 0) return;
+    setSendModalOpen(false);
     setBulkSending(true);
     let successCount = 0;
     for (const doctor of eligible) {
       try {
-        await sendInviteCore(doctor);
+        await sendInviteCore(doctor, mode === "in_progress");
         successCount++;
         await new Promise((r) => setTimeout(r, 300));
       } catch {
@@ -525,7 +524,7 @@ export default function Roster() {
     setBulkSending(false);
     invalidateDoctors();
     if (successCount > 0) {
-      toast.success(`✓ Sent invites to ${successCount} doctor${successCount > 1 ? "s" : ""}`);
+      toast.success(`✓ Sent to ${successCount} doctor${successCount > 1 ? "s" : ""}`);
     }
   };
 
@@ -534,6 +533,36 @@ export default function Roster() {
   const inProgress = doctors.filter((d) => d.survey_status === "in_progress").length;
   const notStarted = doctors.filter((d) => !["submitted", "in_progress"].includes(d.survey_status)).length;
   const progressPct = doctors.length > 0 ? Math.round((submitted / doctors.length) * 100) : 0;
+
+  const noEmailCount = doctors.filter(
+    (d) => !d.email && d.survey_status !== "submitted"
+  ).length;
+
+  const getSendModeRecipients = (mode: SendMode): Doctor[] => {
+    switch (mode) {
+      case "never_invited":
+        return doctors.filter(
+          (d) => !d.survey_invite_sent_at && d.email && d.survey_status !== "submitted"
+        );
+      case "not_started":
+        return doctors.filter(
+          (d) =>
+            d.survey_status !== "submitted" &&
+            d.survey_status !== "in_progress" &&
+            d.email
+        );
+      case "in_progress":
+        return doctors.filter(
+          (d) => d.survey_status === "in_progress" && d.email
+        );
+    }
+  };
+
+  const sendModeRecipients = getSendModeRecipients(sendMode);
+
+  const actionableDoctors = doctors.filter(
+    (d) => d.survey_status !== "submitted" && d.email
+  );
 
   // Search + Sort
   const STATUS_ORDER: Record<string, number> = { not_started: 0, in_progress: 1, submitted: 2 };
@@ -944,29 +973,35 @@ export default function Roster() {
         .eq("id", rotaConfigId)
         .single();
 
-      if (rotaError) throw rotaError;
-
-      const rotaStart = rotaConfig.rota_start_date ?? new Date().toISOString().split("T")[0];
-      const rotaEnd = rotaConfig.rota_end_date ?? new Date(Date.now() + 90 * 86400000).toISOString().split("T")[0];
-
-      const { data: doctorsList, error: doctorsError } = await supabase
-        .from("doctors")
-        .select("id, first_name, last_name, email, grade")
-        .eq("rota_config_id", rotaConfigId);
-
-      if (doctorsError) throw doctorsError;
-
-      if (!doctorsList || doctorsList.length === 0) {
-        toast.error("No doctors found in roster");
+      if (rotaError || !rotaConfig?.rota_start_date || !rotaConfig?.rota_end_date) {
+        toast.error("Could not fetch rota period dates — ensure start and end dates are set");
+        setFillingAll(false);
         return;
       }
 
-      for (const doctor of doctorsList) {
+      const rotaStart = rotaConfig.rota_start_date;
+      const rotaEnd = rotaConfig.rota_end_date;
+
+      const eligible = doctors.filter((d) => d.survey_status !== "submitted");
+      if (eligible.length === 0) {
+        toast("All doctors have already submitted");
+        setFillingAll(false);
+        return;
+      }
+
+      let successCount = 0;
+
+      for (const doctor of eligible) {
         const payload = buildSurveyPayload(doctor, rotaConfigId, rotaStart, rotaEnd);
+
         const { error: upsertError } = await supabase
           .from("doctor_survey_responses")
           .upsert(payload, { onConflict: "doctor_id,rota_config_id" });
-        if (upsertError) throw upsertError;
+
+        if (upsertError) {
+          console.error(`Survey fill failed for ${doctor.first_name} ${doctor.last_name}:`, upsertError);
+          continue;
+        }
 
         const { error: statusError } = await supabase
           .from("doctors")
@@ -976,23 +1011,16 @@ export default function Roster() {
             grade: payload.grade,
           })
           .eq("id", doctor.id);
-        if (statusError) throw statusError;
 
-        try {
-          const { error: rpcErr } = await supabase.rpc("handle_survey_normalization", {
-            p_doctor_id: doctor.id,
-            p_rota_config_id: rotaConfigId,
-            p_signature_name: payload.signature_name ?? null,
-            p_signature_date: payload.signature_date ?? null,
-          });
-          if (rpcErr) console.error(`Normalization RPC failed:`, rpcErr.message);
-        } catch (rpcCatchErr) {
-          console.error(`Normalization RPC exception:`, rpcCatchErr);
+        if (statusError) {
+          console.error(`Status update failed for ${doctor.first_name} ${doctor.last_name}:`, statusError);
+        } else {
+          successCount++;
         }
       }
 
       await loadDoctors();
-      toast.success(`✅ ${doctorsList.length} surveys filled with test data`);
+      toast.success(`✅ Filled ${successCount}/${eligible.length} surveys with realistic data`);
     } catch (err) {
       console.error("handleFillAllSurveys failed:", err);
       toast.error(`Failed to fill surveys: ${String(err)}`);
@@ -1094,95 +1122,42 @@ export default function Roster() {
           </div>
         )}
 
-        {/* Improved Summary Section - Minimal Verticality */}
+        {/* ── STATS CARD ── */}
         {doctors.length > 0 && (
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4 bg-card border border-border px-4 py-3 rounded-lg shadow-sm">
-            {/* Mobile View: 2 rows */}
-            <div className="flex flex-col gap-3 sm:hidden w-full">
-              {/* Row 1: Total & Completion Bar */}
-              <div className="flex justify-between items-center w-full">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-xl text-primary leading-none">{doctors.length}</span>
-                  <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Total</span>
+          <div className="bg-card border border-border rounded-lg shadow-sm px-4 py-3">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className="flex items-center justify-between sm:justify-start gap-4 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-lg text-emerald-600 leading-none">{submitted}</span>
+                  <span className="text-[10px] font-bold text-emerald-600/70 uppercase tracking-wider">Submitted</span>
                 </div>
-                <div className="flex items-center gap-2 w-32 shrink-0">
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
-                    {progressPct}% Done
-                  </span>
-                  <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-emerald-500 transition-all duration-500"
-                      style={{ width: `${progressPct}%` }}
-                    />
-                  </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-lg text-amber-600 leading-none">{inProgress}</span>
+                  <span className="text-[10px] font-bold text-amber-600/70 uppercase tracking-wider">In Progress</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-lg text-muted-foreground leading-none">{notStarted}</span>
+                  <span className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-wider">Not Started</span>
                 </div>
               </div>
-              {/* Row 2: Submitted, In Progress, Not Started */}
-              <div className="grid grid-cols-3 gap-2 w-full">
-                <div className="flex flex-col items-center justify-center py-2 px-1 bg-emerald-50/50 rounded-lg border border-emerald-100">
-                  <span className="font-bold text-lg text-emerald-600 leading-none mb-1">{submitted}</span>
-                  <span className="text-[10px] font-bold text-emerald-600/80 uppercase tracking-wider text-center leading-tight">
-                    Submitted
-                  </span>
-                </div>
-                <div className="flex flex-col items-center justify-center py-2 px-1 bg-amber-50/50 rounded-lg border border-amber-100">
-                  <span className="font-bold text-lg text-amber-600 leading-none mb-1">{inProgress}</span>
-                  <span className="text-[10px] font-bold text-amber-600/80 uppercase tracking-wider text-center leading-tight">
-                    In Progress
-                  </span>
-                </div>
-                <div className="flex flex-col items-center justify-center py-2 px-1 bg-muted/30 rounded-lg border border-border">
-                  <span className="font-bold text-lg text-muted-foreground leading-none mb-1">{notStarted}</span>
-                  <span className="text-[10px] font-bold text-muted-foreground/80 uppercase tracking-wider text-center leading-tight">
-                    Not Started
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Tablet/Desktop View: 1 row */}
-            <div className="hidden sm:flex flex-wrap items-center gap-x-4 gap-y-2 text-sm flex-1">
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-lg text-primary leading-none">{doctors.length}</span>
-                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Total</span>
-              </div>
-              <div className="w-px h-6 bg-border hidden sm:block"></div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-lg text-emerald-600 leading-none">{submitted}</span>
-                <span className="text-[10px] font-bold text-emerald-600/70 uppercase tracking-wider">Submitted</span>
-              </div>
-              <div className="w-px h-6 bg-border hidden sm:block"></div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-lg text-amber-600 leading-none">{inProgress}</span>
-                <span className="text-[10px] font-bold text-amber-600/70 uppercase tracking-wider">In Progress</span>
-              </div>
-              <div className="w-px h-6 bg-border hidden sm:block"></div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-lg text-muted-foreground leading-none">{notStarted}</span>
-                <span className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-wider">
-                  Not Started
+              <div className="flex items-center gap-3 w-full sm:w-48 shrink-0">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
+                  {progressPct}% Done
                 </span>
-              </div>
-            </div>
-
-            {/* Tablet/Desktop Progress Bar */}
-            <div className="hidden sm:flex items-center gap-3 w-48 shrink-0">
-              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
-                {progressPct}% Done
-              </span>
-              <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-emerald-500 transition-all duration-500"
-                  style={{ width: `${progressPct}%` }}
-                />
+                <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-emerald-500 transition-all duration-500"
+                    style={{ width: `${progressPct}%` }}
+                  />
+                </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* Deadline picker & Team Roster Actions */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between py-2">
-          <div className="flex items-center gap-3">
+        {/* ── DEADLINE ROW ── */}
+        <div className="space-y-2">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             <div className="flex items-center gap-2">
               <CalendarIcon className="h-5 w-5 text-primary" />
               <span className="text-sm font-semibold text-card-foreground">Survey Deadline:</span>
@@ -1211,74 +1186,56 @@ export default function Roster() {
                 />
               </PopoverContent>
             </Popover>
-            {deadlineIsPast && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
-                <AlertTriangle className="h-3 w-3" /> Passed
-              </span>
-            )}
           </div>
-
-          <div className="flex items-center gap-2 self-end sm:self-auto">
-            {/* Desktop Add Doctor Modal Trigger */}
-            <div className="hidden sm:block">
-              <Button size="sm" className="gap-2 h-9" onClick={() => setIsAddDoctorOpen(true)}>
-                <UserPlus className="h-4 w-4" /> Add Doctor
-              </Button>
+          {deadlineIsPast && (
+            <div className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
+              <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+              <p className="text-sm text-amber-800">
+                Survey deadline has passed. Doctors can still submit, but consider updating the date.
+              </p>
             </div>
+          )}
+        </div>
 
-            {/* Bulk Send Button */}
-            {(() => {
-              const neverInvited = doctors.filter(
-                (d) => !d.survey_invite_sent_at && d.email && d.survey_status !== "submitted",
-              );
-              if (neverInvited.length === 0 || !surveyDeadline) return null;
-              const label =
-                neverInvited.length === doctors.length
-                  ? `Send all (${doctors.length})`
-                  : `Send to unsent (${neverInvited.length})`;
-              return (
-                <Popover open={bulkPopoverOpen} onOpenChange={setBulkPopoverOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={bulkSending}
-                      className="gap-1.5 border-primary text-primary hover:bg-primary/5 h-9"
-                    >
-                      {bulkSending ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Send className="h-3.5 w-3.5" />
-                      )}
-                      {bulkSending ? "Sending…" : label}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent
-                    className="w-72 pointer-events-auto"
-                    align="end"
-                    onOpenAutoFocus={(e) => e.preventDefault()}
-                  >
-                    <div className="space-y-3">
-                      <p className="text-sm font-medium">
-                        Send invites to {neverInvited.length} doctor{neverInvited.length > 1 ? "s" : ""}?
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Each doctor will receive an email with their personalised survey link.
-                      </p>
-                      <div className="flex gap-2 justify-end">
-                        <Button variant="ghost" size="sm" onClick={() => setBulkPopoverOpen(false)}>
-                          Cancel
-                        </Button>
-                        <Button size="sm" onClick={handleBulkSend}>
-                          Send all
-                        </Button>
-                      </div>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              );
-            })()}
-          </div>
+        {/* ── ACTIONS ROW ── */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+          <Button className="gap-2 h-9 w-full sm:w-auto" onClick={() => setIsAddDoctorOpen(true)}>
+            <UserPlus className="h-4 w-4" /> Add Doctor
+          </Button>
+          {doctors.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={bulkSending}
+              className={cn(
+                "gap-1.5 h-9 w-full sm:w-auto",
+                actionableDoctors.length > 0
+                  ? "border-primary text-primary hover:bg-primary/5"
+                  : "text-muted-foreground"
+              )}
+              onClick={() => {
+                if (!surveyDeadline) {
+                  toast.error("Set a survey deadline before sending invites");
+                  return;
+                }
+                setSendMode("never_invited");
+                setSendModalOpen(true);
+              }}
+            >
+              {bulkSending ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Send className="h-3.5 w-3.5" />
+              )}
+              {bulkSending ? "Sending…" : "Send Invites"}
+            </Button>
+          )}
+          {noEmailCount > 0 && (
+            <span className="flex items-center gap-1.5 text-xs text-amber-600">
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+              {noEmailCount} doctor{noEmailCount > 1 ? "s have" : " has"} no email — excluded from bulk send
+            </span>
+          )}
         </div>
 
         {/* Filters Row */}
@@ -1293,14 +1250,7 @@ export default function Roster() {
             />
           </div>
 
-          <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
-            {/* Mobile Add Doctor */}
-            <div className="sm:hidden shrink-0">
-              <Button size="sm" className="gap-2 h-9 px-3" onClick={() => setIsAddDoctorOpen(true)}>
-                <UserPlus className="h-4 w-4" /> Add Doctor
-              </Button>
-            </div>
-
+          <div className="flex items-center justify-end gap-3 w-full sm:w-auto">
             {doctors.length > 1 && (
               <>
                 <div className="sm:hidden flex-1 min-w-0">
@@ -1354,8 +1304,24 @@ export default function Roster() {
               <Loader2 className="h-5 w-5 animate-spin" />
             </div>
           )}
-          {!loading && sortedDoctors.length === 0 && (
-            <p className="text-center text-sm text-muted-foreground py-8">No doctors added yet.</p>
+          {!loading && doctors.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-16 px-6">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted mb-4">
+                <Users className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <div className="text-center space-y-1.5 mb-6">
+                <p className="text-base font-semibold text-foreground">No doctors added yet</p>
+                <p className="text-sm text-muted-foreground max-w-xs">
+                  Add your first doctor to start collecting survey preferences.
+                </p>
+              </div>
+              <Button onClick={() => setIsAddDoctorOpen(true)}>
+                <UserPlus className="h-4 w-4 mr-2" /> Add First Doctor
+              </Button>
+            </div>
+          )}
+          {!loading && doctors.length > 0 && sortedDoctors.length === 0 && (
+            <p className="text-center text-sm text-muted-foreground py-8">No doctors match your search.</p>
           )}
 
           {sortedDoctors.map((doctor) => {
@@ -1422,6 +1388,12 @@ export default function Roster() {
                       </Badge>
                     )}
                   </div>
+                  {/* Invite count badge */}
+                  {(doctor.survey_invite_count ?? 0) > 0 && (
+                    <span className="hidden xl:inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground shrink-0">
+                      ×{doctor.survey_invite_count} sent
+                    </span>
+                  )}
                   {/* Actions */}
                   <div className="flex-1 flex justify-end items-center gap-1.5 min-w-0">
                     <button
@@ -1514,7 +1486,12 @@ export default function Roster() {
               className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
               onClick={() => setInactiveSectionOpen((v) => !v)}
             >
-              Inactive / Previous Period Doctors ({inactiveDoctors.length})
+              <span className="flex items-center gap-2">
+                Inactive / Previous Period Doctors
+                <span className="inline-flex items-center justify-center rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground min-w-[1.5rem]">
+                  {inactiveDoctors.length}
+                </span>
+              </span>
               <ChevronDown className={`h-4 w-4 transition-transform ${inactiveSectionOpen ? "rotate-180" : ""}`} />
             </button>
             {inactiveSectionOpen && (
@@ -1669,6 +1646,116 @@ export default function Roster() {
           </div>
         )}
       </div>
+
+      {/* ── Smart Send Invites Modal ── */}
+      <Dialog open={sendModalOpen} onOpenChange={setSendModalOpen}>
+        <DialogContent className="w-[92vw] sm:max-w-[480px] p-0 overflow-hidden rounded-2xl shadow-xl">
+          <div className="bg-primary/5 p-6 border-b border-primary/10">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 shrink-0">
+                <Send className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <DialogTitle className="text-lg text-foreground">Send Survey Invites</DialogTitle>
+                <p className="text-sm text-muted-foreground mt-0.5">Choose who to email</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-6 space-y-5">
+            <div className="space-y-2">
+              {(
+                [
+                  { mode: "never_invited" as SendMode, label: "Never invited", description: "Doctors who have never received an invite" },
+                  { mode: "not_started" as SendMode, label: "Not started", description: "All doctors who haven't begun the survey" },
+                  { mode: "in_progress" as SendMode, label: "In progress — reminder", description: "Doctors who started but haven't submitted" },
+                ]
+              ).map(({ mode, label, description }) => {
+                const count = getSendModeRecipients(mode).length;
+                const isSelected = sendMode === mode;
+                return (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setSendMode(mode)}
+                    className={cn(
+                      "w-full flex items-center justify-between rounded-lg border px-4 py-3 text-left transition-colors",
+                      isSelected ? "border-primary bg-primary/5" : "border-border bg-card hover:bg-muted/40"
+                    )}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        "h-4 w-4 rounded-full border-2 shrink-0",
+                        isSelected ? "border-primary bg-primary" : "border-muted-foreground/40"
+                      )} />
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">{label}</p>
+                        <p className="text-xs text-muted-foreground">{description}</p>
+                      </div>
+                    </div>
+                    <span className={cn(
+                      "inline-flex items-center justify-center rounded-full px-2 py-0.5 text-xs font-bold min-w-[1.5rem]",
+                      count > 0 ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                    )}>
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {sendModeRecipients.length > 0 ? (
+              <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-1">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Recipients ({sendModeRecipients.length})
+                </p>
+                <p className="text-sm text-foreground">
+                  {sendModeRecipients.slice(0, 5).map((d) => `Dr ${d.last_name}`).join(", ")}
+                  {sendModeRecipients.length > 5 && (
+                    <span className="text-muted-foreground"> and {sendModeRecipients.length - 5} more</span>
+                  )}
+                </p>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-border bg-muted/30 p-3">
+                <p className="text-sm text-muted-foreground">No doctors in this group to email.</p>
+              </div>
+            )}
+
+            {formattedDeadline && (
+              <div className="flex items-center justify-between text-sm p-3 rounded-lg bg-muted/50 border border-border">
+                <span className="font-medium text-foreground">Deadline in email:</span>
+                <span className="text-muted-foreground">{formattedDeadline}</span>
+              </div>
+            )}
+
+            {noEmailCount > 0 && (
+              <div className="flex items-start gap-2 text-xs text-amber-600">
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                <p>
+                  {noEmailCount} doctor{noEmailCount > 1 ? "s have" : " has"} no email address and will not receive an invite.
+                </p>
+              </div>
+            )}
+
+            <DialogFooter>
+              <Button variant="ghost" onClick={() => setSendModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                disabled={sendModeRecipients.length === 0 || bulkSending}
+                onClick={() => handleBulkSend(sendMode)}
+              >
+                {bulkSending ? (
+                  <><Loader2 className="h-4 w-4 animate-spin mr-1" /> Sending…</>
+                ) : (
+                  `Send to ${sendModeRecipients.length} doctor${sendModeRecipients.length !== 1 ? "s" : ""}`
+                )}
+              </Button>
+            </DialogFooter>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Global Add Doctor Dialog */}
       <Dialog open={isAddDoctorOpen} onOpenChange={setIsAddDoctorOpen}>
