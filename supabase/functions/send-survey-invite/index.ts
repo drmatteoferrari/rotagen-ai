@@ -47,6 +47,7 @@ Deno.serve(async (req) => {
       hospitalName,
       surveyDeadline,
       surveyLink,
+      isReminder,
     } = await req.json();
 
     if (!to || !doctorName || !surveyLink) {
