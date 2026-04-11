@@ -57,7 +57,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    const subject = `Action required: Submit your rota preferences — ${escHtml(departmentName)}, ${escHtml(hospitalName)}, ${rotaPeriod.startDate} to ${rotaPeriod.endDate}`;
+    const subject = isReminder
+      ? `Reminder: your rota survey is waiting — ${escHtml(departmentName)}, ${escHtml(hospitalName)}`
+      : `Action required: Submit your rota preferences — ${escHtml(departmentName)}, ${escHtml(hospitalName)}, ${rotaPeriod.startDate} to ${rotaPeriod.endDate}`;
 
     const html = `<!DOCTYPE html>
 <html lang="en">
