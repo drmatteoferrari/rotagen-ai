@@ -1156,40 +1156,42 @@ export default function Roster() {
         )}
 
         {/* ── DEADLINE ROW ── */}
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
           <div className="flex items-center gap-2 shrink-0">
             <CalendarIcon className="h-4 w-4 text-primary" />
             <span className="text-sm font-semibold text-card-foreground">Survey Deadline:</span>
           </div>
-          <Popover open={deadlineOpen} onOpenChange={setDeadlineOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className={cn(
-                  "w-[200px] justify-start text-left font-normal",
-                  !surveyDeadline && "text-muted-foreground",
-                )}
-              >
-                {formattedDeadline ?? "Select deadline date"}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
-              <Calendar
-                mode="single"
-                selected={surveyDeadline}
-                onSelect={handleDeadlineSelect}
-                disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                initialFocus
-                className="p-3 pointer-events-auto"
-              />
-            </PopoverContent>
-          </Popover>
-          {deadlineIsPast && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 border border-amber-300 px-2.5 py-1 text-xs font-semibold text-amber-700 shrink-0">
-              <AlertTriangle className="h-3 w-3" /> Deadline passed
-            </span>
-          )}
+          <div className="flex items-center gap-2 flex-wrap">
+            <Popover open={deadlineOpen} onOpenChange={setDeadlineOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={cn(
+                    "w-[200px] justify-start text-left font-normal",
+                    !surveyDeadline && "text-muted-foreground",
+                  )}
+                >
+                  {formattedDeadline ?? "Select deadline date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
+                <Calendar
+                  mode="single"
+                  selected={surveyDeadline}
+                  onSelect={handleDeadlineSelect}
+                  disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                  initialFocus
+                  className="p-3 pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
+            {deadlineIsPast && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 border border-amber-300 px-2.5 py-1 text-xs font-semibold text-amber-700 shrink-0">
+                <AlertTriangle className="h-3 w-3" /> Deadline passed
+              </span>
+            )}
+          </div>
         </div>
 
         {/* ── ACTIONS ROW ── */}
