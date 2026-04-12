@@ -330,7 +330,6 @@ body,
 }
 
 .nav-cta-shimmer-wrap {
-  display: inline-block;
   border-radius: 10px;
   padding: 2px;
   background: linear-gradient(270deg, #1d4ed8, #60a5fa, #93c5fd, #2563eb);
