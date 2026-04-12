@@ -1156,44 +1156,39 @@ export default function Roster() {
         )}
 
         {/* ── DEADLINE ROW ── */}
-        <div className="space-y-2">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <div className="flex items-center gap-2">
-              <CalendarIcon className="h-5 w-5 text-primary" />
-              <span className="text-sm font-semibold text-card-foreground">Survey Deadline:</span>
-            </div>
-            <Popover open={deadlineOpen} onOpenChange={setDeadlineOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className={cn(
-                    "w-[220px] justify-start text-left font-normal",
-                    !surveyDeadline && "text-muted-foreground",
-                  )}
-                >
-                  {formattedDeadline ?? "Select deadline date"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
-                <Calendar
-                  mode="single"
-                  selected={surveyDeadline}
-                  onSelect={handleDeadlineSelect}
-                  disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                  initialFocus
-                  className="p-3 pointer-events-auto"
-                />
-              </PopoverContent>
-            </Popover>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 shrink-0">
+            <CalendarIcon className="h-4 w-4 text-primary" />
+            <span className="text-sm font-semibold text-card-foreground">Survey Deadline:</span>
           </div>
+          <Popover open={deadlineOpen} onOpenChange={setDeadlineOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn(
+                  "w-[200px] justify-start text-left font-normal",
+                  !surveyDeadline && "text-muted-foreground",
+                )}
+              >
+                {formattedDeadline ?? "Select deadline date"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
+              <Calendar
+                mode="single"
+                selected={surveyDeadline}
+                onSelect={handleDeadlineSelect}
+                disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                initialFocus
+                className="p-3 pointer-events-auto"
+              />
+            </PopoverContent>
+          </Popover>
           {deadlineIsPast && (
-            <div className="flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
-              <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-              <p className="text-sm text-amber-800">
-                Survey deadline has passed. Doctors can still submit, but consider updating the date.
-              </p>
-            </div>
+            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 border border-amber-300 px-2.5 py-1 text-xs font-semibold text-amber-700 shrink-0">
+              <AlertTriangle className="h-3 w-3" /> Deadline passed
+            </span>
           )}
         </div>
 
@@ -1666,9 +1661,9 @@ export default function Roster() {
             <div className="space-y-2">
               {(
                 [
-                  { mode: "never_invited" as SendMode, label: "Never invited", description: "Doctors who have never received an invite" },
-                  { mode: "not_started" as SendMode, label: "Not started", description: "All doctors who haven't begun the survey" },
-                  { mode: "in_progress" as SendMode, label: "In progress — reminder", description: "Doctors who started but haven't submitted" },
+                  { mode: "never_invited" as SendMode, label: "Never invited", description: "Haven't received a survey link yet" },
+                  { mode: "not_started" as SendMode, label: "Not started", description: "Got the link but haven't opened the survey" },
+                  { mode: "in_progress" as SendMode, label: "In progress — reminder", description: "Started but haven't submitted yet" },
                 ]
               ).map(({ mode, label, description }) => {
                 const count = getSendModeRecipients(mode).length;
