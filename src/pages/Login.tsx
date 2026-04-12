@@ -85,7 +85,7 @@ export default function Login() {
       )}
 
       {/* Main Layout Area - Locked height & width, zero scroll */}
-      <div className="relative flex h-[100dvh] max-h-[100dvh] w-screen max-w-[100vw] flex-col bg-slate-50 overflow-hidden font-sans">
+      <div className="relative flex h-[100dvh] max-h-[100dvh] w-screen max-w-[100vw] flex-col bg-blue-50 overflow-hidden font-sans">
         {/* Soft Ambient Background Blobs for Visual Aesthetics */}
         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-blue-300/20 blur-[100px] pointer-events-none" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-300/20 blur-[100px] pointer-events-none" />
