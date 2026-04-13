@@ -1,9 +1,47 @@
-import { getRotaConfig, type RotaConfig } from "./rotaConfig";
+import { getRotaConfig, type RotaConfig, type DaySlotData } from "./rotaConfig";
 import { supabase } from "@/integrations/supabase/client";
 import { computeShiftTargets, computeWeekendCap } from "./shiftTargets";
-// ✅ Section 6 complete (imports)
 
-// SECTION 8 — Pre-rota generation input builder
+// ─── Constants ────────────────────────────────────────────────
+
+const DAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
+type DayKey = (typeof DAY_KEYS)[number];
+
+// ─── PreRotaInput ─────────────────────────────────────────────
+// shiftSlots is now one entry per (shiftKey × dayKey) pair.
+// The algorithm iterates calendar dates, maps each to its dayKey,
+// and looks up matching entries to get the complete daily manifest.
+
+export interface ShiftSlotEntry {
+  shiftId: string; // shift_types.id
+  shiftKey: string; // e.g. "night", "long-day"
+  name: string;
+  dayKey: string; // "mon" | "tue" | ... | "sun"
+  startTime: string; // "HH:MM"
+  endTime: string; // "HH:MM"
+  durationHours: number;
+  isOncall: boolean;
+  isNonResOncall: boolean;
+  badges: string[]; // ["night", "long", "ooh", "oncall", "nonres"]
+  staffing: {
+    min: number;
+    target: number;
+    max: number | null;
+  };
+  // Slot-level eligibility requirements.
+  // Each entry = one doctor position with its own grade + competency constraints.
+  // Array length may be less than staffing.target — remaining positions unconstrained.
+  slots: Array<{
+    slotIndex: number;
+    label: string | null;
+    permittedGrades: string[]; // [] = no restriction
+    reqIac: number;
+    reqIaoc: number;
+    reqIcu: number;
+    reqTransfer: number;
+  }>;
+  targetPct: number; // shift-level distribution percentage
+}
 
 export interface PreRotaInput {
   configId: string;
@@ -23,26 +61,7 @@ export interface PreRotaInput {
       included: boolean;
     }> | null;
   };
-  shiftSlots: Array<{
-    shiftId: string;
-    shiftKey: string;
-    name: string;
-    startTime: string;
-    endTime: string;
-    durationHours: number;
-    isOncall: boolean;
-    isNonResOncall: boolean;
-    applicableDays: string[];
-    badges: string[];
-    minDoctors: number;
-    maxDoctors: number | null;
-    targetPct: number;
-    reqIac: number;
-    reqIaoc: number;
-    reqIcu: number;
-    reqTransfer: number;
-    reqMinGrade: string | null;
-  }>;
+  shiftSlots: ShiftSlotEntry[];
   wtrConstraints: {
     maxAvgHoursPerWeek: number;
     maxHoursIn168h: number;
@@ -86,10 +105,71 @@ export interface PreRotaInput {
   };
 }
 
+// ─── buildPreRotaInput ────────────────────────────────────────
+
 export async function buildPreRotaInput(configId: string): Promise<PreRotaInput> {
   const cfg = await getRotaConfig(configId);
 
-  const dayKeys = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
+  // Build shiftSlots: one entry per (shift × active day).
+  // If a shift has daySlots from the new tables, use those.
+  // If not (legacy / pre-migration shift), fall back to applicableDays
+  // from shift_types and synthesise entries from shift-level defaults.
+  const shiftSlots: ShiftSlotEntry[] = [];
+
+  for (const shift of cfg.shifts) {
+    const badges = (["night", "long", "ooh", "oncall", "nonres"] as const).filter((b) => shift.badges[b]);
+
+    if (shift.daySlots.length > 0) {
+      // ── New path: per-day slots exist ──
+      for (const ds of shift.daySlots) {
+        shiftSlots.push({
+          shiftId: shift.id,
+          shiftKey: shift.shiftKey,
+          name: shift.name,
+          dayKey: ds.dayKey,
+          startTime: shift.startTime,
+          endTime: shift.endTime,
+          durationHours: shift.durationHours,
+          isOncall: shift.isOncall,
+          isNonResOncall: shift.isNonResOncall,
+          badges,
+          staffing: {
+            min: ds.minDoctors,
+            target: ds.targetDoctors,
+            max: ds.maxDoctors,
+          },
+          slots: ds.slots,
+          targetPct: shift.targetPercentage ?? 0,
+        });
+      }
+    } else {
+      // ── Fallback path: no day slots saved yet ──
+      // Synthesise one entry per active day using shift-level defaults.
+      // Produces zero slot requirements (unconstrained eligibility).
+      for (const dayKey of DAY_KEYS) {
+        if (!shift.applicableDays[dayKey]) continue;
+        shiftSlots.push({
+          shiftId: shift.id,
+          shiftKey: shift.shiftKey,
+          name: shift.name,
+          dayKey,
+          startTime: shift.startTime,
+          endTime: shift.endTime,
+          durationHours: shift.durationHours,
+          isOncall: shift.isOncall,
+          isNonResOncall: shift.isNonResOncall,
+          badges,
+          staffing: {
+            min: shift.minDoctors,
+            target: shift.targetDoctors,
+            max: shift.maxDoctors,
+          },
+          slots: [], // no per-slot constraints in fallback
+          targetPct: shift.targetPercentage ?? 0,
+        });
+      }
+    }
+  }
 
   return {
     configId: cfg.id,
@@ -98,33 +178,11 @@ export async function buildPreRotaInput(configId: string): Promise<PreRotaInput>
       endDate: cfg.rotaPeriod.endDate ?? "",
       totalDays: cfg.rotaPeriod.durationDays ?? 0,
       totalWeeks: cfg.rotaPeriod.durationWeeks ?? 0,
-      bankHolidayDates: cfg.rotaPeriod.bankHolidays
-        .filter((h) => h.isActive)
-        .map((h) => h.date),
+      bankHolidayDates: cfg.rotaPeriod.bankHolidays.filter((h) => h.isActive).map((h) => h.date),
       bhSameAsWeekend: cfg.bhSameAsWeekend ?? null,
       bhShiftRules: cfg.bhShiftRules ?? null,
     },
-    shiftSlots: cfg.shifts.map((s) => ({
-      shiftId: s.id,
-      shiftKey: s.shiftKey,
-      name: s.name,
-      startTime: s.startTime,
-      endTime: s.endTime,
-      durationHours: s.durationHours,
-      isOncall: s.isOncall,
-      isNonResOncall: s.isNonResOncall,
-      applicableDays: dayKeys.filter((d) => s.applicableDays[d]),
-      badges: (["night", "long", "ooh", "weekend", "oncall", "nonres"] as const).filter((b) => s.badges[b]),
-      minDoctors: s.minDoctors,
-      maxDoctors: s.maxDoctors,
-      targetPct: s.targetPercentage ?? 0,
-      // ✅ Section 6 — competency requirements on shift types
-      reqIac: s.reqIac,
-      reqIaoc: s.reqIaoc,
-      reqIcu: s.reqIcu,
-      reqTransfer: s.reqTransfer ?? 0,
-      reqMinGrade: s.reqMinGrade,
-    })),
+    shiftSlots,
     wtrConstraints: {
       maxAvgHoursPerWeek: cfg.wtr?.maxHoursPerWeek ?? 48,
       maxHoursIn168h: cfg.wtr?.maxHoursPer168h ?? 72,
@@ -171,9 +229,32 @@ export async function buildPreRotaInput(configId: string): Promise<PreRotaInput>
   };
 }
 
-// SECTION 8 COMPLETE
+// ─── Helper: total slots per shiftKey across all days ─────────
+// Used by buildFinalRotaInput to compute fairness targets.
+// Counts total doctor-slots that need filling across the rota period.
 
-// SECTION 9 — Final rota generation input builder
+function countTotalSlots(
+  shiftSlots: ShiftSlotEntry[],
+  filter: (s: ShiftSlotEntry) => boolean,
+  totalWeeks: number,
+): number {
+  // Group by shiftKey + dayKey to get weekly occurrences
+  const seen = new Map<string, number>(); // key = shiftKey:dayKey → target
+  for (const s of shiftSlots) {
+    if (!filter(s)) continue;
+    const key = `${s.shiftKey}:${s.dayKey}`;
+    // Use max target seen for this pair (should always be the same)
+    seen.set(key, Math.max(seen.get(key) ?? 0, s.staffing.target));
+  }
+  // Each (shiftKey × dayKey) occurs once per week × totalWeeks
+  let total = 0;
+  for (const target of seen.values()) {
+    total += target * totalWeeks;
+  }
+  return total;
+}
+
+// ─── DoctorPreference ─────────────────────────────────────────
 
 export interface DoctorPreference {
   doctorId: string;
@@ -190,7 +271,6 @@ export interface DoctorPreference {
   annualLeave: Array<{ startDate: string; endDate: string; notes: string }>;
   studyLeave: Array<{ startDate: string; endDate: string; reason: string }>;
   nocDates: string[];
-  // ✅ Section 3 complete — parental leave added to DoctorPreference
   parentalLeaveDates: string[];
   parentalLeaveNotes?: string;
   exemptFromNights: boolean;
@@ -198,6 +278,8 @@ export interface DoctorPreference {
   exemptFromOncall: boolean;
   additionalNotes: string;
 }
+
+// ─── FinalRotaInput ───────────────────────────────────────────
 
 export interface FinalRotaInput {
   preRotaInput: PreRotaInput;
@@ -207,6 +289,11 @@ export interface FinalRotaInput {
     grade: string;
     wtePct: number;
     contractedHoursPerWeek: number;
+    // Competency flags — read from survey, used for slot eligibility
+    hasIac: boolean;
+    hasIaoc: boolean;
+    hasIcu: boolean;
+    hasTransfer: boolean;
     ltft: {
       isLtft: boolean;
       daysOff: string[];
@@ -216,7 +303,6 @@ export interface FinalRotaInput {
       hard: {
         annualLeaveDates: string[];
         studyLeaveDates: string[];
-        // ✅ Section 3 complete — parental leave in FinalRotaInput type
         parentalLeaveDates: string[];
         exemptFromNights: boolean;
         exemptFromWeekends: boolean;
@@ -236,6 +322,10 @@ export interface FinalRotaInput {
       targetOncallCount: number;
       proportionFactor: number;
     };
+    shiftTargets: any[]; // computed by computeShiftTargets
+    totalMaxHours: number;
+    weekendCap: number;
+    hardWeeklyCap: number;
   }>;
   constraints: {
     hard: string[];
@@ -243,7 +333,8 @@ export interface FinalRotaInput {
   };
 }
 
-// SECTION 10 — Survey response type
+// ─── DoctorSurveyResponse ─────────────────────────────────────
+
 export interface DoctorSurveyResponse {
   id: string;
   doctor_id: string;
@@ -266,7 +357,6 @@ export interface DoctorSurveyResponse {
   additional_notes: string | null;
   status: string;
   submitted_at: string | null;
-  // Previously missing fields — eliminates `as any` casts
   parental_leave_expected: boolean | null;
   parental_leave_start: string | null;
   parental_leave_end: string | null;
@@ -276,6 +366,8 @@ export interface DoctorSurveyResponse {
   comp_obstetric: boolean | null;
   comp_icu: boolean | null;
 }
+
+// ─── getSurveyResponsesForConfig ─────────────────────────────
 
 export async function getSurveyResponsesForConfig(configId: string): Promise<DoctorSurveyResponse[]> {
   const { data, error } = await supabase
@@ -291,7 +383,7 @@ export async function getSurveyResponsesForConfig(configId: string): Promise<Doc
   return (data ?? []) as DoctorSurveyResponse[];
 }
 
-// SECTION 10 COMPLETE
+// ─── expandDateRange ──────────────────────────────────────────
 
 function expandDateRange(start: string, end: string): string[] {
   const dates: string[] = [];
@@ -304,27 +396,29 @@ function expandDateRange(start: string, end: string): string[] {
   return dates;
 }
 
+// ─── mapResponseToPreference ──────────────────────────────────
+
 function mapResponseToPreference(resp: DoctorSurveyResponse): DoctorPreference {
   const annualLeave = Array.isArray(resp.annual_leave) ? resp.annual_leave : [];
   const studyLeave = Array.isArray(resp.study_leave) ? resp.study_leave : [];
-  // ✅ Section 1 complete — NOC dates expanded from {startDate, endDate} ranges
+
   const nocDates = Array.isArray(resp.noc_dates)
     ? resp.noc_dates.flatMap((n: any) => {
         if (typeof n === "string") return [n];
-        const start = n?.startDate ?? n?.start_date ?? n?.date ?? '';
-        const end   = n?.endDate   ?? n?.end_date   ?? n?.date ?? '';
+        const start = n?.startDate ?? n?.start_date ?? n?.date ?? "";
+        const end = n?.endDate ?? n?.end_date ?? n?.date ?? "";
         if (!start) return [];
         if (!end || end === start) return [start];
         return expandDateRange(start, end);
       })
     : [];
+
   const ltftNightFlex = Array.isArray(resp.ltft_night_flexibility) ? resp.ltft_night_flexibility : [];
 
-  // ✅ Section 3 complete — expand parental leave into individual blocked dates
   const parentalLeaveDates: string[] = (() => {
     if (!resp.parental_leave_expected) return [];
     const start = resp.parental_leave_start;
-    const end   = resp.parental_leave_end;
+    const end = resp.parental_leave_end;
     if (!start) return [];
     if (!end || end === start) return [start];
     return expandDateRange(start, end);
@@ -335,13 +429,12 @@ function mapResponseToPreference(resp: DoctorSurveyResponse): DoctorPreference {
     name: resp.full_name ?? "",
     grade: resp.grade ?? "",
     wtePct: resp.wte_percent ?? 100,
-    // ✅ Section 3 complete — normalise day names to lowercase
     ltftDaysOff: (resp.ltft_days_off ?? []).map((d: string) => d.toLowerCase()),
     ltftNightFlexibility: ltftNightFlex.map((f: any) => ({
       ...f,
-      day: (f.day ?? '').toLowerCase(),
+      day: (f.day ?? "").toLowerCase(),
     })),
-    maxConsecNights: 0, // placeholder — replaced in buildFinalRotaInput with WTR value
+    maxConsecNights: 0, // replaced in buildFinalRotaInput with WTR value
     annualLeave: annualLeave.map((l: any) => ({
       startDate: l.startDate ?? l.start_date ?? "",
       endDate: l.endDate ?? l.end_date ?? "",
@@ -362,36 +455,37 @@ function mapResponseToPreference(resp: DoctorSurveyResponse): DoctorPreference {
   };
 }
 
+// ─── buildFinalRotaInput ──────────────────────────────────────
+
 export async function buildFinalRotaInput(configId: string): Promise<FinalRotaInput> {
   const preRotaInput = await buildPreRotaInput(configId);
   const cfg = await getRotaConfig(configId);
   const totalWeeks = preRotaInput.period.totalWeeks || 1;
 
-  // ✅ Section 2 complete — read maxConsecNights from WTR settings instead of hardcoding
   const maxConsecNights = cfg.wtr?.maxConsecNights ?? 4;
 
-  // Fetch submitted survey responses
   const responses = await getSurveyResponsesForConfig(configId);
   const submittedResponses = responses.filter((r) => r.status === "submitted");
+
   const doctors = submittedResponses.map((r) => {
     const pref = mapResponseToPreference(r);
     pref.maxConsecNights = maxConsecNights;
     return pref;
   });
 
-  const totalNightSlots = preRotaInput.shiftSlots
-    .filter((s) => s.badges.includes("night"))
-    .reduce((sum, s) => sum + s.minDoctors * preRotaInput.period.totalDays, 0);
-  const totalWeekendSlots = preRotaInput.shiftSlots
-    .filter((s) => s.badges.includes("weekend"))
-    .reduce((sum, s) => sum + s.minDoctors * preRotaInput.period.totalDays, 0);
-  const totalOncallSlots = preRotaInput.shiftSlots
-    .filter((s) => s.isOncall)
-    .reduce((sum, s) => sum + s.minDoctors * preRotaInput.period.totalDays, 0);
+  // ── Total slot counts for fairness target computation ──
+  // Uses the new per-day shape — counts (dayKey × shiftKey) pairs × totalWeeks
+  const totalNightSlots = countTotalSlots(preRotaInput.shiftSlots, (s) => s.badges.includes("night"), totalWeeks);
+  const totalWeekendSlots = countTotalSlots(
+    preRotaInput.shiftSlots,
+    (s) => s.dayKey === "sat" || s.dayKey === "sun",
+    totalWeeks,
+  );
+  const totalOncallSlots = countTotalSlots(preRotaInput.shiftSlots, (s) => s.isOncall, totalWeeks);
 
   const doctorCount = doctors.length || 1;
 
-  // ✅ Section 6 — Compute baseline shift targets (full-time, for reference)
+  // ── Shift targets for distribution ──
   const shiftTargetShifts = cfg.shifts.map((s) => ({
     id: s.id,
     name: s.name,
@@ -401,36 +495,30 @@ export async function buildFinalRotaInput(configId: string): Promise<FinalRotaIn
     durationHours: s.durationHours,
   }));
 
-  const baselineTargets = cfg.wtr ? computeShiftTargets({
-    maxHoursPerWeek: cfg.wtr.maxHoursPerWeek,
-    maxHoursPer168h: cfg.wtr.maxHoursPer168h,
-    rotaWeeks: totalWeeks,
-    globalOncallPct: cfg.distribution.globalOncallPct,
-    globalNonOncallPct: cfg.distribution.globalNonOncallPct,
-    shiftTypes: shiftTargetShifts,
-    wtePercent: 100,
-  }) : null;
-
-  // Per-doctor targets
+  // ── Per-doctor targets ──
   const doctorTargets = doctors.map((doc) => {
     const resp = submittedResponses.find((r) => r.doctor_id === doc.doctorId);
-    const compJson = resp.competencies_json ?? {};
+    const compJson = resp?.competencies_json ?? {};
 
-    const targets = cfg.wtr ? computeShiftTargets({
-      maxHoursPerWeek: cfg.wtr.maxHoursPerWeek,
-      maxHoursPer168h: cfg.wtr.maxHoursPer168h,
-      rotaWeeks: totalWeeks,
-      globalOncallPct: cfg.distribution.globalOncallPct,
-      globalNonOncallPct: cfg.distribution.globalNonOncallPct,
-      shiftTypes: shiftTargetShifts,
-      wtePercent: doc.wtePct,
-    }) : null;
+    const targets = cfg.wtr
+      ? computeShiftTargets({
+          maxHoursPerWeek: cfg.wtr.maxHoursPerWeek,
+          maxHoursPer168h: cfg.wtr.maxHoursPer168h,
+          rotaWeeks: totalWeeks,
+          globalOncallPct: cfg.distribution.globalOncallPct,
+          globalNonOncallPct: cfg.distribution.globalNonOncallPct,
+          shiftTypes: shiftTargetShifts,
+          wtePercent: doc.wtePct,
+        })
+      : null;
 
-    const weekendCap = cfg.wtr ? computeWeekendCap({
-      rotaWeeks: totalWeeks,
-      weekendFrequency: cfg.wtr.weekendFrequency,
-      wtePercent: doc.wtePct,
-    }) : null;
+    const weekendCap = cfg.wtr
+      ? computeWeekendCap({
+          rotaWeeks: totalWeeks,
+          weekendFrequency: cfg.wtr.weekendFrequency,
+          wtePercent: doc.wtePct,
+        })
+      : null;
 
     return {
       doctorId: doc.doctorId,
@@ -438,10 +526,10 @@ export async function buildFinalRotaInput(configId: string): Promise<FinalRotaIn
       totalMaxHours: targets?.totalMaxTargetHours ?? 0,
       weekendCap: weekendCap?.maxWeekends ?? 0,
       hardWeeklyCap: targets?.hardWeeklyCap ?? 72,
-      // ✅ Section 6 — competency status on doctors
       hasIac: compJson?.iac?.achieved === true,
       hasIaoc: compJson?.iaoc?.achieved === true,
       hasIcu: compJson?.icu?.achieved === true,
+      hasTransfer: compJson?.transfer?.achieved === true,
       grade: doc.grade ?? null,
     };
   });
@@ -460,6 +548,10 @@ export async function buildFinalRotaInput(configId: string): Promise<FinalRotaIn
         grade: doc.grade,
         wtePct: doc.wtePct,
         contractedHoursPerWeek: (doc.wtePct / 100) * 40,
+        hasIac: dt?.hasIac ?? false,
+        hasIaoc: dt?.hasIaoc ?? false,
+        hasIcu: dt?.hasIcu ?? false,
+        hasTransfer: dt?.hasTransfer ?? false,
         ltft: {
           isLtft: doc.wtePct < 100,
           daysOff: doc.ltftDaysOff,
@@ -469,7 +561,6 @@ export async function buildFinalRotaInput(configId: string): Promise<FinalRotaIn
           hard: {
             annualLeaveDates,
             studyLeaveDates,
-            // ✅ Section 3 complete — parental leave dates in hard constraints
             parentalLeaveDates: doc.parentalLeaveDates ?? [],
             exemptFromNights: doc.exemptFromNights,
             exemptFromWeekends: doc.exemptFromWeekends,
@@ -483,20 +574,16 @@ export async function buildFinalRotaInput(configId: string): Promise<FinalRotaIn
           },
         },
         fairnessTargets: {
-          targetTotalHours: ((doc.wtePct / 100) * 40) * totalWeeks,
+          targetTotalHours: (doc.wtePct / 100) * 40 * totalWeeks,
           targetNightShiftCount: Math.round((totalNightSlots / doctorCount) * proportion),
           targetWeekendShiftCount: Math.round((totalWeekendSlots / doctorCount) * proportion),
           targetOncallCount: Math.round((totalOncallSlots / doctorCount) * proportion),
           proportionFactor: proportion,
         },
-        // ✅ Section 6 — per-doctor computed targets
         shiftTargets: dt?.shiftTargets ?? [],
         totalMaxHours: dt?.totalMaxHours ?? 0,
         weekendCap: dt?.weekendCap ?? 0,
         hardWeeklyCap: dt?.hardWeeklyCap ?? 72,
-        hasIac: dt?.hasIac ?? false,
-        hasIaoc: dt?.hasIaoc ?? false,
-        hasIcu: dt?.hasIcu ?? false,
       };
     }),
     constraints: {
@@ -520,8 +607,7 @@ export async function buildFinalRotaInput(configId: string): Promise<FinalRotaIn
         "ONCALL_MAX_PER_7_DAYS",
         "ONCALL_DAY_AFTER_MAX_HOURS",
         "NO_SIMULTANEOUS_ONCALL_AND_SHIFT",
-        "COMPETENCY_COMPOSITION_MET",
-        "GRADE_FLOOR_MET",
+        "SLOT_ELIGIBILITY_MET",
         "WEEKEND_CAP_RESPECTED",
       ],
       soft: [
@@ -538,9 +624,8 @@ export async function buildFinalRotaInput(configId: string): Promise<FinalRotaIn
   };
 }
 
-// SECTION 9 COMPLETE
+// ─── validateFinalRotaInput ───────────────────────────────────
 
-// SECTION 10 COMPLETE — validateFinalRotaInput
 export interface ValidationResult {
   isValid: boolean;
   warnings: string[];
@@ -553,42 +638,18 @@ export async function validateFinalRotaInput(configId: string): Promise<Validati
 
   const responses = await getSurveyResponsesForConfig(configId);
 
-  // Blocker: no survey responses at all
   if (responses.length === 0) {
     blockers.push("No doctors have any survey responses. Cannot generate rota.");
-    return { isValid: false, warnings, blockers };
   }
 
-  // Blocker: any doctor not submitted
-  const notSubmitted = responses.filter(r => r.status !== "submitted");
-  if (notSubmitted.length > 0) {
-    blockers.push(`${notSubmitted.length} doctor(s) have not submitted their survey: ${notSubmitted.map(r => r.full_name || r.doctor_id).join(", ")}`);
+  const submitted = responses.filter((r) => r.status === "submitted");
+  if (submitted.length === 0) {
+    blockers.push("No submitted survey responses found. All doctors must complete surveys before generating.");
   }
 
-  // Warnings per doctor
-  for (const r of responses) {
-    const name = r.full_name || r.doctor_id;
-
-    // WTE 100% with no LTFT days
-    if ((r.wte_percent ?? 100) === 100 && (!r.ltft_days_off || r.ltft_days_off.length === 0)) {
-      warnings.push(`${name}: WTE is 100% with no LTFT days off — confirm this is correct`);
-    }
-
-    // All competencies false — check both JSONB and legacy boolean columns
-    const compJson = r.competencies_json as Record<string, any> | null;
-    const hasJsonComp = compJson?.iac?.achieved || compJson?.iaoc?.achieved || compJson?.icu?.achieved;
-    const hasLegacyComp = r.comp_ip_anaesthesia || r.comp_obstetric || r.comp_icu;
-    if (!hasJsonComp && !hasLegacyComp) {
-      warnings.push(`${name}: No competencies recorded (IP Anaesthesia, Obstetric, ICU all false)`);
-    }
-
-    // All leave arrays empty
-    const al = Array.isArray(r.annual_leave) ? r.annual_leave : [];
-    const sl = Array.isArray(r.study_leave) ? r.study_leave : [];
-    const noc = Array.isArray(r.noc_dates) ? r.noc_dates : [];
-    if (al.length === 0 && sl.length === 0 && noc.length === 0) {
-      warnings.push(`${name}: No annual leave, study leave, or NOC dates recorded`);
-    }
+  const unsubmitted = responses.filter((r) => r.status !== "submitted");
+  if (unsubmitted.length > 0) {
+    warnings.push(`${unsubmitted.length} doctor(s) have not submitted their survey.`);
   }
 
   return {
