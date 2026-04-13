@@ -1,20 +1,15 @@
 
 
-## Plan: Add new helpers and components to DepartmentStep2.tsx
+## Plan: Add AddShiftModal and DaySlotModal to DepartmentStep2.tsx
 
 **File**: `src/pages/admin/DepartmentStep2.tsx` (only file modified)
 
-### Changes
+### Change
 
-1. **Replace import block (lines 1-38)** — Add `useEffect`, `Checkbox`, `ChevronDown`/`ChevronUp`/`Copy`, `DaySlot`/`SlotRequirement`/`ShiftStaffing` types, `GRADE_OPTIONS`/`GRADE_DISPLAY_LABELS` from gradeOptions
+Insert ~280 lines of new code between line 206 (end of `SlotRowEditor`) and line 208 (start of `getShiftErrors`). Two new components:
 
-2. **Replace constants block (lines 40-60)** — Add `DAY_SHORT`/`DAY_FULL` as `const` arrays with `DAY_SHORT_LABELS`/`DAY_FULL_LABELS` aliases; update `BADGE_DEFS` typing; remove `ShiftTemplate` type (inferred from `SHIFT_TEMPLATES`)
+1. **AddShiftModal** — 3-page wizard dialog (identity, days, defaults) that builds a complete `ShiftType` with pre-populated `daySlots` on confirm
+2. **DaySlotModal** — Single-cell editor for one shift x day combination with doctors stepper, slot editors, copy-to-days picker, and remove-from-day action
 
-3. **Insert new helper functions after BADGE_DEFS (after line 51, before line 62)** — `makeDefaultDaySlot`, `makeEmptySlot`, `slotHasRestrictions`, `computeIsCustomised`, `getShiftIdentityErrors`
-
-4. **Insert GradePill component** — Grade restriction pill with popover checkbox list, placed after helpers before `getShiftErrors`
-
-5. **Insert SlotRowEditor component** — Per-slot editor with label input, GradePill, and 4 competency checkboxes, placed after GradePill before `getShiftErrors`
-
-All existing functions (`getShiftErrors`, `AddShiftDialog`, `ExpandedCard`, `CollapsedCard`, `DayColumn`, `DraggableShiftChip`, and the default export) remain untouched.
+No existing code is modified or deleted. The `ShiftTemplate` type alias on line 63 is kept since `AddShiftDialog` still references it.
 
