@@ -1,660 +1,416 @@
-import { getRotaConfig, type RotaConfig, type DaySlotData } from "./rotaConfig";
 import { supabase } from "@/integrations/supabase/client";
-import { computeShiftTargets, computeWeekendCap } from "./shiftTargets";
+import { useState, useEffect, useCallback } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 
-// ─── Constants ────────────────────────────────────────────────
+// ─── Internal helpers ─────────────────────────────────────────
 
-const DAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
-type DayKey = (typeof DAY_KEYS)[number];
+function generateAbbreviationForConfig(name: string): string {
+  const base = name.split(/\s[—\-]\s/)[0].trim();
+  const initials = base
+    .split(/\s+/)
+    .map((w: string) => w[0]?.toUpperCase() ?? "")
+    .join("")
+    .slice(0, 4);
+  return initials || name.slice(0, 2).toUpperCase();
+}
 
-// ─── PreRotaInput ─────────────────────────────────────────────
-// shiftSlots is now one entry per (shiftKey × dayKey) pair.
-// The algorithm iterates calendar dates, maps each to its dayKey,
-// and looks up matching entries to get the complete daily manifest.
+// ─── SlotRequirement ─────────────────────────────────────────
+// Defined here independently to avoid circular imports with shiftEligibility.ts.
+// Shape is intentionally identical to shiftEligibility.SlotRequirement —
+// keep in sync manually if either changes.
 
-export interface ShiftSlotEntry {
-  shiftId: string; // shift_types.id
-  shiftKey: string; // e.g. "night", "long-day"
+export interface SlotRequirement {
+  slotIndex: number;
+  label: string | null;
+  permittedGrades: string[]; // [] = unrestricted
+  reqIac: number;
+  reqIaoc: number;
+  reqIcu: number;
+  reqTransfer: number;
+}
+
+// ─── DaySlotData ─────────────────────────────────────────────
+// Per-day staffing + slot requirements for one (shift × day) pair.
+// Populated from shift_day_slots + shift_slot_requirements tables.
+
+export interface DaySlotData {
+  id: string; // shift_day_slots.id (UUID)
+  dayKey: string; // "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun"
+  minDoctors: number;
+  targetDoctors: number;
+  maxDoctors: number | null;
+  slots: SlotRequirement[]; // ordered by slotIndex, may be fewer than targetDoctors
+}
+
+// ─── RotaConfigShift ─────────────────────────────────────────
+
+export interface RotaConfigShift {
+  id: string; // shift_types.id (UUID)
+  shiftKey: string; // human-readable key e.g. "night", "long-day"
   name: string;
-  dayKey: string; // "mon" | "tue" | ... | "sun"
   startTime: string; // "HH:MM"
   endTime: string; // "HH:MM"
   durationHours: number;
   isOncall: boolean;
   isNonResOncall: boolean;
-  badges: string[]; // ["night", "long", "ooh", "oncall", "nonres"]
-  staffing: {
-    min: number;
-    target: number;
-    max: number | null;
+  applicableDays: {
+    mon: boolean;
+    tue: boolean;
+    wed: boolean;
+    thu: boolean;
+    fri: boolean;
+    sat: boolean;
+    sun: boolean;
   };
-  // Slot-level eligibility requirements.
-  // Each entry = one doctor position with its own grade + competency constraints.
-  // Array length may be less than staffing.target — remaining positions unconstrained.
-  slots: Array<{
-    slotIndex: number;
-    label: string | null;
-    permittedGrades: string[]; // [] = no restriction
-    reqIac: number;
-    reqIaoc: number;
-    reqIcu: number;
-    reqTransfer: number;
-  }>;
-  targetPct: number; // shift-level distribution percentage
+  badges: {
+    night: boolean;
+    long: boolean;
+    ooh: boolean;
+    oncall: boolean;
+    nonres: boolean;
+  };
+  badgeOverrides: {
+    night?: boolean;
+    long?: boolean;
+    ooh?: boolean;
+    oncall?: boolean;
+    nonres?: boolean;
+  };
+  oncallManuallySet: boolean;
+  // Shift-level defaults — seed values used when no day slot override exists
+  minDoctors: number;
+  maxDoctors: number | null;
+  targetDoctors: number;
+  targetPercentage: number | null;
+  sortOrder: number;
+  reqIac: number;
+  reqIaoc: number;
+  reqIcu: number;
+  reqMinGrade: string | null;
+  reqTransfer: number;
+  abbreviation: string;
+  // Per-day data — empty array means no day slots saved yet (new shift)
+  daySlots: DaySlotData[];
 }
 
-export interface PreRotaInput {
-  configId: string;
-  period: {
-    startDate: string;
-    endDate: string;
-    totalDays: number;
-    totalWeeks: number;
-    bankHolidayDates: string[];
-    bhSameAsWeekend: boolean | null;
-    bhShiftRules: Array<{
-      shift_key: string;
-      name: string;
-      start_time: string;
-      end_time: string;
-      target_doctors: number;
-      included: boolean;
-    }> | null;
+// ─── RotaConfig ───────────────────────────────────────────────
+
+export interface RotaConfig {
+  id: string;
+  status: string;
+  surveyDeadline: string | null;
+  department: {
+    departmentName: string;
+    trustName: string;
+    contactEmail: string;
   };
-  shiftSlots: ShiftSlotEntry[];
-  wtrConstraints: {
-    maxAvgHoursPerWeek: number;
-    maxHoursIn168h: number;
+  rotaPeriod: {
+    startDate: string | null;
+    endDate: string | null;
+    durationDays: number | null;
+    durationWeeks: number | null;
+    bankHolidays: Array<{
+      id: string;
+      date: string;
+      name: string;
+      isAutoAdded: boolean;
+      isActive: boolean;
+    }>;
+  };
+  shifts: RotaConfigShift[];
+  distribution: {
+    globalOncallPct: number;
+    globalNonOncallPct: number;
+    byShift: Array<{ shiftKey: string; targetPct: number }>;
+  };
+  bhSameAsWeekend: boolean | null;
+  bhShiftRules: Array<{
+    shift_key: string;
+    name: string;
+    start_time: string;
+    end_time: string;
+    target_doctors: number;
+    included: boolean;
+  }> | null;
+  wtr: {
+    maxHoursPerWeek: number;
+    maxHoursPer168h: number;
     maxShiftLengthH: number;
     minInterShiftRestH: number;
-    maxConsecutive: {
-      standard: number;
-      long: number;
-      nights: number;
-      longEvening: number;
-    };
-    minRestHoursAfter: {
-      nights: number;
-      longShifts: number;
-      standardShifts: number;
-      longEveningShifts: number;
-    };
-    weekendFrequencyMax: number;
+    maxConsecStandard: number;
+    maxConsecLong: number;
+    maxConsecNights: number;
+    maxLongEveningConsec: number;
+    restAfterNightsH: number;
+    restAfterLongH: number;
+    restAfterStandardH: number;
+    restAfterLongEveningH: number;
+    weekendFrequency: number;
     oncall: {
+      noConsecExceptWknd: boolean;
       maxPer7Days: number;
       localAgreementMaxConsec: number;
       dayAfterMaxHours: number;
-      restPer24hHours: number;
+      restPer24h: number;
       continuousRestHours: number;
       continuousRestStart: string;
       continuousRestEnd: string;
-      ifRestNotMetNextDayMaxHours: number;
+      ifRestNotMetMaxHours: number;
       noSimultaneousShift: boolean;
-      noConsecExceptWknd: boolean;
+      breakFineThresholdPct: number;
+      breakReferenceWeeks: number;
+      clinicalExceptionAllowed: boolean;
+      saturdaySundayPaired: boolean;
       dayAfterLastConsecMaxH: number;
     };
-  };
-  distributionTargets: {
-    globalOncallPct: number;
-    globalNonOncallPct: number;
-    byShift: Array<{
-      shiftKey: string;
-      targetPct: number;
-      isOncall: boolean;
-    }>;
-  };
+  } | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
-// ─── buildPreRotaInput ────────────────────────────────────────
+// ─── getRotaConfig ────────────────────────────────────────────
 
-export async function buildPreRotaInput(configId: string): Promise<PreRotaInput> {
-  const cfg = await getRotaConfig(configId);
+export async function getRotaConfig(id: string): Promise<RotaConfig> {
+  // Six parallel fetches — zero sequential round trips
+  const [configRes, shiftsRes, holidaysRes, wtrRes, daySlotsRes, slotReqsRes] = await Promise.all([
+    supabase.from("rota_configs").select("*").eq("id", id).single(),
+    supabase.from("shift_types").select("*").eq("rota_config_id", id).order("sort_order", { ascending: true }),
+    supabase.from("bank_holidays").select("*").eq("rota_config_id", id).order("date", { ascending: true }),
+    supabase.from("wtr_settings").select("*").eq("rota_config_id", id).maybeSingle(),
+    // New tables — typed as any until types.ts is regenerated by Lovable
+    (supabase as any).from("shift_day_slots").select("*").eq("rota_config_id", id),
+    (supabase as any).from("shift_slot_requirements").select("*").eq("rota_config_id", id),
+  ]);
 
-  // Build shiftSlots: one entry per (shift × active day).
-  // If a shift has daySlots from the new tables, use those.
-  // If not (legacy / pre-migration shift), fall back to applicableDays
-  // from shift_types and synthesise entries from shift-level defaults.
-  const shiftSlots: ShiftSlotEntry[] = [];
+  if (configRes.error) throw configRes.error;
+  const c = configRes.data;
 
-  for (const shift of cfg.shifts) {
-    const badges = (["night", "long", "ooh", "oncall", "nonres"] as const).filter((b) => shift.badges[b]);
+  // ── Bank holidays ─────────────────────────────────────────
+  const bankHolidays = (holidaysRes.data ?? []).map((h: any) => ({
+    id: h.id,
+    date: h.date,
+    name: h.name,
+    isAutoAdded: h.is_auto_added,
+    isActive: h.is_active ?? true,
+  }));
 
-    if (shift.daySlots.length > 0) {
-      // ── New path: per-day slots exist ──
-      for (const ds of shift.daySlots) {
-        shiftSlots.push({
-          shiftId: shift.id,
-          shiftKey: shift.shiftKey,
-          name: shift.name,
-          dayKey: ds.dayKey,
-          startTime: shift.startTime,
-          endTime: shift.endTime,
-          durationHours: shift.durationHours,
-          isOncall: shift.isOncall,
-          isNonResOncall: shift.isNonResOncall,
-          badges,
-          staffing: {
-            min: ds.minDoctors,
-            target: ds.targetDoctors,
-            max: ds.maxDoctors,
-          },
-          slots: ds.slots,
-          targetPct: shift.targetPercentage ?? 0,
-        });
-      }
-    } else {
-      // ── Fallback path: no day slots saved yet ──
-      // Synthesise one entry per active day using shift-level defaults.
-      // Produces zero slot requirements (unconstrained eligibility).
-      for (const dayKey of DAY_KEYS) {
-        if (!shift.applicableDays[dayKey]) continue;
-        shiftSlots.push({
-          shiftId: shift.id,
-          shiftKey: shift.shiftKey,
-          name: shift.name,
-          dayKey,
-          startTime: shift.startTime,
-          endTime: shift.endTime,
-          durationHours: shift.durationHours,
-          isOncall: shift.isOncall,
-          isNonResOncall: shift.isNonResOncall,
-          badges,
-          staffing: {
-            min: shift.minDoctors,
-            target: shift.targetDoctors,
-            max: shift.maxDoctors,
-          },
-          slots: [], // no per-slot constraints in fallback
-          targetPct: shift.targetPercentage ?? 0,
-        });
-      }
-    }
+  // ── Build slot requirements lookup: shift_day_slot_id → SlotRequirement[] ──
+  const rawSlotReqs: any[] = slotReqsRes.data ?? [];
+  const reqsByDaySlotId = new Map<string, SlotRequirement[]>();
+
+  for (const req of rawSlotReqs) {
+    const sid: string = req.shift_day_slot_id;
+    if (!reqsByDaySlotId.has(sid)) reqsByDaySlotId.set(sid, []);
+    reqsByDaySlotId.get(sid)!.push({
+      slotIndex: req.slot_index as number,
+      label: req.label as string | null,
+      permittedGrades: (req.permitted_grades as string[]) ?? [],
+      reqIac: (req.req_iac as number) ?? 0,
+      reqIaoc: (req.req_iaoc as number) ?? 0,
+      reqIcu: (req.req_icu as number) ?? 0,
+      reqTransfer: (req.req_transfer as number) ?? 0,
+    });
+  }
+  // Sort each group by slotIndex ascending
+  for (const reqs of reqsByDaySlotId.values()) {
+    reqs.sort((a, b) => a.slotIndex - b.slotIndex);
   }
 
+  // ── Build day slots lookup: shift_type_id → DaySlotData[] ──
+  const rawDaySlots: any[] = daySlotsRes.data ?? [];
+  const daySlotsByShiftTypeId = new Map<string, DaySlotData[]>();
+
+  for (const ds of rawDaySlots) {
+    const stid: string = ds.shift_type_id;
+    if (!daySlotsByShiftTypeId.has(stid)) daySlotsByShiftTypeId.set(stid, []);
+    daySlotsByShiftTypeId.get(stid)!.push({
+      id: ds.id as string,
+      dayKey: ds.day_key as string,
+      minDoctors: (ds.min_doctors as number) ?? 1,
+      targetDoctors: (ds.target_doctors as number) ?? 1,
+      maxDoctors: (ds.max_doctors as number | null) ?? null,
+      slots: reqsByDaySlotId.get(ds.id as string) ?? [],
+    });
+  }
+
+  // ── Map shift_types rows ──────────────────────────────────
+  const shifts: RotaConfigShift[] = (shiftsRes.data ?? []).map((s: any) => ({
+    id: s.id,
+    shiftKey: s.shift_key,
+    name: s.name,
+    startTime: s.start_time,
+    endTime: s.end_time,
+    durationHours: Number(s.duration_hours),
+    isOncall: s.is_oncall ?? false,
+    isNonResOncall: s.is_non_res_oncall ?? false,
+    applicableDays: {
+      mon: s.applicable_mon ?? false,
+      tue: s.applicable_tue ?? false,
+      wed: s.applicable_wed ?? false,
+      thu: s.applicable_thu ?? false,
+      fri: s.applicable_fri ?? false,
+      sat: s.applicable_sat ?? false,
+      sun: s.applicable_sun ?? false,
+    },
+    badges: {
+      night: s.badge_night ?? false,
+      long: s.badge_long ?? false,
+      ooh: s.badge_ooh ?? false,
+      oncall: s.badge_oncall ?? false,
+      nonres: s.badge_nonres ?? false,
+    },
+    badgeOverrides: {
+      ...(s.badge_night_manual_override !== null && s.badge_night_manual_override !== undefined
+        ? { night: s.badge_night_manual_override as boolean }
+        : {}),
+      ...(s.badge_long_manual_override !== null && s.badge_long_manual_override !== undefined
+        ? { long: s.badge_long_manual_override as boolean }
+        : {}),
+      ...(s.badge_ooh_manual_override !== null && s.badge_ooh_manual_override !== undefined
+        ? { ooh: s.badge_ooh_manual_override as boolean }
+        : {}),
+      ...(s.badge_oncall_manual_override !== null && s.badge_oncall_manual_override !== undefined
+        ? { oncall: s.badge_oncall_manual_override as boolean }
+        : {}),
+      ...(s.badge_nonres_manual_override !== null && s.badge_nonres_manual_override !== undefined
+        ? { nonres: s.badge_nonres_manual_override as boolean }
+        : {}),
+    },
+    oncallManuallySet: s.oncall_manually_set ?? false,
+    minDoctors: s.min_doctors ?? 1,
+    maxDoctors: s.max_doctors ?? null,
+    targetDoctors: s.target_doctors ?? s.min_doctors ?? 1,
+    targetPercentage: s.target_percentage != null ? Number(s.target_percentage) : null,
+    sortOrder: s.sort_order ?? 0,
+    reqIac: s.req_iac ?? 0,
+    reqIaoc: s.req_iaoc ?? 0,
+    reqIcu: s.req_icu ?? 0,
+    reqMinGrade: s.req_min_grade ?? null,
+    reqTransfer: s.req_transfer ?? 0,
+    abbreviation: s.abbreviation ?? generateAbbreviationForConfig(s.name),
+    // Attach per-day slots — empty array if none saved yet
+    daySlots: daySlotsByShiftTypeId.get(s.id as string) ?? [],
+  }));
+
+  // ── WTR settings ──────────────────────────────────────────
+  const w = wtrRes.data;
+  const wtr = w
+    ? {
+        maxHoursPerWeek: Number(w.max_hours_per_week),
+        maxHoursPer168h: Number(w.max_hours_per_168h),
+        maxShiftLengthH: Number((w as any).max_shift_length_h ?? 13),
+        minInterShiftRestH: Number((w as any).min_inter_shift_rest_h ?? 11),
+        maxConsecStandard: w.max_consec_standard as number,
+        maxConsecLong: w.max_consec_long as number,
+        maxConsecNights: w.max_consec_nights as number,
+        maxLongEveningConsec: (w as any).max_long_evening_consec ?? 4,
+        restAfterNightsH: Number(w.rest_after_nights_h),
+        restAfterLongH: Number(w.rest_after_long_h),
+        restAfterStandardH: Number(w.rest_after_standard_h),
+        restAfterLongEveningH: Number((w as any).rest_after_long_evening_h ?? 48),
+        weekendFrequency: w.weekend_frequency as number,
+        oncall: {
+          noConsecExceptWknd: w.oncall_no_consec_except_wknd as boolean,
+          maxPer7Days: w.oncall_max_per_7_days as number,
+          localAgreementMaxConsec: w.oncall_local_agreement_max_consec as number,
+          dayAfterMaxHours: Number(w.oncall_day_after_max_hours),
+          restPer24h: Number(w.oncall_rest_per_24h),
+          continuousRestHours: Number(w.oncall_continuous_rest_hours),
+          continuousRestStart: w.oncall_continuous_rest_start as string,
+          continuousRestEnd: w.oncall_continuous_rest_end as string,
+          ifRestNotMetMaxHours: Number(w.oncall_if_rest_not_met_max_hours),
+          noSimultaneousShift: w.oncall_no_simultaneous_shift as boolean,
+          breakFineThresholdPct: w.oncall_break_fine_threshold_pct as number,
+          breakReferenceWeeks: w.oncall_break_reference_weeks as number,
+          clinicalExceptionAllowed: w.oncall_clinical_exception_allowed as boolean,
+          saturdaySundayPaired: w.oncall_saturday_sunday_paired as boolean,
+          dayAfterLastConsecMaxH: Number(w.oncall_day_after_last_consec_max_h),
+        },
+      }
+    : null;
+
+  // ── Assemble and return ───────────────────────────────────
   return {
-    configId: cfg.id,
-    period: {
-      startDate: cfg.rotaPeriod.startDate ?? "",
-      endDate: cfg.rotaPeriod.endDate ?? "",
-      totalDays: cfg.rotaPeriod.durationDays ?? 0,
-      totalWeeks: cfg.rotaPeriod.durationWeeks ?? 0,
-      bankHolidayDates: cfg.rotaPeriod.bankHolidays.filter((h) => h.isActive).map((h) => h.date),
-      bhSameAsWeekend: cfg.bhSameAsWeekend ?? null,
-      bhShiftRules: cfg.bhShiftRules ?? null,
+    id: c.id,
+    status: c.status ?? "draft",
+    surveyDeadline: c.survey_deadline ?? null,
+    department: {
+      departmentName: c.department_name ?? "",
+      trustName: c.trust_name ?? "",
+      contactEmail: c.contact_email ?? "",
     },
-    shiftSlots,
-    wtrConstraints: {
-      maxAvgHoursPerWeek: cfg.wtr?.maxHoursPerWeek ?? 48,
-      maxHoursIn168h: cfg.wtr?.maxHoursPer168h ?? 72,
-      maxShiftLengthH: cfg.wtr?.maxShiftLengthH ?? 13,
-      minInterShiftRestH: cfg.wtr?.minInterShiftRestH ?? 11,
-      maxConsecutive: {
-        standard: cfg.wtr?.maxConsecStandard ?? 7,
-        long: cfg.wtr?.maxConsecLong ?? 4,
-        nights: cfg.wtr?.maxConsecNights ?? 4,
-        longEvening: cfg.wtr?.maxLongEveningConsec ?? 4,
-      },
-      minRestHoursAfter: {
-        nights: cfg.wtr?.restAfterNightsH ?? 46,
-        longShifts: cfg.wtr?.restAfterLongH ?? 48,
-        standardShifts: cfg.wtr?.restAfterStandardH ?? 48,
-        longEveningShifts: cfg.wtr?.restAfterLongEveningH ?? 48,
-      },
-      weekendFrequencyMax: cfg.wtr?.weekendFrequency ?? 3,
-      oncall: {
-        maxPer7Days: cfg.wtr?.oncall.maxPer7Days ?? 3,
-        localAgreementMaxConsec: cfg.wtr?.oncall.localAgreementMaxConsec ?? 7,
-        dayAfterMaxHours: cfg.wtr?.oncall.dayAfterMaxHours ?? 10,
-        restPer24hHours: cfg.wtr?.oncall.restPer24h ?? 8,
-        continuousRestHours: cfg.wtr?.oncall.continuousRestHours ?? 5,
-        continuousRestStart: cfg.wtr?.oncall.continuousRestStart ?? "22:00",
-        continuousRestEnd: cfg.wtr?.oncall.continuousRestEnd ?? "07:00",
-        ifRestNotMetNextDayMaxHours: cfg.wtr?.oncall.ifRestNotMetMaxHours ?? 5,
-        noSimultaneousShift: cfg.wtr?.oncall.noSimultaneousShift ?? true,
-        noConsecExceptWknd: cfg.wtr?.oncall.noConsecExceptWknd ?? true,
-        dayAfterLastConsecMaxH: cfg.wtr?.oncall.dayAfterLastConsecMaxH ?? 10,
-      },
+    rotaPeriod: {
+      startDate: c.rota_start_date,
+      endDate: c.rota_end_date,
+      durationDays: c.rota_duration_days,
+      durationWeeks: c.rota_duration_weeks != null ? Number(c.rota_duration_weeks) : null,
+      bankHolidays,
     },
-    distributionTargets: {
-      globalOncallPct: cfg.distribution.globalOncallPct,
-      globalNonOncallPct: cfg.distribution.globalNonOncallPct,
-      byShift: cfg.shifts
+    shifts,
+    distribution: {
+      globalOncallPct: Number(c.global_oncall_pct ?? 50),
+      globalNonOncallPct: Number(c.global_non_oncall_pct ?? 50),
+      byShift: shifts
         .filter((s) => s.targetPercentage != null)
         .map((s) => ({
           shiftKey: s.shiftKey,
           targetPct: s.targetPercentage!,
-          isOncall: s.isOncall,
         })),
     },
+    bhSameAsWeekend: c.bh_same_as_weekend ?? null,
+    bhShiftRules: (c.bh_shift_rules as any[]) ?? null,
+    wtr,
+    createdAt: c.created_at ?? "",
+    updatedAt: c.updated_at ?? "",
   };
 }
 
-// ─── Helper: total slots per shiftKey across all days ─────────
-// Used by buildFinalRotaInput to compute fairness targets.
-// Counts total doctor-slots that need filling across the rota period.
+// ─── getCurrentRotaConfig ─────────────────────────────────────
 
-function countTotalSlots(
-  shiftSlots: ShiftSlotEntry[],
-  filter: (s: ShiftSlotEntry) => boolean,
-  totalWeeks: number,
-): number {
-  // Group by shiftKey + dayKey to get weekly occurrences
-  const seen = new Map<string, number>(); // key = shiftKey:dayKey → target
-  for (const s of shiftSlots) {
-    if (!filter(s)) continue;
-    const key = `${s.shiftKey}:${s.dayKey}`;
-    // Use max target seen for this pair (should always be the same)
-    seen.set(key, Math.max(seen.get(key) ?? 0, s.staffing.target));
-  }
-  // Each (shiftKey × dayKey) occurs once per week × totalWeeks
-  let total = 0;
-  for (const target of seen.values()) {
-    total += target * totalWeeks;
-  }
-  return total;
+export async function getCurrentRotaConfig(userId: string): Promise<RotaConfig | null> {
+  const { data } = await supabase
+    .from("rota_configs")
+    .select("id")
+    .eq("owned_by", userId)
+    .in("status", ["draft", "complete"])
+    .eq("is_archived", false)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!data) return null;
+  return getRotaConfig(data.id);
 }
 
-// ─── DoctorPreference ─────────────────────────────────────────
+// ─── useRotaConfig hook ───────────────────────────────────────
 
-export interface DoctorPreference {
-  doctorId: string;
-  name: string;
-  grade: string;
-  wtePct: number;
-  ltftDaysOff: string[];
-  ltftNightFlexibility: Array<{
-    day: string;
-    canStartNightsOnDay: boolean;
-    canEndNightsOnDay: boolean;
-  }>;
-  maxConsecNights: number;
-  annualLeave: Array<{ startDate: string; endDate: string; notes: string }>;
-  studyLeave: Array<{ startDate: string; endDate: string; reason: string }>;
-  nocDates: string[];
-  parentalLeaveDates: string[];
-  parentalLeaveNotes?: string;
-  exemptFromNights: boolean;
-  exemptFromWeekends: boolean;
-  exemptFromOncall: boolean;
-  additionalNotes: string;
-}
+export function useRotaConfig() {
+  const [config, setConfig] = useState<RotaConfig | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
 
-// ─── FinalRotaInput ───────────────────────────────────────────
+  const refresh = useCallback(async () => {
+    if (!user) {
+      setConfig(null);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await getCurrentRotaConfig(user.id);
+      setConfig(result);
+    } catch (e: any) {
+      setError(e.message ?? "Failed to load config");
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
 
-export interface FinalRotaInput {
-  preRotaInput: PreRotaInput;
-  doctors: Array<{
-    doctorId: string;
-    name: string;
-    grade: string;
-    wtePct: number;
-    contractedHoursPerWeek: number;
-    // Competency flags — read from survey, used for slot eligibility
-    hasIac: boolean;
-    hasIaoc: boolean;
-    hasIcu: boolean;
-    hasTransfer: boolean;
-    ltft: {
-      isLtft: boolean;
-      daysOff: string[];
-      nightFlexibility: DoctorPreference["ltftNightFlexibility"];
-    };
-    constraints: {
-      hard: {
-        annualLeaveDates: string[];
-        studyLeaveDates: string[];
-        parentalLeaveDates: string[];
-        exemptFromNights: boolean;
-        exemptFromWeekends: boolean;
-        exemptFromOncall: boolean;
-        ltftDaysBlocked: string[];
-      };
-      soft: {
-        nocDates: string[];
-        maxConsecNights: number;
-        additionalNotes: string;
-      };
-    };
-    fairnessTargets: {
-      targetTotalHours: number;
-      targetNightShiftCount: number;
-      targetWeekendShiftCount: number;
-      targetOncallCount: number;
-      proportionFactor: number;
-    };
-    shiftTargets: any[]; // computed by computeShiftTargets
-    totalMaxHours: number;
-    weekendCap: number;
-    hardWeeklyCap: number;
-  }>;
-  constraints: {
-    hard: string[];
-    soft: string[];
-  };
-}
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
-// ─── DoctorSurveyResponse ─────────────────────────────────────
-
-export interface DoctorSurveyResponse {
-  id: string;
-  doctor_id: string;
-  rota_config_id: string;
-  full_name: string | null;
-  nhs_email: string | null;
-  grade: string | null;
-  specialty: string | null;
-  wte_percent: number;
-  ltft_days_off: string[] | null;
-  ltft_night_flexibility: any[];
-  annual_leave: any[];
-  study_leave: any[];
-  noc_dates: any[];
-  exempt_from_nights: boolean;
-  exempt_from_weekends: boolean;
-  exempt_from_oncall: boolean;
-  other_requests: string | null;
-  additional_restrictions: string | null;
-  additional_notes: string | null;
-  status: string;
-  submitted_at: string | null;
-  parental_leave_expected: boolean | null;
-  parental_leave_start: string | null;
-  parental_leave_end: string | null;
-  parental_leave_notes: string | null;
-  competencies_json: Record<string, any> | null;
-  comp_ip_anaesthesia: boolean | null;
-  comp_obstetric: boolean | null;
-  comp_icu: boolean | null;
-}
-
-// ─── getSurveyResponsesForConfig ─────────────────────────────
-
-export async function getSurveyResponsesForConfig(configId: string): Promise<DoctorSurveyResponse[]> {
-  const { data, error } = await supabase
-    .from("doctor_survey_responses")
-    .select("*, doctors!inner(is_active)")
-    .eq("rota_config_id", configId)
-    .eq("doctors.is_active", true);
-
-  if (error) {
-    console.error("Failed to fetch survey responses:", error);
-    return [];
-  }
-  return (data ?? []) as DoctorSurveyResponse[];
-}
-
-// ─── expandDateRange ──────────────────────────────────────────
-
-function expandDateRange(start: string, end: string): string[] {
-  const dates: string[] = [];
-  const d = new Date(start);
-  const e = new Date(end);
-  while (d <= e) {
-    dates.push(d.toISOString().slice(0, 10));
-    d.setDate(d.getDate() + 1);
-  }
-  return dates;
-}
-
-// ─── mapResponseToPreference ──────────────────────────────────
-
-function mapResponseToPreference(resp: DoctorSurveyResponse): DoctorPreference {
-  const annualLeave = Array.isArray(resp.annual_leave) ? resp.annual_leave : [];
-  const studyLeave = Array.isArray(resp.study_leave) ? resp.study_leave : [];
-
-  const nocDates = Array.isArray(resp.noc_dates)
-    ? resp.noc_dates.flatMap((n: any) => {
-        if (typeof n === "string") return [n];
-        const start = n?.startDate ?? n?.start_date ?? n?.date ?? "";
-        const end = n?.endDate ?? n?.end_date ?? n?.date ?? "";
-        if (!start) return [];
-        if (!end || end === start) return [start];
-        return expandDateRange(start, end);
-      })
-    : [];
-
-  const ltftNightFlex = Array.isArray(resp.ltft_night_flexibility) ? resp.ltft_night_flexibility : [];
-
-  const parentalLeaveDates: string[] = (() => {
-    if (!resp.parental_leave_expected) return [];
-    const start = resp.parental_leave_start;
-    const end = resp.parental_leave_end;
-    if (!start) return [];
-    if (!end || end === start) return [start];
-    return expandDateRange(start, end);
-  })();
-
-  return {
-    doctorId: resp.doctor_id,
-    name: resp.full_name ?? "",
-    grade: resp.grade ?? "",
-    wtePct: resp.wte_percent ?? 100,
-    ltftDaysOff: (resp.ltft_days_off ?? []).map((d: string) => d.toLowerCase()),
-    ltftNightFlexibility: ltftNightFlex.map((f: any) => ({
-      ...f,
-      day: (f.day ?? "").toLowerCase(),
-    })),
-    maxConsecNights: 0, // replaced in buildFinalRotaInput with WTR value
-    annualLeave: annualLeave.map((l: any) => ({
-      startDate: l.startDate ?? l.start_date ?? "",
-      endDate: l.endDate ?? l.end_date ?? "",
-      notes: l.notes ?? "",
-    })),
-    studyLeave: studyLeave.map((l: any) => ({
-      startDate: l.startDate ?? l.start_date ?? "",
-      endDate: l.endDate ?? l.end_date ?? "",
-      reason: l.reason ?? "",
-    })),
-    nocDates,
-    parentalLeaveDates,
-    parentalLeaveNotes: resp.parental_leave_notes ?? undefined,
-    exemptFromNights: resp.exempt_from_nights ?? false,
-    exemptFromWeekends: resp.exempt_from_weekends ?? false,
-    exemptFromOncall: resp.exempt_from_oncall ?? false,
-    additionalNotes: [resp.other_requests, resp.additional_restrictions].filter(Boolean).join("\n"),
-  };
-}
-
-// ─── buildFinalRotaInput ──────────────────────────────────────
-
-export async function buildFinalRotaInput(configId: string): Promise<FinalRotaInput> {
-  const preRotaInput = await buildPreRotaInput(configId);
-  const cfg = await getRotaConfig(configId);
-  const totalWeeks = preRotaInput.period.totalWeeks || 1;
-
-  const maxConsecNights = cfg.wtr?.maxConsecNights ?? 4;
-
-  const responses = await getSurveyResponsesForConfig(configId);
-  const submittedResponses = responses.filter((r) => r.status === "submitted");
-
-  const doctors = submittedResponses.map((r) => {
-    const pref = mapResponseToPreference(r);
-    pref.maxConsecNights = maxConsecNights;
-    return pref;
-  });
-
-  // ── Total slot counts for fairness target computation ──
-  // Uses the new per-day shape — counts (dayKey × shiftKey) pairs × totalWeeks
-  const totalNightSlots = countTotalSlots(preRotaInput.shiftSlots, (s) => s.badges.includes("night"), totalWeeks);
-  const totalWeekendSlots = countTotalSlots(
-    preRotaInput.shiftSlots,
-    (s) => s.dayKey === "sat" || s.dayKey === "sun",
-    totalWeeks,
-  );
-  const totalOncallSlots = countTotalSlots(preRotaInput.shiftSlots, (s) => s.isOncall, totalWeeks);
-
-  const doctorCount = doctors.length || 1;
-
-  // ── Shift targets for distribution ──
-  const shiftTargetShifts = cfg.shifts.map((s) => ({
-    id: s.id,
-    name: s.name,
-    shiftKey: s.shiftKey,
-    isOncall: s.isOncall,
-    targetPercentage: s.targetPercentage ?? 0,
-    durationHours: s.durationHours,
-  }));
-
-  // ── Per-doctor targets ──
-  const doctorTargets = doctors.map((doc) => {
-    const resp = submittedResponses.find((r) => r.doctor_id === doc.doctorId);
-    const compJson = resp?.competencies_json ?? {};
-
-    const targets = cfg.wtr
-      ? computeShiftTargets({
-          maxHoursPerWeek: cfg.wtr.maxHoursPerWeek,
-          maxHoursPer168h: cfg.wtr.maxHoursPer168h,
-          rotaWeeks: totalWeeks,
-          globalOncallPct: cfg.distribution.globalOncallPct,
-          globalNonOncallPct: cfg.distribution.globalNonOncallPct,
-          shiftTypes: shiftTargetShifts,
-          wtePercent: doc.wtePct,
-        })
-      : null;
-
-    const weekendCap = cfg.wtr
-      ? computeWeekendCap({
-          rotaWeeks: totalWeeks,
-          weekendFrequency: cfg.wtr.weekendFrequency,
-          wtePercent: doc.wtePct,
-        })
-      : null;
-
-    return {
-      doctorId: doc.doctorId,
-      shiftTargets: targets?.targets ?? [],
-      totalMaxHours: targets?.totalMaxTargetHours ?? 0,
-      weekendCap: weekendCap?.maxWeekends ?? 0,
-      hardWeeklyCap: targets?.hardWeeklyCap ?? 72,
-      hasIac: compJson?.iac?.achieved === true,
-      hasIaoc: compJson?.iaoc?.achieved === true,
-      hasIcu: compJson?.icu?.achieved === true,
-      hasTransfer: compJson?.transfer?.achieved === true,
-      grade: doc.grade ?? null,
-    };
-  });
-
-  return {
-    preRotaInput,
-    doctors: doctors.map((doc) => {
-      const proportion = doc.wtePct / 100;
-      const annualLeaveDates = doc.annualLeave.flatMap((l) => expandDateRange(l.startDate, l.endDate));
-      const studyLeaveDates = doc.studyLeave.flatMap((l) => expandDateRange(l.startDate, l.endDate));
-      const dt = doctorTargets.find((d) => d.doctorId === doc.doctorId);
-
-      return {
-        doctorId: doc.doctorId,
-        name: doc.name,
-        grade: doc.grade,
-        wtePct: doc.wtePct,
-        contractedHoursPerWeek: (doc.wtePct / 100) * 40,
-        hasIac: dt?.hasIac ?? false,
-        hasIaoc: dt?.hasIaoc ?? false,
-        hasIcu: dt?.hasIcu ?? false,
-        hasTransfer: dt?.hasTransfer ?? false,
-        ltft: {
-          isLtft: doc.wtePct < 100,
-          daysOff: doc.ltftDaysOff,
-          nightFlexibility: doc.ltftNightFlexibility,
-        },
-        constraints: {
-          hard: {
-            annualLeaveDates,
-            studyLeaveDates,
-            parentalLeaveDates: doc.parentalLeaveDates ?? [],
-            exemptFromNights: doc.exemptFromNights,
-            exemptFromWeekends: doc.exemptFromWeekends,
-            exemptFromOncall: doc.exemptFromOncall,
-            ltftDaysBlocked: doc.ltftDaysOff,
-          },
-          soft: {
-            nocDates: doc.nocDates,
-            maxConsecNights: doc.maxConsecNights,
-            additionalNotes: doc.additionalNotes,
-          },
-        },
-        fairnessTargets: {
-          targetTotalHours: (doc.wtePct / 100) * 40 * totalWeeks,
-          targetNightShiftCount: Math.round((totalNightSlots / doctorCount) * proportion),
-          targetWeekendShiftCount: Math.round((totalWeekendSlots / doctorCount) * proportion),
-          targetOncallCount: Math.round((totalOncallSlots / doctorCount) * proportion),
-          proportionFactor: proportion,
-        },
-        shiftTargets: dt?.shiftTargets ?? [],
-        totalMaxHours: dt?.totalMaxHours ?? 0,
-        weekendCap: dt?.weekendCap ?? 0,
-        hardWeeklyCap: dt?.hardWeeklyCap ?? 72,
-      };
-    }),
-    constraints: {
-      hard: [
-        "WTR_MAX_HOURS_PER_WEEK",
-        "WTR_MAX_HOURS_PER_168H",
-        "WTR_MIN_REST_AFTER_NIGHTS",
-        "WTR_MIN_REST_AFTER_LONG_SHIFTS",
-        "WTR_MIN_REST_AFTER_STANDARD_SHIFTS",
-        "WTR_MAX_CONSEC_NIGHTS",
-        "WTR_MAX_CONSEC_LONG",
-        "WTR_MAX_CONSEC_STANDARD",
-        "ANNUAL_LEAVE_DATES_BLOCKED",
-        "STUDY_LEAVE_DATES_BLOCKED",
-        "PARENTAL_LEAVE_DATES_BLOCKED",
-        "LTFT_DAYS_BLOCKED",
-        "NIGHT_EXEMPTIONS_RESPECTED",
-        "WEEKEND_EXEMPTIONS_RESPECTED",
-        "ONCALL_EXEMPTIONS_RESPECTED",
-        "MIN_STAFFING_MET_ALL_SHIFTS",
-        "ONCALL_MAX_PER_7_DAYS",
-        "ONCALL_DAY_AFTER_MAX_HOURS",
-        "NO_SIMULTANEOUS_ONCALL_AND_SHIFT",
-        "SLOT_ELIGIBILITY_MET",
-        "WEEKEND_CAP_RESPECTED",
-      ],
-      soft: [
-        "SOFT_NOC_DATES_RESPECTED",
-        "SOFT_MAX_CONSEC_NIGHTS_PREFERENCE",
-        "SOFT_WEEKEND_FREQUENCY_TARGET",
-        "SOFT_FAIR_NIGHT_DISTRIBUTION",
-        "SOFT_FAIR_WEEKEND_DISTRIBUTION",
-        "SOFT_FAIR_ONCALL_DISTRIBUTION",
-        "SOFT_FAIR_LONG_DAY_DISTRIBUTION",
-        "SOFT_LTFT_NIGHT_FLEXIBILITY",
-      ],
-    },
-  };
-}
-
-// ─── validateFinalRotaInput ───────────────────────────────────
-
-export interface ValidationResult {
-  isValid: boolean;
-  warnings: string[];
-  blockers: string[];
-}
-
-export async function validateFinalRotaInput(configId: string): Promise<ValidationResult> {
-  const warnings: string[] = [];
-  const blockers: string[] = [];
-
-  const responses = await getSurveyResponsesForConfig(configId);
-
-  if (responses.length === 0) {
-    blockers.push("No doctors have any survey responses. Cannot generate rota.");
-  }
-
-  const submitted = responses.filter((r) => r.status === "submitted");
-  if (submitted.length === 0) {
-    blockers.push("No submitted survey responses found. All doctors must complete surveys before generating.");
-  }
-
-  const unsubmitted = responses.filter((r) => r.status !== "submitted");
-  if (unsubmitted.length > 0) {
-    warnings.push(`${unsubmitted.length} doctor(s) have not submitted their survey.`);
-  }
-
-  return {
-    isValid: blockers.length === 0,
-    warnings,
-    blockers,
-  };
+  return { config, loading, error, refresh };
 }
