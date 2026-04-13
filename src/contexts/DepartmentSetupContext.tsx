@@ -22,6 +22,23 @@ export interface ShiftStaffing {
   max: number | null;
 }
 
+export interface SlotRequirement {
+  slotIndex: number;
+  label: string | null;
+  permittedGrades: string[];
+  reqIac: number;
+  reqIaoc: number;
+  reqIcu: number;
+  reqTransfer: number;
+}
+
+export interface DaySlot {
+  dayKey: string;
+  staffing: ShiftStaffing;
+  slots: SlotRequirement[];
+  isCustomised: boolean;
+}
+
 export interface ShiftType {
   id: string;
   name: string;
@@ -42,6 +59,7 @@ export interface ShiftType {
   reqMinGrade: string | null;
   reqTransfer: number;
   abbreviation: string;
+  daySlots: DaySlot[];
 }
 
 /* ─── Badge auto-detection (pure) ─── */
