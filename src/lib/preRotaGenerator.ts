@@ -221,6 +221,7 @@ export async function generatePreRota(
               alEntitlement: (survey.al_entitlement as number | null) ?? null,
               parentalLeaveExpected: fallbackParentalExpected,
               parentalLeaveStart: fallbackParentalStart,
+              parentalLeaveEnd: fallbackParentalEnd,
               competencies,
             }
           : null,
@@ -291,7 +292,25 @@ export async function generatePreRota(
       departmentName: accountSettings?.department_name ?? (config.department_name as string) ?? "",
       hospitalName: accountSettings?.trust_name ?? (config.trust_name as string) ?? "",
       bankHolidays,
-      doctors: doctorsWithSurveys,
+      doctors: doctorsWithSurveys.map((d) => ({
+        id: d.id,
+        firstName: d.firstName,
+        lastName: d.lastName,
+        grade: d.grade ?? "",
+        wte: d.survey?.wtePercent ?? 100,
+        survey: d.survey
+          ? {
+              ltftDaysOff: d.survey.ltftDaysOff,
+              annualLeave: d.survey.annualLeave,
+              studyLeave: d.survey.studyLeave,
+              nocDates: d.survey.nocDates,
+              rotations: d.survey.rotations,
+              parentalLeaveExpected: d.survey.parentalLeaveExpected ?? false,
+              parentalLeaveStart: d.survey.parentalLeaveStart ?? null,
+              parentalLeaveEnd: d.survey.parentalLeaveEnd ?? null,
+            }
+          : null,
+      })),
     });
 
     // ── 14. Build targets data ─────────────────────────────────────────
