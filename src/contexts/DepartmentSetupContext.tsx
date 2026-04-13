@@ -151,6 +151,7 @@ function makeShift(
     targetOverridePct: null,
     badges: autoBadges, badgeOverrides: {}, oncallManuallySet: false,
     reqIac: 0, reqIaoc: 0, reqIcu: 0, reqTransfer: 0, reqMinGrade: null,
+    daySlots: [],
   };
 }
 
