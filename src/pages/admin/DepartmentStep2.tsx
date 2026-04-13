@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "@/components/AdminLayout";
 import { StepNavBar } from "@/components/StepNavBar";
@@ -6,12 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Plus, Trash2, Pencil, Clock, Save, X, Info, AlertTriangle,
+  Plus, Trash2, Clock, Save, Info, AlertTriangle,
   ArrowLeft, ArrowRight, CalendarDays, ChevronRight, ChevronDown, ChevronUp,
   Loader2, Building2, Copy,
 } from "lucide-react";
