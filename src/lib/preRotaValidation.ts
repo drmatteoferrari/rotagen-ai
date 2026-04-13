@@ -41,6 +41,7 @@ export interface ValidationDoctor {
     alEntitlement: number | null;
     parentalLeaveExpected: boolean;
     parentalLeaveStart: string | null;
+    parentalLeaveEnd: string | null;
     competencies: {
       iacAchieved: boolean | null;
       iaocAchieved: boolean | null;
