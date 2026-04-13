@@ -205,6 +205,417 @@ function SlotRowEditor({ slot, slotNumber, onChange }: SlotRowEditorProps) {
   );
 }
 
+/* ─── AddShiftModal ─── */
+
+interface AddShiftModalProps {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  onConfirm: (shift: ShiftType) => void;
+}
+
+function AddShiftModal({ open, onOpenChange, onConfirm }: AddShiftModalProps) {
+  const [page, setPage]                 = useState<1 | 2 | 3>(1);
+  const [name, setName]                 = useState("");
+  const [abbrev, setAbbrev]             = useState("");
+  const [abbrevManual, setAbbrevManual] = useState(false);
+  const [startTime, setStartTime]       = useState("08:00");
+  const [endTime, setEndTime]           = useState("17:30");
+  const [isOncall, setIsOncall]         = useState(false);
+  const [oncallManual, setOncallManual] = useState(false);
+  const [badgeOverrides, setBadgeOverrides] = useState<Partial<Record<BadgeKey, boolean>>>({});
+  const [selectedDays, setSelectedDays] = useState<Record<DayKey, boolean>>({
+    mon: true, tue: true, wed: true, thu: true, fri: true, sat: false, sun: false,
+  });
+  const [totalDoctors, setTotalDoctors] = useState(2);
+  const [slots, setSlots]               = useState<SlotRequirement[]>([makeEmptySlot(0), makeEmptySlot(1)]);
+
+  const duration   = calcDurationHours(startTime, endTime);
+  const autoBadges = detectBadges(startTime, endTime, selectedDays as ApplicableDays, isOncall, false);
+  const effBadges  = mergedBadges(autoBadges, badgeOverrides);
+
+  const reset = () => {
+    setPage(1); setName(""); setAbbrev(""); setAbbrevManual(false);
+    setStartTime("08:00"); setEndTime("17:30");
+    setIsOncall(false); setOncallManual(false); setBadgeOverrides({});
+    setSelectedDays({ mon: true, tue: true, wed: true, thu: true, fri: true, sat: false, sun: false });
+    setTotalDoctors(2); setSlots([makeEmptySlot(0), makeEmptySlot(1)]);
+  };
+
+  const close = () => { reset(); onOpenChange(false); };
+
+  useEffect(() => {
+    if (!abbrevManual && name.trim()) setAbbrev(generateAbbreviation(name));
+  }, [name, abbrevManual]);
+
+  useEffect(() => {
+    if (!oncallManual) setIsOncall(autoBadges.night || autoBadges.long || autoBadges.ooh);
+  }, [autoBadges.night, autoBadges.long, autoBadges.ooh, oncallManual]);
+
+  useEffect(() => {
+    setSlots((prev) => {
+      if (totalDoctors > prev.length) {
+        return [...prev, ...Array.from({ length: totalDoctors - prev.length }, (_, i) => makeEmptySlot(prev.length + i))];
+      }
+      return prev.slice(0, totalDoctors).map((s, i) => ({ ...s, slotIndex: i }));
+    });
+  }, [totalDoctors]);
+
+  const applyTemplate = (t: typeof SHIFT_TEMPLATES[number]) => {
+    setName(t.label); setAbbrev(t.abbrev); setAbbrevManual(true);
+    setStartTime(t.start); setEndTime(t.end);
+    setIsOncall(t.isOncall); setOncallManual(true); setBadgeOverrides({});
+  };
+
+  const toggleBadgeOverride = (key: BadgeKey) => {
+    setBadgeOverrides((prev) => {
+      const next = { ...prev };
+      if (next[key] !== undefined) { delete next[key]; } else { next[key] = !autoBadges[key]; }
+      return next;
+    });
+  };
+
+  const toggleDay = (key: DayKey) => {
+    setSelectedDays((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      return Object.values(next).some(Boolean) ? next : prev;
+    });
+  };
+
+  const page1Valid = name.trim().length > 0 && abbrev.trim().length >= 1 && abbrev.trim().length <= 4 && startTime !== endTime;
+  const page2Valid = Object.values(selectedDays).some(Boolean);
+
+  const handleConfirm = () => {
+    const id          = String(Date.now());
+    const days        = selectedDays as ApplicableDays;
+    const finalSlots  = slots.map((s, i) => ({ ...s, slotIndex: i }));
+    const staffing: ShiftStaffing = { min: totalDoctors, target: totalDoctors, max: null };
+    const finalBadges = mergedBadges(detectBadges(startTime, endTime, days, isOncall, false), badgeOverrides);
+    const hasRestriction = finalSlots.some(slotHasRestrictions);
+    const selectedDayKeys = DAY_KEYS.filter((k) => selectedDays[k]);
+    const daySlots: DaySlot[] = selectedDayKeys.map((dayKey) => ({
+      dayKey,
+      staffing: { ...staffing },
+      slots:    finalSlots,
+      isCustomised: hasRestriction,
+    }));
+
+    const newShift: ShiftType = {
+      id,
+      name:              name.trim(),
+      abbreviation:      abbrev.trim().toUpperCase(),
+      startTime, endTime,
+      durationHours:     duration,
+      applicableDays:    days,
+      isOncall,
+      isNonRes:          false,
+      staffing,
+      targetOverridePct: null,
+      badges:            finalBadges,
+      badgeOverrides,
+      oncallManuallySet: oncallManual,
+      reqIac: 0, reqIaoc: 0, reqIcu: 0, reqTransfer: 0, reqMinGrade: null,
+      daySlots,
+    };
+    onConfirm(newShift);
+    close();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { if (!v) close(); }}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Add Shift Type — Step {page} of 3</DialogTitle>
+        </DialogHeader>
+        <div className="flex gap-1.5 mb-4">
+          {([1, 2, 3] as const).map((n) => (
+            <div key={n} className={`h-1.5 flex-1 rounded-full transition-colors ${n <= page ? "bg-primary" : "bg-muted"}`} />
+          ))}
+        </div>
+
+        {page === 1 && (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Quick templates</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {SHIFT_TEMPLATES.map((t) => (
+                  <button key={t.abbrev} type="button" onClick={() => applyTemplate(t)}
+                    className={`flex flex-col items-start rounded-lg border px-3 py-2 text-left transition-colors hover:bg-accent ${name === t.label ? "border-primary bg-accent" : "border-border"}`}>
+                    <span className="font-mono text-sm font-bold text-primary">{t.abbrev}</span>
+                    <span className="text-xs font-medium">{t.label}</span>
+                    <span className="text-[10px] text-muted-foreground">{t.start}–{t.end}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="grid grid-cols-[1fr_80px] gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Shift name *</Label>
+                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Standard Day" className="min-h-[40px]" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Abbrev. *</Label>
+                <Input value={abbrev} maxLength={4}
+                  onChange={(e) => { setAbbrevManual(true); setAbbrev(e.target.value.toUpperCase()); }}
+                  className="min-h-[40px] font-mono text-center" placeholder="SD" />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Start</Label>
+                <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className="min-h-[40px]" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">End</Label>
+                <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="min-h-[40px]" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">&nbsp;</Label>
+                <div className={`flex min-h-[40px] items-center gap-1.5 rounded-md border bg-muted px-3 text-sm font-medium ${duration <= 13 ? "text-green-600" : "text-destructive"}`}>
+                  <Clock className="h-3.5 w-3.5" />{duration}h
+                </div>
+              </div>
+            </div>
+            <button type="button"
+              onClick={() => { setIsOncall((v) => !v); setOncallManual(true); }}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${isOncall ? "border-emerald-700 bg-emerald-700 text-white" : "border-border bg-muted text-muted-foreground"}`}>
+              📟 On-call {isOncall ? "✓" : "✗"}
+            </button>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Badges <span className="font-normal normal-case">(auto · click to override)</span>
+              </Label>
+              <div className="flex flex-wrap gap-1.5">
+                {BADGE_DEFS.map(({ key, label, emoji, activeClasses }) => (
+                  <button key={key} type="button" onClick={() => toggleBadgeOverride(key)}
+                    className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide transition-all ${effBadges[key] ? activeClasses : "bg-muted text-muted-foreground/50 line-through"}`}>
+                    {emoji} {label}{badgeOverrides[key] !== undefined ? " ✏️" : ""}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={close}>Cancel</Button>
+              <Button disabled={!page1Valid} onClick={() => setPage(2)}>Next <ChevronRight className="ml-1 h-3.5 w-3.5" /></Button>
+            </div>
+          </div>
+        )}
+
+        {page === 2 && (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Which days does this shift run?</Label>
+              <div className="grid grid-cols-7 gap-1.5">
+                {DAY_KEYS.map((key, i) => (
+                  <button key={key} type="button" onClick={() => toggleDay(key)}
+                    className={`flex flex-col items-center rounded-lg border py-2 text-[11px] font-semibold transition-colors ${
+                      selectedDays[key]
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-muted text-muted-foreground hover:bg-muted/80"
+                    }`}>
+                    {DAY_SHORT[i]}
+                  </button>
+                ))}
+              </div>
+              <div className="flex gap-3">
+                <button type="button" className="text-xs text-primary hover:text-primary/80"
+                  onClick={() => setSelectedDays({ mon: true, tue: true, wed: true, thu: true, fri: true, sat: false, sun: false })}>
+                  Weekdays only
+                </button>
+                <span className="text-muted-foreground">·</span>
+                <button type="button" className="text-xs text-primary hover:text-primary/80"
+                  onClick={() => setSelectedDays({ mon: true, tue: true, wed: true, thu: true, fri: true, sat: true, sun: true })}>
+                  All days
+                </button>
+              </div>
+            </div>
+            <div className="flex justify-between gap-2 pt-2">
+              <Button variant="outline" onClick={() => setPage(1)}><ArrowLeft className="mr-1 h-3.5 w-3.5" /> Back</Button>
+              <Button disabled={!page2Valid} onClick={() => setPage(3)}>Next <ChevronRight className="ml-1 h-3.5 w-3.5" /></Button>
+            </div>
+          </div>
+        )}
+
+        {page === 3 && (
+          <div className="space-y-4">
+            <p className="text-xs text-muted-foreground">Set defaults for this shift. These apply to all selected days. Override per day in the grid.</p>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Doctors per shift</Label>
+              <div className="flex items-center gap-3">
+                <button type="button" disabled={totalDoctors <= 1}
+                  onClick={() => setTotalDoctors((v) => Math.max(1, v - 1))}
+                  className="flex h-8 w-8 items-center justify-center rounded-full border text-sm font-bold hover:bg-muted disabled:opacity-30">−</button>
+                <span className="w-8 text-center text-lg font-bold">{totalDoctors}</span>
+                <button type="button" onClick={() => setTotalDoctors((v) => v + 1)}
+                  className="flex h-8 w-8 items-center justify-center rounded-full border text-sm font-bold hover:bg-muted">+</button>
+                <span className="text-xs text-muted-foreground">doctor{totalDoctors !== 1 ? "s" : ""} per shift</span>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Eligibility per position</Label>
+              <p className="text-[10px] text-muted-foreground">Optionally restrict each position by grade or competency.</p>
+              {slots.map((slot, i) => (
+                <SlotRowEditor key={i} slot={slot} slotNumber={i + 1}
+                  onChange={(updated) => setSlots((prev) => prev.map((s, idx) => idx === i ? updated : s))} />
+              ))}
+            </div>
+            <div className="flex justify-between gap-2 pt-2">
+              <Button variant="outline" onClick={() => setPage(2)}><ArrowLeft className="mr-1 h-3.5 w-3.5" /> Back</Button>
+              <Button onClick={handleConfirm}>Add Shift</Button>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ─── DaySlotModal ─── */
+
+interface DaySlotModalProps {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  shift: ShiftType | null;
+  dayKey: DayKey | null;
+  onSave:          (shiftId: string, dayKey: DayKey, updated: DaySlot) => void;
+  onCopyToDays:    (shiftId: string, sourceDayKey: DayKey, targets: DayKey[], source: DaySlot) => void;
+  onRemoveFromDay: (shiftId: string, dayKey: DayKey) => void;
+}
+
+function DaySlotModal({ open, onOpenChange, shift, dayKey, onSave, onCopyToDays, onRemoveFromDay }: DaySlotModalProps) {
+  const [draft, setDraft]     = useState<DaySlot | null>(null);
+  const [showCopy, setShowCopy] = useState(false);
+  const [copyTargets, setCopyTargets] = useState<Record<DayKey, boolean>>({
+    mon: false, tue: false, wed: false, thu: false, fri: false, sat: false, sun: false,
+  });
+
+  useEffect(() => {
+    if (!open || !shift || !dayKey) return;
+    const existing = shift.daySlots.find((ds) => ds.dayKey === dayKey);
+    setDraft(
+      existing
+        ? { ...existing, staffing: { ...existing.staffing }, slots: existing.slots.map((s) => ({ ...s })) }
+        : makeDefaultDaySlot(dayKey, shift)
+    );
+    setShowCopy(false);
+    setCopyTargets({ mon: false, tue: false, wed: false, thu: false, fri: false, sat: false, sun: false });
+  }, [open, shift?.id, dayKey]);
+
+  if (!shift || !dayKey || !draft) return null;
+
+  const dayIdx   = DAY_KEYS.indexOf(dayKey);
+  const dayLabel = DAY_FULL[dayIdx] ?? dayKey;
+
+  const syncCount = (n: number) => {
+    setDraft((prev) => {
+      if (!prev) return prev;
+      const cur = prev.slots;
+      const next = n > cur.length
+        ? [...cur, ...Array.from({ length: n - cur.length }, (_, i) => makeEmptySlot(cur.length + i))]
+        : cur.slice(0, n).map((s, i) => ({ ...s, slotIndex: i }));
+      return { ...prev, staffing: { ...prev.staffing, min: n, target: n }, slots: next };
+    });
+  };
+
+  const saveAndClose = () => {
+    if (!draft) return;
+    onSave(shift.id, dayKey, { ...draft, isCustomised: computeIsCustomised(draft, shift) });
+    onOpenChange(false);
+  };
+
+  const copyAndClose = () => {
+    const targets = DAY_KEYS.filter((k) => copyTargets[k] && k !== dayKey);
+    if (targets.length === 0) return;
+    onCopyToDays(shift.id, dayKey, targets, { ...draft, isCustomised: computeIsCustomised(draft, shift) });
+    onOpenChange(false);
+  };
+
+  const removeAndClose = () => { onRemoveFromDay(shift.id, dayKey); onOpenChange(false); };
+
+  const isDefault = !computeIsCustomised(draft, shift);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{shift.name} — {dayLabel}</DialogTitle>
+        </DialogHeader>
+        <div className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+          Shift defaults: {shift.staffing.target} doctor{shift.staffing.target !== 1 ? "s" : ""} · {shift.startTime}–{shift.endTime} · {shift.durationHours}h
+          {!isDefault && (
+            <button type="button" onClick={() => setDraft(makeDefaultDaySlot(dayKey, shift))}
+              className="ml-3 text-primary hover:text-primary/80">Reset to defaults</button>
+          )}
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Doctors on this day</Label>
+          <div className="flex items-center gap-3">
+            <button type="button" disabled={draft.staffing.target <= 1}
+              onClick={() => syncCount(Math.max(1, draft.staffing.target - 1))}
+              className="flex h-8 w-8 items-center justify-center rounded-full border text-sm font-bold hover:bg-muted disabled:opacity-30">−</button>
+            <span className="w-8 text-center text-lg font-bold">{draft.staffing.target}</span>
+            <button type="button" onClick={() => syncCount(draft.staffing.target + 1)}
+              className="flex h-8 w-8 items-center justify-center rounded-full border text-sm font-bold hover:bg-muted">+</button>
+          </div>
+        </div>
+        {draft.slots.length > 0 && (
+          <div className="space-y-2">
+            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Eligibility per position</Label>
+            {draft.slots.map((slot, i) => (
+              <SlotRowEditor key={i} slot={slot} slotNumber={i + 1}
+                onChange={(updated) =>
+                  setDraft((prev) => prev ? { ...prev, slots: prev.slots.map((s, idx) => idx === i ? updated : s) } : prev)
+                }
+              />
+            ))}
+          </div>
+        )}
+        <div className="rounded-lg border border-border p-3 space-y-2">
+          <button type="button" onClick={() => setShowCopy((v) => !v)}
+            className="flex items-center gap-2 text-xs font-medium text-primary hover:text-primary/80">
+            <Copy className="h-3.5 w-3.5" /> Copy to other days…
+          </button>
+          {showCopy && (
+            <div className="space-y-2">
+              <div className="grid grid-cols-7 gap-1">
+                {DAY_KEYS.map((k, i) => {
+                  const isSelf = k === dayKey;
+                  return (
+                    <button key={k} type="button" disabled={isSelf}
+                      onClick={() => setCopyTargets((prev) => ({ ...prev, [k]: !prev[k] }))}
+                      className={`rounded border py-1.5 text-[10px] font-semibold transition-colors ${
+                        isSelf
+                          ? "border-primary/20 bg-primary/10 text-primary/40 cursor-default"
+                          : copyTargets[k] ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border bg-muted text-muted-foreground hover:bg-muted/80"
+                      }`}>
+                      {DAY_SHORT[i]}
+                    </button>
+                  );
+                })}
+              </div>
+              <Button size="sm"
+                disabled={!DAY_KEYS.some((k) => copyTargets[k] && k !== dayKey)}
+                onClick={copyAndClose}>Copy</Button>
+            </div>
+          )}
+        </div>
+        <div className="flex items-center justify-between gap-2 pt-2">
+          <button type="button" onClick={removeAndClose}
+            className="text-xs font-medium text-destructive hover:text-destructive/80">
+            Remove from {DAY_SHORT[dayIdx]}
+          </button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button onClick={saveAndClose}>
+              <Save className="mr-1.5 h-3.5 w-3.5" /> Save
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function getShiftErrors(shift: ShiftType, allShifts?: ShiftType[]): string[] {
   const errors: string[] = [];
   if (!shift.name.trim()) errors.push("Shift name is required.");
