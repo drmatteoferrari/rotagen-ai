@@ -903,6 +903,117 @@ export type Database = {
         }
         Relationships: []
       }
+      shift_day_slots: {
+        Row: {
+          created_at: string | null
+          day_key: string
+          id: string
+          max_doctors: number | null
+          min_doctors: number
+          rota_config_id: string
+          shift_type_id: string
+          target_doctors: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          day_key: string
+          id?: string
+          max_doctors?: number | null
+          min_doctors?: number
+          rota_config_id: string
+          shift_type_id: string
+          target_doctors?: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          day_key?: string
+          id?: string
+          max_doctors?: number | null
+          min_doctors?: number
+          rota_config_id?: string
+          shift_type_id?: string
+          target_doctors?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_day_slots_rota_config_id_fkey"
+            columns: ["rota_config_id"]
+            isOneToOne: false
+            referencedRelation: "rota_configs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_day_slots_shift_type_id_fkey"
+            columns: ["shift_type_id"]
+            isOneToOne: false
+            referencedRelation: "shift_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shift_slot_requirements: {
+        Row: {
+          created_at: string | null
+          id: string
+          label: string | null
+          permitted_grades: string[]
+          req_iac: number
+          req_iaoc: number
+          req_icu: number
+          req_transfer: number
+          rota_config_id: string
+          shift_day_slot_id: string
+          slot_index: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          label?: string | null
+          permitted_grades?: string[]
+          req_iac?: number
+          req_iaoc?: number
+          req_icu?: number
+          req_transfer?: number
+          rota_config_id: string
+          shift_day_slot_id: string
+          slot_index: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          label?: string | null
+          permitted_grades?: string[]
+          req_iac?: number
+          req_iaoc?: number
+          req_icu?: number
+          req_transfer?: number
+          rota_config_id?: string
+          shift_day_slot_id?: string
+          slot_index?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_slot_requirements_rota_config_id_fkey"
+            columns: ["rota_config_id"]
+            isOneToOne: false
+            referencedRelation: "rota_configs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_slot_requirements_shift_day_slot_id_fkey"
+            columns: ["shift_day_slot_id"]
+            isOneToOne: false
+            referencedRelation: "shift_day_slots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shift_types: {
         Row: {
           abbreviation: string | null
