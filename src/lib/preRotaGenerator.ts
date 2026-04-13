@@ -291,7 +291,10 @@ export async function generatePreRota(
       departmentName: accountSettings?.department_name ?? (config.department_name as string) ?? "",
       hospitalName: accountSettings?.trust_name ?? (config.trust_name as string) ?? "",
       bankHolidays,
-      doctors: doctorsWithSurveys,
+      doctors: doctorsWithSurveys.map((d) => ({
+        ...d,
+        wte: d.survey?.wtePercent ?? 100,
+      })),
     });
 
     // ── 14. Build targets data ─────────────────────────────────────────
