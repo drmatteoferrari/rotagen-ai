@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "@/components/AdminLayout";
 import { StepNavBar } from "@/components/StepNavBar";
@@ -9,11 +9,17 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Trash2, Pencil, Clock, Save, X, Info, AlertTriangle, ArrowLeft, ArrowRight, CalendarDays, ChevronRight, Loader2, Building2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
-  useDepartmentSetup, detectBadges, mergedBadges,
-  generateAbbreviation, getShiftColor,
+  Plus, Trash2, Pencil, Clock, Save, X, Info, AlertTriangle,
+  ArrowLeft, ArrowRight, CalendarDays, ChevronRight, ChevronDown, ChevronUp,
+  Loader2, Building2, Copy,
+} from "lucide-react";
+import {
+  useDepartmentSetup, detectBadges, mergedBadges, generateAbbreviation,
+  getShiftColor,
   type ShiftType, type BadgeKey, type ShiftBadges,
+  type DaySlot, type SlotRequirement, type ShiftStaffing,
 } from "@/contexts/DepartmentSetupContext";
 import { useAdminSetup } from "@/contexts/AdminSetupContext";
 import { useRotaContext } from "@/contexts/RotaContext";
@@ -22,33 +28,22 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { calcDurationHours } from "@/lib/shiftUtils";
 import type { ApplicableDays } from "@/lib/shiftUtils";
+import { GRADE_OPTIONS, GRADE_DISPLAY_LABELS } from "@/lib/gradeOptions";
 import {
-  DndContext,
-  DragOverlay,
-  PointerSensor,
-  TouchSensor,
-  useSensor,
-  useSensors,
-  useDroppable,
-  useDraggable,
-  type DragStartEvent,
-  type DragEndEvent,
-  type DragOverEvent,
+  DndContext, DragOverlay, PointerSensor, TouchSensor,
+  useSensor, useSensors, useDroppable, useDraggable,
+  type DragStartEvent, type DragEndEvent, type DragOverEvent,
 } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 
 const DAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 type DayKey = typeof DAY_KEYS[number];
-const DAY_SHORT_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const DAY_FULL_LABELS  = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+const DAY_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
+const DAY_FULL  = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] as const;
 
-const BADGE_DEFS = [
-  { key: "night"  as BadgeKey, label: "NIGHT",     emoji: "🌙", activeClasses: "bg-slate-800 text-white" },
-  { key: "long"   as BadgeKey, label: "LONG",       emoji: "⏱",  activeClasses: "bg-amber-600 text-white" },
-  { key: "ooh"    as BadgeKey, label: "OOH",        emoji: "🌆", activeClasses: "bg-indigo-600 text-white" },
-  { key: "oncall" as BadgeKey, label: "ON-CALL",    emoji: "📟", activeClasses: "bg-emerald-700 text-white" },
-  { key: "nonres" as BadgeKey, label: "NON-RES OC", emoji: "🏠", activeClasses: "bg-teal-700 text-white" },
-] as const;
+// Keep DAY_SHORT_LABELS and DAY_FULL_LABELS as aliases so existing code still compiles
+const DAY_SHORT_LABELS = DAY_SHORT;
+const DAY_FULL_LABELS  = DAY_FULL;
 
 const SHIFT_TEMPLATES = [
   { label: "Standard Day", abbrev: "SD", start: "08:00", end: "17:30", isOncall: false },
@@ -57,7 +52,158 @@ const SHIFT_TEMPLATES = [
   { label: "Twilight",     abbrev: "Tw", start: "16:00", end: "00:00", isOncall: true  },
 ] as const;
 
+const BADGE_DEFS: { key: BadgeKey; label: string; emoji: string; activeClasses: string }[] = [
+  { key: "night",  label: "NIGHT",   emoji: "🌙", activeClasses: "bg-slate-800 text-white"    },
+  { key: "long",   label: "LONG",    emoji: "⏱",  activeClasses: "bg-amber-600 text-white"   },
+  { key: "ooh",    label: "OOH",     emoji: "🌆", activeClasses: "bg-indigo-600 text-white"  },
+  { key: "oncall", label: "ON-CALL", emoji: "📟", activeClasses: "bg-emerald-700 text-white" },
+  { key: "nonres", label: "NON-RES", emoji: "🏠", activeClasses: "bg-teal-700 text-white"   },
+];
+
 type ShiftTemplate = typeof SHIFT_TEMPLATES[number];
+
+/* ─── New helpers (day-slot model) ─── */
+
+function makeDefaultDaySlot(dayKey: string, shift: ShiftType): DaySlot {
+  return {
+    dayKey,
+    staffing: { min: shift.staffing.min, target: shift.staffing.target, max: shift.staffing.max },
+    slots: [],
+    isCustomised: false,
+  };
+}
+
+function makeEmptySlot(index: number): SlotRequirement {
+  return { slotIndex: index, label: null, permittedGrades: [], reqIac: 0, reqIaoc: 0, reqIcu: 0, reqTransfer: 0 };
+}
+
+function slotHasRestrictions(s: SlotRequirement): boolean {
+  return s.permittedGrades.length > 0 || s.reqIac > 0 || s.reqIaoc > 0 || s.reqIcu > 0 || s.reqTransfer > 0;
+}
+
+function computeIsCustomised(ds: DaySlot, shift: ShiftType): boolean {
+  return (
+    ds.staffing.min    !== shift.staffing.min    ||
+    ds.staffing.target !== shift.staffing.target ||
+    ds.staffing.max    !== shift.staffing.max    ||
+    ds.slots.some(slotHasRestrictions)
+  );
+}
+
+function getShiftIdentityErrors(shift: ShiftType, allShifts: ShiftType[]): string[] {
+  const errors: string[] = [];
+  if (!shift.name.trim()) errors.push("Name required.");
+  if (!shift.abbreviation.trim()) errors.push("Abbreviation required.");
+  if (shift.abbreviation.trim().length > 4) errors.push("Abbreviation max 4 chars.");
+  if (shift.startTime === shift.endTime) errors.push("Start and end time cannot be equal.");
+  const dupes = allShifts.filter(
+    (s) => s.id !== shift.id &&
+    s.abbreviation.trim().toUpperCase() === shift.abbreviation.trim().toUpperCase()
+  );
+  if (dupes.length > 0) errors.push(`Abbreviation "${shift.abbreviation}" already used.`);
+  return errors;
+}
+
+/* ─── GradePill ─── */
+
+interface GradePillProps {
+  permittedGrades: string[];
+  onChange: (grades: string[]) => void;
+}
+
+function GradePill({ permittedGrades, onChange }: GradePillProps) {
+  const [open, setOpen] = useState(false);
+  const restricted = permittedGrades.length > 0;
+  const pillLabel = restricted
+    ? permittedGrades.length <= 3
+      ? permittedGrades.join(", ")
+      : `${permittedGrades.length} grades`
+    : "Any grade";
+
+  const toggle = (grade: string) =>
+    onChange(
+      permittedGrades.includes(grade)
+        ? permittedGrades.filter((g) => g !== grade)
+        : [...permittedGrades, grade]
+    );
+
+  return (
+    <div className="relative inline-block">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+          restricted
+            ? "border-purple-300 bg-purple-50 text-purple-700 hover:bg-purple-100"
+            : "border-border bg-muted text-muted-foreground hover:bg-muted/70"
+        }`}
+      >
+        {pillLabel}
+        {open ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full z-50 mt-1 w-56 rounded-lg border bg-popover p-3 shadow-lg">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Grade restriction</span>
+            {restricted && (
+              <button type="button" onClick={() => onChange([])} className="text-[10px] text-purple-600 hover:text-purple-800">Clear all</button>
+            )}
+          </div>
+          <div className="space-y-1.5 max-h-48 overflow-y-auto">
+            {GRADE_OPTIONS.map((grade) => (
+              <label key={grade} className="flex items-center gap-2 text-xs cursor-pointer hover:bg-muted/50 rounded px-1 py-0.5">
+                <Checkbox checked={permittedGrades.includes(grade)} onCheckedChange={() => toggle(grade)} className="h-3.5 w-3.5" />
+                {GRADE_DISPLAY_LABELS[grade] ?? grade}
+              </label>
+            ))}
+          </div>
+          <p className="mt-2 text-[10px] text-muted-foreground">No grades selected = any grade eligible.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─── SlotRowEditor ─── */
+
+interface SlotRowEditorProps {
+  slot: SlotRequirement;
+  slotNumber: number;
+  onChange: (updated: SlotRequirement) => void;
+}
+
+function SlotRowEditor({ slot, slotNumber, onChange }: SlotRowEditorProps) {
+  const upd = (patch: Partial<SlotRequirement>) => onChange({ ...slot, ...patch });
+  return (
+    <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-3">
+      <div className="flex items-center gap-2">
+        <span className="text-xs font-semibold text-muted-foreground">Doctor {slotNumber}</span>
+        <Input
+          value={slot.label ?? ""}
+          onChange={(e) => upd({ label: e.target.value.trim() || null })}
+          placeholder="Label (optional)"
+          className="h-7 text-xs"
+        />
+      </div>
+      <GradePill permittedGrades={slot.permittedGrades} onChange={(g) => upd({ permittedGrades: g })} />
+      <div className="flex flex-wrap gap-3">
+        {(
+          [
+            { key: "reqIac"      as const, label: "IAC"      },
+            { key: "reqIaoc"     as const, label: "IAOC"     },
+            { key: "reqIcu"      as const, label: "ICU"      },
+            { key: "reqTransfer" as const, label: "Transfer" },
+          ]
+        ).map(({ key, label }) => (
+          <label key={key} className="flex items-center gap-1.5 text-xs cursor-pointer">
+            <Checkbox checked={slot[key] > 0} onCheckedChange={(v) => upd({ [key]: v ? 1 : 0 })} className="h-3.5 w-3.5" />
+            {label}
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function getShiftErrors(shift: ShiftType, allShifts?: ShiftType[]): string[] {
   const errors: string[] = [];
