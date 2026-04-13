@@ -900,6 +900,257 @@ function DayColumn({
   );
 }
 
+/* ─── ShiftIdentityCard ─── */
+function ShiftIdentityCard({
+  shift, index, expanded, onToggleExpand, onSave, onRemove, canRemove, allShifts,
+}: {
+  shift: ShiftType; index: number; expanded: boolean;
+  onToggleExpand: () => void; onSave: (u: ShiftType) => void;
+  onRemove: () => void; canRemove: boolean; allShifts: ShiftType[];
+}) {
+  const color = getShiftColor(index);
+  const [draft, setDraft] = useState<ShiftType>({ ...shift, badgeOverrides: { ...shift.badgeOverrides } });
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  useEffect(() => {
+    if (expanded) {
+      setDraft({ ...shift, badgeOverrides: { ...shift.badgeOverrides } });
+      setConfirmDelete(false);
+    }
+  }, [expanded]);
+
+  const recalc = (d: ShiftType): ShiftType => {
+    const dur = calcDurationHours(d.startTime, d.endTime);
+    const auto = detectBadges(d.startTime, d.endTime, d.applicableDays, d.isOncall, d.isNonRes);
+    const resolvedOncall = d.oncallManuallySet ? d.isOncall : (auto.night || auto.long || auto.ooh);
+    const finalAuto = detectBadges(d.startTime, d.endTime, d.applicableDays, resolvedOncall, d.isNonRes);
+    return { ...d, durationHours: dur, isOncall: resolvedOncall, badges: mergedBadges(finalAuto, d.badgeOverrides) };
+  };
+
+  const upd = (patch: Partial<ShiftType>) => setDraft((prev) => recalc({ ...prev, ...patch }));
+
+  const toggleBadge = (key: BadgeKey) => {
+    const auto = detectBadges(draft.startTime, draft.endTime, draft.applicableDays, draft.isOncall, draft.isNonRes);
+    const next = { ...draft.badgeOverrides };
+    if (next[key] !== undefined) { delete next[key]; } else { next[key] = !auto[key]; }
+    upd({ badgeOverrides: next });
+  };
+
+  const errors = getShiftIdentityErrors(draft, allShifts);
+
+  if (!expanded) {
+    return (
+      <div
+        className="cursor-pointer rounded-xl border border-border bg-card p-4 transition-all hover:shadow-md"
+        style={{ borderLeft: `4px solid ${color.solid}` }}
+        onClick={onToggleExpand}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1 space-y-1">
+            <div className="flex items-center gap-2">
+              <span className={`rounded-full border px-2 py-0.5 font-mono text-xs font-bold tracking-widest ${color.bg} ${color.text} ${color.border}`}>
+                {shift.abbreviation}
+              </span>
+              <h3 className="truncate text-sm font-semibold">{shift.name}</h3>
+            </div>
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Clock className="h-3.5 w-3.5 shrink-0" />{shift.startTime}–{shift.endTime} · {shift.durationHours}h
+            </p>
+            <div className="flex flex-wrap gap-1">
+              {BADGE_DEFS.filter(({ key }) => shift.badges[key]).map(({ key, emoji, label }) => (
+                <span key={key} className="text-[10px] text-muted-foreground">{emoji} {label}</span>
+              ))}
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center gap-1">
+            <span className="text-[10px] text-muted-foreground">{shift.daySlots.length}d · {shift.staffing.target} drs</span>
+            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4 rounded-xl border-2 border-purple-200 bg-card p-5 shadow-md" style={{ borderLeft: `4px solid ${color.solid}` }}>
+      <div className="grid grid-cols-[1fr_80px] gap-3">
+        <div className="space-y-1.5">
+          <Label className="text-xs">Shift name</Label>
+          <Input value={draft.name} onChange={(e) => upd({ name: e.target.value })} className="min-h-[40px]" />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">Abbrev.</Label>
+          <Input value={draft.abbreviation} maxLength={4} onChange={(e) => upd({ abbreviation: e.target.value.toUpperCase() })} className="min-h-[40px] font-mono text-center" />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-3">
+        <div className="space-y-1.5">
+          <Label className="text-xs">Start</Label>
+          <Input type="time" value={draft.startTime} onChange={(e) => upd({ startTime: e.target.value })} className="min-h-[40px]" />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">End</Label>
+          <Input type="time" value={draft.endTime} onChange={(e) => upd({ endTime: e.target.value })} className="min-h-[40px]" />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">&nbsp;</Label>
+          <div className={`flex min-h-[40px] items-center gap-1.5 rounded-md border bg-muted px-3 text-sm font-medium ${draft.durationHours <= 13 ? "text-green-600" : "text-destructive"}`}>
+            <Clock className="h-3.5 w-3.5" />{draft.durationHours}h
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <button type="button" onClick={() => upd({ isOncall: !draft.isOncall, oncallManuallySet: true })}
+          className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${draft.isOncall ? "border-emerald-700 bg-emerald-700 text-white" : "border-border bg-muted text-muted-foreground"}`}>
+          📟 On-call {draft.isOncall ? "✓" : "✗"}
+        </button>
+        <button type="button" onClick={() => upd({ isNonRes: !draft.isNonRes })}
+          className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${draft.isNonRes ? "border-teal-700 bg-teal-700 text-white" : "border-border bg-muted text-muted-foreground"}`}>
+          🏠 Non-resident {draft.isNonRes ? "✓" : "✗"}
+        </button>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Badges <span className="font-normal normal-case">(auto · click to override · ✏️ = manual)</span>
+        </Label>
+        <div className="flex flex-wrap gap-1.5">
+          {BADGE_DEFS.map(({ key, label, emoji, activeClasses }) => {
+            const auto = detectBadges(draft.startTime, draft.endTime, draft.applicableDays, draft.isOncall, draft.isNonRes);
+            const eff = mergedBadges(auto, draft.badgeOverrides);
+            return (
+              <button key={key} type="button" onClick={() => toggleBadge(key)}
+                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide transition-all ${eff[key] ? activeClasses : "bg-muted text-muted-foreground/50 line-through"}`}>
+                {emoji} {label}{draft.badgeOverrides[key] !== undefined ? " ✏️" : ""}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+        Default staffing: {shift.staffing.target} doctor{shift.staffing.target !== 1 ? "s" : ""} · Active on {shift.daySlots.length} day{shift.daySlots.length !== 1 ? "s" : ""}. Configure staffing and eligibility per day in the grid above.
+      </div>
+
+      {errors.length > 0 && (
+        <div className="space-y-1 rounded-lg border border-destructive/20 bg-destructive/10 p-3">
+          {errors.map((e) => (
+            <p key={e} className="flex items-center gap-1.5 text-xs text-destructive">
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0" /> {e}
+            </p>
+          ))}
+        </div>
+      )}
+
+      <div className="flex items-center justify-between">
+        {canRemove
+          ? !confirmDelete
+            ? <button type="button" onClick={() => setConfirmDelete(true)} className="flex items-center gap-1.5 text-xs font-medium text-destructive hover:text-destructive/80">
+                <Trash2 className="h-3.5 w-3.5" /> Delete shift
+              </button>
+            : <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-destructive">Remove?</span>
+                <Button variant="destructive" size="sm" onClick={onRemove}>Yes</Button>
+                <Button variant="outline" size="sm" onClick={() => setConfirmDelete(false)}>No</Button>
+              </div>
+          : <div />
+        }
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={onToggleExpand}>Cancel</Button>
+          <Button size="sm" className="bg-purple-600 text-white hover:bg-purple-700"
+            disabled={errors.length > 0}
+            onClick={() => { onSave(draft); onToggleExpand(); }}>
+            <Save className="mr-1.5 h-3.5 w-3.5" /> Save
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── DraggableShiftChipNew ─── */
+function DraggableShiftChipNew({ shift, index }: { shift: ShiftType; index: number }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: `new-${shift.id}` });
+  const color = getShiftColor(index);
+  return (
+    <div ref={setNodeRef} {...listeners} {...attributes}
+      className={`flex shrink-0 cursor-grab items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-opacity ${color.bg} ${color.text} ${color.border} ${isDragging ? "opacity-40" : ""}`}
+      style={{ transform: CSS.Transform.toString(transform) }}>
+      <span className="font-mono font-bold tracking-widest">{shift.abbreviation}</span>
+    </div>
+  );
+}
+
+/* ─── DayColumnNew ─── */
+function DayColumnNew({
+  dayKey, dayIndex, isWeekend, shifts, dragOverDay, onCellClick,
+}: {
+  dayKey: DayKey; dayIndex: number; isWeekend: boolean;
+  shifts: ShiftType[]; dragOverDay: DayKey | null;
+  onCellClick: (shiftId: string, dayKey: DayKey) => void;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: `new-${dayKey}` });
+  const highlighted = isOver || dragOverDay === dayKey;
+
+  const active = shifts
+    .map((s, i) => ({ shift: s, idx: i, ds: s.daySlots.find((d) => d.dayKey === dayKey) }))
+    .filter((x): x is typeof x & { ds: DaySlot } => x.ds !== undefined);
+
+  return (
+    <div ref={setNodeRef}
+      className={`min-h-[180px] rounded-xl border p-2 transition-all ${
+        highlighted ? "border-purple-300 bg-purple-50/80 ring-2 ring-purple-400"
+          : isWeekend ? "border-purple-200 bg-purple-50/40"
+          : "border-border bg-card"
+      }`}>
+      <div className="mb-2 text-center">
+        <p className={`text-xs font-semibold ${isWeekend ? "text-purple-700" : "text-slate-600"}`}>{DAY_SHORT[dayIndex]}</p>
+        <p className="text-[10px] text-muted-foreground">
+          {active.length > 0 ? `${active.length} shift${active.length !== 1 ? "s" : ""}` : "—"}
+        </p>
+      </div>
+
+      {active.length === 0 && (
+        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border bg-muted/20 py-6 text-center">
+          <Plus className="mb-1 h-4 w-4 text-muted-foreground/40" />
+          <span className="text-xs text-muted-foreground">Drop here</span>
+        </div>
+      )}
+
+      {active.map(({ shift, idx: si, ds }) => {
+        const color = getShiftColor(si);
+        const hasIac = ds.slots.some((s) => s.reqIac > 0);
+        const hasIaoc = ds.slots.some((s) => s.reqIaoc > 0);
+        const hasIcu = ds.slots.some((s) => s.reqIcu > 0);
+        const hasTx = ds.slots.some((s) => s.reqTransfer > 0);
+        const hasGrade = ds.slots.some((s) => s.permittedGrades.length > 0);
+
+        return (
+          <button key={shift.id} type="button" onClick={() => onCellClick(shift.id, dayKey)}
+            className="mb-1.5 flex w-full items-center gap-1.5 rounded-full border px-2 py-1 text-xs font-semibold transition-all hover:ring-1 hover:ring-purple-200"
+            style={{ backgroundColor: color.solid + "20", borderColor: color.solid + "60" }}>
+            <span className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold"
+              style={{ backgroundColor: color.solid, color: "white" }}>
+              {shift.abbreviation}
+            </span>
+            <span className="text-[10px] text-muted-foreground">×{ds.staffing.target}</span>
+            {ds.isCustomised && <span className="text-[9px]">✏️</span>}
+            <div className="ml-auto flex gap-0.5">
+              {hasIac && <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />}
+              {hasIaoc && <span className="h-1.5 w-1.5 rounded-full bg-pink-500" />}
+              {hasIcu && <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />}
+              {hasTx && <span className="h-1.5 w-1.5 rounded-full bg-teal-500" />}
+              {hasGrade && <span className="h-1.5 w-1.5 rounded-full bg-purple-500" />}
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 /* ─── DraggableShiftChip ─── */
 
 function DraggableShiftChip({ shift, index }: { shift: ShiftType; index: number }) {
