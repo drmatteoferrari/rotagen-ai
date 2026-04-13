@@ -292,8 +292,23 @@ export async function generatePreRota(
       hospitalName: accountSettings?.trust_name ?? (config.trust_name as string) ?? "",
       bankHolidays,
       doctors: doctorsWithSurveys.map((d) => ({
-        ...d,
+        id: d.id,
+        firstName: d.firstName,
+        lastName: d.lastName,
+        grade: d.grade ?? "",
         wte: d.survey?.wtePercent ?? 100,
+        survey: d.survey
+          ? {
+              ltftDaysOff: d.survey.ltftDaysOff,
+              annualLeave: d.survey.annualLeave,
+              studyLeave: d.survey.studyLeave,
+              nocDates: d.survey.nocDates,
+              rotations: d.survey.rotations,
+              parentalLeaveExpected: d.survey.parentalLeaveExpected ?? false,
+              parentalLeaveStart: d.survey.parentalLeaveStart ?? null,
+              parentalLeaveEnd: (d.survey as any).parentalLeaveEnd ?? null,
+            }
+          : null,
       })),
     });
 
