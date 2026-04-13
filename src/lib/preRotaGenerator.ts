@@ -221,6 +221,7 @@ export async function generatePreRota(
               alEntitlement: (survey.al_entitlement as number | null) ?? null,
               parentalLeaveExpected: fallbackParentalExpected,
               parentalLeaveStart: fallbackParentalStart,
+              parentalLeaveEnd: fallbackParentalEnd,
               competencies,
             }
           : null,
