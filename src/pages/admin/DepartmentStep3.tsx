@@ -5,35 +5,73 @@ import { StepNavBar } from "@/components/StepNavBar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import {
-  Info, AlertTriangle, ArrowLeft, ArrowRight,
-  RotateCcw, Loader2, CheckCircle2, ChevronDown, ChevronUp, Building2,
+  Info,
+  AlertTriangle,
+  ArrowLeft,
+  ArrowRight,
+  RotateCcw,
+  Loader2,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Building2,
 } from "lucide-react";
-import {
-  useDepartmentSetup, getShiftColor, type ShiftType,
-} from "@/contexts/DepartmentSetupContext";
+import { useDepartmentSetup, getShiftColor, type ShiftType } from "@/contexts/DepartmentSetupContext";
 import { useAdminSetup } from "@/contexts/AdminSetupContext";
 import { useRotaContext } from "@/contexts/RotaContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-/* ─── Pure utility functions ─── */
+// ─── Constants ────────────────────────────────────────────────
 
 const REF_WEEKS = 13;
-const REF_HPW   = 48;
+const REF_HPW = 48;
+
+// ─── Pure utility functions ───────────────────────────────────
+
+// getWeeklyDemand: total doctor-hours required per week for a shift type.
+//
+// New path (post-Lovable DepartmentSetupContext update):
+//   Uses shift.daySlots — sums actual per-day target headcount × durationHours.
+//   Accurate when days have different staffing levels.
+//
+// Legacy fallback (pre-day-slots, or shift with no day slots saved yet):
+//   Uses applicableDays count × staffing.target × durationHours.
+//   Matches old behaviour exactly; still correct for flat-staffing departments.
+//
+// Both paths give the same result when all active days have the same target.
 
 function getWeeklyDemand(shift: ShiftType): number {
-  const days = Object.values(shift.applicableDays).filter(Boolean).length;
-  return days * shift.staffing.target * shift.durationHours;
+  // Duck-type check for daySlots — added by Lovable DepartmentSetupContext prompt.
+  // The `as any` cast avoids a TS error before the context type is updated,
+  // while remaining correct at runtime once it is.
+  const daySlots = (shift as any).daySlots as
+    | Array<{ staffing: { target: number } }>
+    | Partial<Record<string, { staffing: { target: number } }>>
+    | undefined;
+
+  if (daySlots) {
+    const entries = Array.isArray(daySlots) ? daySlots : Object.values(daySlots).filter(Boolean);
+
+    if (entries.length > 0) {
+      const totalTargetPerWeek = entries.reduce((sum: number, ds: any) => sum + (ds?.staffing?.target ?? 0), 0);
+      return totalTargetPerWeek * shift.durationHours;
+    }
+  }
+
+  // Legacy fallback
+  const activeDayCount = Object.values(shift.applicableDays).filter(Boolean).length;
+  return activeDayCount * shift.staffing.target * shift.durationHours;
 }
 
 function getDemandWeightedPcts(shifts: ShiftType[]): Record<string, number> {
   if (shifts.length === 0) return {};
-  const demands = shifts.map(s => ({ id: s.id, d: getWeeklyDemand(s) }));
-  const total   = demands.reduce((s, d) => s + d.d, 0);
+  const demands = shifts.map((s) => ({ id: s.id, d: getWeeklyDemand(s) }));
+  const total = demands.reduce((s, d) => s + d.d, 0);
   if (total === 0) {
     const eq = Math.round((100 / shifts.length) * 10) / 10;
-    return Object.fromEntries(shifts.map(s => [s.id, eq]));
+    return Object.fromEntries(shifts.map((s) => [s.id, eq]));
   }
   let cum = 0;
   return Object.fromEntries(
@@ -42,7 +80,7 @@ function getDemandWeightedPcts(shifts: ShiftType[]): Record<string, number> {
       const v = Math.round((d.d / total) * 1000) / 10;
       cum += v;
       return [d.id, v];
-    })
+    }),
   );
 }
 
@@ -54,23 +92,20 @@ function getSuggestedGlobalSplit(oncall: ShiftType[], nonOncall: ShiftType[]): n
   return Math.round((od / total) * 100);
 }
 
-function computeActivePcts(
-  shifts: ShiftType[],
-  overrides: Record<string, number>
-): Record<string, number> {
+function computeActivePcts(shifts: ShiftType[], overrides: Record<string, number>): Record<string, number> {
   if (shifts.length === 0) return {};
-  const pinned   = shifts.filter(s => overrides[s.id] !== undefined);
-  const unpinned = shifts.filter(s => overrides[s.id] === undefined);
-  const pinnedTotal     = pinned.reduce((sum, s) => sum + overrides[s.id], 0);
-  const remaining       = Math.max(0, 100 - pinnedTotal);
-  const unpinnedDemand  = unpinned.reduce((sum, s) => sum + getWeeklyDemand(s), 0);
+  const pinned = shifts.filter((s) => overrides[s.id] !== undefined);
+  const unpinned = shifts.filter((s) => overrides[s.id] === undefined);
+  const pinnedTotal = pinned.reduce((sum, s) => sum + overrides[s.id], 0);
+  const remaining = Math.max(0, 100 - pinnedTotal);
+  const unpinnedDemand = unpinned.reduce((sum, s) => sum + getWeeklyDemand(s), 0);
   return Object.fromEntries(
-    shifts.map(s => {
+    shifts.map((s) => {
       if (overrides[s.id] !== undefined) return [s.id, overrides[s.id]];
-      if (unpinned.length === 0)         return [s.id, 0];
-      if (unpinnedDemand === 0)          return [s.id, Math.round((remaining / unpinned.length) * 10) / 10];
+      if (unpinned.length === 0) return [s.id, 0];
+      if (unpinnedDemand === 0) return [s.id, Math.round((remaining / unpinned.length) * 10) / 10];
       return [s.id, Math.round((getWeeklyDemand(s) / unpinnedDemand) * remaining * 10) / 10];
-    })
+    }),
   );
 }
 
@@ -83,19 +118,14 @@ function getAutoShare(shifts: ShiftType[], overrides: Record<string, number>, sh
 function refHours(bucketPct: number, shiftPct: number): number {
   return Math.round((bucketPct / 100) * (shiftPct / 100) * REF_HPW * REF_WEEKS * 10) / 10;
 }
+
 function refShiftCount(bucketPct: number, shiftPct: number, dur: number): number {
   return dur > 0 ? Math.round(refHours(bucketPct, shiftPct) / dur) : 0;
 }
 
-/* ─── Drag bar components ─── */
+// ─── GlobalSplitBar ───────────────────────────────────────────
 
-function GlobalSplitBar({
-  oncallPct,
-  onChange,
-}: {
-  oncallPct: number;
-  onChange: (pct: number) => void;
-}) {
+function GlobalSplitBar({ oncallPct, onChange }: { oncallPct: number; onChange: (pct: number) => void }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
 
@@ -116,41 +146,43 @@ function GlobalSplitBar({
     if (!dragging.current) return;
     onChange(pctFromPointer(e.clientX));
   };
-  const onPointerUp = () => { dragging.current = false; };
+  const onPointerUp = () => {
+    dragging.current = false;
+  };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'ArrowRight') onChange(clamp(oncallPct + (e.shiftKey ? 5 : 1)));
-    if (e.key === 'ArrowLeft')  onChange(clamp(oncallPct - (e.shiftKey ? 5 : 1)));
+    if (e.key === "ArrowRight") onChange(clamp(oncallPct + (e.shiftKey ? 5 : 1)));
+    if (e.key === "ArrowLeft") onChange(clamp(oncallPct - (e.shiftKey ? 5 : 1)));
   };
 
   return (
     <div
       ref={trackRef}
       className="relative h-8 w-full cursor-pointer select-none overflow-hidden rounded-full"
-      style={{ touchAction: 'none' }}
+      style={{ touchAction: "none" }}
     >
       {/* On-call fill */}
       <div
         className="absolute inset-y-0 left-0 rounded-l-full transition-[width] duration-75"
-        style={{ width: `${oncallPct}%`, background: 'linear-gradient(to right, rgba(147,51,234,0.15), #9333ea)' }}
+        style={{ width: `${oncallPct}%`, background: "linear-gradient(to right, rgba(147,51,234,0.15), #9333ea)" }}
       />
-
       {/* Non-on-call fill */}
       <div
         className="absolute inset-y-0 right-0 rounded-r-full transition-[width] duration-75"
-        style={{ width: `${100 - oncallPct}%`, background: 'linear-gradient(to right, rgba(147,51,234,0.06), rgba(196,181,253,0.4))' }}
+        style={{
+          width: `${100 - oncallPct}%`,
+          background: "linear-gradient(to right, rgba(147,51,234,0.06), rgba(196,181,253,0.4))",
+        }}
       />
-
       {/* Segment labels */}
       <div className="pointer-events-none absolute inset-0 flex items-center justify-between px-3 text-[11px] font-semibold">
         <span className="text-white drop-shadow-sm">{oncallPct}% on-call</span>
         <span className="text-purple-700">{100 - oncallPct}% non-on-call</span>
       </div>
-
       {/* Draggable handle */}
       <div
         className="absolute top-0 flex h-full items-center"
-        style={{ left: `${oncallPct}%`, transform: 'translateX(-50%)' }}
+        style={{ left: `${oncallPct}%`, transform: "translateX(-50%)" }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -170,6 +202,8 @@ function GlobalSplitBar({
   );
 }
 
+// ─── ShiftPctBar ──────────────────────────────────────────────
+
 function ShiftPctBar({
   value,
   autoValue,
@@ -187,7 +221,7 @@ function ShiftPctBar({
   const dragging = useRef(false);
   const [tooltip, setTooltip] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [editVal, setEditVal] = useState('');
+  const [editVal, setEditVal] = useState("");
 
   const snap = (v: number) => Math.round(Math.min(100, Math.max(0, v)) * 2) / 2;
 
@@ -207,11 +241,14 @@ function ShiftPctBar({
     if (!dragging.current) return;
     onChange(pctFromPointer(e.clientX));
   };
-  const onPointerUp = () => { dragging.current = false; setTooltip(false); };
+  const onPointerUp = () => {
+    dragging.current = false;
+    setTooltip(false);
+  };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'ArrowRight') onChange(snap(value + (e.shiftKey ? 5 : 0.5)));
-    if (e.key === 'ArrowLeft')  onChange(snap(value - (e.shiftKey ? 5 : 0.5)));
+    if (e.key === "ArrowRight") onChange(snap(value + (e.shiftKey ? 5 : 0.5)));
+    if (e.key === "ArrowLeft") onChange(snap(value - (e.shiftKey ? 5 : 0.5)));
   };
 
   const commitEdit = () => {
@@ -221,7 +258,7 @@ function ShiftPctBar({
   };
 
   const isActive = isOverridden && Math.abs(value - autoValue) > 0.5;
-  const handleBorderClass = isActive ? 'border-purple-600' : 'border-muted-foreground/40';
+  const handleBorderClass = isActive ? "border-purple-600" : "border-muted-foreground/40";
 
   return (
     <div className="flex items-center gap-2">
@@ -229,18 +266,17 @@ function ShiftPctBar({
       <div
         ref={trackRef}
         className="relative h-[22px] flex-1 cursor-pointer select-none overflow-hidden rounded-full bg-muted/40"
-        style={{ touchAction: 'none' }}
+        style={{ touchAction: "none" }}
       >
         {/* Fill */}
         <div
           className="absolute inset-y-0 left-0 rounded-l-full transition-[width] duration-75"
-          style={{ width: `${value}%`, background: 'linear-gradient(to right, rgba(147,51,234,0.1), #9333ea)' }}
+          style={{ width: `${value}%`, background: "linear-gradient(to right, rgba(147,51,234,0.1), #9333ea)" }}
         />
-
         {/* Handle */}
         <div
           className="absolute top-0 flex h-full items-center"
-          style={{ left: `${value}%`, transform: 'translateX(-50%)' }}
+          style={{ left: `${value}%`, transform: "translateX(-50%)" }}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
@@ -257,7 +293,7 @@ function ShiftPctBar({
               {value}%
             </div>
           )}
-          <div className={`h-[44px] w-[44px] flex items-center justify-center p-[10px]`}>
+          <div className="h-[44px] w-[44px] flex items-center justify-center p-[10px]">
             <div className={`h-4 w-4 rounded-full border-2 ${handleBorderClass} bg-white shadow-sm`} />
           </div>
         </div>
@@ -268,24 +304,26 @@ function ShiftPctBar({
         <input
           autoFocus
           type="number"
-          step="0.5"
-          min="0"
-          max="100"
+          min={0}
+          max={100}
+          step={0.5}
           value={editVal}
-          onChange={e => setEditVal(e.target.value)}
+          onChange={(e) => setEditVal(e.target.value)}
           onBlur={commitEdit}
-          onKeyDown={e => {
-            if (e.key === 'Enter') commitEdit();
-            if (e.key === 'Escape') { setEditing(false); }
+          onKeyDown={(e) => {
+            if (e.key === "Enter") commitEdit();
+            if (e.key === "Escape") setEditing(false);
           }}
-          className="w-16 text-center text-sm font-bold rounded-lg border border-purple-400 px-1 py-1 min-h-[36px] focus:outline-none focus:ring-2 focus:ring-purple-400 bg-background"
+          className="w-14 rounded-md border border-purple-400 bg-background px-1.5 py-0.5 text-center text-xs font-bold focus:outline-none focus:ring-1 focus:ring-purple-500"
         />
       ) : (
         <button
-          onClick={() => { setEditing(true); setEditVal(String(value)); }}
-          title="Tap to edit"
-          className={`min-w-[3.5rem] text-right text-sm font-bold transition-colors min-h-[36px] ${
-            isActive ? 'text-purple-700' : 'text-muted-foreground'
+          onClick={() => {
+            setEditing(true);
+            setEditVal(String(value));
+          }}
+          className={`min-h-[44px] w-12 text-center text-xs font-bold transition-colors hover:text-purple-700 ${
+            isActive ? "text-purple-700" : "text-muted-foreground"
           }`}
         >
           {value}%
@@ -294,7 +332,11 @@ function ShiftPctBar({
 
       {/* Reset icon */}
       {isActive ? (
-        <button onClick={onReset} className="min-h-[44px] min-w-[44px] flex items-center justify-center text-purple-600 hover:text-purple-800 transition-colors" title="Reset to auto">
+        <button
+          onClick={onReset}
+          className="min-h-[44px] min-w-[44px] flex items-center justify-center text-purple-600 hover:text-purple-800 transition-colors"
+          title="Reset to auto"
+        >
           <RotateCcw className="h-4 w-4" />
         </button>
       ) : (
@@ -306,49 +348,53 @@ function ShiftPctBar({
   );
 }
 
-/* ─── Main component ─── */
+// ─── Main component ───────────────────────────────────────────
 
 export default function DepartmentStep3() {
-  const navigate         = useNavigate();
-  const { shifts }       = useDepartmentSetup();
+  const navigate = useNavigate();
+  const { shifts } = useDepartmentSetup();
   const { setDepartmentComplete } = useAdminSetup();
-  const { currentRotaConfigId }   = useRotaContext();
-  const { user }         = useAuth();
+  const { currentRotaConfigId } = useRotaContext();
+  const { user } = useAuth();
 
-  const oncallShifts    = shifts.filter(s => s.isOncall);
-  const nonOncallShifts = shifts.filter(s => !s.isOncall);
+  const oncallShifts = shifts.filter((s) => s.isOncall);
+  const nonOncallShifts = shifts.filter((s) => !s.isOncall);
 
   const [globalOncallPct, setGlobalOncallPctState] = useState(50);
-  const [oncallOverrides,    setOncallOverrides]    = useState<Record<string, number>>({});
+  const [oncallOverrides, setOncallOverrides] = useState<Record<string, number>>({});
   const [nonOncallOverrides, setNonOncallOverrides] = useState<Record<string, number>>({});
-  const [expandedAdvanced,   setExpandedAdvanced]   = useState(false);
+  const [expandedAdvanced, setExpandedAdvanced] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [saving,  setSaving]  = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  const suggestedOncallPcts    = getDemandWeightedPcts(oncallShifts);
+  const suggestedOncallPcts = getDemandWeightedPcts(oncallShifts);
   const suggestedNonOncallPcts = getDemandWeightedPcts(nonOncallShifts);
 
-  const activeOncallPcts    = computeActivePcts(oncallShifts,    oncallOverrides);
+  const activeOncallPcts = computeActivePcts(oncallShifts, oncallOverrides);
   const activeNonOncallPcts = computeActivePcts(nonOncallShifts, nonOncallOverrides);
 
-  const oncallSum    = Object.values(activeOncallPcts).reduce((s, v) => s + v, 0);
+  const oncallSum = Object.values(activeOncallPcts).reduce((s, v) => s + v, 0);
   const nonOncallSum = Object.values(activeNonOncallPcts).reduce((s, v) => s + v, 0);
-  const oncallSumErr    = oncallShifts.length > 0    && Math.abs(oncallSum - 100) > 0.5;
+
+  const oncallSumErr = oncallShifts.length > 0 && Math.abs(oncallSum - 100) > 0.5;
   const nonOncallSumErr = nonOncallShifts.length > 0 && Math.abs(nonOncallSum - 100) > 0.5;
   const canSave = !oncallSumErr && !nonOncallSumErr && !saving;
 
-  const anyOncallOverride    = Object.keys(oncallOverrides).length > 0;
+  const anyOncallOverride = Object.keys(oncallOverrides).length > 0;
   const anyNonOncallOverride = Object.keys(nonOncallOverrides).length > 0;
 
-  /* ─── Data loading ─── */
+  // ── Data loading ────────────────────────────────────────────
   useEffect(() => {
     const load = async () => {
-      if (!currentRotaConfigId) { setLoading(false); return; }
+      if (!currentRotaConfigId) {
+        setLoading(false);
+        return;
+      }
       try {
         const { data: cfg } = await supabase
-          .from('rota_configs')
-          .select('global_oncall_pct')
-          .eq('id', currentRotaConfigId)
+          .from("rota_configs")
+          .select("global_oncall_pct")
+          .eq("id", currentRotaConfigId)
           .single();
 
         if (cfg?.global_oncall_pct != null) {
@@ -356,21 +402,21 @@ export default function DepartmentStep3() {
         }
 
         const { data: rows } = await supabase
-          .from('shift_types')
-          .select('shift_key, target_percentage, is_oncall')
-          .eq('rota_config_id', currentRotaConfigId);
+          .from("shift_types")
+          .select("shift_key, target_percentage, is_oncall")
+          .eq("rota_config_id", currentRotaConfigId);
 
         const oo: Record<string, number> = {};
         const no: Record<string, number> = {};
         (rows ?? []).forEach((r: any) => {
           if (r.target_percentage == null) return;
           if (r.is_oncall) oo[r.shift_key] = Number(r.target_percentage);
-          else             no[r.shift_key] = Number(r.target_percentage);
+          else no[r.shift_key] = Number(r.target_percentage);
         });
         if (Object.keys(oo).length > 0) setOncallOverrides(oo);
         if (Object.keys(no).length > 0) setNonOncallOverrides(no);
       } catch (e) {
-        console.error('Step 3 load failed:', e);
+        console.error("Step 3 load failed:", e);
       } finally {
         setLoading(false);
       }
@@ -378,49 +424,49 @@ export default function DepartmentStep3() {
     load();
   }, [currentRotaConfigId]);
 
-  /* ─── Save handler ─── */
+  // ── Save handler ────────────────────────────────────────────
   const handleSave = async () => {
     if (!canSave) return;
     setSaving(true);
     try {
-      if (!currentRotaConfigId) throw new Error('No config');
-      if (!user?.id)            throw new Error('Not signed in');
+      if (!currentRotaConfigId) throw new Error("No config");
+      if (!user?.id) throw new Error("Not signed in");
 
       const { error: cfgErr } = await supabase
-        .from('rota_configs')
+        .from("rota_configs")
         .update({
-          global_oncall_pct:     globalOncallPct,
+          global_oncall_pct: globalOncallPct,
           global_non_oncall_pct: 100 - globalOncallPct,
-          updated_at:            new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         })
-        .eq('id', currentRotaConfigId);
+        .eq("id", currentRotaConfigId);
       if (cfgErr) throw cfgErr;
 
       const allUpdates = [
-        ...oncallShifts.map(s    => ({ key: s.id, pct: activeOncallPcts[s.id] ?? 0 })),
-        ...nonOncallShifts.map(s => ({ key: s.id, pct: activeNonOncallPcts[s.id] ?? 0 })),
+        ...oncallShifts.map((s) => ({ key: s.id, pct: activeOncallPcts[s.id] ?? 0 })),
+        ...nonOncallShifts.map((s) => ({ key: s.id, pct: activeNonOncallPcts[s.id] ?? 0 })),
       ];
       for (const u of allUpdates) {
         const { error } = await supabase
-          .from('shift_types')
+          .from("shift_types")
           .update({ target_percentage: u.pct, updated_at: new Date().toISOString() })
-          .eq('rota_config_id', currentRotaConfigId)
-          .eq('shift_key', u.key);
+          .eq("rota_config_id", currentRotaConfigId)
+          .eq("shift_key", u.key);
         if (error) throw error;
       }
 
-      toast.success('✓ Distribution saved');
+      toast.success("✓ Distribution saved");
       setDepartmentComplete(true);
-      navigate('/admin/department/summary?mode=post-submit');
+      navigate("/admin/department/summary?mode=post-submit");
     } catch (e: any) {
-      console.error('Step 3 save failed:', e);
-      toast.error('Save failed — please try again');
+      console.error("Step 3 save failed:", e);
+      toast.error("Save failed — please try again");
     } finally {
       setSaving(false);
     }
   };
 
-  /* ─── Bucket renderer ─── */
+  // ── Bucket renderer ─────────────────────────────────────────
   const renderBucket = (
     bucketShifts: ShiftType[],
     activePcts: Record<string, number>,
@@ -448,21 +494,23 @@ export default function DepartmentStep3() {
         {/* Bucket header */}
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className={`h-4 w-4 ${sumOk ? 'text-emerald-600' : 'text-destructive'}`} />
+            <CheckCircle2 className={`h-4 w-4 ${sumOk ? "text-emerald-600" : "text-destructive"}`} />
             <p className="text-sm font-semibold">{bucketLabel}</p>
             <span className="text-xs text-muted-foreground">({globalBucketPct}% of hours)</span>
           </div>
           <div className="flex items-center gap-2">
-            {/* Bucket sum indicator */}
-            <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${sumOk ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-              {Math.round(sumVal * 10) / 10}% {sumOk ? '✓' : '⚠'}
+            <span
+              className={`rounded-full px-2.5 py-0.5 text-xs font-bold ${sumOk ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}
+            >
+              {Math.round(sumVal * 10) / 10}% {sumOk ? "✓" : "⚠"}
             </span>
-            {/* Reset all button */}
             <button
               onClick={onResetAll}
               disabled={!anyOverride}
               className={`inline-flex min-h-[44px] items-center gap-1 rounded-lg px-3 text-xs font-medium transition-colors ${
-                anyOverride ? 'bg-purple-100 text-purple-700 hover:bg-purple-200' : 'text-muted-foreground/40 cursor-not-allowed'
+                anyOverride
+                  ? "bg-purple-100 text-purple-700 hover:bg-purple-200"
+                  : "text-muted-foreground/40 cursor-not-allowed"
               }`}
             >
               <RotateCcw className="h-3.5 w-3.5" /> Reset all
@@ -472,19 +520,25 @@ export default function DepartmentStep3() {
 
         {/* Shift rows */}
         {bucketShifts.map((shift, idx) => {
-          const color       = getShiftColor(idx);
-          const pct         = Math.round((activePcts[shift.id] ?? 0) * 10) / 10;
-          const auto        = Math.round(getAutoShare(bucketShifts, overrides, shift.id) * 10) / 10;
+          const color = getShiftColor(idx);
+          const pct = Math.round((activePcts[shift.id] ?? 0) * 10) / 10;
+          const auto = Math.round(getAutoShare(bucketShifts, overrides, shift.id) * 10) / 10;
           const isOverridden = overrides[shift.id] !== undefined;
-          const demand      = getWeeklyDemand(shift);
-          const days        = Object.values(shift.applicableDays).filter(Boolean).length;
+          const demand = getWeeklyDemand(shift);
+          const activeDays = Object.values(shift.applicableDays).filter(Boolean).length;
           const isRefActive = isOverridden && Math.abs(pct - auto) > 0.5;
 
           return (
-            <div key={shift.id} className="rounded-xl border bg-card p-4 space-y-2" style={{ borderLeftWidth: 4, borderLeftColor: color.solid }}>
+            <div
+              key={shift.id}
+              className="rounded-xl border bg-card p-4 space-y-2"
+              style={{ borderLeftWidth: 4, borderLeftColor: color.solid }}
+            >
               {/* Identity row */}
               <div className="flex flex-wrap items-center gap-2">
-                <span className={`inline-flex items-center rounded-full px-2 py-0.5 font-mono text-xs font-bold border ${color.bg} ${color.text} ${color.border}`}>
+                <span
+                  className={`inline-flex items-center rounded-full px-2 py-0.5 font-mono text-xs font-bold border ${color.bg} ${color.text} ${color.border}`}
+                >
                   {shift.abbreviation}
                 </span>
                 <span className="text-sm font-medium">{shift.name}</span>
@@ -495,10 +549,8 @@ export default function DepartmentStep3() {
 
               {/* Demand line */}
               <p className="text-xs text-muted-foreground">
-                {days}d/wk × {shift.staffing.min} doctor{shift.staffing.min !== 1 ? 's' : ''} × {shift.durationHours}h
-                {' '}= {Math.round(demand * 10) / 10}h/wk demand
-                {' '}·{' '}
-                Auto: {auto}%
+                {activeDays}d/wk × {shift.staffing.min} doctor{shift.staffing.min !== 1 ? "s" : ""} ×{" "}
+                {shift.durationHours}h = {Math.round(demand * 10) / 10}h/wk demand · Auto: {auto}%
               </p>
 
               {/* Drag bar */}
@@ -506,20 +558,24 @@ export default function DepartmentStep3() {
                 value={pct}
                 autoValue={auto}
                 isOverridden={isOverridden}
-                onChange={(v) => setOverrides(prev => ({ ...prev, [shift.id]: v }))}
-                onReset={() => setOverrides(prev => {
-                  const next = { ...prev };
-                  delete next[shift.id];
-                  return next;
-                })}
+                onChange={(v) => setOverrides((prev) => ({ ...prev, [shift.id]: v }))}
+                onReset={() =>
+                  setOverrides((prev) => {
+                    const next = { ...prev };
+                    delete next[shift.id];
+                    return next;
+                  })
+                }
               />
 
               {/* Reference preview */}
-              <p className={`rounded-lg px-3 py-1.5 text-xs ${
-                isRefActive ? 'bg-purple-50 text-purple-700' : 'bg-muted/50 text-muted-foreground'
-              }`}>
+              <p
+                className={`rounded-lg px-3 py-1.5 text-xs ${
+                  isRefActive ? "bg-purple-50 text-purple-700" : "bg-muted/50 text-muted-foreground"
+                }`}
+              >
                 ~{refHours(globalBucketPct, pct)}h · ~{refShiftCount(globalBucketPct, pct, shift.durationHours)} shifts
-                {' '}per FT doctor (13-wk ref)
+                per FT doctor (13-wk ref)
               </p>
             </div>
           );
@@ -528,22 +584,38 @@ export default function DepartmentStep3() {
     );
   };
 
-  /* ─── JSX ─── */
+  // ── JSX ─────────────────────────────────────────────────────
   return (
-    <AdminLayout title="Department Setup" subtitle="Step 3 of 3 — Hours" accentColor="purple" pageIcon={Building2}
+    <AdminLayout
+      title="Department Setup"
+      subtitle="Step 3 of 3 — Hours"
+      accentColor="purple"
+      pageIcon={Building2}
       navBar={
         <StepNavBar
           left={
-            <Button variant="outline" size="lg" className="min-h-[44px]" onClick={() => navigate('/admin/department/step-2')}>
+            <Button
+              variant="outline"
+              size="lg"
+              className="min-h-[44px]"
+              onClick={() => navigate("/admin/department/step-2")}
+            >
               <ArrowLeft className="mr-1 h-4 w-4" /> Back
             </Button>
           }
           right={
             <Button size="lg" className="min-h-[44px]" disabled={!canSave || saving} onClick={handleSave}>
-              {saving
-                ? <><Loader2 className="mr-1 h-4 w-4 animate-spin" />Saving…</>
-                : <><ArrowRight className="mr-1 h-4 w-4" />Review &amp; Save</>
-              }
+              {saving ? (
+                <>
+                  <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                  Saving…
+                </>
+              ) : (
+                <>
+                  <ArrowRight className="mr-1 h-4 w-4" />
+                  Review &amp; Save
+                </>
+              )}
             </Button>
           }
         />
@@ -557,7 +629,7 @@ export default function DepartmentStep3() {
           </div>
         ) : (
           <>
-            {/* ZONE 1: GLOBAL SPLIT */}
+            {/* ── ZONE 1: GLOBAL SPLIT ── */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
@@ -565,14 +637,13 @@ export default function DepartmentStep3() {
                   On-call vs non-on-call split
                 </CardTitle>
                 <CardDescription>
-                  Set the on-call fraction of contracted time. Higher = more coverage, heavier rota. Lower = lighter rota, harder to fill all shifts.
+                  Set the on-call fraction of contracted time. Higher = more coverage, heavier rota. Lower = lighter
+                  rota, harder to fill all shifts.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Split bar */}
                 <GlobalSplitBar oncallPct={globalOncallPct} onChange={setGlobalOncallPctState} />
 
-                {/* Numeric legend */}
                 <div className="flex items-center justify-between text-sm">
                   <span className="flex items-center gap-1.5">
                     <span className="h-3 w-3 rounded-full bg-purple-600" />
@@ -584,23 +655,22 @@ export default function DepartmentStep3() {
                   </span>
                 </div>
 
-                {/* Heavy rota warning */}
                 {globalOncallPct > 60 && (
                   <div className="flex items-start gap-2 rounded-xl border border-amber-300 bg-amber-50 p-3">
                     <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
                     <p className="text-xs text-amber-800">
-                      Over 60% on-call — the rota may be demanding for doctors. Check this reflects your department's actual needs.
+                      Over 60% on-call — the rota may be demanding for doctors. Check this reflects your department's
+                      actual needs.
                     </p>
                   </div>
                 )}
               </CardContent>
             </Card>
 
-            {/* ZONE 2: ADVANCED (COLLAPSED) */}
+            {/* ── ZONE 2: ADVANCED (COLLAPSED) ── */}
             <Card>
-              {/* Toggle button */}
               <button
-                onClick={() => setExpandedAdvanced(v => !v)}
+                onClick={() => setExpandedAdvanced((v) => !v)}
                 className="w-full flex items-start justify-between gap-3 px-5 py-4 text-left hover:bg-muted/30 transition-colors rounded-xl"
               >
                 <div className="space-y-1.5 flex-1">
@@ -611,7 +681,8 @@ export default function DepartmentStep3() {
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Auto-calculated from shift demands. Increase a shift's % to prioritise filling it — useful if a specific shift is harder to cover.
+                    Auto-calculated from shift demands. Increase a shift's % to prioritise filling it — useful if a
+                    specific shift is harder to cover.
                   </p>
 
                   {/* Collapsed summary */}
@@ -619,13 +690,18 @@ export default function DepartmentStep3() {
                     <div className="pt-2 space-y-2">
                       {oncallShifts.length > 0 && (
                         <div className="space-y-1">
-                          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">On-call</p>
+                          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
+                            On-call
+                          </p>
                           <div className="flex flex-wrap gap-1.5">
                             {oncallShifts.map((shift, idx) => {
                               const color = getShiftColor(idx);
                               const pct = Math.round(activeOncallPcts[shift.id] ?? 0);
                               return (
-                                <span key={shift.id} className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[11px] font-medium border ${color.bg} ${color.text} ${color.border}`}>
+                                <span
+                                  key={shift.id}
+                                  className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[11px] font-medium border ${color.bg} ${color.text} ${color.border}`}
+                                >
                                   {shift.abbreviation}
                                   <span className="font-bold">{pct}%</span>
                                 </span>
@@ -636,13 +712,18 @@ export default function DepartmentStep3() {
                       )}
                       {nonOncallShifts.length > 0 && (
                         <div className="space-y-1">
-                          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">Non-on-call</p>
+                          <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
+                            Non-on-call
+                          </p>
                           <div className="flex flex-wrap gap-1.5">
                             {nonOncallShifts.map((shift, idx) => {
                               const color = getShiftColor(idx);
                               const pct = Math.round(activeNonOncallPcts[shift.id] ?? 0);
                               return (
-                                <span key={shift.id} className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[11px] font-medium border ${color.bg} ${color.text} ${color.border}`}>
+                                <span
+                                  key={shift.id}
+                                  className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[11px] font-medium border ${color.bg} ${color.text} ${color.border}`}
+                                >
                                   {shift.abbreviation}
                                   <span className="font-bold">{pct}%</span>
                                 </span>
@@ -654,9 +735,11 @@ export default function DepartmentStep3() {
                     </div>
                   )}
                 </div>
-                {expandedAdvanced
-                  ? <ChevronUp className="h-5 w-5 shrink-0 text-muted-foreground mt-1" />
-                  : <ChevronDown className="h-5 w-5 shrink-0 text-muted-foreground mt-1" />}
+                {expandedAdvanced ? (
+                  <ChevronUp className="h-5 w-5 shrink-0 text-muted-foreground mt-1" />
+                ) : (
+                  <ChevronDown className="h-5 w-5 shrink-0 text-muted-foreground mt-1" />
+                )}
               </button>
 
               {/* Expanded content */}
@@ -664,7 +747,10 @@ export default function DepartmentStep3() {
                 <CardContent className="space-y-6 pt-0">
                   <div className="flex items-start gap-2 rounded-xl border border-border bg-muted/30 p-3">
                     <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                    <p className="text-xs text-muted-foreground">Each bucket totals 100% independently. Changing one shift redistributes the remainder proportionally across the others.</p>
+                    <p className="text-xs text-muted-foreground">
+                      Each bucket totals 100% independently. Changing one shift redistributes the remainder
+                      proportionally across the others.
+                    </p>
                   </div>
 
                   {/* ON-CALL BUCKET */}
@@ -674,14 +760,13 @@ export default function DepartmentStep3() {
                     oncallOverrides,
                     setOncallOverrides,
                     globalOncallPct,
-                    'On-call shifts',
+                    "On-call shifts",
                     anyOncallOverride,
                     oncallSum,
                     oncallSumErr,
-                    () => setOncallOverrides({})
+                    () => setOncallOverrides({}),
                   )}
 
-                  {/* Divider */}
                   {oncallShifts.length > 0 && nonOncallShifts.length > 0 && (
                     <div className="flex items-center gap-3 py-1">
                       <div className="flex-1 border-t border-border" />
@@ -697,28 +782,34 @@ export default function DepartmentStep3() {
                     nonOncallOverrides,
                     setNonOncallOverrides,
                     100 - globalOncallPct,
-                    'Non-on-call shifts',
+                    "Non-on-call shifts",
                     anyNonOncallOverride,
                     nonOncallSum,
                     nonOncallSumErr,
-                    () => setNonOncallOverrides({})
+                    () => setNonOncallOverrides({}),
                   )}
 
-                  {/* Empty state */}
                   {oncallShifts.length === 0 && nonOncallShifts.length === 0 && (
                     <p className="py-6 text-center text-sm text-muted-foreground italic">
                       No shift types found. Define shift types in Step 2 first.
                     </p>
                   )}
 
-                  {/* Validation error summary */}
                   {(oncallSumErr || nonOncallSumErr) && (
                     <div className="flex items-start gap-2 rounded-xl border border-red-300 bg-red-50 p-3">
                       <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />
                       <div className="space-y-1">
                         <p className="text-xs font-semibold text-red-700">Cannot save — fix the percentages above.</p>
-                        {oncallSumErr    && <p className="text-xs text-red-600">On-call total: {Math.round(oncallSum * 10) / 10}% (must be 100%)</p>}
-                        {nonOncallSumErr && <p className="text-xs text-red-600">Non-on-call total: {Math.round(nonOncallSum * 10) / 10}% (must be 100%)</p>}
+                        {oncallSumErr && (
+                          <p className="text-xs text-red-600">
+                            On-call total: {Math.round(oncallSum * 10) / 10}% (must be 100%)
+                          </p>
+                        )}
+                        {nonOncallSumErr && (
+                          <p className="text-xs text-red-600">
+                            Non-on-call total: {Math.round(nonOncallSum * 10) / 10}% (must be 100%)
+                          </p>
+                        )}
                       </div>
                     </div>
                   )}
@@ -731,10 +822,12 @@ export default function DepartmentStep3() {
               <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
               <div className="text-xs text-muted-foreground space-y-0.5">
                 <p>Shift estimates assume a full-time doctor, 13-week rota, 48h/week.</p>
-                <p>Actual allocations are recalculated per doctor at generation time using their WTE, leave, and rota length.</p>
+                <p>
+                  Actual allocations are recalculated per doctor at generation time using their WTE, leave, and rota
+                  length.
+                </p>
               </div>
             </div>
-
           </>
         )}
       </div>
