@@ -307,7 +307,7 @@ export async function generatePreRota(
               rotations: d.survey.rotations,
               parentalLeaveExpected: d.survey.parentalLeaveExpected ?? false,
               parentalLeaveStart: d.survey.parentalLeaveStart ?? null,
-              parentalLeaveEnd: (d.survey as any).parentalLeaveEnd ?? null,
+              parentalLeaveEnd: d.survey.parentalLeaveEnd ?? null,
             }
           : null,
       })),
