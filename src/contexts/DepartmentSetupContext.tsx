@@ -22,6 +22,23 @@ export interface ShiftStaffing {
   max: number | null;
 }
 
+export interface SlotRequirement {
+  slotIndex: number;
+  label: string | null;
+  permittedGrades: string[];
+  reqIac: number;
+  reqIaoc: number;
+  reqIcu: number;
+  reqTransfer: number;
+}
+
+export interface DaySlot {
+  dayKey: string;
+  staffing: ShiftStaffing;
+  slots: SlotRequirement[];
+  isCustomised: boolean;
+}
+
 export interface ShiftType {
   id: string;
   name: string;
@@ -42,6 +59,7 @@ export interface ShiftType {
   reqMinGrade: string | null;
   reqTransfer: number;
   abbreviation: string;
+  daySlots: DaySlot[];
 }
 
 /* ─── Badge auto-detection (pure) ─── */
@@ -133,6 +151,7 @@ function makeShift(
     targetOverridePct: null,
     badges: autoBadges, badgeOverrides: {}, oncallManuallySet: false,
     reqIac: 0, reqIaoc: 0, reqIcu: 0, reqTransfer: 0, reqMinGrade: null,
+    daySlots: [],
   };
 }
 
@@ -191,58 +210,128 @@ export function DepartmentSetupProvider({ children }: { children: ReactNode }) {
     const loadFromDb = async () => {
       setIsLoadingShifts(true);
       try {
-        const { data, error } = await supabase
-          .from('shift_types')
-          .select('*')
-          .eq('rota_config_id', currentRotaConfigId)
-          .order('sort_order', { ascending: true });
+        const [shiftsRes, daySlotsRes, slotReqsRes] = await Promise.all([
+          supabase
+            .from('shift_types')
+            .select('*')
+            .eq('rota_config_id', currentRotaConfigId)
+            .order('sort_order', { ascending: true }),
+          supabase
+            .from('shift_day_slots')
+            .select('*')
+            .eq('rota_config_id', currentRotaConfigId),
+          supabase
+            .from('shift_slot_requirements')
+            .select('*')
+            .eq('rota_config_id', currentRotaConfigId),
+        ]);
 
-        if (!error && data && data.length > 0) {
-          const restored: ShiftType[] = data.map((row: any) => {
-            const days: ApplicableDays = {
-              mon: row.applicable_mon ?? false, tue: row.applicable_tue ?? false,
-              wed: row.applicable_wed ?? false, thu: row.applicable_thu ?? false,
-              fri: row.applicable_fri ?? false, sat: row.applicable_sat ?? false,
-              sun: row.applicable_sun ?? false,
-            };
-            const isOncall = row.is_oncall ?? false;
-            const isNonRes = row.is_non_res_oncall ?? false;
-            const autoBadges = detectBadges(row.start_time, row.end_time, days, isOncall, isNonRes);
-            const badgeOverrides: Partial<Record<BadgeKey, boolean>> = {};
-            if (row.badge_night_manual_override != null) badgeOverrides.night = row.badge_night;
-            if (row.badge_long_manual_override != null) badgeOverrides.long = row.badge_long;
-            if (row.badge_ooh_manual_override != null) badgeOverrides.ooh = row.badge_ooh;
-            
-            if (row.badge_oncall_manual_override != null) badgeOverrides.oncall = row.badge_oncall;
-            if (row.badge_nonres_manual_override != null) badgeOverrides.nonres = row.badge_nonres;
-            return {
-              id: row.shift_key ?? row.id,
-              name: row.name,
-              startTime: row.start_time,
-              endTime: row.end_time,
-              durationHours: row.duration_hours,
-              applicableDays: days,
-              isOncall, isNonRes,
-              staffing: {
-                min: row.min_doctors ?? 1,
-                target: row.target_doctors ?? row.min_doctors ?? 1,
-                max: row.max_doctors ?? null,
-              },
-              abbreviation: row.abbreviation ?? generateAbbreviation(row.name),
-              targetOverridePct: row.target_percentage ?? null,
-              badges: mergedBadges(autoBadges, badgeOverrides),
-              badgeOverrides,
-              oncallManuallySet: row.oncall_manually_set ?? false,
-              reqIac: row.req_iac ?? 0,
-              reqIaoc: row.req_iaoc ?? 0,
-              reqIcu: row.req_icu ?? 0,
-              reqTransfer: row.req_transfer ?? 0,
-              reqMinGrade: row.req_min_grade ?? null,
-            };
-          });
-          setShifts(restored);
-          hasLoadedShiftsFromDB.current = true;
+        if (shiftsRes.error || !shiftsRes.data || shiftsRes.data.length === 0) {
+          return;
         }
+
+        const rawSlotReqs = slotReqsRes.data ?? [];
+        const reqsByDaySlotId = new Map<string, SlotRequirement[]>();
+        for (const req of rawSlotReqs) {
+          const sid: string = req.shift_day_slot_id;
+          if (!reqsByDaySlotId.has(sid)) reqsByDaySlotId.set(sid, []);
+          reqsByDaySlotId.get(sid)!.push({
+            slotIndex:       req.slot_index        as number,
+            label:           req.label             as string | null,
+            permittedGrades: (req.permitted_grades as string[]) ?? [],
+            reqIac:          (req.req_iac          as number)  ?? 0,
+            reqIaoc:         (req.req_iaoc         as number)  ?? 0,
+            reqIcu:          (req.req_icu          as number)  ?? 0,
+            reqTransfer:     (req.req_transfer     as number)  ?? 0,
+          });
+        }
+        for (const reqs of reqsByDaySlotId.values()) {
+          reqs.sort((a, b) => a.slotIndex - b.slotIndex);
+        }
+
+        const rawDaySlots = daySlotsRes.data ?? [];
+        const daySlotsByShiftTypeUuid = new Map<string, DaySlot[]>();
+        for (const ds of rawDaySlots) {
+          const shiftTypeUuid: string = ds.shift_type_id;
+          if (!daySlotsByShiftTypeUuid.has(shiftTypeUuid)) {
+            daySlotsByShiftTypeUuid.set(shiftTypeUuid, []);
+          }
+          const daySlotReqs = reqsByDaySlotId.get(ds.id as string) ?? [];
+          const staffing: ShiftStaffing = {
+            min:    (ds.min_doctors    as number) ?? 1,
+            target: (ds.target_doctors as number) ?? 1,
+            max:    (ds.max_doctors    as number | null) ?? null,
+          };
+          daySlotsByShiftTypeUuid.get(shiftTypeUuid)!.push({
+            dayKey:       ds.day_key as string,
+            staffing,
+            slots:        daySlotReqs,
+            isCustomised: false,
+          });
+        }
+
+        const restored: ShiftType[] = shiftsRes.data.map((row: any) => {
+          const days: ApplicableDays = {
+            mon: row.applicable_mon ?? false, tue: row.applicable_tue ?? false,
+            wed: row.applicable_wed ?? false, thu: row.applicable_thu ?? false,
+            fri: row.applicable_fri ?? false, sat: row.applicable_sat ?? false,
+            sun: row.applicable_sun ?? false,
+          };
+          const isOncall = row.is_oncall ?? false;
+          const isNonRes = row.is_non_res_oncall ?? false;
+          const autoBadges = detectBadges(row.start_time, row.end_time, days, isOncall, isNonRes);
+          const badgeOverrides: Partial<Record<BadgeKey, boolean>> = {};
+          if (row.badge_night_manual_override  != null) badgeOverrides.night  = row.badge_night  as boolean;
+          if (row.badge_long_manual_override   != null) badgeOverrides.long   = row.badge_long   as boolean;
+          if (row.badge_ooh_manual_override    != null) badgeOverrides.ooh    = row.badge_ooh    as boolean;
+          if (row.badge_oncall_manual_override != null) badgeOverrides.oncall = row.badge_oncall as boolean;
+          if (row.badge_nonres_manual_override != null) badgeOverrides.nonres = row.badge_nonres as boolean;
+
+          const shiftDefaultMin:    number      = row.min_doctors    ?? 1;
+          const shiftDefaultTarget: number      = row.target_doctors ?? row.min_doctors ?? 1;
+          const shiftDefaultMax:    number|null = row.max_doctors    ?? null;
+
+          const shiftTypeUuid: string = row.id;
+          const rawDaySlotGroup = daySlotsByShiftTypeUuid.get(shiftTypeUuid) ?? [];
+          const daySlots: DaySlot[] = rawDaySlotGroup.map((ds) => ({
+            ...ds,
+            isCustomised: (
+              ds.staffing.min    !== shiftDefaultMin    ||
+              ds.staffing.target !== shiftDefaultTarget ||
+              ds.staffing.max    !== shiftDefaultMax    ||
+              ds.slots.length     > 0
+            ),
+          }));
+
+          return {
+            id:               row.shift_key ?? row.id,
+            name:             row.name,
+            startTime:        row.start_time,
+            endTime:          row.end_time,
+            durationHours:    row.duration_hours,
+            applicableDays:   days,
+            isOncall,
+            isNonRes,
+            staffing: {
+              min:    shiftDefaultMin,
+              target: shiftDefaultTarget,
+              max:    shiftDefaultMax,
+            },
+            abbreviation:      row.abbreviation ?? generateAbbreviation(row.name),
+            targetOverridePct: row.target_percentage ?? null,
+            badges:            mergedBadges(autoBadges, badgeOverrides),
+            badgeOverrides,
+            oncallManuallySet: row.oncall_manually_set ?? false,
+            reqIac:            row.req_iac      ?? 0,
+            reqIaoc:           row.req_iaoc     ?? 0,
+            reqIcu:            row.req_icu      ?? 0,
+            reqTransfer:       row.req_transfer ?? 0,
+            reqMinGrade:       row.req_min_grade ?? null,
+            daySlots,
+          };
+        });
+        setShifts(restored);
+        hasLoadedShiftsFromDB.current = true;
       } catch (err) {
         console.error('Failed to load shift types from DB:', err);
       } finally {

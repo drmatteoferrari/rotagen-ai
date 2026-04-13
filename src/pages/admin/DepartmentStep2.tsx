@@ -914,6 +914,7 @@ export default function DepartmentStep2() {
       badgeOverrides: {},
       oncallManuallySet: false,
       reqIac: 0, reqIaoc: 0, reqIcu: 0, reqTransfer: 0, reqMinGrade: null,
+      daySlots: [],
     };
     setShifts(prev => [...prev, newShift]);
     setExpandedShiftId(id);
@@ -942,6 +943,7 @@ export default function DepartmentStep2() {
       badgeOverrides: {},
       oncallManuallySet: false,
       reqIac: 0, reqIaoc: 0, reqIcu: 0, reqTransfer: 0, reqMinGrade: null,
+      daySlots: [],
     };
     setShifts(prev => [...prev, newShift]);
     setExpandedShiftId(id);
