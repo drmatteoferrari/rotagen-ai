@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { AdminLayout } from "@/components/AdminLayout";
 import { StepNavBar } from "@/components/StepNavBar";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   Plus, Trash2, Clock, Save, Info, AlertTriangle,
   ArrowLeft, ArrowRight, CalendarDays, ChevronRight, ChevronDown, ChevronUp,
-  Loader2, Building2, Copy,
+  Loader2, Building2, Copy, Eye,
 } from "lucide-react";
 import {
   useDepartmentSetup, detectBadges, mergedBadges, generateAbbreviation,
@@ -484,9 +484,10 @@ interface DaySlotModalProps {
   onSave:          (shiftId: string, dayKey: DayKey, updated: DaySlot) => void;
   onCopyToDays:    (shiftId: string, sourceDayKey: DayKey, targets: DayKey[], source: DaySlot) => void;
   onRemoveFromDay: (shiftId: string, dayKey: DayKey) => void;
+  isReadOnly?: boolean;
 }
 
-function DaySlotModal({ open, onOpenChange, shift, dayKey, onSave, onCopyToDays, onRemoveFromDay }: DaySlotModalProps) {
+function DaySlotModal({ open, onOpenChange, shift, dayKey, onSave, onCopyToDays, onRemoveFromDay, isReadOnly }: DaySlotModalProps) {
   const [draft, setDraft]         = useState<DaySlot | null>(null);
   const [showCopy, setShowCopy]   = useState(false);
   const [copyTargets, setCopyTargets] = useState<Record<DayKey, boolean>>({
@@ -587,26 +588,27 @@ function DaySlotModal({ open, onOpenChange, shift, dayKey, onSave, onCopyToDays,
         <div className="flex min-h-0 flex-1 divide-x divide-border overflow-hidden">
 
           {/* Left column: doctors stepper + copy */}
-          <div className="flex w-[200px] shrink-0 flex-col gap-4 overflow-y-auto p-4">
+          <div className={`flex w-[200px] shrink-0 flex-col gap-4 overflow-y-auto p-4 ${isReadOnly ? "pointer-events-none opacity-60" : ""}`}>
 
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Doctors
               </Label>
               <div className="flex items-center gap-3">
-                <button type="button" disabled={draft.staffing.target <= 1}
+                <button type="button" disabled={isReadOnly || draft.staffing.target <= 1}
                   onClick={() => syncCount(Math.max(1, draft.staffing.target - 1))}
                   className="flex h-8 w-8 items-center justify-center rounded-full border text-sm font-bold hover:bg-muted disabled:opacity-30">
                   −
                 </button>
                 <span className="w-8 text-center text-lg font-bold">{draft.staffing.target}</span>
-                <button type="button" onClick={() => syncCount(draft.staffing.target + 1)}
+                <button type="button" disabled={isReadOnly} onClick={() => syncCount(draft.staffing.target + 1)}
                   className="flex h-8 w-8 items-center justify-center rounded-full border text-sm font-bold hover:bg-muted">
                   +
                 </button>
               </div>
             </div>
 
+            {!isReadOnly && (
             <div className="space-y-2">
               <button type="button" onClick={() => setShowCopy((v) => !v)}
                 className="flex items-center gap-1.5 text-xs font-medium text-purple-600 hover:text-purple-800">
@@ -641,10 +643,11 @@ function DaySlotModal({ open, onOpenChange, shift, dayKey, onSave, onCopyToDays,
                 </div>
               )}
             </div>
+            )}
           </div>
 
           {/* Right column: slot rows (scrollable) */}
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className={`flex-1 overflow-y-auto p-4 ${isReadOnly ? "pointer-events-none opacity-60" : ""}`}>
             <div className="mb-3">
               <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Eligibility per position
@@ -665,15 +668,19 @@ function DaySlotModal({ open, onOpenChange, shift, dayKey, onSave, onCopyToDays,
 
         {/* Fixed footer */}
         <div className="flex shrink-0 items-center justify-between border-t px-5 py-3">
-          <button type="button" onClick={removeAndClose}
-            className="text-xs font-medium text-destructive hover:text-destructive/80">
-            Remove from {DAY_SHORT[dayIdx]}
-          </button>
+          {!isReadOnly ? (
+            <button type="button" onClick={removeAndClose}
+              className="text-xs font-medium text-destructive hover:text-destructive/80">
+              Remove from {DAY_SHORT[dayIdx]}
+            </button>
+          ) : <div />}
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button className="bg-purple-600 text-white hover:bg-purple-700" onClick={saveAndClose}>
-              <Save className="mr-1.5 h-3.5 w-3.5" /> Save
-            </Button>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>{isReadOnly ? "Close" : "Cancel"}</Button>
+            {!isReadOnly && (
+              <Button className="bg-purple-600 text-white hover:bg-purple-700" onClick={saveAndClose}>
+                <Save className="mr-1.5 h-3.5 w-3.5" /> Save
+              </Button>
+            )}
           </div>
         </div>
 
@@ -684,11 +691,12 @@ function DaySlotModal({ open, onOpenChange, shift, dayKey, onSave, onCopyToDays,
 
 /* ─── ShiftIdentityCard ─── */
 function ShiftIdentityCard({
-  shift, index, expanded, onToggleExpand, onSave, onRemove, canRemove, allShifts,
+  shift, index, expanded, onToggleExpand, onSave, onRemove, canRemove, allShifts, isReadOnly,
 }: {
   shift: ShiftType; index: number; expanded: boolean;
   onToggleExpand: () => void; onSave: (u: ShiftType) => void;
   onRemove: () => void; canRemove: boolean; allShifts: ShiftType[];
+  isReadOnly?: boolean;
 }) {
   const color = getShiftColor(index);
   const [draft, setDraft] = useState<ShiftType>({ ...shift, badgeOverrides: { ...shift.badgeOverrides } });
@@ -720,12 +728,12 @@ function ShiftIdentityCard({
 
   const errors = getShiftIdentityErrors(draft, allShifts);
 
-  if (!expanded) {
+  if (!expanded || isReadOnly) {
     return (
       <div
-        className="cursor-pointer rounded-xl border border-border bg-card p-4 transition-all hover:shadow-md"
+        className={`rounded-xl border border-border bg-card p-4 transition-all ${isReadOnly ? "" : "cursor-pointer hover:shadow-md"}`}
         style={{ borderLeft: `4px solid ${color.solid}` }}
-        onClick={onToggleExpand}
+        onClick={isReadOnly ? undefined : onToggleExpand}
       >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1 space-y-1">
@@ -746,7 +754,7 @@ function ShiftIdentityCard({
           </div>
           <div className="flex shrink-0 items-center gap-1">
             <span className="text-[10px] text-muted-foreground">{shift.daySlots.length}d · {shift.staffing.target} drs</span>
-            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            {!isReadOnly && <ChevronDown className="h-4 w-4 text-muted-foreground" />}
           </div>
         </div>
       </div>
@@ -877,13 +885,14 @@ function DraggableShiftChipNew({ shift, index }: { shift: ShiftType; index: numb
 
 /* ─── DayColumnNew ─── */
 function DayColumnNew({
-  dayKey, dayIndex, isWeekend, shifts, dragOverDay, onCellClick, onAssignShift, onOpenAssignDialog,
+  dayKey, dayIndex, isWeekend, shifts, dragOverDay, onCellClick, onAssignShift, onOpenAssignDialog, isReadOnly,
 }: {
   dayKey: DayKey; dayIndex: number; isWeekend: boolean;
   shifts: ShiftType[]; dragOverDay: DayKey | null;
   onCellClick: (shiftId: string, dayKey: DayKey) => void;
   onAssignShift: (shiftId: string, dayKey: DayKey) => void;
   onOpenAssignDialog: (dayKey: DayKey) => void;
+  isReadOnly?: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: dayKey });
   const highlighted = isOver || dragOverDay === dayKey;
@@ -941,14 +950,16 @@ function DayColumnNew({
           </button>
         );
       })}
-      {/* Add-shift button — always shown, opens popup */}
-      <div className="mt-1">
-        <button type="button" onClick={() => onOpenAssignDialog(dayKey)}
-          className="flex w-full items-center justify-center gap-1 rounded-lg border border-dashed border-border py-1.5 text-[10px] font-medium text-muted-foreground hover:border-purple-300 hover:text-purple-600 transition-colors"
-        >
-          <Plus className="h-3 w-3" /> Add
-        </button>
-      </div>
+      {/* Add-shift button — hidden in readonly */}
+      {!isReadOnly && (
+        <div className="mt-1">
+          <button type="button" onClick={() => onOpenAssignDialog(dayKey)}
+            className="flex w-full items-center justify-center gap-1 rounded-lg border border-dashed border-border py-1.5 text-[10px] font-medium text-muted-foreground hover:border-purple-300 hover:text-purple-600 transition-colors"
+          >
+            <Plus className="h-3 w-3" /> Add
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -1020,6 +1031,8 @@ function AssignShiftDialog({ open, onOpenChange, dayKey, shifts, onAssign, onNew
 
 export default function DepartmentStep2() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isReadOnly = searchParams.get("readonly") === "true";
   const { shifts, setShifts, removeShift, isLoadingShifts } = useDepartmentSetup();
   const { setDepartmentComplete }                           = useAdminSetup();
   const { currentRotaConfigId, setCurrentRotaConfigId }     = useRotaContext();
@@ -1133,6 +1146,7 @@ export default function DepartmentStep2() {
   const canSave = shifts.length > 0 && identityErrors.length === 0 && !saving;
 
   const handleSaveCheck = async () => {
+    if (isReadOnly) return;
     if (currentRotaConfigId) {
       const { data } = await supabase
         .from("pre_rota_results").select("id, status")
@@ -1266,31 +1280,49 @@ export default function DepartmentStep2() {
       navBar={
         <StepNavBar
           left={
-            <Button variant="outline" size="lg" className="min-h-[44px]" onClick={() => navigate("/admin/department/step-1")}>
+            <Button variant="outline" size="lg" className="min-h-[44px]" onClick={() => navigate(isReadOnly ? "/admin/department/step-1?readonly=true" : "/admin/department/step-1")}>
               <ArrowLeft className="mr-2 h-4 w-4" /> Back
             </Button>
           }
           right={
-            <Button size="lg" className="min-h-[44px] bg-purple-600 text-white hover:bg-purple-700"
-              disabled={!canSave} onClick={handleSaveCheck}>
-              {saving
-                ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving…</>
-                : <>Continue <ArrowRight className="ml-2 h-4 w-4" /></>
-              }
-            </Button>
+            isReadOnly ? (
+              <Button size="lg" onClick={() => navigate("/admin/department/step-3?readonly=true")}>
+                Next <ArrowRight className="ml-1 h-4 w-4" />
+              </Button>
+            ) : (
+              <Button size="lg" className="min-h-[44px] bg-purple-600 text-white hover:bg-purple-700"
+                disabled={!canSave} onClick={handleSaveCheck}>
+                {saving
+                  ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving…</>
+                  : <>Continue <ArrowRight className="ml-2 h-4 w-4" /></>
+                }
+              </Button>
+            )
           }
         />
       }
     >
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={isReadOnly ? undefined : handleDragStart} onDragOver={isReadOnly ? undefined : handleDragOver} onDragEnd={isReadOnly ? undefined : handleDragEnd}>
         <div className="mx-auto max-w-4xl space-y-6 animate-fadeSlideUp">
 
-          <div className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
-            <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
-            <p className="text-sm text-blue-800">
-              Define your shifts, assign them to the days they run, then click any cell to set staffing and eligibility per day.
-            </p>
-          </div>
+          {isReadOnly ? (
+            <div className="flex items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-700">
+              <div className="flex items-center gap-2">
+                <Eye className="h-4 w-4 shrink-0 text-amber-600" />
+                Read-only — no changes will be saved
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => navigate("/admin/department/summary?mode=post-submit")} className="text-amber-700 hover:text-amber-900 hover:bg-amber-100 h-7 px-2 text-xs">
+                Exit
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+              <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
+              <p className="text-sm text-blue-800">
+                Define your shifts, assign them to the days they run, then click any cell to set staffing and eligibility per day.
+              </p>
+            </div>
+          )}
 
           {/* Card 1 — Weekly timetable grid */}
           <Card>
@@ -1317,15 +1349,31 @@ export default function DepartmentStep2() {
               ) : (
                 <>
                   <div className="flex flex-wrap items-center gap-2 pb-1">
-                    <span className="mr-1 flex items-center text-[10px] font-medium text-muted-foreground">Drag onto days →</span>
-                    {shifts.map((s, i) => <DraggableShiftChipNew key={s.id} shift={s} index={i} />)}
-                    <button
-                      type="button"
-                      onClick={() => setAddModalOpen(true)}
-                      className="inline-flex items-center gap-1 rounded-full border border-dashed border-purple-300 px-2.5 py-1 text-xs font-medium text-purple-600 hover:bg-purple-50 transition-colors"
-                    >
-                      <Plus className="h-3 w-3" /> New shift
-                    </button>
+                    {isReadOnly ? (
+                      <>
+                        <span className="mr-1 flex items-center text-[10px] font-medium text-muted-foreground">Shift types</span>
+                        {shifts.map((s, i) => {
+                          const color = getShiftColor(i);
+                          return (
+                            <div key={s.id} className={`flex shrink-0 items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium ${color.bg} ${color.text} ${color.border}`}>
+                              <span className="font-mono font-bold tracking-widest">{s.abbreviation}</span>
+                            </div>
+                          );
+                        })}
+                      </>
+                    ) : (
+                      <>
+                        <span className="mr-1 flex items-center text-[10px] font-medium text-muted-foreground">Drag onto days →</span>
+                        {shifts.map((s, i) => <DraggableShiftChipNew key={s.id} shift={s} index={i} />)}
+                        <button
+                          type="button"
+                          onClick={() => setAddModalOpen(true)}
+                          className="inline-flex items-center gap-1 rounded-full border border-dashed border-purple-300 px-2.5 py-1 text-xs font-medium text-purple-600 hover:bg-purple-50 transition-colors"
+                        >
+                          <Plus className="h-3 w-3" /> New shift
+                        </button>
+                      </>
+                    )}
                   </div>
                   <hr className="border-border" />
 
@@ -1349,6 +1397,7 @@ export default function DepartmentStep2() {
                             shifts={shifts} dragOverDay={dragOverDay}
                             onCellClick={handleCellClick} onAssignShift={handleAssignShift}
                             onOpenAssignDialog={(dk) => setAssignDialog(dk)}
+                            isReadOnly={isReadOnly}
                           />
                         </div>
                       ))}
@@ -1379,6 +1428,7 @@ export default function DepartmentStep2() {
                       onCellClick={handleCellClick}
                       onAssignShift={handleAssignShift}
                       onOpenAssignDialog={(dk) => setAssignDialog(dk)}
+                      isReadOnly={isReadOnly}
                     />
                   </div>
 
@@ -1457,15 +1507,18 @@ export default function DepartmentStep2() {
                       onRemove={() => { removeShift(shift.id); setExpandedShiftId(null); }}
                       canRemove={shifts.length > 1}
                       allShifts={shifts}
+                      isReadOnly={isReadOnly}
                     />
                   </div>
                 ))}
               </div>
 
-              <button type="button" onClick={() => setAddModalOpen(true)}
-                className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-purple-300 p-3 text-sm font-medium text-purple-600 transition-colors hover:bg-purple-50">
-                <Plus className="h-4 w-4" /> Add shift type
-              </button>
+              {!isReadOnly && (
+                <button type="button" onClick={() => setAddModalOpen(true)}
+                  className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-purple-300 p-3 text-sm font-medium text-purple-600 transition-colors hover:bg-purple-50">
+                  <Plus className="h-4 w-4" /> Add shift type
+                </button>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -1495,6 +1548,7 @@ export default function DepartmentStep2() {
           onSave={handleDaySlotSave}
           onCopyToDays={handleCopyToDays}
           onRemoveFromDay={handleRemoveFromDay}
+          isReadOnly={isReadOnly}
         />
 
         <Dialog open={showPreRotaWarn} onOpenChange={setShowPreRotaWarn}>
