@@ -885,13 +885,14 @@ function DraggableShiftChipNew({ shift, index }: { shift: ShiftType; index: numb
 
 /* ─── DayColumnNew ─── */
 function DayColumnNew({
-  dayKey, dayIndex, isWeekend, shifts, dragOverDay, onCellClick, onAssignShift, onOpenAssignDialog,
+  dayKey, dayIndex, isWeekend, shifts, dragOverDay, onCellClick, onAssignShift, onOpenAssignDialog, isReadOnly,
 }: {
   dayKey: DayKey; dayIndex: number; isWeekend: boolean;
   shifts: ShiftType[]; dragOverDay: DayKey | null;
   onCellClick: (shiftId: string, dayKey: DayKey) => void;
   onAssignShift: (shiftId: string, dayKey: DayKey) => void;
   onOpenAssignDialog: (dayKey: DayKey) => void;
+  isReadOnly?: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: dayKey });
   const highlighted = isOver || dragOverDay === dayKey;
@@ -949,14 +950,16 @@ function DayColumnNew({
           </button>
         );
       })}
-      {/* Add-shift button — always shown, opens popup */}
-      <div className="mt-1">
-        <button type="button" onClick={() => onOpenAssignDialog(dayKey)}
-          className="flex w-full items-center justify-center gap-1 rounded-lg border border-dashed border-border py-1.5 text-[10px] font-medium text-muted-foreground hover:border-purple-300 hover:text-purple-600 transition-colors"
-        >
-          <Plus className="h-3 w-3" /> Add
-        </button>
-      </div>
+      {/* Add-shift button — hidden in readonly */}
+      {!isReadOnly && (
+        <div className="mt-1">
+          <button type="button" onClick={() => onOpenAssignDialog(dayKey)}
+            className="flex w-full items-center justify-center gap-1 rounded-lg border border-dashed border-border py-1.5 text-[10px] font-medium text-muted-foreground hover:border-purple-300 hover:text-purple-600 transition-colors"
+          >
+            <Plus className="h-3 w-3" /> Add
+          </button>
+        </div>
+      )}
     </div>
   );
 }
