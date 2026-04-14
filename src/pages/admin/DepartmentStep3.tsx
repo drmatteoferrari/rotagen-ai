@@ -30,32 +30,20 @@ const REF_HPW = 48;
 
 // ─── Pure utility functions ───────────────────────────────────
 
-// getWeeklyDemand: total doctor-hours required per week for a shift type.
-// Primary path: sum daySlots[i].staffing.target × durationHours.
-// daySlots is now a typed first-class property on ShiftType — no cast needed.
-// Fallback: applicableDays count × staffing.target × durationHours
-// (only used if daySlots is somehow empty — should not occur in normal flow).
-
 function getWeeklyDemand(shift: ShiftType): number {
   if (shift.daySlots.length > 0) {
     const totalTargetPerWeek = shift.daySlots.reduce((sum, ds) => sum + (ds.staffing?.target ?? 0), 0);
     return totalTargetPerWeek * shift.durationHours;
   }
-  // Fallback
   const activeDayCount = Object.values(shift.applicableDays).filter(Boolean).length;
   return activeDayCount * shift.staffing.target * shift.durationHours;
 }
 
-// getDayCount: active days for display purposes.
-// Prefers daySlots.length as the canonical source.
 function getDayCount(shift: ShiftType): number {
   if (shift.daySlots.length > 0) return shift.daySlots.length;
   return Object.values(shift.applicableDays).filter(Boolean).length;
 }
 
-// shiftFingerprint: stable string representing the shift list shape.
-// Used to detect Step 2 changes and reset shift-type overrides.
-// Encodes: sorted shift ids, their oncall status, daySlots count, and total demand.
 function shiftFingerprint(shifts: ShiftType[]): string {
   return shifts
     .slice()
@@ -160,12 +148,10 @@ function GlobalSplitBar({ oncallPct, onChange }: { oncallPct: number; onChange: 
       className="relative h-8 w-full cursor-pointer select-none overflow-hidden rounded-full"
       style={{ touchAction: "none" }}
     >
-      {/* On-call fill */}
       <div
         className="absolute inset-y-0 left-0 rounded-l-full transition-[width] duration-75"
         style={{ width: `${oncallPct}%`, background: "linear-gradient(to right, rgba(147,51,234,0.15), #9333ea)" }}
       />
-      {/* Non-on-call fill */}
       <div
         className="absolute inset-y-0 right-0 rounded-r-full transition-[width] duration-75"
         style={{
@@ -173,12 +159,10 @@ function GlobalSplitBar({ oncallPct, onChange }: { oncallPct: number; onChange: 
           background: "linear-gradient(to right, rgba(147,51,234,0.06), rgba(196,181,253,0.4))",
         }}
       />
-      {/* Segment labels */}
       <div className="pointer-events-none absolute inset-0 flex items-center justify-between px-3 text-[11px] font-semibold">
         <span className="text-white drop-shadow-sm">{oncallPct}% on-call</span>
         <span className="text-purple-700">{100 - oncallPct}% non-on-call</span>
       </div>
-      {/* Draggable handle */}
       <div
         className="absolute top-0 flex h-full items-center"
         style={{ left: `${oncallPct}%`, transform: "translateX(-50%)" }}
@@ -261,18 +245,15 @@ function ShiftPctBar({
 
   return (
     <div className="flex items-center gap-2">
-      {/* Track */}
       <div
         ref={trackRef}
         className="relative h-[22px] flex-1 cursor-pointer select-none overflow-hidden rounded-full bg-muted/40"
         style={{ touchAction: "none" }}
       >
-        {/* Fill */}
         <div
           className="absolute inset-y-0 left-0 rounded-l-full transition-[width] duration-75"
           style={{ width: `${value}%`, background: "linear-gradient(to right, rgba(147,51,234,0.1), #9333ea)" }}
         />
-        {/* Handle */}
         <div
           className="absolute top-0 flex h-full items-center"
           style={{ left: `${value}%`, transform: "translateX(-50%)" }}
@@ -298,7 +279,6 @@ function ShiftPctBar({
         </div>
       </div>
 
-      {/* Percentage label — tap to inline-edit */}
       {editing ? (
         <input
           autoFocus
@@ -329,7 +309,6 @@ function ShiftPctBar({
         </button>
       )}
 
-      {/* Reset icon */}
       {isActive ? (
         <button
           onClick={onReset}
@@ -351,7 +330,7 @@ function ShiftPctBar({
 
 export default function DepartmentStep3() {
   const navigate = useNavigate();
-  const { shifts } = useDepartmentSetup();
+  const { shifts, isLoadingShifts } = useDepartmentSetup();
   const { setDepartmentComplete } = useAdminSetup();
   const { currentRotaConfigId } = useRotaContext();
   const { user } = useAuth();
@@ -366,12 +345,12 @@ export default function DepartmentStep3() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // Track the shift fingerprint that was in effect when overrides were loaded
-  // from DB, so we can detect Step 2 changes and reset stale overrides.
-  const loadedFingerprintRef = useRef<string | null>(null);
+  // Whether Step 3's own DB load has run at least once after shifts were ready.
+  const hasInitialisedRef = useRef(false);
 
-  const suggestedOncallPcts = getDemandWeightedPcts(oncallShifts);
-  const suggestedNonOncallPcts = getDemandWeightedPcts(nonOncallShifts);
+  // Fingerprint recorded after each successful DB load or save.
+  // Used to detect Step 2 changes and reset stale shift-type overrides.
+  const loadedFingerprintRef = useRef<string | null>(null);
 
   const activeOncallPcts = computeActivePcts(oncallShifts, oncallOverrides);
   const activeNonOncallPcts = computeActivePcts(nonOncallShifts, nonOncallOverrides);
@@ -387,40 +366,51 @@ export default function DepartmentStep3() {
   const anyNonOncallOverride = Object.keys(nonOncallOverrides).length > 0;
 
   // ── Data loading ────────────────────────────────────────────
-  // Runs once when currentRotaConfigId is available.
-  // Seeds globalOncallPct from DB if previously saved; otherwise seeds from
-  // demand-based suggestion so first-time visitors see a meaningful default.
-  // Restores shift-type overrides from DB and records the fingerprint at load
-  // time so we can detect if Step 2 was edited before returning here.
+  // Waits for the context to finish its own DB load (isLoadingShifts === false)
+  // before running. This ensures `shifts` is fully hydrated from the DB before
+  // demand calculations and fingerprinting run.
+  // Runs when: currentRotaConfigId changes, or isLoadingShifts transitions to false.
   useEffect(() => {
+    // Block until context has finished loading shifts from DB.
+    if (isLoadingShifts) return;
+    // Only initialise once per config. Subsequent shift changes are handled
+    // by the reset effect below.
+    if (hasInitialisedRef.current) return;
+
     const load = async () => {
-      if (!currentRotaConfigId) {
-        // No config yet — seed split from demand suggestion, no overrides.
-        if (shifts.length > 0) {
-          setGlobalOncallPctState(getSuggestedGlobalSplit(oncallShifts, nonOncallShifts));
-        }
-        setLoading(false);
-        return;
-      }
+      setLoading(true);
       try {
+        if (!currentRotaConfigId) {
+          // No config yet — seed from demand suggestion.
+          if (shifts.length > 0) {
+            setGlobalOncallPctState(
+              getSuggestedGlobalSplit(
+                shifts.filter((s) => s.isOncall),
+                shifts.filter((s) => !s.isOncall),
+              ),
+            );
+          }
+          return;
+        }
+
         const { data: cfg, error: cfgErr } = await supabase
           .from("rota_configs")
           .select("global_oncall_pct")
           .eq("id", currentRotaConfigId)
           .single();
 
-        if (cfgErr) {
-          // DB error — fall back to demand suggestion silently
+        if (cfgErr || cfg?.global_oncall_pct == null) {
+          // No previously saved split — seed from demand.
           if (shifts.length > 0) {
-            setGlobalOncallPctState(getSuggestedGlobalSplit(oncallShifts, nonOncallShifts));
+            setGlobalOncallPctState(
+              getSuggestedGlobalSplit(
+                shifts.filter((s) => s.isOncall),
+                shifts.filter((s) => !s.isOncall),
+              ),
+            );
           }
-        } else if (cfg?.global_oncall_pct != null) {
-          setGlobalOncallPctState(Number(cfg.global_oncall_pct));
         } else {
-          // Config exists but no split saved yet — seed from demand
-          if (shifts.length > 0) {
-            setGlobalOncallPctState(getSuggestedGlobalSplit(oncallShifts, nonOncallShifts));
-          }
+          setGlobalOncallPctState(Number(cfg.global_oncall_pct));
         }
 
         const { data: rows } = await supabase
@@ -438,33 +428,38 @@ export default function DepartmentStep3() {
         if (Object.keys(oo).length > 0) setOncallOverrides(oo);
         if (Object.keys(no).length > 0) setNonOncallOverrides(no);
 
-        // Record the fingerprint of the current shifts at load time.
-        // If Step 2 is edited and the coordinator returns here, the
-        // fingerprint will have changed and overrides will be cleared.
+        // Record fingerprint now that shifts are hydrated and overrides loaded.
         loadedFingerprintRef.current = shiftFingerprint(shifts);
       } catch (e) {
         console.error("Step 3 load failed:", e);
         toast.error("Could not load saved settings — defaults applied");
         if (shifts.length > 0) {
-          setGlobalOncallPctState(getSuggestedGlobalSplit(oncallShifts, nonOncallShifts));
+          setGlobalOncallPctState(
+            getSuggestedGlobalSplit(
+              shifts.filter((s) => s.isOncall),
+              shifts.filter((s) => !s.isOncall),
+            ),
+          );
         }
       } finally {
+        hasInitialisedRef.current = true;
         setLoading(false);
       }
     };
+
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentRotaConfigId]);
+  }, [currentRotaConfigId, isLoadingShifts]);
 
   // ── Reset shift-type overrides when Step 2 changes ──────────
-  // Watches the live shift fingerprint from context.
-  // When it diverges from what was loaded from DB, clear both override maps
+  // After initialisation, watches the live shift fingerprint.
+  // When it diverges from the fingerprint at last load/save, clears overrides
   // so the auto-calculated distribution is shown fresh.
-  // Does NOT reset globalOncallPct — that is a coordinator-level decision
-  // that persists independently of shift changes.
+  // Does NOT reset globalOncallPct.
   useEffect(() => {
     if (loading) return;
+    if (!hasInitialisedRef.current) return;
     if (loadedFingerprintRef.current === null) return;
+
     const current = shiftFingerprint(shifts);
     if (current !== loadedFingerprintRef.current) {
       setOncallOverrides({});
@@ -472,6 +467,12 @@ export default function DepartmentStep3() {
       loadedFingerprintRef.current = current;
     }
   }, [shifts, loading]);
+
+  // Reset hasInitialisedRef when config changes so a full re-initialise runs.
+  useEffect(() => {
+    hasInitialisedRef.current = false;
+    loadedFingerprintRef.current = null;
+  }, [currentRotaConfigId]);
 
   // ── Save handler ────────────────────────────────────────────
   const handleSave = async () => {
@@ -504,8 +505,6 @@ export default function DepartmentStep3() {
         if (error) throw error;
       }
 
-      // Update fingerprint ref after successful save so the reset effect
-      // does not fire again on the next render.
       loadedFingerprintRef.current = shiftFingerprint(shifts);
 
       toast.success("✓ Distribution saved");
@@ -544,7 +543,6 @@ export default function DepartmentStep3() {
 
     return (
       <div className="space-y-4">
-        {/* Bucket header */}
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <CheckCircle2 className={`h-4 w-4 ${sumOk ? "text-emerald-600" : "text-destructive"}`} />
@@ -571,7 +569,6 @@ export default function DepartmentStep3() {
           </div>
         </div>
 
-        {/* Shift rows */}
         {bucketShifts.map((shift, idx) => {
           const color = getShiftColor(idx);
           const pct = Math.round((activePcts[shift.id] ?? 0) * 10) / 10;
@@ -579,7 +576,6 @@ export default function DepartmentStep3() {
           const isOverridden = overrides[shift.id] !== undefined;
           const demand = getWeeklyDemand(shift);
           const dayCount = getDayCount(shift);
-          // Use staffing.target (intended headcount) not staffing.min (floor).
           const targetDoctors = shift.staffing.target;
           const isRefActive = isOverridden && Math.abs(pct - auto) > 0.5;
 
@@ -589,7 +585,6 @@ export default function DepartmentStep3() {
               className="rounded-xl border bg-card p-4 space-y-2"
               style={{ borderLeftWidth: 4, borderLeftColor: color.solid }}
             >
-              {/* Identity row */}
               <div className="flex flex-wrap items-center gap-2">
                 <span
                   className={`inline-flex items-center rounded-full px-2 py-0.5 font-mono text-xs font-bold border ${color.bg} ${color.text} ${color.border}`}
@@ -602,13 +597,11 @@ export default function DepartmentStep3() {
                 </span>
               </div>
 
-              {/* Demand line — uses target headcount and canonical day count */}
               <p className="text-xs text-muted-foreground">
                 {dayCount}d/wk × {targetDoctors} doctor{targetDoctors !== 1 ? "s" : ""} × {shift.durationHours}h ={" "}
                 {Math.round(demand * 10) / 10}h/wk demand · Auto: {auto}%
               </p>
 
-              {/* Drag bar */}
               <ShiftPctBar
                 value={pct}
                 autoValue={auto}
@@ -623,7 +616,6 @@ export default function DepartmentStep3() {
                 }
               />
 
-              {/* Reference preview */}
               <p
                 className={`rounded-lg px-3 py-1.5 text-xs ${
                   isRefActive ? "bg-purple-50 text-purple-700" : "bg-muted/50 text-muted-foreground"
@@ -677,7 +669,7 @@ export default function DepartmentStep3() {
       }
     >
       <div className="mx-auto max-w-3xl space-y-6 animate-fadeSlideUp">
-        {loading ? (
+        {loading || isLoadingShifts ? (
           <div className="flex items-center justify-center gap-2 py-20 text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin" />
             Loading…
@@ -740,7 +732,6 @@ export default function DepartmentStep3() {
                     specific shift is harder to cover.
                   </p>
 
-                  {/* Collapsed summary */}
                   {!expandedAdvanced && (
                     <div className="pt-2 space-y-2">
                       {oncallShifts.length > 0 && (
@@ -797,7 +788,6 @@ export default function DepartmentStep3() {
                 )}
               </button>
 
-              {/* Expanded content */}
               {expandedAdvanced && (
                 <CardContent className="space-y-6 pt-0">
                   <div className="flex items-start gap-2 rounded-xl border border-border bg-muted/30 p-3">
@@ -808,7 +798,6 @@ export default function DepartmentStep3() {
                     </p>
                   </div>
 
-                  {/* ON-CALL BUCKET */}
                   {renderBucket(
                     oncallShifts,
                     activeOncallPcts,
@@ -830,7 +819,6 @@ export default function DepartmentStep3() {
                     </div>
                   )}
 
-                  {/* NON-ON-CALL BUCKET */}
                   {renderBucket(
                     nonOncallShifts,
                     activeNonOncallPcts,
