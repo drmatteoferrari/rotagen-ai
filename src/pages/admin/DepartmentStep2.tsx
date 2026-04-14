@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { AdminLayout } from "@/components/AdminLayout";
 import { StepNavBar } from "@/components/StepNavBar";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   Plus, Trash2, Clock, Save, Info, AlertTriangle,
   ArrowLeft, ArrowRight, CalendarDays, ChevronRight, ChevronDown, ChevronUp,
-  Loader2, Building2, Copy,
+  Loader2, Building2, Copy, Eye,
 } from "lucide-react";
 import {
   useDepartmentSetup, detectBadges, mergedBadges, generateAbbreviation,
