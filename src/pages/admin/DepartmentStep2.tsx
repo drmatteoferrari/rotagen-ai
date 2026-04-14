@@ -1031,6 +1031,8 @@ function AssignShiftDialog({ open, onOpenChange, dayKey, shifts, onAssign, onNew
 
 export default function DepartmentStep2() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isReadOnly = searchParams.get("readonly") === "true";
   const { shifts, setShifts, removeShift, isLoadingShifts } = useDepartmentSetup();
   const { setDepartmentComplete }                           = useAdminSetup();
   const { currentRotaConfigId, setCurrentRotaConfigId }     = useRotaContext();
