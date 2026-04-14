@@ -1513,10 +1513,12 @@ export default function DepartmentStep2() {
                 ))}
               </div>
 
-              <button type="button" onClick={() => setAddModalOpen(true)}
-                className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-purple-300 p-3 text-sm font-medium text-purple-600 transition-colors hover:bg-purple-50">
-                <Plus className="h-4 w-4" /> Add shift type
-              </button>
+              {!isReadOnly && (
+                <button type="button" onClick={() => setAddModalOpen(true)}
+                  className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-purple-300 p-3 text-sm font-medium text-purple-600 transition-colors hover:bg-purple-50">
+                  <Plus className="h-4 w-4" /> Add shift type
+                </button>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -1546,6 +1548,7 @@ export default function DepartmentStep2() {
           onSave={handleDaySlotSave}
           onCopyToDays={handleCopyToDays}
           onRemoveFromDay={handleRemoveFromDay}
+          isReadOnly={isReadOnly}
         />
 
         <Dialog open={showPreRotaWarn} onOpenChange={setShowPreRotaWarn}>
