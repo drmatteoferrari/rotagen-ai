@@ -30,20 +30,43 @@ const REF_HPW = 48;
 
 // ─── Pure utility functions ───────────────────────────────────
 
+// getWeeklyDemand: Σ(daySlot.staffing.target) × durationHours.
+// daySlots is the authoritative source — each grid cell in Step 2 stores
+// its own per-day doctor count independently of shift.staffing.target.
+// shift.staffing.target is a creation-time default that goes stale when
+// individual day cells are edited and must never be used for demand.
 function getWeeklyDemand(shift: ShiftType): number {
   if (shift.daySlots.length > 0) {
-    const totalTargetPerWeek = shift.daySlots.reduce((sum, ds) => sum + (ds.staffing?.target ?? 0), 0);
-    return totalTargetPerWeek * shift.durationHours;
+    return shift.daySlots.reduce((sum, ds) => sum + (ds.staffing?.target ?? 0), 0) * shift.durationHours;
   }
+  // Fallback: no daySlots saved yet (edge case only)
   const activeDayCount = Object.values(shift.applicableDays).filter(Boolean).length;
   return activeDayCount * shift.staffing.target * shift.durationHours;
 }
 
+// getDayCount: number of active days (daySlots is canonical).
 function getDayCount(shift: ShiftType): number {
   if (shift.daySlots.length > 0) return shift.daySlots.length;
   return Object.values(shift.applicableDays).filter(Boolean).length;
 }
 
+// getTotalWeeklyDoctors: sum of per-day doctor targets across all active days.
+function getTotalWeeklyDoctors(shift: ShiftType): number {
+  if (shift.daySlots.length > 0) {
+    return shift.daySlots.reduce((sum, ds) => sum + (ds.staffing?.target ?? 0), 0);
+  }
+  return Object.values(shift.applicableDays).filter(Boolean).length * shift.staffing.target;
+}
+
+// isDailyStaffingUniform: true when every active day has the same doctor count.
+// Drives label format: uniform → "Nd × M drs × Hh", non-uniform → "X slots/wk × Hh".
+function isDailyStaffingUniform(shift: ShiftType): boolean {
+  if (shift.daySlots.length === 0) return true;
+  const first = shift.daySlots[0].staffing.target;
+  return shift.daySlots.every((ds) => ds.staffing.target === first);
+}
+
+// shiftFingerprint: detects Step 2 changes for override reset.
 function shiftFingerprint(shifts: ShiftType[]): string {
   return shifts
     .slice()
@@ -345,11 +368,7 @@ export default function DepartmentStep3() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // Whether Step 3's own DB load has run at least once after shifts were ready.
   const hasInitialisedRef = useRef(false);
-
-  // Fingerprint recorded after each successful DB load or save.
-  // Used to detect Step 2 changes and reset stale shift-type overrides.
   const loadedFingerprintRef = useRef<string | null>(null);
 
   const activeOncallPcts = computeActivePcts(oncallShifts, oncallOverrides);
@@ -365,23 +384,24 @@ export default function DepartmentStep3() {
   const anyOncallOverride = Object.keys(oncallOverrides).length > 0;
   const anyNonOncallOverride = Object.keys(nonOncallOverrides).length > 0;
 
-  // ── Data loading ────────────────────────────────────────────
-  // Waits for the context to finish its own DB load (isLoadingShifts === false)
-  // before running. This ensures `shifts` is fully hydrated from the DB before
-  // demand calculations and fingerprinting run.
-  // Runs when: currentRotaConfigId changes, or isLoadingShifts transitions to false.
+  // ── Reset refs when config changes ──────────────────────────
   useEffect(() => {
-    // Block until context has finished loading shifts from DB.
+    hasInitialisedRef.current = false;
+    loadedFingerprintRef.current = null;
+  }, [currentRotaConfigId]);
+
+  // ── Data loading ─────────────────────────────────────────────
+  // Waits for context to finish hydrating shifts (isLoadingShifts === false)
+  // before running. This ensures daySlots are fully populated before any
+  // demand calculation or fingerprinting occurs.
+  useEffect(() => {
     if (isLoadingShifts) return;
-    // Only initialise once per config. Subsequent shift changes are handled
-    // by the reset effect below.
     if (hasInitialisedRef.current) return;
 
     const load = async () => {
       setLoading(true);
       try {
         if (!currentRotaConfigId) {
-          // No config yet — seed from demand suggestion.
           if (shifts.length > 0) {
             setGlobalOncallPctState(
               getSuggestedGlobalSplit(
@@ -400,7 +420,6 @@ export default function DepartmentStep3() {
           .single();
 
         if (cfgErr || cfg?.global_oncall_pct == null) {
-          // No previously saved split — seed from demand.
           if (shifts.length > 0) {
             setGlobalOncallPctState(
               getSuggestedGlobalSplit(
@@ -428,7 +447,6 @@ export default function DepartmentStep3() {
         if (Object.keys(oo).length > 0) setOncallOverrides(oo);
         if (Object.keys(no).length > 0) setNonOncallOverrides(no);
 
-        // Record fingerprint now that shifts are hydrated and overrides loaded.
         loadedFingerprintRef.current = shiftFingerprint(shifts);
       } catch (e) {
         console.error("Step 3 load failed:", e);
@@ -450,16 +468,11 @@ export default function DepartmentStep3() {
     load();
   }, [currentRotaConfigId, isLoadingShifts]);
 
-  // ── Reset shift-type overrides when Step 2 changes ──────────
-  // After initialisation, watches the live shift fingerprint.
-  // When it diverges from the fingerprint at last load/save, clears overrides
-  // so the auto-calculated distribution is shown fresh.
-  // Does NOT reset globalOncallPct.
+  // ── Reset overrides when Step 2 shifts change ────────────────
   useEffect(() => {
     if (loading) return;
     if (!hasInitialisedRef.current) return;
     if (loadedFingerprintRef.current === null) return;
-
     const current = shiftFingerprint(shifts);
     if (current !== loadedFingerprintRef.current) {
       setOncallOverrides({});
@@ -467,12 +480,6 @@ export default function DepartmentStep3() {
       loadedFingerprintRef.current = current;
     }
   }, [shifts, loading]);
-
-  // Reset hasInitialisedRef when config changes so a full re-initialise runs.
-  useEffect(() => {
-    hasInitialisedRef.current = false;
-    loadedFingerprintRef.current = null;
-  }, [currentRotaConfigId]);
 
   // ── Save handler ────────────────────────────────────────────
   const handleSave = async () => {
@@ -506,7 +513,6 @@ export default function DepartmentStep3() {
       }
 
       loadedFingerprintRef.current = shiftFingerprint(shifts);
-
       toast.success("✓ Distribution saved");
       setDepartmentComplete(true);
       navigate("/admin/department/summary?mode=post-submit");
@@ -519,8 +525,11 @@ export default function DepartmentStep3() {
   };
 
   // ── Bucket renderer ─────────────────────────────────────────
+  // globalShifts passed in so colour index is looked up against the full
+  // shifts array — matching exactly how Step 2 colours each shift.
   const renderBucket = (
     bucketShifts: ShiftType[],
+    globalShifts: ShiftType[],
     activePcts: Record<string, number>,
     overrides: Record<string, number>,
     setOverrides: React.Dispatch<React.SetStateAction<Record<string, number>>>,
@@ -543,6 +552,7 @@ export default function DepartmentStep3() {
 
     return (
       <div className="space-y-4">
+        {/* Bucket header */}
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <CheckCircle2 className={`h-4 w-4 ${sumOk ? "text-emerald-600" : "text-destructive"}`} />
@@ -569,14 +579,20 @@ export default function DepartmentStep3() {
           </div>
         </div>
 
-        {bucketShifts.map((shift, idx) => {
-          const color = getShiftColor(idx);
+        {/* Shift rows */}
+        {bucketShifts.map((shift) => {
+          // Use global index so colour matches Step 2 exactly.
+          const globalIndex = globalShifts.indexOf(shift);
+          const color = getShiftColor(globalIndex === -1 ? 0 : globalIndex);
+
           const pct = Math.round((activePcts[shift.id] ?? 0) * 10) / 10;
           const auto = Math.round(getAutoShare(bucketShifts, overrides, shift.id) * 10) / 10;
           const isOverridden = overrides[shift.id] !== undefined;
           const demand = getWeeklyDemand(shift);
           const dayCount = getDayCount(shift);
-          const targetDoctors = shift.staffing.target;
+          const uniform = isDailyStaffingUniform(shift);
+          const perDayCount = shift.daySlots[0]?.staffing.target ?? shift.staffing.target;
+          const totalSlots = getTotalWeeklyDoctors(shift);
           const isRefActive = isOverridden && Math.abs(pct - auto) > 0.5;
 
           return (
@@ -585,9 +601,11 @@ export default function DepartmentStep3() {
               className="rounded-xl border bg-card p-4 space-y-2"
               style={{ borderLeftWidth: 4, borderLeftColor: color.solid }}
             >
+              {/* Identity row */}
               <div className="flex flex-wrap items-center gap-2">
                 <span
-                  className={`inline-flex items-center rounded-full px-2 py-0.5 font-mono text-xs font-bold border ${color.bg} ${color.text} ${color.border}`}
+                  className="inline-flex items-center rounded-full px-2 py-0.5 font-mono text-xs font-bold text-white"
+                  style={{ backgroundColor: color.solid }}
                 >
                   {shift.abbreviation}
                 </span>
@@ -597,11 +615,16 @@ export default function DepartmentStep3() {
                 </span>
               </div>
 
+              {/* Demand line — Option B:
+                  uniform days → "Nd × M drs × Hh = Xh/wk"
+                  non-uniform  → "Nd · X doctor-slots/wk × Hh = Xh/wk" */}
               <p className="text-xs text-muted-foreground">
-                {dayCount}d/wk × {targetDoctors} doctor{targetDoctors !== 1 ? "s" : ""} × {shift.durationHours}h ={" "}
-                {Math.round(demand * 10) / 10}h/wk demand · Auto: {auto}%
+                {uniform
+                  ? `${dayCount}d/wk × ${perDayCount} doctor${perDayCount !== 1 ? "s" : ""} × ${shift.durationHours}h = ${Math.round(demand * 10) / 10}h/wk demand · Auto: ${auto}%`
+                  : `${dayCount}d/wk · ${totalSlots} doctor-slots/wk × ${shift.durationHours}h = ${Math.round(demand * 10) / 10}h/wk demand · Auto: ${auto}%`}
               </p>
 
+              {/* Drag bar */}
               <ShiftPctBar
                 value={pct}
                 autoValue={auto}
@@ -616,6 +639,7 @@ export default function DepartmentStep3() {
                 }
               />
 
+              {/* Reference preview */}
               <p
                 className={`rounded-lg px-3 py-1.5 text-xs ${
                   isRefActive ? "bg-purple-50 text-purple-700" : "bg-muted/50 text-muted-foreground"
@@ -732,6 +756,7 @@ export default function DepartmentStep3() {
                     specific shift is harder to cover.
                   </p>
 
+                  {/* Collapsed summary — global index for correct colours */}
                   {!expandedAdvanced && (
                     <div className="pt-2 space-y-2">
                       {oncallShifts.length > 0 && (
@@ -740,13 +765,15 @@ export default function DepartmentStep3() {
                             On-call
                           </p>
                           <div className="flex flex-wrap gap-1.5">
-                            {oncallShifts.map((shift, idx) => {
-                              const color = getShiftColor(idx);
+                            {oncallShifts.map((shift) => {
+                              const globalIndex = shifts.indexOf(shift);
+                              const color = getShiftColor(globalIndex === -1 ? 0 : globalIndex);
                               const pct = Math.round(activeOncallPcts[shift.id] ?? 0);
                               return (
                                 <span
                                   key={shift.id}
-                                  className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[11px] font-medium border ${color.bg} ${color.text} ${color.border}`}
+                                  className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[11px] font-medium text-white"
+                                  style={{ backgroundColor: color.solid }}
                                 >
                                   {shift.abbreviation}
                                   <span className="font-bold">{pct}%</span>
@@ -762,13 +789,15 @@ export default function DepartmentStep3() {
                             Non-on-call
                           </p>
                           <div className="flex flex-wrap gap-1.5">
-                            {nonOncallShifts.map((shift, idx) => {
-                              const color = getShiftColor(idx);
+                            {nonOncallShifts.map((shift) => {
+                              const globalIndex = shifts.indexOf(shift);
+                              const color = getShiftColor(globalIndex === -1 ? 0 : globalIndex);
                               const pct = Math.round(activeNonOncallPcts[shift.id] ?? 0);
                               return (
                                 <span
                                   key={shift.id}
-                                  className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[11px] font-medium border ${color.bg} ${color.text} ${color.border}`}
+                                  className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[11px] font-medium text-white"
+                                  style={{ backgroundColor: color.solid }}
                                 >
                                   {shift.abbreviation}
                                   <span className="font-bold">{pct}%</span>
@@ -788,6 +817,7 @@ export default function DepartmentStep3() {
                 )}
               </button>
 
+              {/* Expanded content */}
               {expandedAdvanced && (
                 <CardContent className="space-y-6 pt-0">
                   <div className="flex items-start gap-2 rounded-xl border border-border bg-muted/30 p-3">
@@ -800,6 +830,7 @@ export default function DepartmentStep3() {
 
                   {renderBucket(
                     oncallShifts,
+                    shifts,
                     activeOncallPcts,
                     oncallOverrides,
                     setOncallOverrides,
@@ -821,6 +852,7 @@ export default function DepartmentStep3() {
 
                   {renderBucket(
                     nonOncallShifts,
+                    shifts,
                     activeNonOncallPcts,
                     nonOncallOverrides,
                     setNonOncallOverrides,
