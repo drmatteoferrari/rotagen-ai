@@ -484,9 +484,10 @@ interface DaySlotModalProps {
   onSave:          (shiftId: string, dayKey: DayKey, updated: DaySlot) => void;
   onCopyToDays:    (shiftId: string, sourceDayKey: DayKey, targets: DayKey[], source: DaySlot) => void;
   onRemoveFromDay: (shiftId: string, dayKey: DayKey) => void;
+  isReadOnly?: boolean;
 }
 
-function DaySlotModal({ open, onOpenChange, shift, dayKey, onSave, onCopyToDays, onRemoveFromDay }: DaySlotModalProps) {
+function DaySlotModal({ open, onOpenChange, shift, dayKey, onSave, onCopyToDays, onRemoveFromDay, isReadOnly }: DaySlotModalProps) {
   const [draft, setDraft]         = useState<DaySlot | null>(null);
   const [showCopy, setShowCopy]   = useState(false);
   const [copyTargets, setCopyTargets] = useState<Record<DayKey, boolean>>({
@@ -587,26 +588,27 @@ function DaySlotModal({ open, onOpenChange, shift, dayKey, onSave, onCopyToDays,
         <div className="flex min-h-0 flex-1 divide-x divide-border overflow-hidden">
 
           {/* Left column: doctors stepper + copy */}
-          <div className="flex w-[200px] shrink-0 flex-col gap-4 overflow-y-auto p-4">
+          <div className={`flex w-[200px] shrink-0 flex-col gap-4 overflow-y-auto p-4 ${isReadOnly ? "pointer-events-none opacity-60" : ""}`}>
 
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Doctors
               </Label>
               <div className="flex items-center gap-3">
-                <button type="button" disabled={draft.staffing.target <= 1}
+                <button type="button" disabled={isReadOnly || draft.staffing.target <= 1}
                   onClick={() => syncCount(Math.max(1, draft.staffing.target - 1))}
                   className="flex h-8 w-8 items-center justify-center rounded-full border text-sm font-bold hover:bg-muted disabled:opacity-30">
                   −
                 </button>
                 <span className="w-8 text-center text-lg font-bold">{draft.staffing.target}</span>
-                <button type="button" onClick={() => syncCount(draft.staffing.target + 1)}
+                <button type="button" disabled={isReadOnly} onClick={() => syncCount(draft.staffing.target + 1)}
                   className="flex h-8 w-8 items-center justify-center rounded-full border text-sm font-bold hover:bg-muted">
                   +
                 </button>
               </div>
             </div>
 
+            {!isReadOnly && (
             <div className="space-y-2">
               <button type="button" onClick={() => setShowCopy((v) => !v)}
                 className="flex items-center gap-1.5 text-xs font-medium text-purple-600 hover:text-purple-800">
@@ -641,6 +643,7 @@ function DaySlotModal({ open, onOpenChange, shift, dayKey, onSave, onCopyToDays,
                 </div>
               )}
             </div>
+            )}
           </div>
 
           {/* Right column: slot rows (scrollable) */}
