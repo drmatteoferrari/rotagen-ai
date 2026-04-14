@@ -1280,31 +1280,49 @@ export default function DepartmentStep2() {
       navBar={
         <StepNavBar
           left={
-            <Button variant="outline" size="lg" className="min-h-[44px]" onClick={() => navigate("/admin/department/step-1")}>
+            <Button variant="outline" size="lg" className="min-h-[44px]" onClick={() => navigate(isReadOnly ? "/admin/department/step-1?readonly=true" : "/admin/department/step-1")}>
               <ArrowLeft className="mr-2 h-4 w-4" /> Back
             </Button>
           }
           right={
-            <Button size="lg" className="min-h-[44px] bg-purple-600 text-white hover:bg-purple-700"
-              disabled={!canSave} onClick={handleSaveCheck}>
-              {saving
-                ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving…</>
-                : <>Continue <ArrowRight className="ml-2 h-4 w-4" /></>
-              }
-            </Button>
+            isReadOnly ? (
+              <Button size="lg" onClick={() => navigate("/admin/department/step-3?readonly=true")}>
+                Next <ArrowRight className="ml-1 h-4 w-4" />
+              </Button>
+            ) : (
+              <Button size="lg" className="min-h-[44px] bg-purple-600 text-white hover:bg-purple-700"
+                disabled={!canSave} onClick={handleSaveCheck}>
+                {saving
+                  ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving…</>
+                  : <>Continue <ArrowRight className="ml-2 h-4 w-4" /></>
+                }
+              </Button>
+            )
           }
         />
       }
     >
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={isReadOnly ? undefined : handleDragStart} onDragOver={isReadOnly ? undefined : handleDragOver} onDragEnd={isReadOnly ? undefined : handleDragEnd}>
         <div className="mx-auto max-w-4xl space-y-6 animate-fadeSlideUp">
 
-          <div className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
-            <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
-            <p className="text-sm text-blue-800">
-              Define your shifts, assign them to the days they run, then click any cell to set staffing and eligibility per day.
-            </p>
-          </div>
+          {isReadOnly ? (
+            <div className="flex items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-700">
+              <div className="flex items-center gap-2">
+                <Eye className="h-4 w-4 shrink-0 text-amber-600" />
+                Read-only — no changes will be saved
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => navigate("/admin/department/summary?mode=post-submit")} className="text-amber-700 hover:text-amber-900 hover:bg-amber-100 h-7 px-2 text-xs">
+                Exit
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
+              <Info className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
+              <p className="text-sm text-blue-800">
+                Define your shifts, assign them to the days they run, then click any cell to set staffing and eligibility per day.
+              </p>
+            </div>
+          )}
 
           {/* Card 1 — Weekly timetable grid */}
           <Card>
