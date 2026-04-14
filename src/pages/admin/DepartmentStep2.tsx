@@ -691,11 +691,12 @@ function DaySlotModal({ open, onOpenChange, shift, dayKey, onSave, onCopyToDays,
 
 /* ─── ShiftIdentityCard ─── */
 function ShiftIdentityCard({
-  shift, index, expanded, onToggleExpand, onSave, onRemove, canRemove, allShifts,
+  shift, index, expanded, onToggleExpand, onSave, onRemove, canRemove, allShifts, isReadOnly,
 }: {
   shift: ShiftType; index: number; expanded: boolean;
   onToggleExpand: () => void; onSave: (u: ShiftType) => void;
   onRemove: () => void; canRemove: boolean; allShifts: ShiftType[];
+  isReadOnly?: boolean;
 }) {
   const color = getShiftColor(index);
   const [draft, setDraft] = useState<ShiftType>({ ...shift, badgeOverrides: { ...shift.badgeOverrides } });
@@ -727,12 +728,12 @@ function ShiftIdentityCard({
 
   const errors = getShiftIdentityErrors(draft, allShifts);
 
-  if (!expanded) {
+  if (!expanded || isReadOnly) {
     return (
       <div
-        className="cursor-pointer rounded-xl border border-border bg-card p-4 transition-all hover:shadow-md"
+        className={`rounded-xl border border-border bg-card p-4 transition-all ${isReadOnly ? "" : "cursor-pointer hover:shadow-md"}`}
         style={{ borderLeft: `4px solid ${color.solid}` }}
-        onClick={onToggleExpand}
+        onClick={isReadOnly ? undefined : onToggleExpand}
       >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1 space-y-1">
@@ -753,7 +754,7 @@ function ShiftIdentityCard({
           </div>
           <div className="flex shrink-0 items-center gap-1">
             <span className="text-[10px] text-muted-foreground">{shift.daySlots.length}d · {shift.staffing.target} drs</span>
-            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            {!isReadOnly && <ChevronDown className="h-4 w-4 text-muted-foreground" />}
           </div>
         </div>
       </div>
