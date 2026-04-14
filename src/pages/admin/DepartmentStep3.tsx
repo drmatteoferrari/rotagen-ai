@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "@/components/AdminLayout";
 import { StepNavBar } from "@/components/StepNavBar";
@@ -31,38 +31,37 @@ const REF_HPW = 48;
 // ─── Pure utility functions ───────────────────────────────────
 
 // getWeeklyDemand: total doctor-hours required per week for a shift type.
-//
-// New path (post-Lovable DepartmentSetupContext update):
-//   Uses shift.daySlots — sums actual per-day target headcount × durationHours.
-//   Accurate when days have different staffing levels.
-//
-// Legacy fallback (pre-day-slots, or shift with no day slots saved yet):
-//   Uses applicableDays count × staffing.target × durationHours.
-//   Matches old behaviour exactly; still correct for flat-staffing departments.
-//
-// Both paths give the same result when all active days have the same target.
+// Primary path: sum daySlots[i].staffing.target × durationHours.
+// daySlots is now a typed first-class property on ShiftType — no cast needed.
+// Fallback: applicableDays count × staffing.target × durationHours
+// (only used if daySlots is somehow empty — should not occur in normal flow).
 
 function getWeeklyDemand(shift: ShiftType): number {
-  // Duck-type check for daySlots — added by Lovable DepartmentSetupContext prompt.
-  // The `as any` cast avoids a TS error before the context type is updated,
-  // while remaining correct at runtime once it is.
-  const daySlots = (shift as any).daySlots as
-    | Array<{ staffing: { target: number } }>
-    | Partial<Record<string, { staffing: { target: number } }>>
-    | undefined;
-
-  if (daySlots) {
-    const entries = Array.isArray(daySlots) ? daySlots : Object.values(daySlots).filter(Boolean);
-
-    if (entries.length > 0) {
-      const totalTargetPerWeek = entries.reduce((sum: number, ds: any) => sum + (ds?.staffing?.target ?? 0), 0);
-      return totalTargetPerWeek * shift.durationHours;
-    }
+  if (shift.daySlots.length > 0) {
+    const totalTargetPerWeek = shift.daySlots.reduce((sum, ds) => sum + (ds.staffing?.target ?? 0), 0);
+    return totalTargetPerWeek * shift.durationHours;
   }
-
-  // Legacy fallback
+  // Fallback
   const activeDayCount = Object.values(shift.applicableDays).filter(Boolean).length;
   return activeDayCount * shift.staffing.target * shift.durationHours;
+}
+
+// getDayCount: active days for display purposes.
+// Prefers daySlots.length as the canonical source.
+function getDayCount(shift: ShiftType): number {
+  if (shift.daySlots.length > 0) return shift.daySlots.length;
+  return Object.values(shift.applicableDays).filter(Boolean).length;
+}
+
+// shiftFingerprint: stable string representing the shift list shape.
+// Used to detect Step 2 changes and reset shift-type overrides.
+// Encodes: sorted shift ids, their oncall status, daySlots count, and total demand.
+function shiftFingerprint(shifts: ShiftType[]): string {
+  return shifts
+    .slice()
+    .sort((a, b) => a.id.localeCompare(b.id))
+    .map((s) => `${s.id}:${s.isOncall ? 1 : 0}:${s.daySlots.length}:${getWeeklyDemand(s)}`)
+    .join("|");
 }
 
 function getDemandWeightedPcts(shifts: ShiftType[]): Record<string, number> {
@@ -367,6 +366,10 @@ export default function DepartmentStep3() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  // Track the shift fingerprint that was in effect when overrides were loaded
+  // from DB, so we can detect Step 2 changes and reset stale overrides.
+  const loadedFingerprintRef = useRef<string | null>(null);
+
   const suggestedOncallPcts = getDemandWeightedPcts(oncallShifts);
   const suggestedNonOncallPcts = getDemandWeightedPcts(nonOncallShifts);
 
@@ -384,21 +387,40 @@ export default function DepartmentStep3() {
   const anyNonOncallOverride = Object.keys(nonOncallOverrides).length > 0;
 
   // ── Data loading ────────────────────────────────────────────
+  // Runs once when currentRotaConfigId is available.
+  // Seeds globalOncallPct from DB if previously saved; otherwise seeds from
+  // demand-based suggestion so first-time visitors see a meaningful default.
+  // Restores shift-type overrides from DB and records the fingerprint at load
+  // time so we can detect if Step 2 was edited before returning here.
   useEffect(() => {
     const load = async () => {
       if (!currentRotaConfigId) {
+        // No config yet — seed split from demand suggestion, no overrides.
+        if (shifts.length > 0) {
+          setGlobalOncallPctState(getSuggestedGlobalSplit(oncallShifts, nonOncallShifts));
+        }
         setLoading(false);
         return;
       }
       try {
-        const { data: cfg } = await supabase
+        const { data: cfg, error: cfgErr } = await supabase
           .from("rota_configs")
           .select("global_oncall_pct")
           .eq("id", currentRotaConfigId)
           .single();
 
-        if (cfg?.global_oncall_pct != null) {
+        if (cfgErr) {
+          // DB error — fall back to demand suggestion silently
+          if (shifts.length > 0) {
+            setGlobalOncallPctState(getSuggestedGlobalSplit(oncallShifts, nonOncallShifts));
+          }
+        } else if (cfg?.global_oncall_pct != null) {
           setGlobalOncallPctState(Number(cfg.global_oncall_pct));
+        } else {
+          // Config exists but no split saved yet — seed from demand
+          if (shifts.length > 0) {
+            setGlobalOncallPctState(getSuggestedGlobalSplit(oncallShifts, nonOncallShifts));
+          }
         }
 
         const { data: rows } = await supabase
@@ -415,14 +437,41 @@ export default function DepartmentStep3() {
         });
         if (Object.keys(oo).length > 0) setOncallOverrides(oo);
         if (Object.keys(no).length > 0) setNonOncallOverrides(no);
+
+        // Record the fingerprint of the current shifts at load time.
+        // If Step 2 is edited and the coordinator returns here, the
+        // fingerprint will have changed and overrides will be cleared.
+        loadedFingerprintRef.current = shiftFingerprint(shifts);
       } catch (e) {
         console.error("Step 3 load failed:", e);
+        toast.error("Could not load saved settings — defaults applied");
+        if (shifts.length > 0) {
+          setGlobalOncallPctState(getSuggestedGlobalSplit(oncallShifts, nonOncallShifts));
+        }
       } finally {
         setLoading(false);
       }
     };
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentRotaConfigId]);
+
+  // ── Reset shift-type overrides when Step 2 changes ──────────
+  // Watches the live shift fingerprint from context.
+  // When it diverges from what was loaded from DB, clear both override maps
+  // so the auto-calculated distribution is shown fresh.
+  // Does NOT reset globalOncallPct — that is a coordinator-level decision
+  // that persists independently of shift changes.
+  useEffect(() => {
+    if (loading) return;
+    if (loadedFingerprintRef.current === null) return;
+    const current = shiftFingerprint(shifts);
+    if (current !== loadedFingerprintRef.current) {
+      setOncallOverrides({});
+      setNonOncallOverrides({});
+      loadedFingerprintRef.current = current;
+    }
+  }, [shifts, loading]);
 
   // ── Save handler ────────────────────────────────────────────
   const handleSave = async () => {
@@ -454,6 +503,10 @@ export default function DepartmentStep3() {
           .eq("shift_key", u.key);
         if (error) throw error;
       }
+
+      // Update fingerprint ref after successful save so the reset effect
+      // does not fire again on the next render.
+      loadedFingerprintRef.current = shiftFingerprint(shifts);
 
       toast.success("✓ Distribution saved");
       setDepartmentComplete(true);
@@ -525,7 +578,9 @@ export default function DepartmentStep3() {
           const auto = Math.round(getAutoShare(bucketShifts, overrides, shift.id) * 10) / 10;
           const isOverridden = overrides[shift.id] !== undefined;
           const demand = getWeeklyDemand(shift);
-          const activeDays = Object.values(shift.applicableDays).filter(Boolean).length;
+          const dayCount = getDayCount(shift);
+          // Use staffing.target (intended headcount) not staffing.min (floor).
+          const targetDoctors = shift.staffing.target;
           const isRefActive = isOverridden && Math.abs(pct - auto) > 0.5;
 
           return (
@@ -547,10 +602,10 @@ export default function DepartmentStep3() {
                 </span>
               </div>
 
-              {/* Demand line */}
+              {/* Demand line — uses target headcount and canonical day count */}
               <p className="text-xs text-muted-foreground">
-                {activeDays}d/wk × {shift.staffing.min} doctor{shift.staffing.min !== 1 ? "s" : ""} ×{" "}
-                {shift.durationHours}h = {Math.round(demand * 10) / 10}h/wk demand · Auto: {auto}%
+                {dayCount}d/wk × {targetDoctors} doctor{targetDoctors !== 1 ? "s" : ""} × {shift.durationHours}h ={" "}
+                {Math.round(demand * 10) / 10}h/wk demand · Auto: {auto}%
               </p>
 
               {/* Drag bar */}
