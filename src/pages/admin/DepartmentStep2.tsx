@@ -1507,6 +1507,7 @@ export default function DepartmentStep2() {
                       onRemove={() => { removeShift(shift.id); setExpandedShiftId(null); }}
                       canRemove={shifts.length > 1}
                       allShifts={shifts}
+                      isReadOnly={isReadOnly}
                     />
                   </div>
                 ))}
