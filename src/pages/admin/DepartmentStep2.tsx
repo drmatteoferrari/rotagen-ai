@@ -647,7 +647,7 @@ function DaySlotModal({ open, onOpenChange, shift, dayKey, onSave, onCopyToDays,
           </div>
 
           {/* Right column: slot rows (scrollable) */}
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className={`flex-1 overflow-y-auto p-4 ${isReadOnly ? "pointer-events-none opacity-60" : ""}`}>
             <div className="mb-3">
               <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Eligibility per position
@@ -668,15 +668,19 @@ function DaySlotModal({ open, onOpenChange, shift, dayKey, onSave, onCopyToDays,
 
         {/* Fixed footer */}
         <div className="flex shrink-0 items-center justify-between border-t px-5 py-3">
-          <button type="button" onClick={removeAndClose}
-            className="text-xs font-medium text-destructive hover:text-destructive/80">
-            Remove from {DAY_SHORT[dayIdx]}
-          </button>
+          {!isReadOnly ? (
+            <button type="button" onClick={removeAndClose}
+              className="text-xs font-medium text-destructive hover:text-destructive/80">
+              Remove from {DAY_SHORT[dayIdx]}
+            </button>
+          ) : <div />}
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button className="bg-purple-600 text-white hover:bg-purple-700" onClick={saveAndClose}>
-              <Save className="mr-1.5 h-3.5 w-3.5" /> Save
-            </Button>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>{isReadOnly ? "Close" : "Cancel"}</Button>
+            {!isReadOnly && (
+              <Button className="bg-purple-600 text-white hover:bg-purple-700" onClick={saveAndClose}>
+                <Save className="mr-1.5 h-3.5 w-3.5" /> Save
+              </Button>
+            )}
           </div>
         </div>
 
