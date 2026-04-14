@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { AdminLayout } from "@/components/AdminLayout";
 import { StepNavBar } from "@/components/StepNavBar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Building2, ArrowLeft, ArrowRight, Loader2, Info, CheckCircle2 } from "lucide-react";
+import { Building2, ArrowLeft, ArrowRight, Loader2, Info, CheckCircle2, Eye } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRotaContext } from "@/contexts/RotaContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,6 +14,8 @@ import { useAccountSettingsQuery, useInvalidateQuery } from "@/hooks/useAdminQue
 
 export default function DepartmentStep1New() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isReadOnly = searchParams.get("readonly") === "true";
   const { user, setAccountSettings } = useAuth();
   const { currentRotaConfigId } = useRotaContext();
   const { invalidateAccountSettings } = useInvalidateQuery();
@@ -35,6 +37,7 @@ export default function DepartmentStep1New() {
   }, [accountData, initialized]);
 
   const handleSaveAndContinue = async () => {
+    if (isReadOnly) return;
     setDeptError("");
     setTrustError("");
     if (!deptName.trim()) { setDeptError("Please enter a department name"); return; }
@@ -82,25 +85,43 @@ export default function DepartmentStep1New() {
       navBar={
         <StepNavBar
           left={
-            <Button variant="outline" size="lg" onClick={() => navigate("/admin/setup")}>
+            <Button variant="outline" size="lg" onClick={() => navigate(isReadOnly ? "/admin/department/summary?mode=post-submit" : "/admin/setup")}>
               <ArrowLeft className="mr-2 h-4 w-4" /> Back
             </Button>
           }
           right={
-            <Button size="lg" onClick={handleSaveAndContinue} disabled={saving || loading} className="bg-purple-600 hover:bg-purple-700 text-white">
-              {saving ? "Saving…" : "Continue"}
-              {!saving && <ArrowRight className="ml-2 h-4 w-4" />}
-            </Button>
+            isReadOnly ? (
+              <Button size="lg" onClick={() => navigate("/admin/department/step-2?readonly=true")}>
+                Next <ArrowRight className="ml-1 h-4 w-4" />
+              </Button>
+            ) : (
+              <Button size="lg" onClick={handleSaveAndContinue} disabled={saving || loading} className="bg-purple-600 hover:bg-purple-700 text-white">
+                {saving ? "Saving…" : "Continue"}
+                {!saving && <ArrowRight className="ml-2 h-4 w-4" />}
+              </Button>
+            )
           }
         />
       }
     >
       <div className="mx-auto max-w-3xl space-y-6 animate-fadeSlideUp">
-        {/* Info banner */}
-        <div className="flex items-center gap-2 rounded-lg border border-purple-200 bg-purple-50 px-4 py-2.5 text-sm font-medium text-purple-700">
-          <Info className="h-4 w-4 shrink-0 text-purple-600" />
-          Enter your department and hospital.
-        </div>
+        {/* Banner */}
+        {isReadOnly ? (
+          <div className="flex items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-700">
+            <div className="flex items-center gap-2">
+              <Eye className="h-4 w-4 shrink-0 text-amber-600" />
+              Read-only — no changes will be saved
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => navigate("/admin/department/summary?mode=post-submit")} className="text-amber-700 hover:text-amber-900 hover:bg-amber-100 h-7 px-2 text-xs">
+              Exit
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 rounded-lg border border-purple-200 bg-purple-50 px-4 py-2.5 text-sm font-medium text-purple-700">
+            <Info className="h-4 w-4 shrink-0 text-purple-600" />
+            Enter your department and hospital.
+          </div>
+        )}
 
         <Card>
           <CardHeader>
@@ -117,7 +138,7 @@ export default function DepartmentStep1New() {
             ) : (
               <>
                 {/* Department Name */}
-                <div className="flex flex-col gap-1.5">
+                <div className={`flex flex-col gap-1.5 ${isReadOnly ? "pointer-events-none opacity-60" : ""}`}>
                   <label className="text-sm font-medium text-card-foreground">
                     Department Name <span className="text-[11px] font-semibold text-purple-600 ml-1">Required</span>
                   </label>
@@ -127,12 +148,14 @@ export default function DepartmentStep1New() {
                     onChange={(e) => { setDeptName(e.target.value.slice(0, 100)); setDeptError(""); }}
                     maxLength={100}
                     className="min-h-[44px]"
+                    disabled={isReadOnly}
+                    readOnly={isReadOnly}
                   />
                   {deptError && <p className="text-xs text-destructive">{deptError}</p>}
                 </div>
 
                 {/* Hospital / Trust Name */}
-                <div className="flex flex-col gap-1.5">
+                <div className={`flex flex-col gap-1.5 ${isReadOnly ? "pointer-events-none opacity-60" : ""}`}>
                   <label className="text-sm font-medium text-card-foreground">
                     Hospital or Trust <span className="text-[11px] font-semibold text-purple-600 ml-1">Required</span>
                   </label>
@@ -142,6 +165,8 @@ export default function DepartmentStep1New() {
                     onChange={(e) => { setTrustName(e.target.value.slice(0, 100)); setTrustError(""); }}
                     maxLength={100}
                     className="min-h-[44px]"
+                    disabled={isReadOnly}
+                    readOnly={isReadOnly}
                   />
                   {trustError && <p className="text-xs text-destructive">{trustError}</p>}
                 </div>

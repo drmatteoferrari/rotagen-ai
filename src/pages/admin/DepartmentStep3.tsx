@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { AdminLayout } from "@/components/AdminLayout";
 import { StepNavBar } from "@/components/StepNavBar";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import {
   ChevronDown,
   ChevronUp,
   Building2,
+  Eye,
 } from "lucide-react";
 import { useDepartmentSetup, getShiftColor, type ShiftType } from "@/contexts/DepartmentSetupContext";
 import { useAdminSetup } from "@/contexts/AdminSetupContext";
@@ -28,29 +29,19 @@ import { toast } from "sonner";
 const REF_WEEKS = 13;
 const REF_HPW = 48;
 
-// ─── Pure utility functions ───────────────────────────────────
-
-// getWeeklyDemand: Σ(daySlot.staffing.target) × durationHours.
-// daySlots is the authoritative source — each grid cell in Step 2 stores
-// its own per-day doctor count independently of shift.staffing.target.
-// shift.staffing.target is a creation-time default that goes stale when
-// individual day cells are edited and must never be used for demand.
 function getWeeklyDemand(shift: ShiftType): number {
   if (shift.daySlots.length > 0) {
     return shift.daySlots.reduce((sum, ds) => sum + (ds.staffing?.target ?? 0), 0) * shift.durationHours;
   }
-  // Fallback: no daySlots saved yet (edge case only)
   const activeDayCount = Object.values(shift.applicableDays).filter(Boolean).length;
   return activeDayCount * shift.staffing.target * shift.durationHours;
 }
 
-// getDayCount: number of active days (daySlots is canonical).
 function getDayCount(shift: ShiftType): number {
   if (shift.daySlots.length > 0) return shift.daySlots.length;
   return Object.values(shift.applicableDays).filter(Boolean).length;
 }
 
-// getTotalWeeklyDoctors: sum of per-day doctor targets across all active days.
 function getTotalWeeklyDoctors(shift: ShiftType): number {
   if (shift.daySlots.length > 0) {
     return shift.daySlots.reduce((sum, ds) => sum + (ds.staffing?.target ?? 0), 0);
@@ -58,15 +49,12 @@ function getTotalWeeklyDoctors(shift: ShiftType): number {
   return Object.values(shift.applicableDays).filter(Boolean).length * shift.staffing.target;
 }
 
-// isDailyStaffingUniform: true when every active day has the same doctor count.
-// Drives label format: uniform → "Nd × M drs × Hh", non-uniform → "X slots/wk × Hh".
 function isDailyStaffingUniform(shift: ShiftType): boolean {
   if (shift.daySlots.length === 0) return true;
   const first = shift.daySlots[0].staffing.target;
   return shift.daySlots.every((ds) => ds.staffing.target === first);
 }
 
-// shiftFingerprint: detects Step 2 changes for override reset.
 function shiftFingerprint(shifts: ShiftType[]): string {
   return shifts
     .slice()
@@ -216,12 +204,14 @@ function ShiftPctBar({
   isOverridden,
   onChange,
   onReset,
+  isReadOnly,
 }: {
   value: number;
   autoValue: number;
   isOverridden: boolean;
   onChange: (v: number) => void;
   onReset: () => void;
+  isReadOnly?: boolean;
 }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
@@ -238,12 +228,14 @@ function ShiftPctBar({
   };
 
   const onPointerDown = (e: React.PointerEvent) => {
+    if (isReadOnly) return;
     (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
     dragging.current = true;
     setTooltip(true);
     onChange(pctFromPointer(e.clientX));
   };
   const onPointerMove = (e: React.PointerEvent) => {
+    if (isReadOnly) return;
     if (!dragging.current) return;
     onChange(pctFromPointer(e.clientX));
   };
@@ -253,6 +245,7 @@ function ShiftPctBar({
   };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
+    if (isReadOnly) return;
     if (e.key === "ArrowRight") onChange(snap(value + (e.shiftKey ? 5 : 0.5)));
     if (e.key === "ArrowLeft") onChange(snap(value - (e.shiftKey ? 5 : 0.5)));
   };
@@ -284,7 +277,7 @@ function ShiftPctBar({
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onKeyDown={onKeyDown}
-          tabIndex={0}
+          tabIndex={isReadOnly ? -1 : 0}
           role="slider"
           aria-valuenow={value}
           aria-valuemin={0}
@@ -302,7 +295,7 @@ function ShiftPctBar({
         </div>
       </div>
 
-      {editing ? (
+      {editing && !isReadOnly ? (
         <input
           autoFocus
           type="number"
@@ -321,10 +314,11 @@ function ShiftPctBar({
       ) : (
         <button
           onClick={() => {
+            if (isReadOnly) return;
             setEditing(true);
             setEditVal(String(value));
           }}
-          className={`min-h-[44px] w-12 text-center text-xs font-bold transition-colors hover:text-purple-700 ${
+          className={`min-h-[44px] w-12 text-center text-xs font-bold transition-colors ${isReadOnly ? "" : "hover:text-purple-700"} ${
             isActive ? "text-purple-700" : "text-muted-foreground"
           }`}
         >
@@ -332,18 +326,20 @@ function ShiftPctBar({
         </button>
       )}
 
-      {isActive ? (
-        <button
-          onClick={onReset}
-          className="min-h-[44px] min-w-[44px] flex items-center justify-center text-purple-600 hover:text-purple-800 transition-colors"
-          title="Reset to auto"
-        >
-          <RotateCcw className="h-4 w-4" />
-        </button>
-      ) : (
-        <div className="min-h-[44px] min-w-[44px] flex items-center justify-center text-muted-foreground/30">
-          <RotateCcw className="h-4 w-4" />
-        </div>
+      {!isReadOnly && (
+        isActive ? (
+          <button
+            onClick={onReset}
+            className="min-h-[44px] min-w-[44px] flex items-center justify-center text-purple-600 hover:text-purple-800 transition-colors"
+            title="Reset to auto"
+          >
+            <RotateCcw className="h-4 w-4" />
+          </button>
+        ) : (
+          <div className="min-h-[44px] min-w-[44px] flex items-center justify-center text-muted-foreground/30">
+            <RotateCcw className="h-4 w-4" />
+          </div>
+        )
       )}
     </div>
   );
@@ -353,6 +349,8 @@ function ShiftPctBar({
 
 export default function DepartmentStep3() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isReadOnly = searchParams.get("readonly") === "true";
   const { shifts, isLoadingShifts } = useDepartmentSetup();
   const { setDepartmentComplete } = useAdminSetup();
   const { currentRotaConfigId } = useRotaContext();
@@ -391,9 +389,6 @@ export default function DepartmentStep3() {
   }, [currentRotaConfigId]);
 
   // ── Data loading ─────────────────────────────────────────────
-  // Waits for context to finish hydrating shifts (isLoadingShifts === false)
-  // before running. This ensures daySlots are fully populated before any
-  // demand calculation or fingerprinting occurs.
   useEffect(() => {
     if (isLoadingShifts) return;
     if (hasInitialisedRef.current) return;
@@ -483,6 +478,7 @@ export default function DepartmentStep3() {
 
   // ── Save handler ────────────────────────────────────────────
   const handleSave = async () => {
+    if (isReadOnly) return;
     if (!canSave) return;
     setSaving(true);
     try {
@@ -525,8 +521,6 @@ export default function DepartmentStep3() {
   };
 
   // ── Bucket renderer ─────────────────────────────────────────
-  // globalShifts passed in so colour index is looked up against the full
-  // shifts array — matching exactly how Step 2 colours each shift.
   const renderBucket = (
     bucketShifts: ShiftType[],
     globalShifts: ShiftType[],
@@ -565,23 +559,24 @@ export default function DepartmentStep3() {
             >
               {Math.round(sumVal * 10) / 10}% {sumOk ? "✓" : "⚠"}
             </span>
-            <button
-              onClick={onResetAll}
-              disabled={!anyOverride}
-              className={`inline-flex min-h-[44px] items-center gap-1 rounded-lg px-3 text-xs font-medium transition-colors ${
-                anyOverride
-                  ? "bg-purple-100 text-purple-700 hover:bg-purple-200"
-                  : "text-muted-foreground/40 cursor-not-allowed"
-              }`}
-            >
-              <RotateCcw className="h-3.5 w-3.5" /> Reset all
-            </button>
+            {!isReadOnly && (
+              <button
+                onClick={onResetAll}
+                disabled={!anyOverride}
+                className={`inline-flex min-h-[44px] items-center gap-1 rounded-lg px-3 text-xs font-medium transition-colors ${
+                  anyOverride
+                    ? "bg-purple-100 text-purple-700 hover:bg-purple-200"
+                    : "text-muted-foreground/40 cursor-not-allowed"
+                }`}
+              >
+                <RotateCcw className="h-3.5 w-3.5" /> Reset all
+              </button>
+            )}
           </div>
         </div>
 
         {/* Shift rows */}
         {bucketShifts.map((shift) => {
-          // Use global index so colour matches Step 2 exactly.
           const globalIndex = globalShifts.indexOf(shift);
           const color = getShiftColor(globalIndex === -1 ? 0 : globalIndex);
 
@@ -615,9 +610,6 @@ export default function DepartmentStep3() {
                 </span>
               </div>
 
-              {/* Demand line — Option B:
-                  uniform days → "Nd × M drs × Hh = Xh/wk"
-                  non-uniform  → "Nd · X doctor-slots/wk × Hh = Xh/wk" */}
               <p className="text-xs text-muted-foreground">
                 {uniform
                   ? `${dayCount}d/wk × ${perDayCount} doctor${perDayCount !== 1 ? "s" : ""} × ${shift.durationHours}h = ${Math.round(demand * 10) / 10}h/wk demand · Auto: ${auto}%`
@@ -637,6 +629,7 @@ export default function DepartmentStep3() {
                     return next;
                   })
                 }
+                isReadOnly={isReadOnly}
               />
 
               {/* Reference preview */}
@@ -669,30 +662,49 @@ export default function DepartmentStep3() {
               variant="outline"
               size="lg"
               className="min-h-[44px]"
-              onClick={() => navigate("/admin/department/step-2")}
+              onClick={() => navigate(isReadOnly ? "/admin/department/step-2?readonly=true" : "/admin/department/step-2")}
             >
               <ArrowLeft className="mr-1 h-4 w-4" /> Back
             </Button>
           }
           right={
-            <Button size="lg" className="min-h-[44px]" disabled={!canSave || saving} onClick={handleSave}>
-              {saving ? (
-                <>
-                  <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                  Saving…
-                </>
-              ) : (
-                <>
-                  <ArrowRight className="mr-1 h-4 w-4" />
-                  Review &amp; Save
-                </>
-              )}
-            </Button>
+            isReadOnly ? (
+              <Button size="lg" onClick={() => navigate("/admin/department/summary?mode=post-submit")}>
+                Done
+              </Button>
+            ) : (
+              <Button size="lg" className="min-h-[44px]" disabled={!canSave || saving} onClick={handleSave}>
+                {saving ? (
+                  <>
+                    <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                    Saving…
+                  </>
+                ) : (
+                  <>
+                    <ArrowRight className="mr-1 h-4 w-4" />
+                    Review &amp; Save
+                  </>
+                )}
+              </Button>
+            )
           }
         />
       }
     >
       <div className="mx-auto max-w-3xl space-y-6 animate-fadeSlideUp">
+        {/* Readonly banner */}
+        {isReadOnly && (
+          <div className="flex items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-700">
+            <div className="flex items-center gap-2">
+              <Eye className="h-4 w-4 shrink-0 text-amber-600" />
+              Read-only — no changes will be saved
+            </div>
+            <Button variant="ghost" size="sm" onClick={() => navigate("/admin/department/summary?mode=post-submit")} className="text-amber-700 hover:text-amber-900 hover:bg-amber-100 h-7 px-2 text-xs">
+              Exit
+            </Button>
+          </div>
+        )}
+
         {loading || isLoadingShifts ? (
           <div className="flex items-center justify-center gap-2 py-20 text-muted-foreground">
             <Loader2 className="h-5 w-5 animate-spin" />
@@ -713,7 +725,9 @@ export default function DepartmentStep3() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <GlobalSplitBar oncallPct={globalOncallPct} onChange={setGlobalOncallPctState} />
+                <div className={isReadOnly ? "pointer-events-none opacity-60" : ""}>
+                  <GlobalSplitBar oncallPct={globalOncallPct} onChange={setGlobalOncallPctState} />
+                </div>
 
                 <div className="flex items-center justify-between text-sm">
                   <span className="flex items-center gap-1.5">
@@ -756,7 +770,7 @@ export default function DepartmentStep3() {
                     specific shift is harder to cover.
                   </p>
 
-                  {/* Collapsed summary — global index for correct colours */}
+                  {/* Collapsed summary */}
                   {!expandedAdvanced && (
                     <div className="pt-2 space-y-2">
                       {oncallShifts.length > 0 && (
