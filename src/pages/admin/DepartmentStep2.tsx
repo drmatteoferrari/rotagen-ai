@@ -1146,6 +1146,7 @@ export default function DepartmentStep2() {
   const canSave = shifts.length > 0 && identityErrors.length === 0 && !saving;
 
   const handleSaveCheck = async () => {
+    if (isReadOnly) return;
     if (currentRotaConfigId) {
       const { data } = await supabase
         .from("pre_rota_results").select("id, status")
