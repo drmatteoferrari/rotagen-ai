@@ -28,10 +28,11 @@ import { calcDurationHours } from "@/lib/shiftUtils";
 import type { ApplicableDays } from "@/lib/shiftUtils";
 import { GRADE_OPTIONS, GRADE_DISPLAY_LABELS } from "@/lib/gradeOptions";
 import {
-  DndContext, DragOverlay, PointerSensor, TouchSensor,
-  useSensor, useSensors, useDroppable, useDraggable,
-  type DragStartEvent, type DragEndEvent, type DragOverEvent,
-} from "@dnd-kit/core";
+    DndContext, DragOverlay, PointerSensor, TouchSensor,
+    useSensor, useSensors, useDroppable, useDraggable,
+    closestCenter,
+    type DragStartEvent, type DragEndEvent, type DragOverEvent,
+  } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 
 const DAY_KEYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
@@ -39,9 +40,6 @@ type DayKey = typeof DAY_KEYS[number];
 const DAY_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
 const DAY_FULL  = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] as const;
 
-// Keep DAY_SHORT_LABELS and DAY_FULL_LABELS as aliases so existing code still compiles
-const DAY_SHORT_LABELS = DAY_SHORT;
-const DAY_FULL_LABELS  = DAY_FULL;
 
 const SHIFT_TEMPLATES = [
   { label: "Standard Day", abbrev: "SD", start: "08:00", end: "17:30", isOncall: false },
@@ -58,7 +56,7 @@ const BADGE_DEFS: { key: BadgeKey; label: string; emoji: string; activeClasses: 
   { key: "nonres", label: "NON-RES", emoji: "🏠", activeClasses: "bg-teal-700 text-white"   },
 ];
 
-type ShiftTemplate = typeof SHIFT_TEMPLATES[number];
+
 
 /* ─── New helpers (day-slot model) ─── */
 
@@ -126,7 +124,7 @@ function GradePill({ permittedGrades, onChange }: GradePillProps) {
     );
 
   return (
-    <div className="relative inline-block">
+    <div className="inline-block">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -140,22 +138,31 @@ function GradePill({ permittedGrades, onChange }: GradePillProps) {
         {open ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
       </button>
       {open && (
-        <div className="absolute left-0 top-full z-50 mt-1 w-56 rounded-lg border bg-popover p-3 shadow-lg">
+        <div className="mt-1 w-56 rounded-lg border bg-popover p-3 shadow-lg">
           <div className="mb-2 flex items-center justify-between">
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Grade restriction</span>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Grade restriction
+            </span>
             {restricted && (
-              <button type="button" onClick={() => onChange([])} className="text-[10px] text-purple-600 hover:text-purple-800">Clear all</button>
+              <button type="button" onClick={() => onChange([])}
+                className="text-[10px] text-purple-600 hover:text-purple-800">
+                Clear all
+              </button>
             )}
           </div>
           <div className="space-y-1.5 max-h-48 overflow-y-auto">
             {GRADE_OPTIONS.map((grade) => (
               <label key={grade} className="flex items-center gap-2 text-xs cursor-pointer hover:bg-muted/50 rounded px-1 py-0.5">
-                <Checkbox checked={permittedGrades.includes(grade)} onCheckedChange={() => toggle(grade)} className="h-3.5 w-3.5" />
+                <Checkbox checked={permittedGrades.includes(grade)} onCheckedChange={() => toggle(grade)}
+                  className="h-3.5 w-3.5"
+                />
                 {GRADE_DISPLAY_LABELS[grade] ?? grade}
               </label>
             ))}
           </div>
-          <p className="mt-2 text-[10px] text-muted-foreground">No grades selected = any grade eligible.</p>
+          <p className="mt-2 text-[10px] text-muted-foreground">
+            No grades selected = any grade eligible.
+          </p>
         </div>
       )}
     </div>
@@ -458,7 +465,7 @@ function AddShiftModal({ open, onOpenChange, onConfirm }: AddShiftModalProps) {
             </div>
             <div className="flex justify-between gap-2 pt-2">
               <Button variant="outline" onClick={() => setPage(2)}><ArrowLeft className="mr-1 h-3.5 w-3.5" /> Back</Button>
-              <Button onClick={handleConfirm}>Add Shift</Button>
+              <Button className="bg-purple-600 text-white hover:bg-purple-700" onClick={handleConfirm}>Add Shift</Button>
             </div>
           </div>
         )}
@@ -480,8 +487,8 @@ interface DaySlotModalProps {
 }
 
 function DaySlotModal({ open, onOpenChange, shift, dayKey, onSave, onCopyToDays, onRemoveFromDay }: DaySlotModalProps) {
-  const [draft, setDraft]     = useState<DaySlot | null>(null);
-  const [showCopy, setShowCopy] = useState(false);
+  const [draft, setDraft]         = useState<DaySlot | null>(null);
+  const [showCopy, setShowCopy]   = useState(false);
   const [copyTargets, setCopyTargets] = useState<Record<DayKey, boolean>>({
     mon: false, tue: false, wed: false, thu: false, fri: false, sat: false, sun: false,
   });
@@ -503,6 +510,11 @@ function DaySlotModal({ open, onOpenChange, shift, dayKey, onSave, onCopyToDays,
   const dayIdx   = DAY_KEYS.indexOf(dayKey);
   const dayLabel = DAY_FULL[dayIdx] ?? dayKey;
 
+  const displaySlots: SlotRequirement[] = Array.from(
+    { length: Math.max(draft.staffing.target, draft.slots.length) },
+    (_, i) => draft.slots[i] ?? makeEmptySlot(i)
+  );
+
   const syncCount = (n: number) => {
     setDraft((prev) => {
       if (!prev) return prev;
@@ -514,9 +526,28 @@ function DaySlotModal({ open, onOpenChange, shift, dayKey, onSave, onCopyToDays,
     });
   };
 
+  const handleSlotChange = (i: number, updated: SlotRequirement) => {
+    setDraft((prev) => {
+      if (!prev) return prev;
+      const grown = Array.from(
+        { length: Math.max(prev.staffing.target, prev.slots.length, i + 1) },
+        (_, idx) => prev.slots[idx] ?? makeEmptySlot(idx)
+      );
+      grown[i] = updated;
+      return { ...prev, slots: grown };
+    });
+  };
+
   const saveAndClose = () => {
     if (!draft) return;
-    onSave(shift.id, dayKey, { ...draft, isCustomised: computeIsCustomised(draft, shift) });
+    const hasAnyRestriction = draft.slots.some(slotHasRestrictions);
+    const slotsToSave = hasAnyRestriction ? draft.slots : [];
+    const finalDraft: DaySlot = {
+      ...draft,
+      slots: slotsToSave,
+      isCustomised: computeIsCustomised({ ...draft, slots: slotsToSave }, shift),
+    };
+    onSave(shift.id, dayKey, finalDraft);
     onOpenChange(false);
   };
 
@@ -528,87 +559,124 @@ function DaySlotModal({ open, onOpenChange, shift, dayKey, onSave, onCopyToDays,
   };
 
   const removeAndClose = () => { onRemoveFromDay(shift.id, dayKey); onOpenChange(false); };
-
   const isDefault = !computeIsCustomised(draft, shift);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{shift.name} — {dayLabel}</DialogTitle>
-        </DialogHeader>
-        <div className="rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-          Shift defaults: {shift.staffing.target} doctor{shift.staffing.target !== 1 ? "s" : ""} · {shift.startTime}–{shift.endTime} · {shift.durationHours}h
-          {!isDefault && (
-            <button type="button" onClick={() => setDraft(makeDefaultDaySlot(dayKey, shift))}
-              className="ml-3 text-primary hover:text-primary/80">Reset to defaults</button>
-          )}
-        </div>
-        <div className="space-y-1.5">
-          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Doctors on this day</Label>
-          <div className="flex items-center gap-3">
-            <button type="button" disabled={draft.staffing.target <= 1}
-              onClick={() => syncCount(Math.max(1, draft.staffing.target - 1))}
-              className="flex h-8 w-8 items-center justify-center rounded-full border text-sm font-bold hover:bg-muted disabled:opacity-30">−</button>
-            <span className="w-8 text-center text-lg font-bold">{draft.staffing.target}</span>
-            <button type="button" onClick={() => syncCount(draft.staffing.target + 1)}
-              className="flex h-8 w-8 items-center justify-center rounded-full border text-sm font-bold hover:bg-muted">+</button>
+      <DialogContent className="flex max-w-2xl flex-col p-0" style={{ maxHeight: "min(85vh, 620px)" }}>
+
+        {/* Fixed header */}
+        <div className="shrink-0 border-b px-5 py-4">
+          <DialogHeader>
+            <DialogTitle>{shift.name} — {dayLabel}</DialogTitle>
+          </DialogHeader>
+          <div className="mt-1 flex items-center text-xs text-muted-foreground">
+            <span>
+              Defaults: {shift.staffing.target} doctor{shift.staffing.target !== 1 ? "s" : ""} · {shift.startTime}–{shift.endTime} · {shift.durationHours}h
+            </span>
+            {!isDefault && (
+              <button type="button" onClick={() => setDraft(makeDefaultDaySlot(dayKey, shift))}
+                className="ml-3 shrink-0 text-purple-600 hover:text-purple-800">
+                Reset
+              </button>
+            )}
           </div>
         </div>
-        {draft.slots.length > 0 && (
-          <div className="space-y-2">
-            <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Eligibility per position</Label>
-            {draft.slots.map((slot, i) => (
-              <SlotRowEditor key={i} slot={slot} slotNumber={i + 1}
-                onChange={(updated) =>
-                  setDraft((prev) => prev ? { ...prev, slots: prev.slots.map((s, idx) => idx === i ? updated : s) } : prev)
-                }
-              />
-            ))}
-          </div>
-        )}
-        <div className="rounded-lg border border-border p-3 space-y-2">
-          <button type="button" onClick={() => setShowCopy((v) => !v)}
-            className="flex items-center gap-2 text-xs font-medium text-primary hover:text-primary/80">
-            <Copy className="h-3.5 w-3.5" /> Copy to other days…
-          </button>
-          {showCopy && (
-            <div className="space-y-2">
-              <div className="grid grid-cols-7 gap-1">
-                {DAY_KEYS.map((k, i) => {
-                  const isSelf = k === dayKey;
-                  return (
-                    <button key={k} type="button" disabled={isSelf}
-                      onClick={() => setCopyTargets((prev) => ({ ...prev, [k]: !prev[k] }))}
-                      className={`rounded border py-1.5 text-[10px] font-semibold transition-colors ${
-                        isSelf
-                          ? "border-primary/20 bg-primary/10 text-primary/40 cursor-default"
-                          : copyTargets[k] ? "border-primary bg-primary text-primary-foreground"
-                          : "border-border bg-muted text-muted-foreground hover:bg-muted/80"
-                      }`}>
-                      {DAY_SHORT[i]}
-                    </button>
-                  );
-                })}
+
+        {/* Scrollable body — two columns */}
+        <div className="flex min-h-0 flex-1 divide-x divide-border overflow-hidden">
+
+          {/* Left column: doctors stepper + copy */}
+          <div className="flex w-[200px] shrink-0 flex-col gap-4 overflow-y-auto p-4">
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Doctors
+              </Label>
+              <div className="flex items-center gap-3">
+                <button type="button" disabled={draft.staffing.target <= 1}
+                  onClick={() => syncCount(Math.max(1, draft.staffing.target - 1))}
+                  className="flex h-8 w-8 items-center justify-center rounded-full border text-sm font-bold hover:bg-muted disabled:opacity-30">
+                  −
+                </button>
+                <span className="w-8 text-center text-lg font-bold">{draft.staffing.target}</span>
+                <button type="button" onClick={() => syncCount(draft.staffing.target + 1)}
+                  className="flex h-8 w-8 items-center justify-center rounded-full border text-sm font-bold hover:bg-muted">
+                  +
+                </button>
               </div>
-              <Button size="sm"
-                disabled={!DAY_KEYS.some((k) => copyTargets[k] && k !== dayKey)}
-                onClick={copyAndClose}>Copy</Button>
             </div>
-          )}
+
+            <div className="space-y-2">
+              <button type="button" onClick={() => setShowCopy((v) => !v)}
+                className="flex items-center gap-1.5 text-xs font-medium text-purple-600 hover:text-purple-800">
+                <Copy className="h-3.5 w-3.5" /> Copy to days…
+              </button>
+              {showCopy && (
+                <div className="space-y-2">
+                  <div className="grid grid-cols-4 gap-1">
+                    {DAY_KEYS.map((k, i) => {
+                      const isSelf = k === dayKey;
+                      return (
+                        <button key={k} type="button" disabled={isSelf}
+                          onClick={() => setCopyTargets((prev) => ({ ...prev, [k]: !prev[k] }))}
+                          className={`rounded border py-1 text-[10px] font-semibold transition-colors ${
+                            isSelf
+                              ? "border-purple-200 bg-purple-100 text-purple-400 cursor-default"
+                              : copyTargets[k]
+                                ? "border-purple-400 bg-purple-600 text-white"
+                                : "border-border bg-muted text-muted-foreground hover:bg-muted/80"
+                          }`}>
+                          {DAY_SHORT[i]}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <Button size="sm"
+                    disabled={!DAY_KEYS.some((k) => copyTargets[k] && k !== dayKey)}
+                    onClick={copyAndClose}
+                    className="w-full h-7 text-xs bg-purple-600 text-white hover:bg-purple-700">
+                    Copy
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right column: slot rows (scrollable) */}
+          <div className="flex-1 overflow-y-auto p-4">
+            <div className="mb-3">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Eligibility per position
+              </Label>
+              <p className="mt-0.5 text-[10px] text-muted-foreground">
+                Restrict each position by grade or competency. Leave blank for no restriction.
+              </p>
+            </div>
+            <div className="space-y-2">
+              {displaySlots.map((slot, i) => (
+                <SlotRowEditor key={i} slot={slot} slotNumber={i + 1}
+                  onChange={(updated) => handleSlotChange(i, updated)}
+                />
+              ))}
+            </div>
+          </div>
         </div>
-        <div className="flex items-center justify-between gap-2 pt-2">
+
+        {/* Fixed footer */}
+        <div className="flex shrink-0 items-center justify-between border-t px-5 py-3">
           <button type="button" onClick={removeAndClose}
             className="text-xs font-medium text-destructive hover:text-destructive/80">
             Remove from {DAY_SHORT[dayIdx]}
           </button>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button onClick={saveAndClose}>
+            <Button className="bg-purple-600 text-white hover:bg-purple-700" onClick={saveAndClose}>
               <Save className="mr-1.5 h-3.5 w-3.5" /> Save
             </Button>
           </div>
         </div>
+
       </DialogContent>
     </Dialog>
   );
@@ -791,7 +859,7 @@ function DraggableShiftChipNew({ shift, index }: { shift: ShiftType; index: numb
   return (
     <div ref={setNodeRef} {...listeners} {...attributes}
       className={`flex shrink-0 cursor-grab items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-opacity ${color.bg} ${color.text} ${color.border} ${isDragging ? "opacity-40" : ""}`}
-      style={{ transform: CSS.Transform.toString(transform) }}>
+      style={{ transform: CSS.Transform.toString(transform), touchAction: 'none' }}>
       <span className="font-mono font-bold tracking-widest">{shift.abbreviation}</span>
     </div>
   );
@@ -807,6 +875,8 @@ function DayColumnNew({
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: dayKey });
   const highlighted = isOver || dragOverDay === dayKey;
+  const [showPicker, setShowPicker] = useState(false);
+  const unassigned = shifts.filter((s) => !s.daySlots.some((ds) => ds.dayKey === dayKey));
 
   const active = shifts
     .map((s, i) => ({ shift: s, idx: i, ds: s.daySlots.find((d) => d.dayKey === dayKey) }))
@@ -861,6 +931,41 @@ function DayColumnNew({
           </button>
         );
       })}
+      {/* Tap-to-assign picker */}
+      {unassigned.length > 0 && (
+        <div className="mt-1">
+          {!showPicker ? (
+            <button type="button" onClick={() => setShowPicker(true)}
+              className="flex w-full items-center justify-center gap-1 rounded-lg border border-dashed border-border py-1.5 text-[10px] font-medium text-muted-foreground hover:border-purple-300 hover:text-purple-600 transition-colors"
+            >
+              <Plus className="h-3 w-3" /> Add
+            </button>
+          ) : (
+            <div className="space-y-1">
+              {unassigned.map((s) => {
+                const color = getShiftColor(shifts.indexOf(s));
+                return (
+                  <button key={s.id} type="button"
+                    onClick={() => { onAssignShift(s.id, dayKey); setShowPicker(false); }}
+                    className="flex w-full items-center gap-1.5 rounded-full border px-2 py-1 text-[10px] font-semibold transition-all hover:ring-1 hover:ring-purple-200"
+                    style={{ backgroundColor: color.solid + "15", borderColor: color.solid + "50" }}
+                  >
+                    <span className="inline-flex items-center rounded-full px-1.5 py-0.5 font-bold" style={{ backgroundColor: color.solid, color: "white" }}>
+                      {s.abbreviation}
+                    </span>
+                    {s.name}
+                  </button>
+                );
+              })}
+              <button type="button" onClick={() => setShowPicker(false)}
+                className="w-full py-0.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -917,6 +1022,18 @@ export default function DepartmentStep2() {
   const handleCellClick = useCallback((shiftId: string, dayKey: DayKey) => {
     setDaySlotModal({ shiftId, dayKey });
   }, []);
+
+  const handleAssignShift = useCallback((shiftId: string, dayKey: DayKey) => {
+    setShifts((prev) => prev.map((s) => {
+      if (s.id !== shiftId) return s;
+      if (s.daySlots.some((ds) => ds.dayKey === dayKey)) return s;
+      return {
+        ...s,
+        applicableDays: { ...s.applicableDays, [dayKey]: true },
+        daySlots: [...s.daySlots, makeDefaultDaySlot(dayKey, s)],
+      };
+    }));
+  }, [setShifts]);
 
   const handleDaySlotSave = useCallback((shiftId: string, dayKey: DayKey, updated: DaySlot) => {
     setShifts((prev) => prev.map((s) => {
@@ -1118,7 +1235,7 @@ export default function DepartmentStep2() {
         />
       }
     >
-      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
         <div className="mx-auto max-w-4xl space-y-6 animate-fadeSlideUp">
 
           <div className="flex items-start gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3">
@@ -1175,7 +1292,8 @@ export default function DepartmentStep2() {
                         <div key={key} className={i === 5 ? "border-l-2 border-purple-200 pl-1" : ""}>
                           <DayColumnNew
                             dayKey={key} dayIndex={i} isWeekend={i >= 5}
-                            shifts={shifts} dragOverDay={dragOverDay} onCellClick={handleCellClick}
+                            shifts={shifts} dragOverDay={dragOverDay}
+                            onCellClick={handleCellClick} onAssignShift={handleAssignShift}
                           />
                         </div>
                       ))}
@@ -1204,6 +1322,7 @@ export default function DepartmentStep2() {
                       shifts={shifts}
                       dragOverDay={dragOverDay}
                       onCellClick={handleCellClick}
+                      onAssignShift={handleAssignShift}
                     />
                   </div>
 
@@ -1324,15 +1443,17 @@ export default function DepartmentStep2() {
           </DialogContent>
         </Dialog>
 
-        <DragOverlay>
+        <DragOverlay dropAnimation={null}>
           {draggedShiftId && (() => {
             const idx   = shifts.findIndex((s) => s.id === draggedShiftId);
             const shift = shifts[idx];
             if (!shift) return null;
             const color = getShiftColor(idx);
             return (
-              <div className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold shadow-lg ${color.bg} ${color.text} ${color.border}`}>
+              <div className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold shadow-lg ${color.bg} ${color.text} ${color.border}`}
+                style={{ pointerEvents: 'none' }}>
                 {shift.abbreviation}
+                <span className="text-[10px] font-medium opacity-70">{shift.name}</span>
               </div>
             );
           })()}
