@@ -867,11 +867,12 @@ function DraggableShiftChipNew({ shift, index }: { shift: ShiftType; index: numb
 
 /* ─── DayColumnNew ─── */
 function DayColumnNew({
-  dayKey, dayIndex, isWeekend, shifts, dragOverDay, onCellClick,
+  dayKey, dayIndex, isWeekend, shifts, dragOverDay, onCellClick, onAssignShift,
 }: {
   dayKey: DayKey; dayIndex: number; isWeekend: boolean;
   shifts: ShiftType[]; dragOverDay: DayKey | null;
   onCellClick: (shiftId: string, dayKey: DayKey) => void;
+  onAssignShift: (shiftId: string, dayKey: DayKey) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: dayKey });
   const highlighted = isOver || dragOverDay === dayKey;
