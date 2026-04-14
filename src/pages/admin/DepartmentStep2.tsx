@@ -755,6 +755,16 @@ function ShiftIdentityCard({
 
   return (
     <div className="space-y-4 rounded-xl border-2 border-purple-200 bg-card p-5 shadow-md" style={{ borderLeft: `4px solid ${color.solid}` }}>
+      {/* Collapse header */}
+      <div className="flex cursor-pointer items-center justify-between" onClick={onToggleExpand}>
+        <div className="flex items-center gap-2">
+          <span className={`rounded-full border px-2 py-0.5 font-mono text-xs font-bold tracking-widest ${color.bg} ${color.text} ${color.border}`}>
+            {draft.abbreviation || shift.abbreviation}
+          </span>
+          <span className="text-sm font-semibold text-muted-foreground">{draft.name || shift.name}</span>
+        </div>
+        <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground" />
+      </div>
       <div className="grid grid-cols-[1fr_80px] gap-3">
         <div className="space-y-1.5">
           <Label className="text-xs">Shift name</Label>
@@ -858,7 +868,7 @@ function DraggableShiftChipNew({ shift, index }: { shift: ShiftType; index: numb
   const color = getShiftColor(index);
   return (
     <div ref={setNodeRef} {...listeners} {...attributes}
-      className={`flex shrink-0 cursor-grab items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-opacity ${color.bg} ${color.text} ${color.border} ${isDragging ? "opacity-40" : ""}`}
+      className={`flex shrink-0 cursor-grab items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-opacity ${color.bg} ${color.text} ${color.border} ${isDragging ? "opacity-0 pointer-events-none" : ""}`}
       style={{ transform: CSS.Transform.toString(transform), touchAction: 'none' }}>
       <span className="font-mono font-bold tracking-widest">{shift.abbreviation}</span>
     </div>
@@ -867,17 +877,16 @@ function DraggableShiftChipNew({ shift, index }: { shift: ShiftType; index: numb
 
 /* ─── DayColumnNew ─── */
 function DayColumnNew({
-  dayKey, dayIndex, isWeekend, shifts, dragOverDay, onCellClick, onAssignShift,
+  dayKey, dayIndex, isWeekend, shifts, dragOverDay, onCellClick, onAssignShift, onOpenAssignDialog,
 }: {
   dayKey: DayKey; dayIndex: number; isWeekend: boolean;
   shifts: ShiftType[]; dragOverDay: DayKey | null;
   onCellClick: (shiftId: string, dayKey: DayKey) => void;
   onAssignShift: (shiftId: string, dayKey: DayKey) => void;
+  onOpenAssignDialog: (dayKey: DayKey) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: dayKey });
   const highlighted = isOver || dragOverDay === dayKey;
-  const [showPicker, setShowPicker] = useState(false);
-  const unassigned = shifts.filter((s) => !s.daySlots.some((ds) => ds.dayKey === dayKey));
 
   const active = shifts
     .map((s, i) => ({ shift: s, idx: i, ds: s.daySlots.find((d) => d.dayKey === dayKey) }))
@@ -932,42 +941,78 @@ function DayColumnNew({
           </button>
         );
       })}
-      {/* Tap-to-assign picker */}
-      {unassigned.length > 0 && (
-        <div className="mt-1">
-          {!showPicker ? (
-            <button type="button" onClick={() => setShowPicker(true)}
-              className="flex w-full items-center justify-center gap-1 rounded-lg border border-dashed border-border py-1.5 text-[10px] font-medium text-muted-foreground hover:border-purple-300 hover:text-purple-600 transition-colors"
-            >
-              <Plus className="h-3 w-3" /> Add
-            </button>
-          ) : (
-            <div className="space-y-1">
-              {unassigned.map((s) => {
-                const color = getShiftColor(shifts.indexOf(s));
-                return (
-                  <button key={s.id} type="button"
-                    onClick={() => { onAssignShift(s.id, dayKey); setShowPicker(false); }}
-                    className="flex w-full items-center gap-1.5 rounded-full border px-2 py-1 text-[10px] font-semibold transition-all hover:ring-1 hover:ring-purple-200"
-                    style={{ backgroundColor: color.solid + "15", borderColor: color.solid + "50" }}
-                  >
-                    <span className="inline-flex items-center rounded-full px-1.5 py-0.5 font-bold" style={{ backgroundColor: color.solid, color: "white" }}>
-                      {s.abbreviation}
-                    </span>
-                    {s.name}
-                  </button>
-                );
-              })}
-              <button type="button" onClick={() => setShowPicker(false)}
-                className="w-full py-0.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Cancel
-              </button>
-            </div>
-          )}
-        </div>
-      )}
+      {/* Add-shift button — always shown, opens popup */}
+      <div className="mt-1">
+        <button type="button" onClick={() => onOpenAssignDialog(dayKey)}
+          className="flex w-full items-center justify-center gap-1 rounded-lg border border-dashed border-border py-1.5 text-[10px] font-medium text-muted-foreground hover:border-purple-300 hover:text-purple-600 transition-colors"
+        >
+          <Plus className="h-3 w-3" /> Add
+        </button>
+      </div>
     </div>
+  );
+}
+
+/* ─── AssignShiftDialog ─── */
+interface AssignShiftDialogProps {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  dayKey: DayKey;
+  shifts: ShiftType[];
+  onAssign: (shiftId: string) => void;
+  onNewShift: () => void;
+}
+function AssignShiftDialog({ open, onOpenChange, dayKey, shifts, onAssign, onNewShift }: AssignShiftDialogProps) {
+  const dayIdx   = DAY_KEYS.indexOf(dayKey);
+  const dayLabel = DAY_FULL[dayIdx] ?? dayKey;
+  const unassigned = shifts.filter((s) => !s.daySlots.some((ds) => ds.dayKey === dayKey));
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-xs">
+        <DialogHeader>
+          <DialogTitle className="text-base">Add shift — {dayLabel}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-2 pt-1">
+          {unassigned.length === 0 ? (
+            <p className="text-xs text-muted-foreground">All shift types are already assigned to this day.</p>
+          ) : (
+            unassigned.map((s) => {
+              const color = getShiftColor(shifts.indexOf(s));
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => { onAssign(s.id); onOpenChange(false); }}
+                  className="flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-sm font-medium transition-all hover:bg-muted/50 hover:ring-1 hover:ring-purple-200"
+                  style={{ borderColor: color.solid + "40" }}
+                >
+                  <span
+                    className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full font-mono text-xs font-bold text-white"
+                    style={{ backgroundColor: color.solid }}
+                  >
+                    {s.abbreviation}
+                  </span>
+                  <div className="min-w-0 text-left">
+                    <p className="truncate text-sm font-semibold">{s.name}</p>
+                    <p className="text-[10px] text-muted-foreground">{s.startTime}–{s.endTime} · {s.durationHours}h</p>
+                  </div>
+                </button>
+              );
+            })
+          )}
+          <button
+            type="button"
+            onClick={() => { onOpenChange(false); onNewShift(); }}
+            className="flex w-full items-center gap-3 rounded-lg border border-dashed border-purple-300 px-3 py-2.5 text-sm font-medium text-purple-600 transition-colors hover:bg-purple-50"
+          >
+            <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-purple-300 bg-purple-50">
+              <Plus className="h-3.5 w-3.5" />
+            </span>
+            New shift type…
+          </button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -982,6 +1027,7 @@ export default function DepartmentStep2() {
 
   const [addModalOpen,      setAddModalOpen]      = useState(false);
   const [daySlotModal,      setDaySlotModal]      = useState<{ shiftId: string; dayKey: DayKey } | null>(null);
+  const [assignDialog,      setAssignDialog]      = useState<DayKey | null>(null);
   const [expandedShiftId,   setExpandedShiftId]   = useState<string | null>(null);
   const [badgeMeaningsOpen, setBadgeMeaningsOpen] = useState(false);
   const [saving,            setSaving]            = useState(false);
@@ -1270,9 +1316,16 @@ export default function DepartmentStep2() {
                 </div>
               ) : (
                 <>
-                  <div className="flex flex-wrap gap-2 pb-1">
+                  <div className="flex flex-wrap items-center gap-2 pb-1">
                     <span className="mr-1 flex items-center text-[10px] font-medium text-muted-foreground">Drag onto days →</span>
                     {shifts.map((s, i) => <DraggableShiftChipNew key={s.id} shift={s} index={i} />)}
+                    <button
+                      type="button"
+                      onClick={() => setAddModalOpen(true)}
+                      className="inline-flex items-center gap-1 rounded-full border border-dashed border-purple-300 px-2.5 py-1 text-xs font-medium text-purple-600 hover:bg-purple-50 transition-colors"
+                    >
+                      <Plus className="h-3 w-3" /> New shift
+                    </button>
                   </div>
                   <hr className="border-border" />
 
@@ -1295,6 +1348,7 @@ export default function DepartmentStep2() {
                             dayKey={key} dayIndex={i} isWeekend={i >= 5}
                             shifts={shifts} dragOverDay={dragOverDay}
                             onCellClick={handleCellClick} onAssignShift={handleAssignShift}
+                            onOpenAssignDialog={(dk) => setAssignDialog(dk)}
                           />
                         </div>
                       ))}
@@ -1324,6 +1378,7 @@ export default function DepartmentStep2() {
                       dragOverDay={dragOverDay}
                       onCellClick={handleCellClick}
                       onAssignShift={handleAssignShift}
+                      onOpenAssignDialog={(dk) => setAssignDialog(dk)}
                     />
                   </div>
 
@@ -1420,6 +1475,17 @@ export default function DepartmentStep2() {
           onOpenChange={setAddModalOpen}
           onConfirm={handleAddConfirm}
         />
+
+        {assignDialog !== null && (
+          <AssignShiftDialog
+            open={assignDialog !== null}
+            onOpenChange={(v) => { if (!v) setAssignDialog(null); }}
+            dayKey={assignDialog}
+            shifts={shifts}
+            onAssign={(shiftId) => handleAssignShift(shiftId, assignDialog)}
+            onNewShift={() => setAddModalOpen(true)}
+          />
+        )}
 
         <DaySlotModal
           open={daySlotModal !== null}
