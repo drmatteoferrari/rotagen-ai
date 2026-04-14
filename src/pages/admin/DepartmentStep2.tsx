@@ -1349,15 +1349,31 @@ export default function DepartmentStep2() {
               ) : (
                 <>
                   <div className="flex flex-wrap items-center gap-2 pb-1">
-                    <span className="mr-1 flex items-center text-[10px] font-medium text-muted-foreground">Drag onto days →</span>
-                    {shifts.map((s, i) => <DraggableShiftChipNew key={s.id} shift={s} index={i} />)}
-                    <button
-                      type="button"
-                      onClick={() => setAddModalOpen(true)}
-                      className="inline-flex items-center gap-1 rounded-full border border-dashed border-purple-300 px-2.5 py-1 text-xs font-medium text-purple-600 hover:bg-purple-50 transition-colors"
-                    >
-                      <Plus className="h-3 w-3" /> New shift
-                    </button>
+                    {isReadOnly ? (
+                      <>
+                        <span className="mr-1 flex items-center text-[10px] font-medium text-muted-foreground">Shift types</span>
+                        {shifts.map((s, i) => {
+                          const color = getShiftColor(i);
+                          return (
+                            <div key={s.id} className={`flex shrink-0 items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium ${color.bg} ${color.text} ${color.border}`}>
+                              <span className="font-mono font-bold tracking-widest">{s.abbreviation}</span>
+                            </div>
+                          );
+                        })}
+                      </>
+                    ) : (
+                      <>
+                        <span className="mr-1 flex items-center text-[10px] font-medium text-muted-foreground">Drag onto days →</span>
+                        {shifts.map((s, i) => <DraggableShiftChipNew key={s.id} shift={s} index={i} />)}
+                        <button
+                          type="button"
+                          onClick={() => setAddModalOpen(true)}
+                          className="inline-flex items-center gap-1 rounded-full border border-dashed border-purple-300 px-2.5 py-1 text-xs font-medium text-purple-600 hover:bg-purple-50 transition-colors"
+                        >
+                          <Plus className="h-3 w-3" /> New shift
+                        </button>
+                      </>
+                    )}
                   </div>
                   <hr className="border-border" />
 
@@ -1381,6 +1397,7 @@ export default function DepartmentStep2() {
                             shifts={shifts} dragOverDay={dragOverDay}
                             onCellClick={handleCellClick} onAssignShift={handleAssignShift}
                             onOpenAssignDialog={(dk) => setAssignDialog(dk)}
+                            isReadOnly={isReadOnly}
                           />
                         </div>
                       ))}
@@ -1411,6 +1428,7 @@ export default function DepartmentStep2() {
                       onCellClick={handleCellClick}
                       onAssignShift={handleAssignShift}
                       onOpenAssignDialog={(dk) => setAssignDialog(dk)}
+                      isReadOnly={isReadOnly}
                     />
                   </div>
 
