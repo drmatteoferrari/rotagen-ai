@@ -1,3 +1,7 @@
+iIn src/components/brand/RotaGenIcon.tsx, replace the entire file contents with this:
+
+import React from "react";
+
 interface RotaGenIconProps {
   size?: number;
   variant?: "light" | "dark";
@@ -6,71 +10,103 @@ interface RotaGenIconProps {
 
 export default function RotaGenIcon({ size = 44, variant = "light", className }: RotaGenIconProps) {
   const isLight = variant === "light";
-  const frameStroke = isLight ? "#2563EB" : "white";
-  const topBandFill = isLight ? "#dbeafe" : "#1e3a8a";
-  const bodyFill = isLight ? "white" : "#2563EB";
-  const cellFill = isLight ? "#dbeafe" : "#1e3a8a";
-  const ecgStroke = isLight ? "#2563EB" : "white";
-  const notchFill = isLight ? "#2563EB" : "white";
-  const headerStroke = isLight ? "#2563EB" : "white";
-  const clipId = `rotagen-icon-clip-${variant}`;
+  const bgFill        = isLight ? "#dbeafe" : "#1e3a8a";
+  const bodyFill      = isLight ? "white"   : "#2563EB";
+  const cellFill      = isLight ? "#dbeafe" : "#1e3a8a";
+  const ecgStroke     = isLight ? "#2563EB" : "white";
+  const frameStroke   = isLight ? "#2563EB" : "white";
+  const rotaColor     = isLight ? "#0f172a" : "white";
+  const genColor      = isLight ? "#2563EB" : "#93c5fd";
+
+  const showText = size >= 32;
+
+  // When showing text: header band = y 0–38, white section = y 38–123 (h=85)
+  // When no text:      full area is white section with small top band for colour
+  const headerH   = showText ? 38  : 18;
+  const whiteY    = headerH;
+  const whiteH    = 130 - headerH - 7;  // 7px bottom margin
+  const whiteRx   = 17;
+
+  // Grid: 4×3, cell 19×12, col-gap 6, row-gap 7
+  // Grid w=94, centred in 130: x start = (130-94)/2 = 18
+  // cols: 18, 43, 68, 93
+  // Grid h=50, centred in white section
+  const gridTop   = whiteY + Math.round((whiteH - 50) / 2);
+  const rows      = [gridTop, gridTop + 19, gridTop + 38];
+  const cols      = [18, 43, 68, 93];
+
+  // ECG centred vertically in white section
+  const ecgY      = whiteY + Math.round(whiteH / 2);
+  const ecgAmp    = 23;  // amplitude preserved
+  const ecgPath   = `M12,${ecgY} L30,${ecgY} L36,${ecgY+12} L43,${ecgY-23} L51,${ecgY+25} L59,${ecgY} L75,${ecgY} Q82,${ecgY} 88,${ecgY-14} Q94,${ecgY} 103,${ecgY} L118,${ecgY}`;
+
+  const frameClipId = `rg-frame-${variant}-${size}`;
+  const whiteClipId = `rg-white-${variant}-${size}`;
 
   return (
-    <svg width={size} height={size} viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 130 130"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+    >
       <defs>
-        <clipPath id={clipId}>
-          <rect x="2" y="4" width="40" height="36" rx="6" />
+        <clipPath id={frameClipId}>
+          <rect x="0" y="0" width="130" height="130" rx="20" />
+        </clipPath>
+        <clipPath id={whiteClipId}>
+          <rect x="7" y={whiteY} width="116" height={whiteH} rx={whiteRx} />
         </clipPath>
       </defs>
 
-      {/* Top band */}
-      <rect x="2" y="4" width="40" height="14" rx="6" fill={topBandFill} clipPath={`url(#${clipId})`} />
+      <g clipPath={`url(#${frameClipId})`}>
+        {/* Background */}
+        <rect x="0" y="0" width="130" height="130" fill={bgFill} />
 
-      {/* Calendar body */}
-      <rect x="2" y="14" width="40" height="26" fill={bodyFill} clipPath={`url(#${clipId})`} />
+        {/* Frame stroke — inside clip so it never bleeds */}
+        <rect x="2" y="2" width="126" height="126" rx="19" fill="none" stroke={frameStroke} strokeWidth="2" />
 
-      {/* Inner cell area */}
-      <rect x="5" y="16" width="34" height="22" rx="2" fill={bodyFill} />
+        {/* ROTAGEN wordmark — only when large enough */}
+        {showText && (
+          <text
+            x="65"
+            y="22"
+            textAnchor="middle"
+            dominantBaseline="central"
+            fontFamily="Inter, system-ui, sans-serif"
+            fontSize="22"
+            fontWeight="900"
+            letterSpacing="1.5"
+            strokeWidth="0.6"
+            paintOrder="stroke fill"
+          >
+            <tspan fill={rotaColor} stroke={rotaColor}>ROTA</tspan>
+            <tspan fill={genColor}  stroke={genColor}>GEN</tspan>
+          </text>
+        )}
 
-      {/* Grid cells - 4 cols × 3 rows */}
-      <g>
-        {/* Row 1 */}
-        <rect x="6.5" y="17.5" width="6.5" height="5.5" rx="1" fill={cellFill} />
-        <rect x="14.5" y="17.5" width="6.5" height="5.5" rx="1" fill={cellFill} />
-        <rect x="22.5" y="17.5" width="6.5" height="5.5" rx="1" fill={cellFill} />
-        <rect x="30.5" y="17.5" width="6.5" height="5.5" rx="1" fill={cellFill} />
-        {/* Row 2 */}
-        <rect x="6.5" y="24.5" width="6.5" height="5.5" rx="1" fill={cellFill} />
-        <rect x="14.5" y="24.5" width="6.5" height="5.5" rx="1" fill={cellFill} />
-        <rect x="22.5" y="24.5" width="6.5" height="5.5" rx="1" fill={cellFill} />
-        <rect x="30.5" y="24.5" width="6.5" height="5.5" rx="1" fill={cellFill} />
-        {/* Row 3 */}
-        <rect x="6.5" y="31.5" width="6.5" height="5.5" rx="1" fill={cellFill} />
-        <rect x="14.5" y="31.5" width="6.5" height="5.5" rx="1" fill={cellFill} />
-        <rect x="22.5" y="31.5" width="6.5" height="5.5" rx="1" fill={cellFill} />
-        <rect x="30.5" y="31.5" width="6.5" height="5.5" rx="1" fill={cellFill} />
+        {/* White calendar body */}
+        <rect x="7" y={whiteY} width="116" height={whiteH} rx={whiteRx} fill={bodyFill} />
 
-        {/* ECG path */}
-        <polyline
-          points="6,28 12,28 15,22 18,34 21,25 24,28 28,28 31,24 34,28 38,28"
-          fill="none"
-          stroke={ecgStroke}
-          strokeWidth="1.8"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
+        {/* Grid + ECG clipped to white section */}
+        <g clipPath={`url(#${whiteClipId})`}>
+          {rows.map((ry) =>
+            cols.map((cx) => (
+              <rect key={`${cx}-${ry}`} x={cx} y={ry} width="19" height="12" rx="2.5" fill={cellFill} />
+            ))
+          )}
+          <path
+            d={ecgPath}
+            fill="none"
+            stroke={ecgStroke}
+            strokeWidth="3.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </g>
       </g>
-
-      {/* Left notch */}
-      <rect x="12" y="1" width="3" height="7" rx="1.5" fill={notchFill} />
-      {/* Right notch */}
-      <rect x="29" y="1" width="3" height="7" rx="1.5" fill={notchFill} />
-
-      {/* Header line */}
-      <line x1="2" y1="14" x2="42" y2="14" stroke={headerStroke} strokeWidth="0.5" />
-
-      {/* Outer frame - always on top */}
-      <rect x="2" y="4" width="40" height="36" rx="6" stroke={frameStroke} strokeWidth="2" fill="none" />
     </svg>
   );
 }
