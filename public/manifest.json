@@ -4,21 +4,21 @@
   "description": "WTR-compliant NHS rota scheduling",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#dbeafe",
+  "background_color": "#2563EB",
   "theme_color": "#2563EB",
   "icons": [
     {
-      "src": "/icon-192x192-light.png",
+      "src": "/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/icon-512x512-light.png",
+      "src": "/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png"
     },
     {
-      "src": "/icon-1024x1024-light.png",
+      "src": "/icon-1024x1024.png",
       "sizes": "1024x1024",
       "type": "image/png"
     }
