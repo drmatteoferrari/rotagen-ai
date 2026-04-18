@@ -38,7 +38,7 @@ import {
   type MergedCell,
 } from "@/lib/calendarOverrides";
 import { AddEventModal } from "@/components/calendar/AddEventModal";
-import { refreshResolvedAvailabilityForDoctor } from "@/lib/resolvedAvailability";
+import { refreshResolvedAvailabilityForDoctor, refreshPreRotaTargets } from "@/lib/resolvedAvailability";
 import {
   usePreRotaResultQuery,
   useCalendarShiftTypesQuery,
@@ -1053,6 +1053,9 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
       refreshResolvedAvailabilityForDoctor(rotaConfigId, doctorId).catch((err) =>
         console.error("refreshResolvedAvailability failed:", err),
       );
+      refreshPreRotaTargets(rotaConfigId).catch((err) =>
+        console.error("refreshPreRotaTargets failed:", err),
+      );
     } catch (err) {
       console.error("Failed to save override:", err);
     } finally {
@@ -1074,6 +1077,9 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
       setSelectedCell(null);
       refreshResolvedAvailabilityForDoctor(rotaConfigId, doctorId).catch((err) =>
         console.error("refreshResolvedAvailability failed:", err),
+      );
+      refreshPreRotaTargets(rotaConfigId).catch((err) =>
+        console.error("refreshPreRotaTargets failed:", err),
       );
     } catch (err) {
       console.error("Failed to delete override:", err);

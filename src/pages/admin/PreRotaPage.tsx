@@ -11,7 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { generatePreRota } from "@/lib/preRotaGenerator";
 import type { PreRotaResult } from "@/lib/preRotaTypes";
-import { refreshResolvedAvailabilityForDoctor, rebuildResolvedAvailabilityFromDB } from '@/lib/resolvedAvailability';
+import { refreshResolvedAvailabilityForDoctor, rebuildResolvedAvailabilityFromDB, refreshPreRotaTargets } from '@/lib/resolvedAvailability';
 
 export default function PreRotaPage() {
   const navigate = useNavigate();
@@ -157,6 +157,8 @@ export default function PreRotaPage() {
     if (affectedDoctorId && currentRotaConfigId) {
       refreshResolvedAvailabilityForDoctor(currentRotaConfigId, affectedDoctorId)
         .catch(err => console.error('refreshResolvedAvailability failed:', err))
+      refreshPreRotaTargets(currentRotaConfigId)
+        .catch(err => console.error('refreshPreRotaTargets failed:', err))
     }
   }
 
@@ -167,6 +169,8 @@ export default function PreRotaPage() {
     setOverrides([])
     rebuildResolvedAvailabilityFromDB(currentRotaConfigId)
       .catch(err => console.error('rebuildResolvedAvailabilityFromDB failed:', err))
+    refreshPreRotaTargets(currentRotaConfigId)
+      .catch(err => console.error('refreshPreRotaTargets failed:', err))
   }
 
   useEffect(() => {
