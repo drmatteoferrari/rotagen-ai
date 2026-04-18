@@ -76,12 +76,21 @@ export default function PreRotaPage() {
           .order("updated_at", { ascending: false })
           .limit(1);
 
+        const { data: latestOverrides } = await supabase
+          .from("coordinator_calendar_overrides")
+          .select("created_at")
+          .eq("rota_config_id", currentRotaConfigId)
+          .order("created_at", { ascending: false })
+          .limit(1);
+
         const latestDoctorUpdate = latestDoctors?.[0]?.updated_at ? new Date(latestDoctors[0].updated_at) : null;
         const latestSurveyUpdate = latestSurveys?.[0]?.updated_at ? new Date(latestSurveys[0].updated_at) : null;
+        const latestOverrideUpdate = latestOverrides?.[0]?.created_at ? new Date(latestOverrides[0].created_at) : null;
 
         const stale =
           (latestDoctorUpdate && latestDoctorUpdate > generatedAt) ||
-          (latestSurveyUpdate && latestSurveyUpdate > generatedAt);
+          (latestSurveyUpdate && latestSurveyUpdate > generatedAt) ||
+          (latestOverrideUpdate && latestOverrideUpdate > generatedAt);
 
         result.isStale = !!stale;
         setPreRotaResult(result);
