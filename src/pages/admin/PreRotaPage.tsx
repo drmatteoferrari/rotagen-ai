@@ -11,7 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { generatePreRota } from "@/lib/preRotaGenerator";
 import type { PreRotaResult } from "@/lib/preRotaTypes";
-import { refreshResolvedAvailabilityForDoctor, rebuildResolvedAvailabilityFromDB } from '@/lib/resolvedAvailability';
+import { refreshResolvedAvailabilityForDoctor, rebuildResolvedAvailabilityFromDB, refreshPreRotaTargets } from '@/lib/resolvedAvailability';
 
 export default function PreRotaPage() {
   const navigate = useNavigate();
@@ -76,12 +76,21 @@ export default function PreRotaPage() {
           .order("updated_at", { ascending: false })
           .limit(1);
 
+        const { data: latestOverrides } = await supabase
+          .from("coordinator_calendar_overrides")
+          .select("created_at")
+          .eq("rota_config_id", currentRotaConfigId)
+          .order("created_at", { ascending: false })
+          .limit(1);
+
         const latestDoctorUpdate = latestDoctors?.[0]?.updated_at ? new Date(latestDoctors[0].updated_at) : null;
         const latestSurveyUpdate = latestSurveys?.[0]?.updated_at ? new Date(latestSurveys[0].updated_at) : null;
+        const latestOverrideUpdate = latestOverrides?.[0]?.created_at ? new Date(latestOverrides[0].created_at) : null;
 
         const stale =
           (latestDoctorUpdate && latestDoctorUpdate > generatedAt) ||
-          (latestSurveyUpdate && latestSurveyUpdate > generatedAt);
+          (latestSurveyUpdate && latestSurveyUpdate > generatedAt) ||
+          (latestOverrideUpdate && latestOverrideUpdate > generatedAt);
 
         result.isStale = !!stale;
         setPreRotaResult(result);
@@ -157,6 +166,8 @@ export default function PreRotaPage() {
     if (affectedDoctorId && currentRotaConfigId) {
       refreshResolvedAvailabilityForDoctor(currentRotaConfigId, affectedDoctorId)
         .catch(err => console.error('refreshResolvedAvailability failed:', err))
+      refreshPreRotaTargets(currentRotaConfigId)
+        .catch(err => console.error('refreshPreRotaTargets failed:', err))
     }
   }
 
@@ -167,6 +178,8 @@ export default function PreRotaPage() {
     setOverrides([])
     rebuildResolvedAvailabilityFromDB(currentRotaConfigId)
       .catch(err => console.error('rebuildResolvedAvailabilityFromDB failed:', err))
+    refreshPreRotaTargets(currentRotaConfigId)
+      .catch(err => console.error('refreshPreRotaTargets failed:', err))
   }
 
   useEffect(() => {

@@ -31,7 +31,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { AddEventModal } from "@/components/calendar/AddEventModal";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { refreshResolvedAvailabilityForDoctor } from "@/lib/resolvedAvailability";
+import { refreshResolvedAvailabilityForDoctor, refreshPreRotaTargets } from "@/lib/resolvedAvailability";
 
 // ─── Constants ────────────────────────────────────────────────
 const EVENT_LABELS: Record<string, string> = {
@@ -460,6 +460,9 @@ export default function DoctorCalendarPage() {
       refreshResolvedAvailabilityForDoctor(currentRotaConfigId, doctorId!).catch((err) =>
         console.error("refreshResolvedAvailability failed:", err),
       );
+      refreshPreRotaTargets(currentRotaConfigId!).catch((err) =>
+        console.error("refreshPreRotaTargets failed:", err),
+      );
     } catch (err) {
       console.error("Failed to save override:", err);
     } finally {
@@ -479,6 +482,9 @@ export default function DoctorCalendarPage() {
       setSelectedDate(null);
       refreshResolvedAvailabilityForDoctor(currentRotaConfigId!, doctorId!).catch((err) =>
         console.error("refreshResolvedAvailability failed:", err),
+      );
+      refreshPreRotaTargets(currentRotaConfigId!).catch((err) =>
+        console.error("refreshPreRotaTargets failed:", err),
       );
     } catch (err) {
       console.error("Failed to delete override:", err);

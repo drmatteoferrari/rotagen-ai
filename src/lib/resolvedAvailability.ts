@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client'
 import { mergeOverridesIntoAvailability, mapOverrideRow } from '@/lib/calendarOverrides'
-import type { CalendarData } from '@/lib/preRotaTypes'
+import { buildTargetsData } from './preRotaTargets'
+import type { CalendarData, CalendarCell } from './preRotaTypes'
 
 type ResolvedRow = {
   rota_config_id: string
@@ -157,4 +158,143 @@ export async function rebuildResolvedAvailabilityFromDB(
   if (!calendarData.doctors?.length) return
 
   await rebuildResolvedAvailability(rotaConfigId, calendarData)
+}
+
+/**
+ * Rebuild calendar_data (survey + overrides merged) and targets_data for a config,
+ * and save back to pre_rota_results. Called after any coordinator override mutation
+ * to keep targets in sync with resolved_availability.
+ *
+ * Silent no-op if no pre_rota_results row exists yet or status is 'blocked'.
+ * Fire-and-forget — errors logged via console.error, never thrown.
+ */
+export async function refreshPreRotaTargets(rotaConfigId: string): Promise<void> {
+  try {
+    // 1. Load current pre_rota_results
+    const { data: pr } = await supabase
+      .from('pre_rota_results')
+      .select('calendar_data, status')
+      .eq('rota_config_id', rotaConfigId)
+      .maybeSingle()
+
+    if (!pr?.calendar_data) return
+    if (pr.status === 'blocked') return
+    const calendarData = pr.calendar_data as unknown as CalendarData
+    if (!calendarData.doctors?.length) return
+
+    // 2. Fetch raw rota_configs row
+    const { data: config } = await supabase
+      .from('rota_configs')
+      .select('*')
+      .eq('id', rotaConfigId)
+      .maybeSingle()
+    if (!config) return
+
+    // 3. Fetch WTR settings
+    const { data: wtr } = await supabase
+      .from('wtr_settings')
+      .select('*')
+      .eq('rota_config_id', rotaConfigId)
+      .maybeSingle()
+    if (!wtr) return
+
+    // 4. Fetch raw shift types
+    const { data: rawShiftTypes } = await supabase
+      .from('shift_types')
+      .select('*')
+      .eq('rota_config_id', rotaConfigId)
+      .order('sort_order', { ascending: true })
+    if (!rawShiftTypes?.length) return
+
+    // 5. Fetch active doctors
+    const { data: doctorRows } = await supabase
+      .from('doctors')
+      .select('*')
+      .eq('rota_config_id', rotaConfigId)
+      .eq('is_active', true)
+    if (!doctorRows?.length) return
+
+    // 6. Fetch survey responses (for wte_percent mapping)
+    const { data: surveyRows } = await supabase
+      .from('doctor_survey_responses')
+      .select('doctor_id, wte_percent, grade')
+      .eq('rota_config_id', rotaConfigId)
+    const surveysByDoctor = new Map<string, { wte_percent: number | null; grade: string | null }>()
+    for (const s of surveyRows ?? []) {
+      surveysByDoctor.set(s.doctor_id as string, {
+        wte_percent: (s.wte_percent as number | null) ?? null,
+        grade: (s.grade as string | null) ?? null,
+      })
+    }
+
+    // 7. Fetch all coordinator overrides
+    const { data: overrideRows } = await supabase
+      .from('coordinator_calendar_overrides')
+      .select('*')
+      .eq('rota_config_id', rotaConfigId)
+    const allOverrides = (overrideRows ?? []).map(mapOverrideRow)
+
+    // 8. Build a fresh merged calendar_data clone
+    const mergedCalendarData = structuredClone(calendarData)
+    for (const doctor of mergedCalendarData.doctors) {
+      const doctorOverrides = allOverrides.filter(o => o.doctorId === doctor.doctorId)
+      const merged = mergeOverridesIntoAvailability(
+        doctor.availability,
+        doctorOverrides,
+        mergedCalendarData.rotaStartDate,
+        mergedCalendarData.rotaEndDate,
+      )
+      // Strip MergedCell-specific fields → CalendarCell shape only.
+      // primary is already 'AVAILABLE' when isDeleted; do not interpret isDeleted here.
+      const stripped: Record<string, CalendarCell> = {}
+      for (const [date, cell] of Object.entries(merged)) {
+        stripped[date] = {
+          primary: cell.primary as CalendarCell['primary'],
+          secondary: cell.secondary as CalendarCell['secondary'],
+          label: cell.label,
+        }
+      }
+      doctor.availability = stripped
+    }
+
+    // 9. Recompute targets_data using merged calendar doctors
+    const targetsData = buildTargetsData({
+      wtrMaxHoursPerWeek: Number(wtr.max_hours_per_week ?? 48),
+      wtrMaxHoursPer168h: Number(wtr.max_hours_per_168h ?? 72),
+      weekendFrequency: (wtr.weekend_frequency as number) ?? 3,
+      rotaWeeks: Number(config.rota_duration_weeks ?? 0),
+      globalOncallPct: Number(config.global_oncall_pct ?? 50),
+      globalNonOncallPct: Number(config.global_non_oncall_pct ?? 50),
+      shiftTypes: rawShiftTypes.map((s: any) => ({
+        id: s.id as string,
+        name: s.name as string,
+        shiftKey: s.shift_key as string,
+        isOncall: (s.is_oncall as boolean) ?? false,
+        targetPercentage: Number(s.target_percentage ?? 0),
+        durationHours: Number(s.duration_hours),
+      })),
+      doctors: doctorRows.map((d: any) => {
+        const survey = surveysByDoctor.get(d.id as string)
+        return {
+          id: d.id as string,
+          firstName: d.first_name as string,
+          lastName: d.last_name as string,
+          grade: (survey?.grade ?? d.grade ?? '') as string,
+          wte: Number(survey?.wte_percent ?? 100),
+        }
+      }),
+      calendarDoctors: mergedCalendarData.doctors,
+    })
+
+    // 10. UPDATE pre_rota_results — only calendar_data + targets_data
+    await supabase
+      .from('pre_rota_results')
+      .update({
+        calendar_data: mergedCalendarData as any,
+        targets_data: targetsData as any,
+      })
+      .eq('rota_config_id', rotaConfigId)
+  } catch (err) {
+    console.error('refreshPreRotaTargets failed:', err)
+  }
 }
