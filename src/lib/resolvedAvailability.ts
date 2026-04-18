@@ -286,11 +286,14 @@ export async function refreshPreRotaTargets(rotaConfigId: string): Promise<void>
       calendarDoctors: mergedCalendarData.doctors,
     })
 
-    // 10. UPDATE pre_rota_results — only calendar_data + targets_data
+    // 10. UPDATE pre_rota_results — ONLY targets_data.
+    // calendar_data is the survey-only base; it is NEVER rewritten here,
+    // because doing so corrupts the base on subsequent runs (merged data
+    // gets re-merged, phantom leave days accumulate, overrides can't be reverted).
+    // The merged calendar is transient — used only to feed buildTargetsData above.
     await supabase
       .from('pre_rota_results')
       .update({
-        calendar_data: mergedCalendarData as any,
         targets_data: targetsData as any,
       })
       .eq('rota_config_id', rotaConfigId)
