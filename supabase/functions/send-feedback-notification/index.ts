@@ -78,8 +78,8 @@ ${rows.join("\n")}
 </div>`;
 
     const { error } = await resend.emails.send({
-      from: "onboarding@resend.dev",
-      to: ["matteferro31@gmail.com"],
+      from: "RotaGen <noreply@rotagen.co.uk>",
+      to: ["hello@rotagen.co.uk"],
       subject: "RotaGen — New Feedback Submitted",
       html,
     });

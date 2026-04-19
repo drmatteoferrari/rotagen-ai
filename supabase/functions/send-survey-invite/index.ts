@@ -48,6 +48,7 @@ Deno.serve(async (req) => {
       surveyDeadline,
       surveyLink,
       isReminder,
+      coordinatorEmail,
     } = await req.json();
 
     if (!to || !doctorName || !surveyLink) {
@@ -124,8 +125,20 @@ Deno.serve(async (req) => {
 </table>
 </td></tr>
 
+<tr><td style="padding-top:24px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f0f7ff;border-radius:8px;">
+<tr><td style="padding:14px 18px;">
+<p style="font-size:13px;color:#374151;line-height:1.6;margin:0;">Questions about the rota or your allocation? Contact your rota coordinator directly: ${
+  coordinatorEmail
+    ? `<a href="mailto:${escHtml(coordinatorEmail)}" style="color:#2563EB;text-decoration:none;">${escHtml(coordinatorEmail)}</a>`
+    : `contact your department coordinator`
+}.</p>
+</td></tr>
+</table>
+</td></tr>
+
 <tr><td style="padding-top:24px;text-align:center;">
-<p style="font-size:12px;color:#999;line-height:1.5;margin:0;"><strong>RotaGen</strong> · NHS Rota Management<br/>${escHtml(departmentName)} · ${escHtml(hospitalName)}<br/>This is an automated message — please do not reply directly to this email.</p>
+<p style="font-size:12px;color:#999;line-height:1.5;margin:0;"><strong>RotaGen</strong> · NHS Rota Management<br/>${escHtml(departmentName)} · ${escHtml(hospitalName)}<br/>This survey link is unique to you — please do not share it. This is an automated message — do not reply to this email.</p>
 </td></tr>
 
 </table>
@@ -135,7 +148,8 @@ Deno.serve(async (req) => {
 </html>`;
 
     const { error } = await resend.emails.send({
-      from: "onboarding@resend.dev",
+      from: "RotaGen <noreply@rotagen.co.uk>",
+      reply_to: "support@rotagen.co.uk",
       to: [to],
       subject,
       html,

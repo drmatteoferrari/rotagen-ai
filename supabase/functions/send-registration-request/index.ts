@@ -22,11 +22,10 @@ Deno.serve(async (req) => {
 
   try {
     const apiKey = Deno.env.get("RESEND_API_KEY");
-    const matteoEmail = Deno.env.get("MATTEO_EMAIL");
 
-    if (!apiKey || !matteoEmail) {
+    if (!apiKey) {
       return new Response(
-        JSON.stringify({ success: false, error: "Missing RESEND_API_KEY or MATTEO_EMAIL secret" }),
+        JSON.stringify({ success: false, error: "Missing RESEND_API_KEY secret" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -67,8 +66,8 @@ Deno.serve(async (req) => {
 </div>`;
 
     const { error } = await resend.emails.send({
-      from: "onboarding@resend.dev",
-      to: [matteoEmail],
+      from: "RotaGen <noreply@rotagen.co.uk>",
+      to: ["hello@rotagen.co.uk"],
       subject,
       html,
     });
