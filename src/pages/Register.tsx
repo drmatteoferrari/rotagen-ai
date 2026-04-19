@@ -84,6 +84,19 @@ export default function Register() {
         console.warn("Email notification failed (request still saved):", emailErr);
       }
 
+      // Send confirmation to coordinator (non-blocking)
+      try {
+        await supabase.functions.invoke("send-registration-confirmation", {
+          body: {
+            to: email.trim(),
+            firstName: firstName.trim(),
+            email: email.trim(),
+          },
+        });
+      } catch (confirmErr) {
+        console.warn("Registration confirmation email failed (non-blocking):", confirmErr);
+      }
+
       setSuccess(true);
     } catch (err: any) {
       console.error("Registration request failed:", err);

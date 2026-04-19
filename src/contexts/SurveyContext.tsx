@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { buildSurveyLink } from "@/lib/surveyLinks";
 
 // === Types ===
 
@@ -660,20 +661,32 @@ export function SurveyProvider({
           body: {
             to: fd.nhsEmail,
             doctorName: fd.fullName,
+            doctorId: doc.id,
+            surveyLink: token ? buildSurveyLink(token) : null,
             submittedAt: new Date().toLocaleString("en-GB"),
-            departmentName: ri?.departmentName || "—",
-            hospitalName: ri?.trustName || "—",
-            rotaStartDate: ri?.startDate || "TBC",
-            rotaEndDate: ri?.endDate || "TBC",
-            surveyDeadline: ri?.surveyDeadline || "TBC",
+            departmentName: ri?.departmentName ?? "—",
+            hospitalName: ri?.trustName ?? "—",
+            rotaStartDate: ri?.startDate ?? "TBC",
+            rotaEndDate: ri?.endDate ?? "TBC",
+            surveyDeadline: ri?.surveyDeadline ?? "TBC",
             workingPattern:
               fd.wtePercent === 100
                 ? "Full-time (100%)"
                 : `${fd.wtePercent === 0 ? fd.wteOtherValue : fd.wtePercent}% LTFT${fd.ltftDaysOff.length ? ` (${fd.ltftDaysOff.join(", ")} off)` : ""}`,
-            annualLeaveSummary: fd.annualLeave.length ? `${fd.annualLeave.length} period(s)` : "None entered",
-            studyLeaveSummary: fd.studyLeave.length ? `${fd.studyLeave.length} period(s)` : "None entered",
-            nocSummary: fd.nocDates.length ? `${fd.nocDates.length} date(s)/period(s)` : "None",
-            parentalLeave: fd.parentalLeaveExpected ? `${fd.parentalLeaveStart} to ${fd.parentalLeaveEnd}` : "None",
+            annualLeave: fd.annualLeave,
+            studyLeave: fd.studyLeave,
+            nocDates: fd.nocDates,
+            rotations: fd.rotations,
+            parentalLeaveExpected: fd.parentalLeaveExpected,
+            parentalLeaveStart: fd.parentalLeaveStart,
+            parentalLeaveEnd: fd.parentalLeaveEnd,
+            parentalLeaveNotes: fd.parentalLeaveNotes,
+            exemptFromNights: fd.exemptFromNights,
+            exemptFromWeekends: fd.exemptFromWeekends,
+            exemptFromOncall: fd.exemptFromOncall,
+            exemptionDetails: fd.exemptionDetails,
+            otherSchedulingRestrictions: fd.otherSchedulingRestrictions,
+            additionalNotes: fd.additionalNotes,
           },
         });
       } catch (emailErr) {
@@ -692,7 +705,7 @@ export function SurveyProvider({
     } finally {
       setSubmitting(false);
     }
-  }, [rotaInfo]);
+  }, [rotaInfo, token]);
 
   return (
     <SurveyContext.Provider

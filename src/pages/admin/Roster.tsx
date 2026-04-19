@@ -208,7 +208,7 @@ function ExpandedDoctorPanel({
 export default function Roster() {
   const navigate = useNavigate();
   const { currentRotaConfigId, restoredConfig } = useRotaContext();
-  const { accountSettings } = useAuth();
+  const { accountSettings, user } = useAuth();
   const { invalidateDoctors, invalidateInactiveDoctors, invalidateRotaConfigDetails } = useInvalidateQuery();
 
   // Add Doctor modal state
@@ -442,6 +442,7 @@ export default function Roster() {
       hospitalName,
       surveyDeadline: formattedDeadline,
       surveyLink,
+      coordinatorEmail: user?.email ?? null,
     };
 
     const { data, error } = await supabase.functions.invoke("send-survey-invite", { body });
