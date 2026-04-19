@@ -66,8 +66,8 @@ Deno.serve(async (req) => {
 </div>`;
 
     const { error } = await resend.emails.send({
-      from: "onboarding@resend.dev",
-      to: [matteoEmail],
+      from: "RotaGen <noreply@rotagen.co.uk>",
+      to: ["hello@rotagen.co.uk"],
       subject,
       html,
     });
