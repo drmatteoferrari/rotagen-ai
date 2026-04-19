@@ -6,7 +6,7 @@ export function buildSurveyLink(surveyToken: string): string {
   if (!envUrl) {
     console.warn("WARNING: VITE_APP_URL is not set. Survey links will use the hardcoded production URL. Set this variable before sending real invites.");
   }
-  const base = envUrl ?? "https://rotagen-ai.lovable.app";
+  const base = envUrl ?? "https://rotagen.co.uk";
   return `${base}/doctor/survey?token=${surveyToken}`;
 }
 
