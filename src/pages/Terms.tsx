@@ -59,7 +59,7 @@ export default function Terms() {
 
           <h2 className="mt-8 text-lg font-semibold">Contact</h2>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            For any questions about these terms, email <a href="mailto:matteferro31@gmail.com" className="text-primary hover:underline">matteferro31@gmail.com</a>.
+            For any questions about these terms, email <a href="mailto:hello@rotagen.co.uk" className="text-primary hover:underline">hello@rotagen.co.uk</a>.
           </p>
         </div>
       </main>

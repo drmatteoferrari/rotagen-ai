@@ -113,7 +113,7 @@ export default function Approve() {
       try {
         await supabase.functions.invoke("send-welcome-email", {
           body: {
-            to: "matteferro31@gmail.com",
+            to: request.email,
             fullName: request.full_name,
             username: username,
             email: request.email,

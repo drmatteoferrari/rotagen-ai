@@ -179,7 +179,7 @@ export default function DoctorProfile() {
   const { doctorId } = useParams<{ doctorId: string }>();
   const navigate = useNavigate();
   const { restoredConfig } = useRotaContext();
-  const { accountSettings } = useAuth();
+  const { accountSettings, user } = useAuth();
 
   const [doctor, setDoctor] = useState<DoctorRow | null>(null);
   const [survey, setSurvey] = useState<SurveyRow | null>(null);
@@ -395,6 +395,7 @@ export default function DoctorProfile() {
         hospitalName,
         surveyDeadline: "See Roster page for deadline",
         surveyLink,
+        coordinatorEmail: user?.email ?? null,
       };
       const { data, error } = await supabase.functions.invoke("send-survey-invite", { body });
       if (error) throw error;
