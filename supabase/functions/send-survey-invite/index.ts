@@ -5,11 +5,21 @@
 
 import { Resend } from "https://esm.sh/resend@4.6.0";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "https://rotagen-ai.lovable.app",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+const ALLOWED_ORIGINS = [
+  "https://rotagen.co.uk",
+  "https://rotagen-ai.lovable.app",
+];
+
+function getCorsHeaders(req: Request): Record<string, string> {
+  const origin = req.headers.get("origin") ?? "";
+  return {
+    "Access-Control-Allow-Origin": ALLOWED_ORIGINS.includes(origin)
+      ? origin
+      : ALLOWED_ORIGINS[0],
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  };
+}
 
 function escHtml(s: string | null | undefined): string {
   if (!s) return "";
@@ -24,7 +34,7 @@ function escHtml(s: string | null | undefined): string {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: getCorsHeaders(req) });
   }
 
   try {
@@ -32,7 +42,7 @@ Deno.serve(async (req) => {
     if (!apiKey) {
       return new Response(
         JSON.stringify({ success: false, error: "RESEND_API_KEY not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -54,7 +64,7 @@ Deno.serve(async (req) => {
     if (!to || !doctorName || !surveyLink) {
       return new Response(
         JSON.stringify({ success: false, error: "Missing required fields: to, doctorName, surveyLink" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -159,20 +169,20 @@ Deno.serve(async (req) => {
       console.error("Resend error:", error);
       return new Response(
         JSON.stringify({ success: false, error: error.message }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
     return new Response(
       JSON.stringify({ success: true }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
     );
     // SECTION 3 COMPLETE
   } catch (err) {
     console.error("Edge function error:", err);
     return new Response(
       JSON.stringify({ success: false, error: err.message ?? "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
     );
   }
 });

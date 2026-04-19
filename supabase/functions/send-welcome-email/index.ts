@@ -1,10 +1,20 @@
 import { Resend } from "https://esm.sh/resend@4.6.0";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "https://rotagen-ai.lovable.app",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+const ALLOWED_ORIGINS = [
+  "https://rotagen.co.uk",
+  "https://rotagen-ai.lovable.app",
+];
+
+function getCorsHeaders(req: Request): Record<string, string> {
+  const origin = req.headers.get("origin") ?? "";
+  return {
+    "Access-Control-Allow-Origin": ALLOWED_ORIGINS.includes(origin)
+      ? origin
+      : ALLOWED_ORIGINS[0],
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  };
+}
 
 function escHtml(s: string | null | undefined): string {
   if (!s) return "";
@@ -16,7 +26,7 @@ function escHtml(s: string | null | undefined): string {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method === "OPTIONS") return new Response(null, { headers: getCorsHeaders(req) });
 
   try {
     const apiKey = Deno.env.get("RESEND_API_KEY");
@@ -28,7 +38,7 @@ Deno.serve(async (req) => {
     if (!to || !fullName || !email || !tempPassword) {
       return new Response(
         JSON.stringify({ success: false, error: "Missing required fields" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
       );
     }
 
@@ -103,12 +113,12 @@ ${username ? `<tr><td style="color:#666;padding-right:16px;">Display name:</td><
 
     return new Response(
       JSON.stringify({ success: true }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
     );
   } catch (err: any) {
     return new Response(
       JSON.stringify({ success: false, error: err.message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
     );
   }
 });
