@@ -36,63 +36,62 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const { data: newUser, error: createError } =
-      await supabaseAdmin.auth.admin.createUser({
-        email,
+    // Check if user already exists BEFORE attempting creation.
+    // This handles re-approval of a failed previous attempt cleanly
+    // without relying on fragile error string matching.
+    let userId: string | null = null;
+
+    const { data: { users: allUsers } } = await supabaseAdmin.auth.admin.listUsers({
+      perPage: 1000,
+      page: 1,
+    });
+
+    const existingUser = (allUsers ?? []).find((u) => u.email === email);
+
+    if (existingUser) {
+      // User exists — update their password and metadata so the
+      // credentials in the welcome email always match what's in Auth
+      await supabaseAdmin.auth.admin.updateUserById(existingUser.id, {
         password,
-        email_confirm: true,
         user_metadata: {
           full_name: fullName,
           username,
           must_change_password: true,
         },
       });
+      userId = existingUser.id;
+    } else {
+      // User does not exist — create them fresh
+      const { data: newUser, error: createError } =
+        await supabaseAdmin.auth.admin.createUser({
+          email,
+          password,
+          email_confirm: true,
+          user_metadata: {
+            full_name: fullName,
+            username,
+            must_change_password: true,
+          },
+        });
 
-    if (createError || !newUser?.user) {
-      // If user already exists, look them up and continue rather than failing
-      const alreadyExists =
-        createError?.message?.toLowerCase().includes("already registered") ||
-        createError?.message?.toLowerCase().includes("already exists") ||
-        createError?.message?.toLowerCase().includes("already been registered");
-
-      if (alreadyExists) {
-        const { data: { users }, error: listError } =
-          await supabaseAdmin.auth.admin.listUsers();
-        const existingUser = users?.find((u) => u.email === email);
-        if (existingUser) {
-          // Ensure account_settings row exists
-          await supabaseAdmin
-            .from("account_settings")
-            .upsert(
-              {
-                owned_by: existingUser.id,
-                department_name: departmentName ?? null,
-                trust_name: hospitalName ?? null,
-              },
-              { onConflict: "owned_by" }
-            );
-          return new Response(
-            JSON.stringify({ success: true, userId: existingUser.id }),
-            { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
-          );
-        }
+      if (createError || !newUser?.user) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: createError?.message ?? "Failed to create user",
+          }),
+          { status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
+        );
       }
-
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: createError?.message ?? "Failed to create user",
-        }),
-        { status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
-      );
+      userId = newUser.user.id;
     }
 
-    // Create account_settings row for the new coordinator
+    // Ensure account_settings row exists for this coordinator
     await supabaseAdmin
       .from("account_settings")
       .upsert(
         {
-          owned_by: newUser.user.id,
+          owned_by: userId,
           department_name: departmentName ?? null,
           trust_name: hospitalName ?? null,
         },
@@ -100,10 +99,10 @@ Deno.serve(async (req) => {
       );
 
     return new Response(
-      JSON.stringify({ success: true, userId: newUser.user.id }),
+      JSON.stringify({ success: true, userId }),
       { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
     );
-  } catch (err) {
+  } catch (err: any) {
     return new Response(
       JSON.stringify({ success: false, error: err.message ?? "Unknown error" }),
       { status: 400, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
