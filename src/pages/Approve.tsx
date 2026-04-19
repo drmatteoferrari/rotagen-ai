@@ -39,7 +39,7 @@ export default function Approve() {
       .maybeSingle() as any
     ).then(({ data, error }: any) => {
       if (error || !data) { setPageState("invalid"); return; }
-      if (data.status !== "pending") { setPageState("already_approved"); return; }
+      if (data.status === "completed") { setPageState("already_approved"); return; }
       setRequest(data);
       setPageState("confirm");
     });

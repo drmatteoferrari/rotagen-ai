@@ -49,6 +49,35 @@ Deno.serve(async (req) => {
       });
 
     if (createError || !newUser?.user) {
+      // If user already exists, look them up and continue rather than failing
+      const alreadyExists =
+        createError?.message?.toLowerCase().includes("already registered") ||
+        createError?.message?.toLowerCase().includes("already exists") ||
+        createError?.message?.toLowerCase().includes("already been registered");
+
+      if (alreadyExists) {
+        const { data: { users }, error: listError } =
+          await supabaseAdmin.auth.admin.listUsers();
+        const existingUser = users?.find((u) => u.email === email);
+        if (existingUser) {
+          // Ensure account_settings row exists
+          await supabaseAdmin
+            .from("account_settings")
+            .upsert(
+              {
+                owned_by: existingUser.id,
+                department_name: departmentName ?? null,
+                trust_name: hospitalName ?? null,
+              },
+              { onConflict: "owned_by" }
+            );
+          return new Response(
+            JSON.stringify({ success: true, userId: existingUser.id }),
+            { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
+          );
+        }
+      }
+
       return new Response(
         JSON.stringify({
           success: false,
