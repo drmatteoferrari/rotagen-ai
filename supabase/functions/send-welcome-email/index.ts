@@ -12,7 +12,7 @@ function escHtml(s: string | null | undefined): string {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/\"/g, "&quot;");
+    .replace(/"/g, "&quot;");
 }
 
 Deno.serve(async (req) => {
@@ -23,7 +23,7 @@ Deno.serve(async (req) => {
     if (!apiKey) throw new Error("RESEND_API_KEY not configured");
 
     const resend = new Resend(apiKey);
-    const { to, fullName, email, tempPassword, hospital, department, jobTitle } = await req.json();
+    const { to, fullName, email, username, tempPassword, hospital, department } = await req.json();
 
     if (!to || !fullName || !email || !tempPassword) {
       return new Response(
@@ -32,37 +32,70 @@ Deno.serve(async (req) => {
       );
     }
 
-    const html = `
-<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#1a1a1a">
-<h2 style="color:#2563eb;margin-bottom:16px">New RotaGen Account Created</h2>
-<p style="margin-bottom:8px;font-size:14px;color:#6b7280">A new coordinator account has been activated.</p>
+    const subject = `Welcome to RotaGen — your login details`;
 
-<table style="width:100%;border-collapse:collapse;margin-bottom:24px">
-<tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;font-weight:600;width:180px">Name:</td><td style="padding:8px;border-bottom:1px solid #e5e7eb">${escHtml(fullName)}</td></tr>
-<tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;font-weight:600">Email:</td><td style="padding:8px;border-bottom:1px solid #e5e7eb;font-family:monospace">${escHtml(email)}</td></tr>
-<tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;font-weight:600">Hospital:</td><td style="padding:8px;border-bottom:1px solid #e5e7eb">${escHtml(hospital) || "—"}</td></tr>
-<tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;font-weight:600">Department:</td><td style="padding:8px;border-bottom:1px solid #e5e7eb">${escHtml(department) || "—"}</td></tr>
-<tr><td style="padding:8px;border-bottom:1px solid #e5e7eb;font-weight:600">Job title:</td><td style="padding:8px;border-bottom:1px solid #e5e7eb">${escHtml(jobTitle) || "—"}</td></tr>
+    const orgLine = (department || hospital)
+      ? `<br/>${escHtml(department || "")}${department && hospital ? " · " : ""}${escHtml(hospital || "")}`
+      : "";
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Welcome to RotaGen</title>
+</head>
+<body style="margin:0;padding:0;background-color:#ffffff;font-family:Arial,Helvetica,sans-serif;color:#1a1a1a;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#ffffff;">
+<tr><td align="center" style="padding:40px 16px;">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+
+<tr><td style="padding-bottom:24px;text-align:center;">
+<p style="font-size:20px;font-weight:bold;color:#2563EB;margin:0 0 4px;">RotaGen</p>
+<p style="font-size:12px;color:#666;margin:0;">NHS Rota Management</p>
+</td></tr>
+
+<tr><td style="padding-bottom:16px;">
+<h1 style="font-size:22px;font-weight:bold;margin:0 0 16px;color:#1a1a1a;">Welcome to RotaGen</h1>
+<p style="font-size:16px;line-height:1.6;margin:0 0 16px;">Hi ${escHtml(fullName)},</p>
+<p style="font-size:15px;line-height:1.6;margin:0 0 16px;">Your RotaGen account has been activated. Here are your login details:</p>
+</td></tr>
+
+<tr><td style="padding-bottom:24px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f5f5f5;border-radius:8px;">
+<tr><td style="padding:20px 24px;">
+<table role="presentation" cellpadding="0" cellspacing="0" style="font-size:14px;line-height:1.8;width:100%;">
+<tr><td style="color:#666;padding-right:16px;width:160px;">Login URL:</td><td style="font-weight:600;"><a href="https://rotagen.co.uk/login" style="color:#2563EB;text-decoration:none;">rotagen.co.uk/login</a></td></tr>
+<tr><td style="color:#666;padding-right:16px;">Email:</td><td style="font-weight:600;font-family:monospace;">${escHtml(email)}</td></tr>
+<tr><td style="color:#666;padding-right:16px;">Temporary password:</td><td style="font-weight:600;font-family:monospace;">${escHtml(tempPassword)}</td></tr>
+${username ? `<tr><td style="color:#666;padding-right:16px;">Display name:</td><td style="font-weight:600;">${escHtml(username)}</td></tr>` : ""}
 </table>
+</td></tr>
+</table>
+</td></tr>
 
-<p style="font-size:13px;color:#b45309;background:#fef3c7;padding:12px;border-radius:6px;margin-bottom:24px">
-<strong>Temporary password:</strong> <code style="font-family:monospace">${escHtml(tempPassword)}</code>
-</p>
+<tr><td style="padding-bottom:24px;">
+<p style="font-size:14px;line-height:1.6;margin:0 0 16px;color:#374151;">You will be asked to set a new password the first time you log in. Use the email address and temporary password above to sign in — keep this email until you have done so.</p>
+<p style="font-size:14px;line-height:1.6;margin:0 0 16px;color:#374151;">Your first step is to complete your department setup — this takes around 10–15 minutes. A setup guide will appear automatically when you first sign in.</p>
+<p style="font-size:14px;line-height:1.6;margin:0 0 16px;color:#374151;">If you need any help, email <a href="mailto:support@rotagen.co.uk" style="color:#2563EB;text-decoration:none;">support@rotagen.co.uk</a>.</p>
+<p style="font-size:15px;line-height:1.6;margin:24px 0 0;">The RotaGen team</p>
+</td></tr>
 
-<p style="font-size:13px;color:#374151;margin-bottom:16px">
-They can log in at <a href="https://rotagen-ai.lovable.app/login" style="color:#2563eb">rotagen-ai.lovable.app/login</a> and will be prompted to change their password on first login.
-</p>
+<tr><td style="border-top:1px solid #e0e0e0;padding-top:20px;text-align:center;">
+<p style="font-size:12px;color:#999;line-height:1.5;margin:0;"><strong>RotaGen</strong> · NHS Rota Management${orgLine}<br/>This is an automated message — please do not reply to this email.</p>
+</td></tr>
 
-<p style="font-size:13px;color:#374151">Share these credentials with the new coordinator directly.</p>
-
-<hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0" />
-<p style="font-size:11px;color:#9ca3af;text-align:center">RotaGen · NHS Rota Management · For authorised users only</p>
-</div>`;
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
 
     const { error } = await resend.emails.send({
-      from: "onboarding@resend.dev",
+      from: "RotaGen <noreply@rotagen.co.uk>",
       to: [to],
-      subject: `New RotaGen account created — ${escHtml(fullName)}`,
+      bcc: ["hello@rotagen.co.uk"],
+      subject,
       html,
     });
 
