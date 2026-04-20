@@ -394,11 +394,13 @@ export async function getSurveyResponsesForConfig(configId: string): Promise<Doc
 
 function expandDateRange(start: string, end: string): string[] {
   const dates: string[] = [];
-  const d = new Date(start);
-  const e = new Date(end);
+  const [sy, sm, sd] = start.split('-').map(Number);
+  const [ey, em, ed] = end.split('-').map(Number);
+  const d = new Date(Date.UTC(sy, sm - 1, sd));
+  const e = new Date(Date.UTC(ey, em - 1, ed));
   while (d <= e) {
     dates.push(d.toISOString().slice(0, 10));
-    d.setDate(d.getDate() + 1);
+    d.setUTCDate(d.getUTCDate() + 1);
   }
   return dates;
 }
