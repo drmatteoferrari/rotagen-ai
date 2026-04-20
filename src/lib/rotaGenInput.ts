@@ -117,7 +117,14 @@ export async function buildPreRotaInput(configId: string): Promise<PreRotaInput>
   const shiftSlots: ShiftSlotEntry[] = [];
 
   for (const shift of cfg.shifts) {
-    const badges = (["night", "long", "ooh", "oncall", "nonres"] as const).filter((b) => shift.badges[b]);
+    const badges: string[] = [
+      shift.badges.night       ? "night"        : null,
+      shift.badges.long        ? "long"         : null,
+      shift.badges.longEvening ? "long-evening" : null,
+      shift.badges.ooh         ? "ooh"          : null,
+      shift.badges.oncall      ? "oncall"       : null,
+      shift.badges.nonres      ? "nonres"       : null,
+    ].filter((b): b is string => b !== null);
 
     if (shift.daySlots.length > 0) {
       // ── New path: per-day slots exist ──

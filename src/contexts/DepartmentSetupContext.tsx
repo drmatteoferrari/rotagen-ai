@@ -12,6 +12,7 @@ export interface ShiftBadges {
   ooh: boolean;
   oncall: boolean;
   nonres: boolean;
+  longEvening: boolean;
 }
 
 export type BadgeKey = keyof ShiftBadges;
@@ -89,6 +90,8 @@ export function detectBadges(
   }
   const night = nightMinutes >= 180;
   const long = dur > 10;
+  // long-evening: starts before 16:00, ends after 23:00, does not cross midnight, not already night
+  const longEvening = !night && em > sm && sm < 16 * 60 && em > 23 * 60;
 
   let ooh = hasSatSun;
   if (!ooh) {
@@ -99,7 +102,7 @@ export function detectBadges(
     }
   }
 
-  return { night, long, ooh, oncall: isOncall, nonres: isNonRes };
+  return { night, long, ooh, oncall: isOncall, nonres: isNonRes, longEvening };
 }
 
 /** Merge auto-detected badges with manual overrides */
