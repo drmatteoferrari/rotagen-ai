@@ -731,25 +731,39 @@ export async function validateFinalRotaInput(configId: string): Promise<Validati
   const warnings: string[] = [];
   const blockers: string[] = [];
 
-  const responses = await getSurveyResponsesForConfig(configId);
+  const [responses, preRotaRow] = await Promise.all([
+    getSurveyResponsesForConfig(configId),
+    supabase
+      .from('pre_rota_results')
+      .select('status, targets_data')
+      .eq('rota_config_id', configId)
+      .maybeSingle(),
+  ]);
 
+  // Pre-rota must exist and not be blocked
+  if (!preRotaRow.data) {
+    blockers.push('Pre-rota has not been generated. Generate the pre-rota first before proceeding.');
+  } else if (preRotaRow.data.status === 'blocked') {
+    blockers.push('Pre-rota is blocked by critical issues. Resolve them on the Pre-Rota page first.');
+  } else {
+    const td = preRotaRow.data.targets_data as unknown as TargetsData | null;
+    if (!td?.doctors?.length) {
+      blockers.push('Shift hour targets are missing. Re-generate the pre-rota to rebuild them.');
+    }
+  }
+
+  // Survey responses
   if (responses.length === 0) {
-    blockers.push("No doctors have any survey responses. Cannot generate rota.");
+    blockers.push('No doctors have survey responses. Cannot generate rota.');
   }
-
-  const submitted = responses.filter((r) => r.status === "submitted");
+  const submitted = responses.filter((r) => r.status === 'submitted');
   if (submitted.length === 0) {
-    blockers.push("No submitted survey responses found. All doctors must complete surveys before generating.");
+    blockers.push('No submitted surveys found. All doctors must complete their surveys first.');
   }
-
-  const unsubmitted = responses.filter((r) => r.status !== "submitted");
+  const unsubmitted = responses.filter((r) => r.status !== 'submitted');
   if (unsubmitted.length > 0) {
-    warnings.push(`${unsubmitted.length} doctor(s) have not submitted their survey.`);
+    warnings.push(`${unsubmitted.length} doctor(s) have not submitted their survey and will be excluded.`);
   }
 
-  return {
-    isValid: blockers.length === 0,
-    warnings,
-    blockers,
-  };
+  return { isValid: blockers.length === 0, warnings, blockers };
 }
