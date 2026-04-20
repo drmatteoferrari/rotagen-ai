@@ -304,6 +304,7 @@ export interface FinalRotaInput {
         annualLeaveDates: string[];
         studyLeaveDates: string[];
         parentalLeaveDates: string[];
+        rotationDates: string[];           // expanded from unavailability_blocks reason='rotation'
         exemptFromNights: boolean;
         exemptFromWeekends: boolean;
         exemptFromOncall: boolean;
@@ -322,7 +323,7 @@ export interface FinalRotaInput {
       targetOncallCount: number;
       proportionFactor: number;
     };
-    shiftTargets: any[]; // computed by computeShiftTargets
+    shiftTargets: DoctorShiftTarget[];
     totalMaxHours: number;
     weekendCap: number;
     hardWeeklyCap: number;
