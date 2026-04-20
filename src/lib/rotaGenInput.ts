@@ -1,6 +1,6 @@
 import { getRotaConfig, type RotaConfig, type DaySlotData } from "./rotaConfig";
 import { supabase } from "@/integrations/supabase/client";
-import { computeShiftTargets, computeWeekendCap } from "./shiftTargets";
+import type { TargetsData, DoctorShiftTarget } from "./preRotaTypes";
 
 // ─── Constants ────────────────────────────────────────────────
 
