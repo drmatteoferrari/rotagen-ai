@@ -363,6 +363,12 @@ export interface DoctorSurveyResponse {
   parental_leave_end: string | null;
   parental_leave_notes: string | null;
   competencies_json: Record<string, any> | null;
+  // Flat competency columns — written by handle_survey_normalization on submit
+  // These are the canonical source; competencies_json is the fallback only
+  iac_achieved: boolean | null;
+  iaoc_achieved: boolean | null;
+  icu_achieved: boolean | null;
+  transfer_achieved: boolean | null;
   comp_ip_anaesthesia: boolean | null;
   comp_obstetric: boolean | null;
   comp_icu: boolean | null;
