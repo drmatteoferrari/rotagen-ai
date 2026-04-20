@@ -610,14 +610,14 @@ export async function buildFinalRotaInput(configId: string): Promise<FinalRotaIn
     const ltftNightFlexibility = hasNormalized
       ? ltftRows.map((l) => ({
           day: l.day as string,
-          canStart: l.can_start_nights as boolean | null,
-          canEnd: l.can_end_nights as boolean | null,
+          canStartNightsOnDay: (l.can_start_nights ?? false) as boolean,
+          canEndNightsOnDay: (l.can_end_nights ?? false) as boolean,
         }))
       : (Array.isArray(resp.ltft_night_flexibility) ? resp.ltft_night_flexibility as any[] : [])
           .map((f: any) => ({
             day: (f.day ?? '').toLowerCase(),
-            canStart: f.canStart ?? null,
-            canEnd: f.canEnd ?? null,
+            canStartNightsOnDay: f.canStartNightsOnDay ?? f.canStart ?? false,
+            canEndNightsOnDay: f.canEndNightsOnDay ?? f.canEnd ?? false,
           }));
 
     // ── Competency flags: flat columns first, JSONB fallback ──────────
