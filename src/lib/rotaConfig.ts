@@ -68,6 +68,7 @@ export interface RotaConfigShift {
     ooh: boolean;
     oncall: boolean;
     nonres: boolean;
+    longEvening: boolean;
   };
   badgeOverrides: {
     night?: boolean;
@@ -253,11 +254,12 @@ export async function getRotaConfig(id: string): Promise<RotaConfig> {
       sun: s.applicable_sun ?? false,
     },
     badges: {
-      night: s.badge_night ?? false,
-      long: s.badge_long ?? false,
-      ooh: s.badge_ooh ?? false,
-      oncall: s.badge_oncall ?? false,
-      nonres: s.badge_nonres ?? false,
+      night:       s.badge_night        ?? false,
+      long:        s.badge_long         ?? false,
+      ooh:         s.badge_ooh          ?? false,
+      oncall:      s.badge_oncall       ?? false,
+      nonres:      s.badge_nonres       ?? false,
+      longEvening: (s as any).badge_long_evening ?? false,
     },
     badgeOverrides: {
       ...(s.badge_night_manual_override !== null && s.badge_night_manual_override !== undefined

@@ -1025,6 +1025,7 @@ export type Database = {
           applicable_tue: boolean | null
           applicable_wed: boolean | null
           badge_long: boolean | null
+          badge_long_evening: boolean | null
           badge_long_manual_override: boolean | null
           badge_night: boolean | null
           badge_night_manual_override: boolean | null
@@ -1067,6 +1068,7 @@ export type Database = {
           applicable_tue?: boolean | null
           applicable_wed?: boolean | null
           badge_long?: boolean | null
+          badge_long_evening?: boolean | null
           badge_long_manual_override?: boolean | null
           badge_night?: boolean | null
           badge_night_manual_override?: boolean | null
@@ -1109,6 +1111,7 @@ export type Database = {
           applicable_tue?: boolean | null
           applicable_wed?: boolean | null
           badge_long?: boolean | null
+          badge_long_evening?: boolean | null
           badge_long_manual_override?: boolean | null
           badge_night?: boolean | null
           badge_night_manual_override?: boolean | null

@@ -49,11 +49,12 @@ const SHIFT_TEMPLATES = [
 ] as const;
 
 const BADGE_DEFS: { key: BadgeKey; label: string; emoji: string; activeClasses: string }[] = [
-  { key: "night",  label: "NIGHT",   emoji: "🌙", activeClasses: "bg-slate-800 text-white"    },
-  { key: "long",   label: "LONG",    emoji: "⏱",  activeClasses: "bg-amber-600 text-white"   },
-  { key: "ooh",    label: "OOH",     emoji: "🌆", activeClasses: "bg-indigo-600 text-white"  },
-  { key: "oncall", label: "ON-CALL", emoji: "📟", activeClasses: "bg-emerald-700 text-white" },
-  { key: "nonres", label: "NON-RES", emoji: "🏠", activeClasses: "bg-teal-700 text-white"   },
+  { key: "night",       label: "NIGHT",    emoji: "🌙", activeClasses: "bg-slate-800 text-white"    },
+  { key: "long",        label: "LONG",     emoji: "⏱",  activeClasses: "bg-amber-600 text-white"   },
+  { key: "longEvening", label: "LONG-EVE", emoji: "🌇", activeClasses: "bg-amber-700 text-white"   },
+  { key: "ooh",         label: "OOH",      emoji: "🌆", activeClasses: "bg-indigo-600 text-white"  },
+  { key: "oncall",      label: "ON-CALL",  emoji: "📟", activeClasses: "bg-emerald-700 text-white" },
+  { key: "nonres",      label: "NON-RES",  emoji: "🏠", activeClasses: "bg-teal-700 text-white"   },
 ];
 
 
@@ -1198,7 +1199,8 @@ export default function DepartmentStep2() {
           applicable_wed: s.applicableDays.wed, applicable_thu: s.applicableDays.thu,
           applicable_fri: s.applicableDays.fri, applicable_sat: s.applicableDays.sat,
           applicable_sun: s.applicableDays.sun,
-          badge_night: mb.night, badge_long: mb.long, badge_ooh: mb.ooh, badge_oncall: mb.oncall, badge_nonres: mb.nonres,
+          badge_night: mb.night, badge_long: mb.long, badge_long_evening: mb.longEvening,
+          badge_ooh: mb.ooh, badge_oncall: mb.oncall, badge_nonres: mb.nonres,
           badge_night_manual_override:  s.badgeOverrides.night  ?? null,
           badge_long_manual_override:   s.badgeOverrides.long   ?? null,
           badge_ooh_manual_override:    s.badgeOverrides.ooh    ?? null,
@@ -1476,6 +1478,7 @@ export default function DepartmentStep2() {
                   <div className="space-y-1 border-t border-border px-4 pb-3 pt-2 text-xs text-muted-foreground">
                     <p>🌙 <span className="font-semibold">NIGHT</span> — ≥3h between 23:00–06:00</p>
                     <p>⏱ <span className="font-semibold">LONG</span> — duration &gt;10h</p>
+                    <p>🌇 <span className="font-semibold">LONG-EVE</span> — starts before 16:00 and ends after 23:00. Governs consecutive long-evening scheduling limits.</p>
                     <p>🌆 <span className="font-semibold">OOH</span> — outside 07:00–19:00 or on weekends</p>
                     <p>📟 <span className="font-semibold">ON-CALL</span> — resident on-site</p>
                     <p>🏠 <span className="font-semibold">NON-RES</span> — on-call from home</p>
