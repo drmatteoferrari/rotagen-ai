@@ -28,7 +28,7 @@ import {
   ExternalLink,
   ChevronDown,
   ChevronUp,
-  ArrowUpDown,
+  ListFilter,
   Search,
   CircleDashed,
   MoreVertical,
@@ -64,6 +64,16 @@ interface Doctor {
   survey_submitted_at: string | null;
   is_active: boolean;
 }
+
+/** Display helper — SURNAME in full caps, Firstname in sentence case */
+const formatDoctorName = (first: string, last: string): string => {
+  const surname = last.toUpperCase();
+  const givenName = first
+    .split(" ")
+    .map((w) => (w.length > 0 ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : ""))
+    .join(" ");
+  return `${surname}, ${givenName}`;
+};
 
 // ── Expanded panel component ──
 function ExpandedDoctorPanel({
@@ -169,7 +179,7 @@ function ExpandedDoctorPanel({
                   key={key}
                   className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold ${colour}`}
                 >
-                  {key.toUpperCase()} {achieved === true ? "✓" : "✗"}
+                  {key === "transfer" ? "TR" : key.toUpperCase()} {achieved === true ? "✓" : "✗"}
                   {workingTowards === true ? " – working towards" : ""}
                 </span>
               );
@@ -1080,7 +1090,7 @@ export default function Roster() {
 
   return (
     <AdminLayout title="Team Roster" subtitle="Manage doctors" accentColor="blue" pageIcon={Users}>
-      <div className="mx-auto max-w-[1200px] space-y-4 animate-fadeSlideUp">
+      <div className="mx-auto max-w-[1200px] w-full overflow-x-hidden space-y-4 animate-fadeSlideUp">
         {/* No config banner */}
         {!currentRotaConfigId && (
           <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 flex items-center gap-3">
@@ -1125,27 +1135,27 @@ export default function Roster() {
 
         {/* ── STATS CARD ── */}
         {doctors.length > 0 && (
-          <div className="bg-card border border-border rounded-lg shadow-sm px-4 py-3">
+          <div className="bg-card border border-border rounded-lg px-3 py-2 sm:px-4 sm:py-2.5">
             <div className="flex flex-col sm:flex-row sm:items-center gap-3">
               <div className="flex items-center justify-between sm:justify-start gap-4 flex-1">
                 <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-lg text-emerald-600 leading-none">{submitted}</span>
-                  <span className="text-[10px] font-bold text-emerald-600/70 uppercase tracking-wider">Submitted</span>
+                  <span className="font-bold text-sm sm:text-base text-emerald-600 leading-none">{submitted}</span>
+                  <span className="text-[9px] font-bold text-emerald-600/70 uppercase tracking-wider">Submitted</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-lg text-amber-600 leading-none">{inProgress}</span>
-                  <span className="text-[10px] font-bold text-amber-600/70 uppercase tracking-wider">In Progress</span>
+                  <span className="font-bold text-sm sm:text-base text-amber-600 leading-none">{inProgress}</span>
+                  <span className="text-[9px] font-bold text-amber-600/70 uppercase tracking-wider">In Progress</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-lg text-muted-foreground leading-none">{notStarted}</span>
-                  <span className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-wider">Not Started</span>
+                  <span className="font-bold text-sm sm:text-base text-muted-foreground leading-none">{notStarted}</span>
+                  <span className="text-[9px] font-bold text-muted-foreground/70 uppercase tracking-wider">Not Started</span>
                 </div>
               </div>
               <div className="flex items-center gap-3 w-full sm:w-48 shrink-0">
-                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
+                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
                   {progressPct}% Done
                 </span>
-                <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                <div className="h-1 w-full rounded-full bg-muted overflow-hidden">
                   <div
                     className="h-full rounded-full bg-emerald-500 transition-all duration-500"
                     style={{ width: `${progressPct}%` }}
@@ -1156,24 +1166,22 @@ export default function Roster() {
           </div>
         )}
 
-        {/* ── DEADLINE ROW ── */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-          <div className="flex items-center gap-2 shrink-0">
-            <CalendarIcon className="h-4 w-4 text-primary" />
-            <span className="text-sm font-semibold text-card-foreground">Survey Deadline:</span>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <Popover open={deadlineOpen} onOpenChange={setDeadlineOpen}>
+        {/* ── CONTROL ROW: Deadline · Add · Send · Search · Sort ── */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Deadline picker */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <CalendarIcon className="h-3.5 w-3.5 text-primary shrink-0" />
+            <Popover open={deadlineOpen} onOpenChange={setDeadlineOpen} modal={false}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
                   size="sm"
                   className={cn(
-                    "w-[200px] justify-start text-left font-normal",
+                    "h-8 text-xs font-normal min-w-[110px] max-w-[160px] justify-start",
                     !surveyDeadline && "text-muted-foreground",
                   )}
                 >
-                  {formattedDeadline ?? "Select deadline date"}
+                  {surveyDeadline ? format(surveyDeadline, "d MMM yyyy") : "Set deadline"}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
@@ -1188,28 +1196,38 @@ export default function Roster() {
               </PopoverContent>
             </Popover>
             {deadlineIsPast && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 border border-amber-300 px-2.5 py-1 text-xs font-semibold text-amber-700 shrink-0">
-                <AlertTriangle className="h-3 w-3" /> Deadline passed
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 border border-amber-300 px-2 py-0.5 text-[10px] font-semibold text-amber-700 shrink-0">
+                <AlertTriangle className="h-3 w-3 shrink-0" />
+                <span className="hidden sm:inline">Deadline passed</span>
+                <span className="sm:hidden">Passed</span>
               </span>
             )}
           </div>
-        </div>
 
-        {/* ── ACTIONS ROW ── */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-          <Button className="gap-2 h-9 w-full sm:w-auto" onClick={() => setIsAddDoctorOpen(true)}>
-            <UserPlus className="h-4 w-4" /> Add Doctor
+          {/* Divider */}
+          <div className="hidden sm:block w-px h-5 bg-border shrink-0" />
+
+          {/* Add Doctor */}
+          <Button
+            size="sm"
+            className="gap-1.5 h-8 text-xs shrink-0 px-3"
+            onClick={() => setIsAddDoctorOpen(true)}
+          >
+            <UserPlus className="h-3.5 w-3.5" />
+            <span>Add Doctor</span>
           </Button>
+
+          {/* Send Invites */}
           {doctors.length > 0 && (
             <Button
               variant="outline"
               size="sm"
               disabled={bulkSending}
               className={cn(
-                "gap-1.5 h-9 w-full sm:w-auto",
+                "gap-1.5 h-8 text-xs shrink-0 px-3",
                 actionableDoctors.length > 0
                   ? "border-primary text-primary hover:bg-primary/5"
-                  : "text-muted-foreground"
+                  : "text-muted-foreground",
               )}
               onClick={() => {
                 if (!surveyDeadline) {
@@ -1228,72 +1246,67 @@ export default function Roster() {
               {bulkSending ? "Sending…" : "Send Invites"}
             </Button>
           )}
+
+          {/* No-email warning — inline chip, only on sm+ to save mobile space */}
           {noEmailCount > 0 && (
-            <span className="flex items-center gap-1.5 text-xs text-amber-600">
-              <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-              {noEmailCount} doctor{noEmailCount > 1 ? "s have" : " has"} no email — excluded from bulk send
+            <span className="hidden sm:inline-flex items-center gap-1 text-[10px] text-amber-600 font-medium shrink-0">
+              <AlertTriangle className="h-3 w-3 shrink-0" />
+              {noEmailCount} no email
             </span>
           )}
-        </div>
 
-        {/* Filters Row */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+          {/* Spacer — pushes search+sort to right on sm+ */}
+          <div className="flex-1 hidden sm:block min-w-0" />
+
+          {/* Search — full width on mobile, capped on sm+ */}
+          <div className="relative flex items-center w-full sm:w-44 md:w-52 shrink-0">
+            <Search className="absolute left-2.5 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
             <Input
-              placeholder="Search by name…"
+              placeholder="Search…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full sm:max-w-xs h-9 text-sm"
+              className="pl-8 h-8 text-xs w-full"
             />
           </div>
 
-          <div className="flex items-center justify-end gap-3 w-full sm:w-auto">
-            {doctors.length > 1 && (
-              <>
-                <div className="sm:hidden flex-1 min-w-0">
-                  <select
-                    value={sortKey}
-                    onChange={(e) => setSortKey(e.target.value as SortKey)}
-                    className="w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm h-9"
-                  >
-                    <option value="surname_asc">Sort: A–Z</option>
-                    <option value="surname_desc">Sort: Z–A</option>
-                    <option value="status">Sort: Status</option>
-                    <option value="grade">Sort: Grade</option>
-                  </select>
-                </div>
-                <div className="hidden sm:flex items-center gap-1.5">
-                  <span className="text-xs text-muted-foreground flex items-center gap-1">
-                    <ArrowUpDown className="h-3 w-3" /> Sort:
+          {/* Sort dropdown — replaces both native select and pill buttons */}
+          {doctors.length > 1 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 text-xs gap-1 shrink-0 px-2.5">
+                  <ListFilter className="h-3.5 w-3.5 shrink-0" />
+                  <span className="hidden sm:inline">
+                    {{ surname_asc: "A–Z", surname_desc: "Z–A", status: "Status", grade: "Grade" }[sortKey]}
                   </span>
-                  {(["surname_asc", "surname_desc", "status", "grade"] as const).map((key) => {
-                    const labels: Record<SortKey, string> = {
-                      surname_asc: "A–Z",
-                      surname_desc: "Z–A",
-                      status: "Status",
-                      grade: "Grade",
-                    };
-                    return (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => setSortKey(key)}
-                        className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium border transition-colors ${
-                          sortKey === key
-                            ? "bg-primary text-primary-foreground border-primary"
-                            : "bg-background text-muted-foreground border-border hover:border-primary/50"
-                        }`}
-                      >
-                        {labels[key]}
-                      </button>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-          </div>
+                  <ChevronDown className="h-3 w-3 opacity-50 shrink-0" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-32 pointer-events-auto">
+                {(["surname_asc", "surname_desc", "status", "grade"] as const).map((key) => {
+                  const labels: Record<SortKey, string> = {
+                    surname_asc: "A → Z",
+                    surname_desc: "Z → A",
+                    status: "Status",
+                    grade: "Grade",
+                  };
+                  return (
+                    <DropdownMenuItem
+                      key={key}
+                      onClick={() => setSortKey(key)}
+                      className={cn("text-xs cursor-pointer", sortKey === key && "font-semibold text-primary")}
+                    >
+                      <span className="mr-2 w-3 inline-flex shrink-0">
+                        {sortKey === key && <Check className="h-3 w-3 text-primary" />}
+                      </span>
+                      {labels[key]}
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
+        {/* ── END CONTROL ROW ── */}
 
         {/* Main List Container */}
         <div className="space-y-0 divide-y divide-border rounded-lg border border-border overflow-hidden bg-card">
@@ -1329,79 +1342,86 @@ export default function Roster() {
             return (
               <div key={doctor.id} className="bg-card">
                 {/* ── Desktop Row (lg and up) ── no collapse, full 1-line view */}
-                <div className="hidden lg:flex items-center gap-3 py-3 px-4 w-full text-sm hover:bg-muted/30 transition-colors group">
+                <div className="hidden lg:flex items-center gap-2 py-2.5 px-4 w-full min-w-0 overflow-hidden text-sm hover:bg-muted/30 transition-colors group">
                   {/* Name */}
-                  <div className="w-[15%] font-semibold truncate text-[14px]">
-                    {doctor.last_name}, {doctor.first_name}
+                  <div className="flex-[2] min-w-0 font-semibold truncate text-[13px]">
+                    {formatDoctorName(doctor.first_name, doctor.last_name)}
                   </div>
                   {/* Grade */}
-                  <div className="w-[8%] text-muted-foreground truncate">{doctor.grade || "—"}</div>
+                  <div className="w-16 shrink-0 text-muted-foreground text-xs truncate">
+                    {doctor.grade || "—"}
+                  </div>
                   {/* Email */}
-                  <div className="w-[16%] text-muted-foreground truncate">
+                  <div className="flex-[2] min-w-0 text-muted-foreground text-xs truncate">
                     {cached?.nhs_email ?? doctor.email ?? "—"}
                   </div>
                   {/* Phone */}
-                  <div className="w-[10%] text-muted-foreground truncate">{cached?.phone_number ?? "—"}</div>
-                  {/* WTE & Days Off */}
-                  <div className="w-[10%] text-muted-foreground truncate flex flex-col text-xs justify-center">
-                    <span>{cached ? `${cached.wte_percent ?? 100}%` : "—"}</span>
-                    {cached?.ltft_days_off?.length > 0 && (
-                      <span className="text-[10px] opacity-80 truncate">
-                        Off: {cached.ltft_days_off.map((d: string) => d.slice(0, 3)).join(",")}
-                      </span>
-                    )}
+                  <div className="w-24 shrink-0 text-muted-foreground text-xs truncate">
+                    {cached?.phone_number ?? "—"}
+                  </div>
+                  {/* WTE */}
+                  <div className="w-16 shrink-0 text-muted-foreground text-xs">
+                    {cached ? `${cached.wte_percent ?? 100}%` : "—"}
                   </div>
                   {/* Competencies */}
-                  <div className="w-[16%] flex flex-wrap gap-1 items-center">
+                  <div className="w-[15%] min-w-[100px] flex flex-wrap gap-0.5 items-center">
                     {cached &&
                       (["iac", "iaoc", "icu", "transfer"] as const).map((k) => {
                         const achieved = cached[`${k}_achieved`] ?? cached.competencies_json?.[k]?.achieved;
                         const working = cached[`${k}_working`] ?? cached.competencies_json?.[k]?.workingTowards;
-                        if (!achieved && !working) return null;
+                        const label = k === "transfer" ? "TR" : k.toUpperCase();
+                        const colour =
+                          achieved === true
+                            ? "bg-emerald-100 text-emerald-700"
+                            : working === true
+                              ? "bg-amber-100 text-amber-700"
+                              : "bg-red-100 text-red-700";
                         return (
-                          <span
-                            key={k}
-                            className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${achieved ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}
-                          >
-                            {k.toUpperCase()}
+                          <span key={k} className={`px-1 py-0.5 rounded text-[8px] font-bold leading-tight ${colour}`}>
+                            {label}
                           </span>
                         );
                       })}
                   </div>
-                  {/* Status */}
-                  <div className="w-[10%] shrink-0">
+                  {/* Survey status */}
+                  <div className="w-20 shrink-0">
                     {doctor.survey_status === "submitted" && (
-                      <Badge className="bg-emerald-500/15 text-emerald-600 border-emerald-500/20 shadow-none pointer-events-none text-[10px]">
+                      <Badge className="bg-emerald-500/15 text-emerald-600 border-emerald-500/20 shadow-none pointer-events-none text-[10px] px-1.5 py-0">
                         Submitted
                       </Badge>
                     )}
                     {doctor.survey_status === "in_progress" && (
-                      <Badge className="bg-amber-500/15 text-amber-600 border-amber-500/20 shadow-none pointer-events-none text-[10px]">
+                      <Badge className="bg-amber-500/15 text-amber-600 border-amber-500/20 shadow-none pointer-events-none text-[10px] px-1.5 py-0">
                         In Progress
                       </Badge>
                     )}
                     {(!doctor.survey_status || doctor.survey_status === "not_started") && (
-                      <Badge className="bg-muted text-muted-foreground border-border shadow-none pointer-events-none text-[10px]">
+                      <Badge className="bg-muted text-muted-foreground border-border shadow-none pointer-events-none text-[10px] px-1.5 py-0">
                         Not Started
                       </Badge>
                     )}
                   </div>
-                  {/* Invite count badge */}
-                  {(doctor.survey_invite_count ?? 0) > 0 && (
-                    <span className="hidden xl:inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground shrink-0">
-                      ×{doctor.survey_invite_count} sent
-                    </span>
-                  )}
+                  {/* Invite counter icon — fixed width, no layout shift */}
+                  <div className="w-7 shrink-0 flex items-center justify-center">
+                    {(doctor.survey_invite_count ?? 0) > 0 && (
+                      <span
+                        title={`${doctor.survey_invite_count} invite${doctor.survey_invite_count !== 1 ? "s" : ""} sent`}
+                        className="relative inline-flex items-center justify-center h-6 w-6"
+                      >
+                        <Send className="h-3 w-3 text-muted-foreground/50" />
+                        <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-primary text-[7px] font-bold text-primary-foreground leading-none">
+                          {(doctor.survey_invite_count ?? 0) > 9 ? "9+" : doctor.survey_invite_count}
+                        </span>
+                      </span>
+                    )}
+                  </div>
                   {/* Actions */}
-                  <div className="flex-1 flex justify-end items-center gap-1.5 min-w-0">
+                  <div className="flex items-center gap-1 shrink-0">
                     <button
                       type="button"
                       title="View Profile"
                       className="h-7 w-7 inline-flex items-center justify-center rounded-md text-teal-600 hover:text-teal-700 hover:bg-teal-50 transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/admin/doctor/${doctor.id}`);
-                      }}
+                      onClick={(e) => { e.stopPropagation(); navigate(`/admin/doctor/${doctor.id}`); }}
                     >
                       <User className="h-3.5 w-3.5" />
                     </button>
@@ -1409,10 +1429,7 @@ export default function Roster() {
                       type="button"
                       title="View Calendar"
                       className="h-7 w-7 inline-flex items-center justify-center rounded-md text-teal-600 hover:text-teal-700 hover:bg-teal-50 transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/admin/doctor-calendar/${doctor.id}`);
-                      }}
+                      onClick={(e) => { e.stopPropagation(); navigate(`/admin/doctor-calendar/${doctor.id}`); }}
                     >
                       <CalendarDays className="h-3.5 w-3.5" />
                     </button>
@@ -1421,45 +1438,75 @@ export default function Roster() {
                 </div>
 
                 {/* ── Mobile/Tablet Row (below lg) ── */}
-                <div className="flex flex-col lg:hidden p-3 sm:p-4">
-                  <div className="flex flex-col gap-1 cursor-pointer" onClick={() => toggleExpand(doctor.id)}>
-                    {/* Top line */}
-                    <div className="flex justify-between items-center">
-                      <span className="font-semibold text-base truncate">
-                        {doctor.last_name}, {doctor.first_name}
-                      </span>
-                      <div className="shrink-0 ml-2">
-                        {doctor.survey_status === "submitted" && <Check className="h-5 w-5 text-emerald-600" />}
-                        {doctor.survey_status === "in_progress" && <Pencil className="h-5 w-5 text-amber-600" />}
-                        {(!doctor.survey_status || doctor.survey_status === "not_started") && (
-                          <CircleDashed className="h-5 w-5 text-muted-foreground" />
-                        )}
-                      </div>
+                <div className="flex flex-col lg:hidden py-2 px-3">
+                  {/* Tap target: name row + status icon + menu */}
+                  <div
+                    className="flex items-center gap-2 cursor-pointer select-none min-h-[44px]"
+                    onClick={() => toggleExpand(doctor.id)}
+                  >
+                    {/* Explicit expand/collapse cue */}
+                    {isExpanded ? (
+                      <ChevronUp className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    )}
+                    {/* Name */}
+                    <span className="font-semibold text-sm flex-1 min-w-0 truncate">
+                      {formatDoctorName(doctor.first_name, doctor.last_name)}
+                    </span>
+                    {/* Grade — visible on sm and up only to save mobile space */}
+                    <span className="hidden sm:inline text-[11px] text-muted-foreground font-medium shrink-0">
+                      {doctor.grade || "—"}
+                    </span>
+                    {/* Survey status icon */}
+                    <div className="shrink-0">
+                      {doctor.survey_status === "submitted" && <Check className="h-4 w-4 text-emerald-600" />}
+                      {doctor.survey_status === "in_progress" && <Pencil className="h-4 w-4 text-amber-600" />}
+                      {(!doctor.survey_status || doctor.survey_status === "not_started") && (
+                        <CircleDashed className="h-4 w-4 text-muted-foreground" />
+                      )}
                     </div>
-                    {/* Bottom line */}
-                    <div className="flex justify-between items-center text-sm text-muted-foreground mt-1">
-                      <div className="flex items-center gap-2 truncate text-xs sm:text-sm">
-                        <span className="font-medium">{doctor.grade || "No grade"}</span>
-                        {/* Only visible on sm to lg (Tablet mode) */}
-                        <span className="hidden sm:inline-block w-1 h-1 rounded-full bg-border shrink-0"></span>
-                        <span className="hidden sm:inline-block truncate max-w-[150px]">
-                          {cached?.nhs_email ?? doctor.email ?? "—"}
+                    {/* Invite counter icon — fixed 24px, no layout shift */}
+                    {(doctor.survey_invite_count ?? 0) > 0 && (
+                      <span
+                        title={`${doctor.survey_invite_count} invite${doctor.survey_invite_count !== 1 ? "s" : ""} sent`}
+                        className="relative inline-flex items-center justify-center h-6 w-6 shrink-0"
+                      >
+                        <Send className="h-3 w-3 text-muted-foreground/50" />
+                        <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-primary text-[7px] font-bold text-primary-foreground leading-none">
+                          {(doctor.survey_invite_count ?? 0) > 9 ? "9+" : doctor.survey_invite_count}
                         </span>
-                        <span className="hidden sm:inline-block w-1 h-1 rounded-full bg-border shrink-0"></span>
-                        <span className="hidden sm:inline-block truncate">{cached?.phone_number ?? "—"}</span>
-                        <span className="hidden sm:inline-block w-1 h-1 rounded-full bg-border shrink-0"></span>
-                        <span className="hidden sm:inline-block shrink-0">
-                          WTE: {cached?.wte_percent ? `${cached.wte_percent}%` : "—"}
-                        </span>
-                      </div>
-                      <div onClick={(e) => e.stopPropagation()} className="shrink-0 ml-2">
-                        {renderDoctorMenu(doctor)}
-                      </div>
+                      </span>
+                    )}
+                    {/* Kebab menu — stop propagation */}
+                    <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+                      {renderDoctorMenu(doctor)}
                     </div>
                   </div>
-                  {/* Extended details */}
+
+                  {/* Collapsed sub-line: grade (mobile only) + email + phone on sm+ */}
+                  {!isExpanded && (
+                    <div className="flex items-center gap-2 pl-5 pb-0.5 text-xs text-muted-foreground truncate">
+                      {/* Grade — mobile only (sm hides it in favour of the inline grade above) */}
+                      <span className="sm:hidden shrink-0 font-medium">{doctor.grade || "—"}</span>
+                      <span className="sm:hidden w-1 h-1 rounded-full bg-border shrink-0" />
+                      {/* Email — always visible */}
+                      <span className="truncate max-w-[200px]">
+                        {cached?.nhs_email ?? doctor.email ?? "No email"}
+                      </span>
+                      {/* Phone — sm and up only */}
+                      {(cached?.phone_number) && (
+                        <>
+                          <span className="hidden sm:inline-block w-1 h-1 rounded-full bg-border shrink-0" />
+                          <span className="hidden sm:inline-block shrink-0">{cached.phone_number}</span>
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Expanded detail panel */}
                   {isExpanded && (
-                    <div className="mt-4 pt-4 border-t border-border">
+                    <div className="mt-3 pt-3 border-t border-border pl-5">
                       <ExpandedDoctorPanel
                         doctor={doctor}
                         surveyData={cached}
@@ -1525,7 +1572,7 @@ export default function Roster() {
                               <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                             )}
                             <span className="text-sm font-medium truncate">
-                              {doctor.last_name}, {doctor.first_name}
+                              {formatDoctorName(doctor.first_name, doctor.last_name)}
                             </span>
                           </div>
                           <span className="text-xs text-muted-foreground sm:w-24 shrink-0 text-right sm:text-left">
