@@ -28,7 +28,7 @@ import {
   ExternalLink,
   ChevronDown,
   ChevronUp,
-  ArrowUpDown,
+  ListFilter,
   Search,
   CircleDashed,
   MoreVertical,
@@ -64,6 +64,16 @@ interface Doctor {
   survey_submitted_at: string | null;
   is_active: boolean;
 }
+
+/** Display helper — SURNAME in full caps, Firstname in sentence case */
+const formatDoctorName = (first: string, last: string): string => {
+  const surname = last.toUpperCase();
+  const givenName = first
+    .split(" ")
+    .map((w) => (w.length > 0 ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : ""))
+    .join(" ");
+  return `${surname}, ${givenName}`;
+};
 
 // ── Expanded panel component ──
 function ExpandedDoctorPanel({
@@ -169,7 +179,7 @@ function ExpandedDoctorPanel({
                   key={key}
                   className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold ${colour}`}
                 >
-                  {key.toUpperCase()} {achieved === true ? "✓" : "✗"}
+                  {key === "transfer" ? "TR" : key.toUpperCase()} {achieved === true ? "✓" : "✗"}
                   {workingTowards === true ? " – working towards" : ""}
                 </span>
               );
