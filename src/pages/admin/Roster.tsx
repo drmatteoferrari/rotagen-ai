@@ -1443,10 +1443,10 @@ export default function Roster() {
                 </div>
 
                 {/* ── Mobile/Tablet Row (below lg) ── */}
-                <div className="flex flex-col lg:hidden py-2 px-3">
-                  {/* Tap target: name row + status icon + menu */}
+                <div className="flex flex-col lg:hidden py-1.5 px-3">
+                  {/* Tap target: chevron + name/email column + status + menu */}
                   <div
-                    className="flex items-center gap-2 cursor-pointer select-none min-h-[44px]"
+                    className="flex items-center gap-2 cursor-pointer select-none"
                     onClick={() => toggleExpand(doctor.id)}
                   >
                     {/* Explicit expand/collapse cue */}
@@ -1455,14 +1455,38 @@ export default function Roster() {
                     ) : (
                       <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                     )}
-                    {/* Name */}
-                    <span className="font-semibold text-sm flex-1 min-w-0 truncate">
-                      {formatDoctorName(doctor.first_name, doctor.last_name)}
-                    </span>
-                    {/* Grade — visible on sm and up only to save mobile space */}
-                    <span className="hidden sm:inline text-[11px] text-muted-foreground font-medium shrink-0">
-                      {doctor.grade || "—"}
-                    </span>
+
+                    {/* Name + sub-line stacked tightly */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="font-semibold text-[13px] leading-tight flex-1 min-w-0 truncate">
+                          {formatDoctorName(doctor.first_name, doctor.last_name)}
+                        </span>
+                        {/* Grade — visible on sm and up only to save mobile space */}
+                        <span className="hidden sm:inline text-[11px] text-muted-foreground font-medium shrink-0">
+                          {doctor.grade || "—"}
+                        </span>
+                      </div>
+                      {!isExpanded && (
+                        <div className="flex items-center gap-1.5 text-[11px] leading-tight text-muted-foreground truncate">
+                          {/* Grade — mobile only */}
+                          <span className="sm:hidden shrink-0 font-medium">{doctor.grade || "—"}</span>
+                          <span className="sm:hidden w-1 h-1 rounded-full bg-border shrink-0" />
+                          {/* Email */}
+                          <span className="truncate">
+                            {cached?.nhs_email ?? doctor.email ?? "No email"}
+                          </span>
+                          {/* Phone — sm and up only */}
+                          {cached?.phone_number && (
+                            <>
+                              <span className="hidden sm:inline-block w-1 h-1 rounded-full bg-border shrink-0" />
+                              <span className="hidden sm:inline-block shrink-0">{cached.phone_number}</span>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
                     {/* Survey status icon */}
                     <div className="shrink-0">
                       {doctor.survey_status === "submitted" && <Check className="h-4 w-4 text-emerald-600" />}
@@ -1471,11 +1495,11 @@ export default function Roster() {
                         <CircleDashed className="h-4 w-4 text-muted-foreground" />
                       )}
                     </div>
-                    {/* Invite counter icon — fixed 24px, no layout shift */}
+                    {/* Invite counter icon */}
                     {(doctor.survey_invite_count ?? 0) > 0 && (
                       <span
                         title={`${doctor.survey_invite_count} invite${doctor.survey_invite_count !== 1 ? "s" : ""} sent`}
-                        className="relative inline-flex items-center justify-center h-6 w-6 shrink-0"
+                        className="relative inline-flex items-center justify-center h-5 w-5 shrink-0"
                       >
                         <Send className="h-3 w-3 text-muted-foreground/50" />
                         <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-primary text-[7px] font-bold text-primary-foreground leading-none">
@@ -1489,29 +1513,9 @@ export default function Roster() {
                     </div>
                   </div>
 
-                  {/* Collapsed sub-line: grade (mobile only) + email + phone on sm+ */}
-                  {!isExpanded && (
-                    <div className="flex items-center gap-2 pl-5 pb-0.5 text-xs text-muted-foreground truncate">
-                      {/* Grade — mobile only (sm hides it in favour of the inline grade above) */}
-                      <span className="sm:hidden shrink-0 font-medium">{doctor.grade || "—"}</span>
-                      <span className="sm:hidden w-1 h-1 rounded-full bg-border shrink-0" />
-                      {/* Email — always visible */}
-                      <span className="truncate max-w-[200px]">
-                        {cached?.nhs_email ?? doctor.email ?? "No email"}
-                      </span>
-                      {/* Phone — sm and up only */}
-                      {(cached?.phone_number) && (
-                        <>
-                          <span className="hidden sm:inline-block w-1 h-1 rounded-full bg-border shrink-0" />
-                          <span className="hidden sm:inline-block shrink-0">{cached.phone_number}</span>
-                        </>
-                      )}
-                    </div>
-                  )}
-
                   {/* Expanded detail panel */}
                   {isExpanded && (
-                    <div className="mt-3 pt-3 border-t border-border pl-5">
+                    <div className="mt-2 pt-2 border-t border-border pl-5">
                       <ExpandedDoctorPanel
                         doctor={doctor}
                         surveyData={cached}
