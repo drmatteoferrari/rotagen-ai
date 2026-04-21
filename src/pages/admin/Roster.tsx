@@ -1457,7 +1457,7 @@ export default function Roster() {
                     )}
 
                     {/* Name + sub-line stacked tightly */}
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 py-0.5">
                       <div className="flex items-center gap-2 min-w-0">
                         <span className="font-semibold text-[13px] leading-tight flex-1 min-w-0 truncate">
                           {formatDoctorName(doctor.first_name, doctor.last_name)}
@@ -1468,7 +1468,7 @@ export default function Roster() {
                         </span>
                       </div>
                       {!isExpanded && (
-                        <div className="flex items-center gap-1.5 text-[11px] leading-tight text-muted-foreground truncate">
+                        <div className="mt-1 flex items-center gap-1.5 text-[11px] leading-tight text-muted-foreground truncate">
                           {/* Grade — mobile only */}
                           <span className="sm:hidden shrink-0 font-medium">{doctor.grade || "—"}</span>
                           <span className="sm:hidden w-1 h-1 rounded-full bg-border shrink-0" />
