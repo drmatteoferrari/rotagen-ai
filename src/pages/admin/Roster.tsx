@@ -1572,7 +1572,7 @@ export default function Roster() {
                               <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                             )}
                             <span className="text-sm font-medium truncate">
-                              {doctor.last_name}, {doctor.first_name}
+                              {formatDoctorName(doctor.first_name, doctor.last_name)}
                             </span>
                           </div>
                           <span className="text-xs text-muted-foreground sm:w-24 shrink-0 text-right sm:text-left">
