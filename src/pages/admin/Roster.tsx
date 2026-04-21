@@ -1090,7 +1090,7 @@ export default function Roster() {
 
   return (
     <AdminLayout title="Team Roster" subtitle="Manage doctors" accentColor="blue" pageIcon={Users}>
-      <div className="mx-auto max-w-[1200px] space-y-4 animate-fadeSlideUp">
+      <div className="mx-auto max-w-[1200px] w-full overflow-x-hidden space-y-4 animate-fadeSlideUp">
         {/* No config banner */}
         {!currentRotaConfigId && (
           <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 flex items-center gap-3">
@@ -1135,27 +1135,27 @@ export default function Roster() {
 
         {/* ── STATS CARD ── */}
         {doctors.length > 0 && (
-          <div className="bg-card border border-border rounded-lg shadow-sm px-4 py-3">
+          <div className="bg-card border border-border rounded-lg px-3 py-2 sm:px-4 sm:py-2.5">
             <div className="flex flex-col sm:flex-row sm:items-center gap-3">
               <div className="flex items-center justify-between sm:justify-start gap-4 flex-1">
                 <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-lg text-emerald-600 leading-none">{submitted}</span>
-                  <span className="text-[10px] font-bold text-emerald-600/70 uppercase tracking-wider">Submitted</span>
+                  <span className="font-bold text-sm sm:text-base text-emerald-600 leading-none">{submitted}</span>
+                  <span className="text-[9px] font-bold text-emerald-600/70 uppercase tracking-wider">Submitted</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-lg text-amber-600 leading-none">{inProgress}</span>
-                  <span className="text-[10px] font-bold text-amber-600/70 uppercase tracking-wider">In Progress</span>
+                  <span className="font-bold text-sm sm:text-base text-amber-600 leading-none">{inProgress}</span>
+                  <span className="text-[9px] font-bold text-amber-600/70 uppercase tracking-wider">In Progress</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-lg text-muted-foreground leading-none">{notStarted}</span>
-                  <span className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-wider">Not Started</span>
+                  <span className="font-bold text-sm sm:text-base text-muted-foreground leading-none">{notStarted}</span>
+                  <span className="text-[9px] font-bold text-muted-foreground/70 uppercase tracking-wider">Not Started</span>
                 </div>
               </div>
               <div className="flex items-center gap-3 w-full sm:w-48 shrink-0">
-                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
+                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider whitespace-nowrap">
                   {progressPct}% Done
                 </span>
-                <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                <div className="h-1 w-full rounded-full bg-muted overflow-hidden">
                   <div
                     className="h-full rounded-full bg-emerald-500 transition-all duration-500"
                     style={{ width: `${progressPct}%` }}
@@ -1166,24 +1166,22 @@ export default function Roster() {
           </div>
         )}
 
-        {/* ── DEADLINE ROW ── */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-          <div className="flex items-center gap-2 shrink-0">
-            <CalendarIcon className="h-4 w-4 text-primary" />
-            <span className="text-sm font-semibold text-card-foreground">Survey Deadline:</span>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <Popover open={deadlineOpen} onOpenChange={setDeadlineOpen}>
+        {/* ── CONTROL ROW: Deadline · Add · Send · Search · Sort ── */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Deadline picker */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <CalendarIcon className="h-3.5 w-3.5 text-primary shrink-0" />
+            <Popover open={deadlineOpen} onOpenChange={setDeadlineOpen} modal={false}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
                   size="sm"
                   className={cn(
-                    "w-[200px] justify-start text-left font-normal",
+                    "h-8 text-xs font-normal min-w-[110px] max-w-[160px] justify-start",
                     !surveyDeadline && "text-muted-foreground",
                   )}
                 >
-                  {formattedDeadline ?? "Select deadline date"}
+                  {surveyDeadline ? format(surveyDeadline, "d MMM yyyy") : "Set deadline"}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
@@ -1198,28 +1196,38 @@ export default function Roster() {
               </PopoverContent>
             </Popover>
             {deadlineIsPast && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 border border-amber-300 px-2.5 py-1 text-xs font-semibold text-amber-700 shrink-0">
-                <AlertTriangle className="h-3 w-3" /> Deadline passed
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 border border-amber-300 px-2 py-0.5 text-[10px] font-semibold text-amber-700 shrink-0">
+                <AlertTriangle className="h-3 w-3 shrink-0" />
+                <span className="hidden sm:inline">Deadline passed</span>
+                <span className="sm:hidden">Passed</span>
               </span>
             )}
           </div>
-        </div>
 
-        {/* ── ACTIONS ROW ── */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-          <Button className="gap-2 h-9 w-full sm:w-auto" onClick={() => setIsAddDoctorOpen(true)}>
-            <UserPlus className="h-4 w-4" /> Add Doctor
+          {/* Divider */}
+          <div className="hidden sm:block w-px h-5 bg-border shrink-0" />
+
+          {/* Add Doctor */}
+          <Button
+            size="sm"
+            className="gap-1.5 h-8 text-xs shrink-0 px-3"
+            onClick={() => setIsAddDoctorOpen(true)}
+          >
+            <UserPlus className="h-3.5 w-3.5" />
+            <span>Add Doctor</span>
           </Button>
+
+          {/* Send Invites */}
           {doctors.length > 0 && (
             <Button
               variant="outline"
               size="sm"
               disabled={bulkSending}
               className={cn(
-                "gap-1.5 h-9 w-full sm:w-auto",
+                "gap-1.5 h-8 text-xs shrink-0 px-3",
                 actionableDoctors.length > 0
                   ? "border-primary text-primary hover:bg-primary/5"
-                  : "text-muted-foreground"
+                  : "text-muted-foreground",
               )}
               onClick={() => {
                 if (!surveyDeadline) {
@@ -1238,72 +1246,67 @@ export default function Roster() {
               {bulkSending ? "Sending…" : "Send Invites"}
             </Button>
           )}
+
+          {/* No-email warning — inline chip, only on sm+ to save mobile space */}
           {noEmailCount > 0 && (
-            <span className="flex items-center gap-1.5 text-xs text-amber-600">
-              <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-              {noEmailCount} doctor{noEmailCount > 1 ? "s have" : " has"} no email — excluded from bulk send
+            <span className="hidden sm:inline-flex items-center gap-1 text-[10px] text-amber-600 font-medium shrink-0">
+              <AlertTriangle className="h-3 w-3 shrink-0" />
+              {noEmailCount} no email
             </span>
           )}
-        </div>
 
-        {/* Filters Row */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+          {/* Spacer — pushes search+sort to right on sm+ */}
+          <div className="flex-1 hidden sm:block min-w-0" />
+
+          {/* Search — full width on mobile, capped on sm+ */}
+          <div className="relative flex items-center w-full sm:w-44 md:w-52 shrink-0">
+            <Search className="absolute left-2.5 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
             <Input
-              placeholder="Search by name…"
+              placeholder="Search…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full sm:max-w-xs h-9 text-sm"
+              className="pl-8 h-8 text-xs w-full"
             />
           </div>
 
-          <div className="flex items-center justify-end gap-3 w-full sm:w-auto">
-            {doctors.length > 1 && (
-              <>
-                <div className="sm:hidden flex-1 min-w-0">
-                  <select
-                    value={sortKey}
-                    onChange={(e) => setSortKey(e.target.value as SortKey)}
-                    className="w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm h-9"
-                  >
-                    <option value="surname_asc">Sort: A–Z</option>
-                    <option value="surname_desc">Sort: Z–A</option>
-                    <option value="status">Sort: Status</option>
-                    <option value="grade">Sort: Grade</option>
-                  </select>
-                </div>
-                <div className="hidden sm:flex items-center gap-1.5">
-                  <span className="text-xs text-muted-foreground flex items-center gap-1">
-                    <ArrowUpDown className="h-3 w-3" /> Sort:
+          {/* Sort dropdown — replaces both native select and pill buttons */}
+          {doctors.length > 1 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 text-xs gap-1 shrink-0 px-2.5">
+                  <ListFilter className="h-3.5 w-3.5 shrink-0" />
+                  <span className="hidden sm:inline">
+                    {{ surname_asc: "A–Z", surname_desc: "Z–A", status: "Status", grade: "Grade" }[sortKey]}
                   </span>
-                  {(["surname_asc", "surname_desc", "status", "grade"] as const).map((key) => {
-                    const labels: Record<SortKey, string> = {
-                      surname_asc: "A–Z",
-                      surname_desc: "Z–A",
-                      status: "Status",
-                      grade: "Grade",
-                    };
-                    return (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => setSortKey(key)}
-                        className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium border transition-colors ${
-                          sortKey === key
-                            ? "bg-primary text-primary-foreground border-primary"
-                            : "bg-background text-muted-foreground border-border hover:border-primary/50"
-                        }`}
-                      >
-                        {labels[key]}
-                      </button>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-          </div>
+                  <ChevronDown className="h-3 w-3 opacity-50 shrink-0" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-32 pointer-events-auto">
+                {(["surname_asc", "surname_desc", "status", "grade"] as const).map((key) => {
+                  const labels: Record<SortKey, string> = {
+                    surname_asc: "A → Z",
+                    surname_desc: "Z → A",
+                    status: "Status",
+                    grade: "Grade",
+                  };
+                  return (
+                    <DropdownMenuItem
+                      key={key}
+                      onClick={() => setSortKey(key)}
+                      className={cn("text-xs cursor-pointer", sortKey === key && "font-semibold text-primary")}
+                    >
+                      <span className="mr-2 w-3 inline-flex shrink-0">
+                        {sortKey === key && <Check className="h-3 w-3 text-primary" />}
+                      </span>
+                      {labels[key]}
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
+        {/* ── END CONTROL ROW ── */}
 
         {/* Main List Container */}
         <div className="space-y-0 divide-y divide-border rounded-lg border border-border overflow-hidden bg-card">
