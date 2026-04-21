@@ -1167,21 +1167,24 @@ export default function Roster() {
         )}
 
         {/* ── CONTROL ROW: Deadline · Add · Send · Search · Sort ── */}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           {/* Deadline picker */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            <CalendarIcon className="h-3.5 w-3.5 text-primary shrink-0" />
+          <div className="flex items-center gap-1 shrink-0">
+            <CalendarIcon className="hidden sm:block h-3.5 w-3.5 text-primary shrink-0" />
             <Popover open={deadlineOpen} onOpenChange={setDeadlineOpen} modal={false}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
                   size="sm"
                   className={cn(
-                    "h-8 text-xs font-normal min-w-[110px] max-w-[160px] justify-start",
+                    "h-7 sm:h-8 text-[11px] sm:text-xs font-normal px-2 sm:px-3 gap-1.5 min-w-0 sm:min-w-[110px] sm:max-w-[160px] justify-start",
                     !surveyDeadline && "text-muted-foreground",
                   )}
                 >
-                  {surveyDeadline ? format(surveyDeadline, "d MMM yyyy") : "Set deadline"}
+                  <CalendarIcon className="sm:hidden h-3.5 w-3.5 text-primary shrink-0" />
+                  <span className="truncate">
+                    {surveyDeadline ? format(surveyDeadline, "d MMM yyyy") : "Set deadline"}
+                  </span>
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
@@ -1196,7 +1199,7 @@ export default function Roster() {
               </PopoverContent>
             </Popover>
             {deadlineIsPast && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 border border-amber-300 px-2 py-0.5 text-[10px] font-semibold text-amber-700 shrink-0">
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 border border-amber-300 px-1.5 py-0.5 text-[9px] sm:text-[10px] font-semibold text-amber-700 shrink-0">
                 <AlertTriangle className="h-3 w-3 shrink-0" />
                 <span className="hidden sm:inline">Deadline passed</span>
                 <span className="sm:hidden">Passed</span>
@@ -1207,24 +1210,26 @@ export default function Roster() {
           {/* Divider */}
           <div className="hidden sm:block w-px h-5 bg-border shrink-0" />
 
-          {/* Add Doctor */}
+          {/* Add Doctor — icon-only on mobile */}
           <Button
             size="sm"
-            className="gap-1.5 h-8 text-xs shrink-0 px-3"
+            className="gap-1.5 h-7 sm:h-8 text-xs shrink-0 px-2 sm:px-3"
             onClick={() => setIsAddDoctorOpen(true)}
+            title="Add Doctor"
           >
             <UserPlus className="h-3.5 w-3.5" />
-            <span>Add Doctor</span>
+            <span className="hidden sm:inline">Add Doctor</span>
           </Button>
 
-          {/* Send Invites */}
+          {/* Send Invites — icon-only on mobile */}
           {doctors.length > 0 && (
             <Button
               variant="outline"
               size="sm"
               disabled={bulkSending}
+              title="Send Invites"
               className={cn(
-                "gap-1.5 h-8 text-xs shrink-0 px-3",
+                "gap-1.5 h-7 sm:h-8 text-xs shrink-0 px-2 sm:px-3",
                 actionableDoctors.length > 0
                   ? "border-primary text-primary hover:bg-primary/5"
                   : "text-muted-foreground",
@@ -1243,7 +1248,7 @@ export default function Roster() {
               ) : (
                 <Send className="h-3.5 w-3.5" />
               )}
-              {bulkSending ? "Sending…" : "Send Invites"}
+              <span className="hidden sm:inline">{bulkSending ? "Sending…" : "Send Invites"}</span>
             </Button>
           )}
 
@@ -1258,27 +1263,27 @@ export default function Roster() {
           {/* Spacer — pushes search+sort to right on sm+ */}
           <div className="flex-1 hidden sm:block min-w-0" />
 
-          {/* Search — full width on mobile, capped on sm+ */}
-          <div className="relative flex items-center w-full sm:w-44 md:w-52 shrink-0">
-            <Search className="absolute left-2.5 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+          {/* Search — flexes to fill remaining space on mobile, capped on sm+ */}
+          <div className="relative flex items-center flex-1 min-w-[100px] sm:flex-none sm:w-44 md:w-52 shrink">
+            <Search className="absolute left-2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
             <Input
               placeholder="Search…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 h-8 text-xs w-full"
+              className="pl-7 sm:pl-8 h-7 sm:h-8 text-[11px] sm:text-xs w-full"
             />
           </div>
 
-          {/* Sort dropdown — replaces both native select and pill buttons */}
+          {/* Sort dropdown — icon-only on mobile */}
           {doctors.length > 1 && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8 text-xs gap-1 shrink-0 px-2.5">
+                <Button variant="outline" size="sm" className="h-7 sm:h-8 text-xs gap-1 shrink-0 px-1.5 sm:px-2.5">
                   <ListFilter className="h-3.5 w-3.5 shrink-0" />
                   <span className="hidden sm:inline">
                     {{ surname_asc: "A–Z", surname_desc: "Z–A", status: "Status", grade: "Grade" }[sortKey]}
                   </span>
-                  <ChevronDown className="h-3 w-3 opacity-50 shrink-0" />
+                  <ChevronDown className="hidden sm:inline-block h-3 w-3 opacity-50 shrink-0" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-32 pointer-events-auto">
