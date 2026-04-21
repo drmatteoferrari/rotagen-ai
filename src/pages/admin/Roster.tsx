@@ -1556,7 +1556,7 @@ export default function Roster() {
                   return (
                     <div key={doctor.id} className="bg-card">
                       <div
-                        className="flex flex-col sm:flex-row sm:items-center gap-2 px-3 py-3 sm:px-4 cursor-pointer"
+                        className="flex items-center gap-2 px-3 py-1.5 sm:px-4 cursor-pointer"
                         onClick={() => {
                           if (isExpanded) {
                             setInactiveExpandedIds((prev) => {
@@ -1573,23 +1573,16 @@ export default function Roster() {
                           }
                         }}
                       >
-                        <div className="flex items-center justify-between sm:flex-1">
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            {isExpanded ? (
-                              <ChevronUp className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                            ) : (
-                              <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                            )}
-                            <span className="text-sm font-medium truncate">
-                              {formatDoctorName(doctor.first_name, doctor.last_name)}
-                            </span>
-                          </div>
-                          <span className="text-xs text-muted-foreground sm:w-24 shrink-0 text-right sm:text-left">
-                            {doctor.grade || "—"}
-                          </span>
-                        </div>
+                        {isExpanded ? (
+                          <ChevronUp className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                        ) : (
+                          <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                        )}
+                        <span className="flex-1 min-w-0 text-[13px] font-medium truncate">
+                          {formatDoctorName(doctor.first_name, doctor.last_name)}
+                        </span>
 
-                        <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex justify-end shrink-0" onClick={(e) => e.stopPropagation()}>
                           <Popover
                             open={reactivatePopoverId === doctor.id}
                             onOpenChange={(open) => {
