@@ -1342,79 +1342,86 @@ export default function Roster() {
             return (
               <div key={doctor.id} className="bg-card">
                 {/* ── Desktop Row (lg and up) ── no collapse, full 1-line view */}
-                <div className="hidden lg:flex items-center gap-3 py-3 px-4 w-full text-sm hover:bg-muted/30 transition-colors group">
+                <div className="hidden lg:flex items-center gap-2 py-2.5 px-4 w-full min-w-0 overflow-hidden text-sm hover:bg-muted/30 transition-colors group">
                   {/* Name */}
-                  <div className="w-[15%] font-semibold truncate text-[14px]">
-                    {doctor.last_name}, {doctor.first_name}
+                  <div className="flex-[2] min-w-0 font-semibold truncate text-[13px]">
+                    {formatDoctorName(doctor.first_name, doctor.last_name)}
                   </div>
                   {/* Grade */}
-                  <div className="w-[8%] text-muted-foreground truncate">{doctor.grade || "—"}</div>
+                  <div className="w-16 shrink-0 text-muted-foreground text-xs truncate">
+                    {doctor.grade || "—"}
+                  </div>
                   {/* Email */}
-                  <div className="w-[16%] text-muted-foreground truncate">
+                  <div className="flex-[2] min-w-0 text-muted-foreground text-xs truncate">
                     {cached?.nhs_email ?? doctor.email ?? "—"}
                   </div>
                   {/* Phone */}
-                  <div className="w-[10%] text-muted-foreground truncate">{cached?.phone_number ?? "—"}</div>
-                  {/* WTE & Days Off */}
-                  <div className="w-[10%] text-muted-foreground truncate flex flex-col text-xs justify-center">
-                    <span>{cached ? `${cached.wte_percent ?? 100}%` : "—"}</span>
-                    {cached?.ltft_days_off?.length > 0 && (
-                      <span className="text-[10px] opacity-80 truncate">
-                        Off: {cached.ltft_days_off.map((d: string) => d.slice(0, 3)).join(",")}
-                      </span>
-                    )}
+                  <div className="w-24 shrink-0 text-muted-foreground text-xs truncate">
+                    {cached?.phone_number ?? "—"}
+                  </div>
+                  {/* WTE */}
+                  <div className="w-16 shrink-0 text-muted-foreground text-xs">
+                    {cached ? `${cached.wte_percent ?? 100}%` : "—"}
                   </div>
                   {/* Competencies */}
-                  <div className="w-[16%] flex flex-wrap gap-1 items-center">
+                  <div className="w-[15%] min-w-[100px] flex flex-wrap gap-0.5 items-center">
                     {cached &&
                       (["iac", "iaoc", "icu", "transfer"] as const).map((k) => {
                         const achieved = cached[`${k}_achieved`] ?? cached.competencies_json?.[k]?.achieved;
                         const working = cached[`${k}_working`] ?? cached.competencies_json?.[k]?.workingTowards;
-                        if (!achieved && !working) return null;
+                        const label = k === "transfer" ? "TR" : k.toUpperCase();
+                        const colour =
+                          achieved === true
+                            ? "bg-emerald-100 text-emerald-700"
+                            : working === true
+                              ? "bg-amber-100 text-amber-700"
+                              : "bg-red-100 text-red-700";
                         return (
-                          <span
-                            key={k}
-                            className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${achieved ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}
-                          >
-                            {k.toUpperCase()}
+                          <span key={k} className={`px-1 py-0.5 rounded text-[8px] font-bold leading-tight ${colour}`}>
+                            {label}
                           </span>
                         );
                       })}
                   </div>
-                  {/* Status */}
-                  <div className="w-[10%] shrink-0">
+                  {/* Survey status */}
+                  <div className="w-20 shrink-0">
                     {doctor.survey_status === "submitted" && (
-                      <Badge className="bg-emerald-500/15 text-emerald-600 border-emerald-500/20 shadow-none pointer-events-none text-[10px]">
+                      <Badge className="bg-emerald-500/15 text-emerald-600 border-emerald-500/20 shadow-none pointer-events-none text-[10px] px-1.5 py-0">
                         Submitted
                       </Badge>
                     )}
                     {doctor.survey_status === "in_progress" && (
-                      <Badge className="bg-amber-500/15 text-amber-600 border-amber-500/20 shadow-none pointer-events-none text-[10px]">
+                      <Badge className="bg-amber-500/15 text-amber-600 border-amber-500/20 shadow-none pointer-events-none text-[10px] px-1.5 py-0">
                         In Progress
                       </Badge>
                     )}
                     {(!doctor.survey_status || doctor.survey_status === "not_started") && (
-                      <Badge className="bg-muted text-muted-foreground border-border shadow-none pointer-events-none text-[10px]">
+                      <Badge className="bg-muted text-muted-foreground border-border shadow-none pointer-events-none text-[10px] px-1.5 py-0">
                         Not Started
                       </Badge>
                     )}
                   </div>
-                  {/* Invite count badge */}
-                  {(doctor.survey_invite_count ?? 0) > 0 && (
-                    <span className="hidden xl:inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground shrink-0">
-                      ×{doctor.survey_invite_count} sent
-                    </span>
-                  )}
+                  {/* Invite counter icon — fixed width, no layout shift */}
+                  <div className="w-7 shrink-0 flex items-center justify-center">
+                    {(doctor.survey_invite_count ?? 0) > 0 && (
+                      <span
+                        title={`${doctor.survey_invite_count} invite${doctor.survey_invite_count !== 1 ? "s" : ""} sent`}
+                        className="relative inline-flex items-center justify-center h-6 w-6"
+                      >
+                        <Send className="h-3 w-3 text-muted-foreground/50" />
+                        <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-primary text-[7px] font-bold text-primary-foreground leading-none">
+                          {(doctor.survey_invite_count ?? 0) > 9 ? "9+" : doctor.survey_invite_count}
+                        </span>
+                      </span>
+                    )}
+                  </div>
                   {/* Actions */}
-                  <div className="flex-1 flex justify-end items-center gap-1.5 min-w-0">
+                  <div className="flex items-center gap-1 shrink-0">
                     <button
                       type="button"
                       title="View Profile"
                       className="h-7 w-7 inline-flex items-center justify-center rounded-md text-teal-600 hover:text-teal-700 hover:bg-teal-50 transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/admin/doctor/${doctor.id}`);
-                      }}
+                      onClick={(e) => { e.stopPropagation(); navigate(`/admin/doctor/${doctor.id}`); }}
                     >
                       <User className="h-3.5 w-3.5" />
                     </button>
@@ -1422,10 +1429,7 @@ export default function Roster() {
                       type="button"
                       title="View Calendar"
                       className="h-7 w-7 inline-flex items-center justify-center rounded-md text-teal-600 hover:text-teal-700 hover:bg-teal-50 transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/admin/doctor-calendar/${doctor.id}`);
-                      }}
+                      onClick={(e) => { e.stopPropagation(); navigate(`/admin/doctor-calendar/${doctor.id}`); }}
                     >
                       <CalendarDays className="h-3.5 w-3.5" />
                     </button>
@@ -1434,45 +1438,75 @@ export default function Roster() {
                 </div>
 
                 {/* ── Mobile/Tablet Row (below lg) ── */}
-                <div className="flex flex-col lg:hidden p-3 sm:p-4">
-                  <div className="flex flex-col gap-1 cursor-pointer" onClick={() => toggleExpand(doctor.id)}>
-                    {/* Top line */}
-                    <div className="flex justify-between items-center">
-                      <span className="font-semibold text-base truncate">
-                        {doctor.last_name}, {doctor.first_name}
-                      </span>
-                      <div className="shrink-0 ml-2">
-                        {doctor.survey_status === "submitted" && <Check className="h-5 w-5 text-emerald-600" />}
-                        {doctor.survey_status === "in_progress" && <Pencil className="h-5 w-5 text-amber-600" />}
-                        {(!doctor.survey_status || doctor.survey_status === "not_started") && (
-                          <CircleDashed className="h-5 w-5 text-muted-foreground" />
-                        )}
-                      </div>
+                <div className="flex flex-col lg:hidden py-2 px-3">
+                  {/* Tap target: name row + status icon + menu */}
+                  <div
+                    className="flex items-center gap-2 cursor-pointer select-none min-h-[44px]"
+                    onClick={() => toggleExpand(doctor.id)}
+                  >
+                    {/* Explicit expand/collapse cue */}
+                    {isExpanded ? (
+                      <ChevronUp className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    )}
+                    {/* Name */}
+                    <span className="font-semibold text-sm flex-1 min-w-0 truncate">
+                      {formatDoctorName(doctor.first_name, doctor.last_name)}
+                    </span>
+                    {/* Grade — visible on sm and up only to save mobile space */}
+                    <span className="hidden sm:inline text-[11px] text-muted-foreground font-medium shrink-0">
+                      {doctor.grade || "—"}
+                    </span>
+                    {/* Survey status icon */}
+                    <div className="shrink-0">
+                      {doctor.survey_status === "submitted" && <Check className="h-4 w-4 text-emerald-600" />}
+                      {doctor.survey_status === "in_progress" && <Pencil className="h-4 w-4 text-amber-600" />}
+                      {(!doctor.survey_status || doctor.survey_status === "not_started") && (
+                        <CircleDashed className="h-4 w-4 text-muted-foreground" />
+                      )}
                     </div>
-                    {/* Bottom line */}
-                    <div className="flex justify-between items-center text-sm text-muted-foreground mt-1">
-                      <div className="flex items-center gap-2 truncate text-xs sm:text-sm">
-                        <span className="font-medium">{doctor.grade || "No grade"}</span>
-                        {/* Only visible on sm to lg (Tablet mode) */}
-                        <span className="hidden sm:inline-block w-1 h-1 rounded-full bg-border shrink-0"></span>
-                        <span className="hidden sm:inline-block truncate max-w-[150px]">
-                          {cached?.nhs_email ?? doctor.email ?? "—"}
+                    {/* Invite counter icon — fixed 24px, no layout shift */}
+                    {(doctor.survey_invite_count ?? 0) > 0 && (
+                      <span
+                        title={`${doctor.survey_invite_count} invite${doctor.survey_invite_count !== 1 ? "s" : ""} sent`}
+                        className="relative inline-flex items-center justify-center h-6 w-6 shrink-0"
+                      >
+                        <Send className="h-3 w-3 text-muted-foreground/50" />
+                        <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-primary text-[7px] font-bold text-primary-foreground leading-none">
+                          {(doctor.survey_invite_count ?? 0) > 9 ? "9+" : doctor.survey_invite_count}
                         </span>
-                        <span className="hidden sm:inline-block w-1 h-1 rounded-full bg-border shrink-0"></span>
-                        <span className="hidden sm:inline-block truncate">{cached?.phone_number ?? "—"}</span>
-                        <span className="hidden sm:inline-block w-1 h-1 rounded-full bg-border shrink-0"></span>
-                        <span className="hidden sm:inline-block shrink-0">
-                          WTE: {cached?.wte_percent ? `${cached.wte_percent}%` : "—"}
-                        </span>
-                      </div>
-                      <div onClick={(e) => e.stopPropagation()} className="shrink-0 ml-2">
-                        {renderDoctorMenu(doctor)}
-                      </div>
+                      </span>
+                    )}
+                    {/* Kebab menu — stop propagation */}
+                    <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+                      {renderDoctorMenu(doctor)}
                     </div>
                   </div>
-                  {/* Extended details */}
+
+                  {/* Collapsed sub-line: grade (mobile only) + email + phone on sm+ */}
+                  {!isExpanded && (
+                    <div className="flex items-center gap-2 pl-5 pb-0.5 text-xs text-muted-foreground truncate">
+                      {/* Grade — mobile only (sm hides it in favour of the inline grade above) */}
+                      <span className="sm:hidden shrink-0 font-medium">{doctor.grade || "—"}</span>
+                      <span className="sm:hidden w-1 h-1 rounded-full bg-border shrink-0" />
+                      {/* Email — always visible */}
+                      <span className="truncate max-w-[200px]">
+                        {cached?.nhs_email ?? doctor.email ?? "No email"}
+                      </span>
+                      {/* Phone — sm and up only */}
+                      {(cached?.phone_number) && (
+                        <>
+                          <span className="hidden sm:inline-block w-1 h-1 rounded-full bg-border shrink-0" />
+                          <span className="hidden sm:inline-block shrink-0">{cached.phone_number}</span>
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Expanded detail panel */}
                   {isExpanded && (
-                    <div className="mt-4 pt-4 border-t border-border">
+                    <div className="mt-3 pt-3 border-t border-border pl-5">
                       <ExpandedDoctorPanel
                         doctor={doctor}
                         surveyData={cached}
