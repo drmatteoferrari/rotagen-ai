@@ -1287,53 +1287,56 @@ export default function Roster() {
             <div className="flex-1 hidden sm:block min-w-0" />
           </div>
 
-          {/* Search — flexes to fill remaining space on mobile, capped on sm+ */}
-          <div className="relative flex items-center flex-1 min-w-[100px] sm:flex-none sm:w-44 md:w-52 shrink">
-            <Search className="absolute left-2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-            <Input
-              placeholder="Search…"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-7 sm:pl-8 h-7 sm:h-8 text-[11px] sm:text-xs w-full"
-            />
-          </div>
+          {/* Row 2 (mobile): Search left · Sort right */}
+          <div className="flex items-center gap-1.5 sm:contents">
+            {/* Search — flexes to fill remaining space on mobile, capped on sm+ */}
+            <div className="relative flex items-center flex-1 min-w-[100px] sm:flex-none sm:w-44 md:w-52 shrink">
+              <Search className="absolute left-2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+              <Input
+                placeholder="Search…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-7 sm:pl-8 h-7 sm:h-8 text-[11px] sm:text-xs w-full"
+              />
+            </div>
 
-          {/* Sort dropdown — icon-only on mobile */}
-          {doctors.length > 1 && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-7 sm:h-8 text-xs gap-1 shrink-0 px-1.5 sm:px-2.5">
-                  <ListFilter className="h-3.5 w-3.5 shrink-0" />
-                  <span className="hidden sm:inline">
-                    {{ surname_asc: "A–Z", surname_desc: "Z–A", status: "Status", grade: "Grade" }[sortKey]}
-                  </span>
-                  <ChevronDown className="hidden sm:inline-block h-3 w-3 opacity-50 shrink-0" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-32 pointer-events-auto">
-                {(["surname_asc", "surname_desc", "status", "grade"] as const).map((key) => {
-                  const labels: Record<SortKey, string> = {
-                    surname_asc: "A → Z",
-                    surname_desc: "Z → A",
-                    status: "Status",
-                    grade: "Grade",
-                  };
-                  return (
-                    <DropdownMenuItem
-                      key={key}
-                      onClick={() => setSortKey(key)}
-                      className={cn("text-xs cursor-pointer", sortKey === key && "font-semibold text-primary")}
-                    >
-                      <span className="mr-2 w-3 inline-flex shrink-0">
-                        {sortKey === key && <Check className="h-3 w-3 text-primary" />}
-                      </span>
-                      {labels[key]}
-                    </DropdownMenuItem>
-                  );
-                })}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+            {/* Sort dropdown — icon-only on mobile */}
+            {doctors.length > 1 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-7 sm:h-8 text-xs gap-1 shrink-0 px-1.5 sm:px-2.5">
+                    <ListFilter className="h-3.5 w-3.5 shrink-0" />
+                    <span className="hidden sm:inline">
+                      {{ surname_asc: "A–Z", surname_desc: "Z–A", status: "Status", grade: "Grade" }[sortKey]}
+                    </span>
+                    <ChevronDown className="hidden sm:inline-block h-3 w-3 opacity-50 shrink-0" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-32 pointer-events-auto">
+                  {(["surname_asc", "surname_desc", "status", "grade"] as const).map((key) => {
+                    const labels: Record<SortKey, string> = {
+                      surname_asc: "A → Z",
+                      surname_desc: "Z → A",
+                      status: "Status",
+                      grade: "Grade",
+                    };
+                    return (
+                      <DropdownMenuItem
+                        key={key}
+                        onClick={() => setSortKey(key)}
+                        className={cn("text-xs cursor-pointer", sortKey === key && "font-semibold text-primary")}
+                      >
+                        <span className="mr-2 w-3 inline-flex shrink-0">
+                          {sortKey === key && <Check className="h-3 w-3 text-primary" />}
+                        </span>
+                        {labels[key]}
+                      </DropdownMenuItem>
+                    );
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
         </div>
         {/* ── END CONTROL ROW ── */}
 
