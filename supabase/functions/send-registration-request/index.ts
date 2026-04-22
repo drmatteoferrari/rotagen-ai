@@ -94,8 +94,9 @@ Deno.serve(async (req) => {
       { headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
     );
   } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
     return new Response(
-      JSON.stringify({ success: false, error: err.message ?? "Unknown error" }),
+      JSON.stringify({ success: false, error: message }),
       { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
     );
   }

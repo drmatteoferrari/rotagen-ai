@@ -297,7 +297,7 @@ ${coordinatorBlock}
 
     const { error } = await resend.emails.send({
       from: "RotaGen <noreply@rotagen.co.uk>",
-      reply_to: "support@rotagen.co.uk",
+      replyTo: "support@rotagen.co.uk",
       to: [to],
       subject,
       html,
