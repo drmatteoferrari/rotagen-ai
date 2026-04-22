@@ -1278,13 +1278,6 @@ export default function Roster() {
               )}
             </div>
 
-            {/* Desktop/tablet: passed warning inline after buttons */}
-            {deadlineIsPast && (
-              <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-amber-100 border border-amber-300 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 shrink-0">
-                <AlertTriangle className="h-3 w-3 shrink-0" />
-                Deadline passed
-              </span>
-            )}
 
             {/* No-email warning — inline chip, only on sm+ to save mobile space */}
             {noEmailCount > 0 && (
