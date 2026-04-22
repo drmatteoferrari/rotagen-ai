@@ -1456,6 +1456,15 @@ export default function Roster() {
                       <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                     )}
 
+                    {/* Survey status icon — moved before name */}
+                    <div className="shrink-0">
+                      {doctor.survey_status === "submitted" && <Check className="h-4 w-4 text-emerald-600" />}
+                      {doctor.survey_status === "in_progress" && <Pencil className="h-4 w-4 text-amber-600" />}
+                      {(!doctor.survey_status || doctor.survey_status === "not_started") && (
+                        <CircleDashed className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </div>
+
                     {/* Name + sub-line stacked tightly */}
                     <div className="flex-1 min-w-0 py-0.5">
                       <div className="flex items-center gap-2 min-w-0">
@@ -1487,14 +1496,6 @@ export default function Roster() {
                       )}
                     </div>
 
-                    {/* Survey status icon */}
-                    <div className="shrink-0">
-                      {doctor.survey_status === "submitted" && <Check className="h-4 w-4 text-emerald-600" />}
-                      {doctor.survey_status === "in_progress" && <Pencil className="h-4 w-4 text-amber-600" />}
-                      {(!doctor.survey_status || doctor.survey_status === "not_started") && (
-                        <CircleDashed className="h-4 w-4 text-muted-foreground" />
-                      )}
-                    </div>
                     {/* Invite counter icon */}
                     {(doctor.survey_invite_count ?? 0) > 0 && (
                       <span
