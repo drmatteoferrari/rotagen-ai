@@ -1467,14 +1467,7 @@ export default function Roster() {
                     className="flex items-center gap-2 cursor-pointer select-none"
                     onClick={() => toggleExpand(doctor.id)}
                   >
-                    {/* Explicit expand/collapse cue */}
-                    {isExpanded ? (
-                      <ChevronUp className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                    ) : (
-                      <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                    )}
-
-                    {/* Survey status icon — moved before name */}
+                    {/* Survey status icon */}
                     <div className="shrink-0">
                       {doctor.survey_status === "submitted" && <Check className="h-4 w-4 text-emerald-600" />}
                       {doctor.survey_status === "in_progress" && <Pencil className="h-4 w-4 text-amber-600" />}
@@ -1530,6 +1523,12 @@ export default function Roster() {
                     <div onClick={(e) => e.stopPropagation()} className="shrink-0">
                       {renderDoctorMenu(doctor)}
                     </div>
+                    {/* Explicit expand/collapse cue — moved to right */}
+                    {isExpanded ? (
+                      <ChevronUp className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    )}
                   </div>
 
                   {/* Expanded detail panel */}
