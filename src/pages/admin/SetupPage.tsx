@@ -583,14 +583,14 @@ export default function SetupPage() {
               </Button>
               <Button
                 className="flex-1 font-bold"
-                disabled={finalLoading || !allChecked}
+                disabled={!allChecked}
                 onClick={() => {
                   setShowFinalChecklist(false);
                   setChecklistItems([false, false, false]);
                   handleGenerateFinalRota();
                 }}
               >
-                {finalLoading ? "Executing…" : "Execute"}
+                Execute
               </Button>
             </div>
           </div>
