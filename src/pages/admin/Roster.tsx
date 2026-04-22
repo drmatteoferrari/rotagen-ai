@@ -1352,7 +1352,6 @@ export default function Roster() {
           {sortedDoctors.map((doctor) => {
             const isExpanded = expandedIds.has(doctor.id);
             const cached = surveyCache[doctor.id];
-            const isLtft = (cached?.wte_percent ?? 100) < 100;
 
             return (
               <div
@@ -1360,8 +1359,7 @@ export default function Roster() {
                 className={cn(
                   "bg-card",
                   // Mobile/tablet: each doctor is its own card
-                  "rounded-lg border overflow-hidden lg:rounded-none lg:border-0 lg:overflow-visible",
-                  isLtft ? "border-amber-300 lg:border-l-0" : "border-border",
+                  "rounded-lg border border-border overflow-hidden lg:rounded-none lg:border-0 lg:overflow-visible",
                 )}
               >
                 {/* ── Desktop Row (lg and up) ── no collapse, full 1-line view */}
