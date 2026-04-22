@@ -535,7 +535,158 @@ function ActionButtonsPopover({
   );
 }
 
-export default function PreRotaCalendarPage({ embedded = false }: { embedded?: boolean }) {
+// ── PickerModal — multi-select checkbox picker for cells with multiple events ──
+// Used when a day has multiple coordinator overrides and/or LTFT day-off,
+// so the coordinator can choose exactly which event(s) the action applies to.
+
+interface PickerItem {
+  kind: 'override' | 'ltft';
+  id: string;
+  label: string;
+  subLabel: string;
+}
+
+function PickerModal({
+  doctorName,
+  items,
+  actionVerb,
+  singleSelect,
+  onCancel,
+  onConfirm,
+}: {
+  doctorName: string;
+  items: PickerItem[];
+  actionVerb: string;
+  singleSelect: boolean;
+  onCancel: () => void;
+  onConfirm: (selectedIds: string[]) => void;
+}) {
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const toggle = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (singleSelect) {
+        next.clear();
+        if (!prev.has(id)) next.add(id);
+      } else {
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const canConfirm = selected.size > 0 && (!singleSelect || selected.size === 1);
+
+  return (
+    <div
+      onClick={onCancel}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 200,
+        background: 'rgba(0,0,0,0.35)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '16px',
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: '100%', maxWidth: 360,
+          background: '#fff', borderRadius: '14px',
+          padding: '16px', boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+        }}
+      >
+        <p style={{ fontSize: 13, fontWeight: 700, color: '#1e293b', marginBottom: 4 }}>
+          {doctorName}
+        </p>
+        <p style={{ fontSize: 11, color: '#64748b', marginBottom: 12 }}>
+          {singleSelect
+            ? `Select an event to ${actionVerb}:`
+            : `Select event(s) to ${actionVerb}:`}
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {items.map((item) => {
+            const isChecked = selected.has(item.id);
+            const isLtft = item.kind === 'ltft';
+            return (
+              <div
+                key={item.id}
+                onClick={() => toggle(item.id)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '9px 12px', borderRadius: 8,
+                  background: isChecked ? '#eff6ff' : '#f8fafc',
+                  border: `1px solid ${isChecked ? '#93c5fd' : '#e2e8f0'}`,
+                  cursor: 'pointer',
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={isChecked}
+                  onChange={() => toggle(item.id)}
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ width: 16, height: 16, cursor: 'pointer', accentColor: '#2563eb' }}
+                />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{
+                    fontSize: 12, fontWeight: 600, color: '#1e293b',
+                    margin: 0,
+                  }}>
+                    {item.label}
+                    {isLtft && (
+                      <span style={{
+                        marginLeft: 6, fontSize: 10, fontWeight: 500,
+                        color: '#a16207',
+                        background: '#fef3c7',
+                        padding: '1px 6px', borderRadius: 4,
+                      }}>
+                        recurring
+                      </span>
+                    )}
+                  </p>
+                  <p style={{ fontSize: 10, color: '#64748b', margin: '2px 0 0' }}>
+                    {item.subLabel}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+          <button
+            onClick={onCancel}
+            style={{
+              flex: 1, padding: '8px',
+              fontSize: 12, fontWeight: 500,
+              background: '#fff', border: '1px solid #e2e8f0',
+              borderRadius: 8, cursor: 'pointer', color: '#64748b',
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => canConfirm && onConfirm(Array.from(selected))}
+            disabled={!canConfirm}
+            style={{
+              flex: 1, padding: '8px',
+              fontSize: 12, fontWeight: 600,
+              background: canConfirm ? '#2563eb' : '#cbd5e1',
+              border: 'none',
+              borderRadius: 8,
+              cursor: canConfirm ? 'pointer' : 'not-allowed',
+              color: '#fff',
+            }}
+          >
+            Confirm{selected.size > 1 ? ` (${selected.size})` : ''}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const todayISO = getTodayISO();
