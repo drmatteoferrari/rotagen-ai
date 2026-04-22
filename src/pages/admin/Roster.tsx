@@ -1215,57 +1215,60 @@ export default function Roster() {
             {/* Divider */}
             <div className="hidden sm:block w-px h-5 bg-border shrink-0" />
 
-            {/* Add Doctor — icon-only on mobile */}
-            <Button
-              size="sm"
-              className="gap-1.5 h-7 sm:h-8 text-xs shrink-0 px-2 sm:px-3"
-              onClick={() => setIsAddDoctorOpen(true)}
-              title="Add Doctor"
-            >
-              <UserPlus className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Add Doctor</span>
-            </Button>
-
-            {/* Send Invites — icon-only on mobile */}
-            {doctors.length > 0 && (
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={bulkSending}
-                title="Send Invites"
-                className={cn(
-                  "gap-1.5 h-7 sm:h-8 text-xs shrink-0 px-2 sm:px-3",
-                  actionableDoctors.length > 0
-                    ? "border-primary text-primary hover:bg-primary/5"
-                    : "text-muted-foreground",
-                )}
-                onClick={() => {
-                  if (!surveyDeadline) {
-                    toast.error("Set a survey deadline before sending invites");
-                    return;
-                  }
-                  setSendMode("never_invited");
-                  setSendModalOpen(true);
-                }}
-              >
-                {bulkSending ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Send className="h-3.5 w-3.5" />
-                )}
-                <span className="hidden sm:inline">{bulkSending ? "Sending…" : "Send Invites"}</span>
-              </Button>
-            )}
-
-            {/* Mobile: centered "passed" warning between buttons and right edge */}
+            {/* Mobile: centered "passed" warning between deadline (left) and action buttons (right) */}
             {deadlineIsPast && (
-              <span className="sm:hidden flex-1 flex justify-center">
+              <span className="sm:hidden flex-1 flex justify-center min-w-0">
                 <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 border border-amber-300 px-1.5 py-0.5 text-[9px] font-semibold text-amber-700">
                   <AlertTriangle className="h-3 w-3 shrink-0" />
                   Passed
                 </span>
               </span>
             )}
+
+            {/* Action buttons group — pushed right on mobile, inline on sm+ */}
+            <div className={cn("flex items-center gap-1.5 shrink-0 sm:contents", !deadlineIsPast && "ml-auto sm:ml-0")}>
+              {/* Add Doctor — icon-only on mobile */}
+              <Button
+                size="sm"
+                className="gap-1.5 h-7 sm:h-8 text-xs shrink-0 px-2 sm:px-3"
+                onClick={() => setIsAddDoctorOpen(true)}
+                title="Add Doctor"
+              >
+                <UserPlus className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Add Doctor</span>
+              </Button>
+
+              {/* Send Invites — icon-only on mobile */}
+              {doctors.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={bulkSending}
+                  title="Send Invites"
+                  className={cn(
+                    "gap-1.5 h-7 sm:h-8 text-xs shrink-0 px-2 sm:px-3",
+                    actionableDoctors.length > 0
+                      ? "border-primary text-primary hover:bg-primary/5"
+                      : "text-muted-foreground",
+                  )}
+                  onClick={() => {
+                    if (!surveyDeadline) {
+                      toast.error("Set a survey deadline before sending invites");
+                      return;
+                    }
+                    setSendMode("never_invited");
+                    setSendModalOpen(true);
+                  }}
+                >
+                  {bulkSending ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Send className="h-3.5 w-3.5" />
+                  )}
+                  <span className="hidden sm:inline">{bulkSending ? "Sending…" : "Send Invites"}</span>
+                </Button>
+              )}
+            </div>
 
             {/* Desktop/tablet: passed warning inline after buttons */}
             {deadlineIsPast && (
