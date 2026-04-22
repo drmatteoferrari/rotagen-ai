@@ -545,22 +545,35 @@ export default function Roster() {
   const notStarted = doctors.filter((d) => !["submitted", "in_progress"].includes(d.survey_status)).length;
   const progressPct = doctors.length > 0 ? Math.round((submitted / doctors.length) * 100) : 0;
 
-  const noEmailCount = doctors.filter((d) => !d.email && d.survey_status !== "submitted").length;
+  const noEmailCount = doctors.filter(
+    (d) => !d.email && d.survey_status !== "submitted"
+  ).length;
 
   const getSendModeRecipients = (mode: SendMode): Doctor[] => {
     switch (mode) {
       case "never_invited":
-        return doctors.filter((d) => !d.survey_invite_sent_at && d.email && d.survey_status !== "submitted");
+        return doctors.filter(
+          (d) => !d.survey_invite_sent_at && d.email && d.survey_status !== "submitted"
+        );
       case "not_started":
-        return doctors.filter((d) => d.survey_status !== "submitted" && d.survey_status !== "in_progress" && d.email);
+        return doctors.filter(
+          (d) =>
+            d.survey_status !== "submitted" &&
+            d.survey_status !== "in_progress" &&
+            d.email
+        );
       case "in_progress":
-        return doctors.filter((d) => d.survey_status === "in_progress" && d.email);
+        return doctors.filter(
+          (d) => d.survey_status === "in_progress" && d.email
+        );
     }
   };
 
   const sendModeRecipients = getSendModeRecipients(sendMode);
 
-  const actionableDoctors = doctors.filter((d) => d.survey_status !== "submitted" && d.email);
+  const actionableDoctors = doctors.filter(
+    (d) => d.survey_status !== "submitted" && d.email
+  );
 
   // Search + Sort
   const STATUS_ORDER: Record<string, number> = { not_started: 0, in_progress: 1, submitted: 2 };
@@ -1143,12 +1156,8 @@ export default function Roster() {
                   <span className="text-[9px] font-bold text-amber-600/70 uppercase tracking-wider">In Progress</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-sm sm:text-base text-muted-foreground leading-none">
-                    {notStarted}
-                  </span>
-                  <span className="text-[9px] font-bold text-muted-foreground/70 uppercase tracking-wider">
-                    Not Started
-                  </span>
+                  <span className="font-bold text-sm sm:text-base text-muted-foreground leading-none">{notStarted}</span>
+                  <span className="text-[9px] font-bold text-muted-foreground/70 uppercase tracking-wider">Not Started</span>
                 </div>
               </div>
               <div className="flex items-center gap-3 w-full sm:w-48 shrink-0">
@@ -1167,145 +1176,171 @@ export default function Roster() {
         )}
 
         {/* ── CONTROL ROW: Deadline · Add · Send · Search · Sort ── */}
-        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-          {/* Deadline picker */}
-          <div className="flex items-center gap-1 shrink-0">
-            <CalendarIcon className="hidden sm:block h-3.5 w-3.5 text-primary shrink-0" />
-            <Popover open={deadlineOpen} onOpenChange={setDeadlineOpen} modal={false}>
-              <PopoverTrigger asChild>
+        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-1.5 sm:gap-2">
+          {/* Row 1 (mobile): Deadline label + picker · Add · Send · passed warning */}
+          <div className="flex items-center gap-1.5 sm:contents">
+            {/* Deadline picker */}
+            <div className="flex items-center gap-1 shrink-0">
+              <CalendarIcon className="hidden sm:block h-3.5 w-3.5 text-primary shrink-0" />
+              <span className="text-[11px] sm:text-xs font-medium text-muted-foreground shrink-0">Deadline</span>
+              <Popover open={deadlineOpen} onOpenChange={setDeadlineOpen} modal={false}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={cn(
+                      "h-7 sm:h-8 text-[11px] sm:text-xs font-normal px-2 sm:px-3 gap-1.5 min-w-0 sm:min-w-[110px] sm:max-w-[160px] justify-start",
+                      !surveyDeadline && "text-muted-foreground",
+                    )}
+                  >
+                    <CalendarIcon className="sm:hidden h-3.5 w-3.5 text-primary shrink-0" />
+                    <span className="truncate">
+                      {surveyDeadline ? format(surveyDeadline, "d MMM yyyy") : "Set deadline"}
+                    </span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={surveyDeadline}
+                    onSelect={handleDeadlineSelect}
+                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                    initialFocus
+                    className="p-3 pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* Desktop/tablet: passed warning right next to date selector */}
+            {deadlineIsPast && (
+              <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-amber-100 border border-amber-300 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 shrink-0">
+                <AlertTriangle className="h-3 w-3 shrink-0" />
+                Deadline passed
+              </span>
+            )}
+
+            {/* Divider */}
+            <div className="hidden sm:block w-px h-5 bg-border shrink-0" />
+
+            {/* Mobile: centered "passed" warning between deadline (left) and action buttons (right) */}
+            {deadlineIsPast && (
+              <span className="sm:hidden flex-1 flex justify-center min-w-0">
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 border border-amber-300 px-1.5 py-0.5 text-[9px] font-semibold text-amber-700">
+                  <AlertTriangle className="h-3 w-3 shrink-0" />
+                  Passed
+                </span>
+              </span>
+            )}
+
+            {/* Action buttons group — pushed right on mobile, inline on sm+ */}
+            <div className={cn("flex items-center gap-1.5 shrink-0 sm:contents", !deadlineIsPast && "ml-auto sm:ml-0")}>
+              {/* Add Doctor — icon-only on mobile */}
+              <Button
+                size="sm"
+                className="gap-1.5 h-7 sm:h-8 text-xs shrink-0 px-2 sm:px-3"
+                onClick={() => setIsAddDoctorOpen(true)}
+                title="Add Doctor"
+              >
+                <UserPlus className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Add Doctor</span>
+              </Button>
+
+              {/* Send Invites — icon-only on mobile */}
+              {doctors.length > 0 && (
                 <Button
                   variant="outline"
                   size="sm"
+                  disabled={bulkSending}
+                  title="Send Invites"
                   className={cn(
-                    "h-7 sm:h-8 text-[11px] sm:text-xs font-normal px-2 sm:px-3 gap-1.5 min-w-0 sm:min-w-[110px] sm:max-w-[160px] justify-start",
-                    !surveyDeadline && "text-muted-foreground",
+                    "gap-1.5 h-7 sm:h-8 text-xs shrink-0 px-2 sm:px-3",
+                    actionableDoctors.length > 0
+                      ? "border-primary text-primary hover:bg-primary/5"
+                      : "text-muted-foreground",
                   )}
+                  onClick={() => {
+                    if (!surveyDeadline) {
+                      toast.error("Set a survey deadline before sending invites");
+                      return;
+                    }
+                    setSendMode("never_invited");
+                    setSendModalOpen(true);
+                  }}
                 >
-                  <CalendarIcon className="sm:hidden h-3.5 w-3.5 text-primary shrink-0" />
-                  <span className="truncate">
-                    {surveyDeadline ? format(surveyDeadline, "d MMM yyyy") : "Set deadline"}
-                  </span>
+                  {bulkSending ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Send className="h-3.5 w-3.5" />
+                  )}
+                  <span className="hidden sm:inline">{bulkSending ? "Sending…" : "Send Invites"}</span>
                 </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
-                <Calendar
-                  mode="single"
-                  selected={surveyDeadline}
-                  onSelect={handleDeadlineSelect}
-                  disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                  initialFocus
-                  className="p-3 pointer-events-auto"
-                />
-              </PopoverContent>
-            </Popover>
-            {deadlineIsPast && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 border border-amber-300 px-1.5 py-0.5 text-[9px] sm:text-[10px] font-semibold text-amber-700 shrink-0">
+              )}
+            </div>
+
+
+            {/* No-email warning — inline chip, only on sm+ to save mobile space */}
+            {noEmailCount > 0 && (
+              <span className="hidden sm:inline-flex items-center gap-1 text-[10px] text-amber-600 font-medium shrink-0">
                 <AlertTriangle className="h-3 w-3 shrink-0" />
-                <span className="hidden sm:inline">Passed</span>
-                <span className="sm:hidden">Passed</span>
+                {noEmailCount} no email
               </span>
             )}
+
+            {/* Spacer — pushes search+sort to right on sm+ */}
+            <div className="flex-1 hidden sm:block min-w-0" />
           </div>
 
-          {/* Divider */}
-          <div className="hidden sm:block w-px h-5 bg-border shrink-0" />
+          {/* Row 2 (mobile): Search left · Sort right */}
+          <div className="flex items-center gap-1.5 sm:contents">
+            {/* Search — flexes to fill remaining space on mobile, capped on sm+ */}
+            <div className="relative flex items-center flex-1 min-w-[100px] sm:flex-none sm:w-44 md:w-52 shrink">
+              <Search className="absolute left-2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+              <Input
+                placeholder="Search…"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-7 sm:pl-8 h-7 sm:h-8 text-[11px] sm:text-xs w-full"
+              />
+            </div>
 
-          {/* Add Doctor — icon-only on mobile */}
-          <Button
-            size="sm"
-            className="gap-1.5 h-7 sm:h-8 text-xs shrink-0 px-2 sm:px-3"
-            onClick={() => setIsAddDoctorOpen(true)}
-            title="Add Doctor"
-          >
-            <UserPlus className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Add Doctor</span>
-          </Button>
-
-          {/* Send Invites — icon-only on mobile */}
-          {doctors.length > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={bulkSending}
-              title="Send Invites"
-              className={cn(
-                "gap-1.5 h-7 sm:h-8 text-xs shrink-0 px-2 sm:px-3",
-                actionableDoctors.length > 0
-                  ? "border-primary text-primary hover:bg-primary/5"
-                  : "text-muted-foreground",
-              )}
-              onClick={() => {
-                if (!surveyDeadline) {
-                  toast.error("Set a survey deadline before sending invites");
-                  return;
-                }
-                setSendMode("never_invited");
-                setSendModalOpen(true);
-              }}
-            >
-              {bulkSending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-              <span className="hidden sm:inline">{bulkSending ? "Sending…" : "Send Invites"}</span>
-            </Button>
-          )}
-
-          {/* No-email warning — inline chip, only on sm+ to save mobile space */}
-          {noEmailCount > 0 && (
-            <span className="hidden sm:inline-flex items-center gap-1 text-[10px] text-amber-600 font-medium shrink-0">
-              <AlertTriangle className="h-3 w-3 shrink-0" />
-              {noEmailCount} no email
-            </span>
-          )}
-
-          {/* Spacer — pushes search+sort to right on sm+ */}
-          <div className="flex-1 hidden sm:block min-w-0" />
-
-          {/* Search — flexes to fill remaining space on mobile, capped on sm+ */}
-          <div className="relative flex items-center flex-1 min-w-[100px] sm:flex-none sm:w-44 md:w-52 shrink">
-            <Search className="absolute left-2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-            <Input
-              placeholder="Search…"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-7 sm:pl-8 h-7 sm:h-8 text-[11px] sm:text-xs w-full"
-            />
+            {/* Sort dropdown — icon-only on mobile */}
+            {doctors.length > 1 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-7 sm:h-8 text-xs gap-1 shrink-0 px-1.5 sm:px-2.5">
+                    <ListFilter className="h-3.5 w-3.5 shrink-0" />
+                    <span className="hidden sm:inline">
+                      {{ surname_asc: "A–Z", surname_desc: "Z–A", status: "Status", grade: "Grade" }[sortKey]}
+                    </span>
+                    <ChevronDown className="hidden sm:inline-block h-3 w-3 opacity-50 shrink-0" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-32 pointer-events-auto">
+                  {(["surname_asc", "surname_desc", "status", "grade"] as const).map((key) => {
+                    const labels: Record<SortKey, string> = {
+                      surname_asc: "A → Z",
+                      surname_desc: "Z → A",
+                      status: "Status",
+                      grade: "Grade",
+                    };
+                    return (
+                      <DropdownMenuItem
+                        key={key}
+                        onClick={() => setSortKey(key)}
+                        className={cn("text-xs cursor-pointer", sortKey === key && "font-semibold text-primary")}
+                      >
+                        <span className="mr-2 w-3 inline-flex shrink-0">
+                          {sortKey === key && <Check className="h-3 w-3 text-primary" />}
+                        </span>
+                        {labels[key]}
+                      </DropdownMenuItem>
+                    );
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
-
-          {/* Sort dropdown — icon-only on mobile */}
-          {doctors.length > 1 && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-7 sm:h-8 text-xs gap-1 shrink-0 px-1.5 sm:px-2.5">
-                  <ListFilter className="h-3.5 w-3.5 shrink-0" />
-                  <span className="hidden sm:inline">
-                    {{ surname_asc: "A–Z", surname_desc: "Z–A", status: "Status", grade: "Grade" }[sortKey]}
-                  </span>
-                  <ChevronDown className="hidden sm:inline-block h-3 w-3 opacity-50 shrink-0" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-32 pointer-events-auto">
-                {(["surname_asc", "surname_desc", "status", "grade"] as const).map((key) => {
-                  const labels: Record<SortKey, string> = {
-                    surname_asc: "A → Z",
-                    surname_desc: "Z → A",
-                    status: "Status",
-                    grade: "Grade",
-                  };
-                  return (
-                    <DropdownMenuItem
-                      key={key}
-                      onClick={() => setSortKey(key)}
-                      className={cn("text-xs cursor-pointer", sortKey === key && "font-semibold text-primary")}
-                    >
-                      <span className="mr-2 w-3 inline-flex shrink-0">
-                        {sortKey === key && <Check className="h-3 w-3 text-primary" />}
-                      </span>
-                      {labels[key]}
-                    </DropdownMenuItem>
-                  );
-                })}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
         </div>
         {/* ── END CONTROL ROW ── */}
 
@@ -1356,7 +1391,9 @@ export default function Roster() {
                     {formatDoctorName(doctor.first_name, doctor.last_name)}
                   </div>
                   {/* Grade */}
-                  <div className="w-16 shrink-0 text-muted-foreground text-xs truncate">{doctor.grade || "—"}</div>
+                  <div className="w-16 shrink-0 text-muted-foreground text-xs truncate">
+                    {doctor.grade || "—"}
+                  </div>
                   {/* Email */}
                   <div className="flex-[2] min-w-0 text-muted-foreground text-xs truncate">
                     {cached?.nhs_email ?? doctor.email ?? "—"}
@@ -1427,10 +1464,7 @@ export default function Roster() {
                       type="button"
                       title="View Profile"
                       className="h-7 w-7 inline-flex items-center justify-center rounded-md text-teal-600 hover:text-teal-700 hover:bg-teal-50 transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/admin/doctor/${doctor.id}`);
-                      }}
+                      onClick={(e) => { e.stopPropagation(); navigate(`/admin/doctor/${doctor.id}`); }}
                     >
                       <User className="h-3.5 w-3.5" />
                     </button>
@@ -1438,10 +1472,7 @@ export default function Roster() {
                       type="button"
                       title="View Calendar"
                       className="h-7 w-7 inline-flex items-center justify-center rounded-md text-teal-600 hover:text-teal-700 hover:bg-teal-50 transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/admin/doctor-calendar/${doctor.id}`);
-                      }}
+                      onClick={(e) => { e.stopPropagation(); navigate(`/admin/doctor-calendar/${doctor.id}`); }}
                     >
                       <CalendarDays className="h-3.5 w-3.5" />
                     </button>
@@ -1482,7 +1513,9 @@ export default function Roster() {
                           <span className="sm:hidden shrink-0 font-medium">{doctor.grade || "—"}</span>
                           <span className="sm:hidden w-1 h-1 rounded-full bg-border shrink-0" />
                           {/* Email */}
-                          <span className="truncate">{cached?.nhs_email ?? doctor.email ?? "No email"}</span>
+                          <span className="truncate">
+                            {cached?.nhs_email ?? doctor.email ?? "No email"}
+                          </span>
                           {/* Phone — sm and up only */}
                           {cached?.phone_number && (
                             <>
@@ -1716,23 +1749,13 @@ export default function Roster() {
 
           <div className="p-6 space-y-5">
             <div className="space-y-2">
-              {[
-                {
-                  mode: "never_invited" as SendMode,
-                  label: "Never invited",
-                  description: "Haven't received a survey link yet",
-                },
-                {
-                  mode: "not_started" as SendMode,
-                  label: "Not started",
-                  description: "Got the link but haven't opened the survey",
-                },
-                {
-                  mode: "in_progress" as SendMode,
-                  label: "In progress — reminder",
-                  description: "Started but haven't submitted yet",
-                },
-              ].map(({ mode, label, description }) => {
+              {(
+                [
+                  { mode: "never_invited" as SendMode, label: "Never invited", description: "Haven't received a survey link yet" },
+                  { mode: "not_started" as SendMode, label: "Not started", description: "Got the link but haven't opened the survey" },
+                  { mode: "in_progress" as SendMode, label: "In progress — reminder", description: "Started but haven't submitted yet" },
+                ]
+              ).map(({ mode, label, description }) => {
                 const count = getSendModeRecipients(mode).length;
                 const isSelected = sendMode === mode;
                 return (
@@ -1742,27 +1765,23 @@ export default function Roster() {
                     onClick={() => setSendMode(mode)}
                     className={cn(
                       "w-full flex items-center justify-between rounded-lg border px-4 py-3 text-left transition-colors",
-                      isSelected ? "border-primary bg-primary/5" : "border-border bg-card hover:bg-muted/40",
+                      isSelected ? "border-primary bg-primary/5" : "border-border bg-card hover:bg-muted/40"
                     )}
                   >
                     <div className="flex items-center gap-3">
-                      <div
-                        className={cn(
-                          "h-4 w-4 rounded-full border-2 shrink-0",
-                          isSelected ? "border-primary bg-primary" : "border-muted-foreground/40",
-                        )}
-                      />
+                      <div className={cn(
+                        "h-4 w-4 rounded-full border-2 shrink-0",
+                        isSelected ? "border-primary bg-primary" : "border-muted-foreground/40"
+                      )} />
                       <div>
                         <p className="text-sm font-semibold text-foreground">{label}</p>
                         <p className="text-xs text-muted-foreground">{description}</p>
                       </div>
                     </div>
-                    <span
-                      className={cn(
-                        "inline-flex items-center justify-center rounded-full px-2 py-0.5 text-xs font-bold min-w-[1.5rem]",
-                        count > 0 ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
-                      )}
-                    >
+                    <span className={cn(
+                      "inline-flex items-center justify-center rounded-full px-2 py-0.5 text-xs font-bold min-w-[1.5rem]",
+                      count > 0 ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                    )}>
                       {count}
                     </span>
                   </button>
@@ -1776,10 +1795,7 @@ export default function Roster() {
                   Recipients ({sendModeRecipients.length})
                 </p>
                 <p className="text-sm text-foreground">
-                  {sendModeRecipients
-                    .slice(0, 5)
-                    .map((d) => `Dr ${d.last_name}`)
-                    .join(", ")}
+                  {sendModeRecipients.slice(0, 5).map((d) => `Dr ${d.last_name}`).join(", ")}
                   {sendModeRecipients.length > 5 && (
                     <span className="text-muted-foreground"> and {sendModeRecipients.length - 5} more</span>
                   )}
@@ -1802,8 +1818,7 @@ export default function Roster() {
               <div className="flex items-start gap-2 text-xs text-amber-600">
                 <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                 <p>
-                  {noEmailCount} doctor{noEmailCount > 1 ? "s have" : " has"} no email address and will not receive an
-                  invite.
+                  {noEmailCount} doctor{noEmailCount > 1 ? "s have" : " has"} no email address and will not receive an invite.
                 </p>
               </div>
             )}
@@ -1817,9 +1832,7 @@ export default function Roster() {
                 onClick={() => handleBulkSend(sendMode)}
               >
                 {bulkSending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin mr-1" /> Sending…
-                  </>
+                  <><Loader2 className="h-4 w-4 animate-spin mr-1" /> Sending…</>
                 ) : (
                   `Send to ${sendModeRecipients.length} doctor${sendModeRecipients.length !== 1 ? "s" : ""}`
                 )}
