@@ -229,36 +229,47 @@ function ReferenceTargetsPanel({ config }: { config: NonNullable<ReturnType<type
             <table className="w-full text-xs border-collapse">
               <thead>
                 <tr className="border-b border-border text-left text-muted-foreground">
-                  {['WTE', 'h/wk', 'Total h', ...shifts.map(s => s.name)].map((h, i) => (
-                    <th key={i} className="py-1.5 px-2 font-medium">{h}</th>
-                  ))}
+                  <th className="py-1.5 px-2 font-medium"></th>
+                  {results.map(({ wte }) => {
+                    const isCustom = wte === safeCustomWte && !wteOptions.includes(wte)
+                    return (
+                      <th key={wte} className={`py-1.5 px-2 font-medium font-mono ${isCustom ? 'text-primary' : ''}`}>
+                        {wte}%{isCustom ? ' ✱' : ''}
+                      </th>
+                    )
+                  })}
                 </tr>
               </thead>
               <tbody>
-                {results.map(({ wte, result }) => {
-                  const isCustom = wte === safeCustomWte && !wteOptions.includes(wte)
-                  return (
-                    <tr key={wte} className={`border-b border-border/50 ${isCustom ? 'bg-primary/5' : ''}`}>
-                      <td className="py-1.5 px-2 font-mono font-medium text-foreground">
-                        {wte}%{isCustom ? ' ✱' : ''}
-                      </td>
-                      <td className="py-1.5 px-2 font-mono text-muted-foreground">
-                        {result ? r1(config.wtr!.maxHoursPerWeek * wte / 100) : '—'}h
-                      </td>
-                      <td className="py-1.5 px-2 font-mono text-foreground">
-                        {result?.totalMaxTargetHours ?? '—'}h
-                      </td>
-                      {shifts.map(s => {
-                        const t = result?.targets.find(x => x.shiftId === s.id)
-                        return (
-                          <td key={s.id} className="py-1.5 px-2 font-mono text-muted-foreground">
-                            {t ? `${t.maxTargetHours}h` : '—'}
-                          </td>
-                        )
-                      })}
-                    </tr>
-                  )
-                })}
+                <tr className="border-b border-border/50">
+                  <td className="py-1.5 px-2 font-medium text-muted-foreground">h/wk</td>
+                  {results.map(({ wte, result }) => (
+                    <td key={wte} className="py-1.5 px-2 font-mono text-muted-foreground">
+                      {result ? r1(config.wtr!.maxHoursPerWeek * wte / 100) : '—'}h
+                    </td>
+                  ))}
+                </tr>
+                <tr className="border-b border-border/50">
+                  <td className="py-1.5 px-2 font-medium text-muted-foreground">Total h</td>
+                  {results.map(({ wte, result }) => (
+                    <td key={wte} className="py-1.5 px-2 font-mono text-foreground">
+                      {result?.totalMaxTargetHours ?? '—'}h
+                    </td>
+                  ))}
+                </tr>
+                {shifts.map(s => (
+                  <tr key={s.id} className="border-b border-border/50">
+                    <td className="py-1.5 px-2 font-medium text-foreground">{s.name}</td>
+                    {results.map(({ wte, result }) => {
+                      const t = result?.targets.find(x => x.shiftId === s.id)
+                      return (
+                        <td key={wte} className="py-1.5 px-2 font-mono text-muted-foreground">
+                          {t ? `${t.maxTargetHours}h` : '—'}
+                        </td>
+                      )
+                    })}
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
