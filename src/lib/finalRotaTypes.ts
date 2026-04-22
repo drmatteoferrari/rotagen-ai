@@ -1,0 +1,116 @@
+// src/lib/finalRotaTypes.ts
+// Internal working types for the final rota algorithm (spec v2.9 §4.1).
+// These never cross the Web Worker boundary and are not persisted.
+// Public output types live in src/types/finalRota.ts.
+//
+// Per spec Note 35: algorithm internal modules import from this file only.
+// They must not import from @/types/finalRota.ts — working state must never
+// be shaped by what the UI currently happens to render.
+//
+// No imports from React, Supabase, or any browser API. Node-runnable.
+
+// ─── AvailabilityStatus ────────────────────────────────────────
+
+export type AvailabilityStatus =
+  | 'available'
+  | 'annual_leave'
+  | 'sick'
+  | 'bank_holiday'
+  | 'ltft_off'
+  | 'rotation'
+  | 'parental'
+  | 'study'
+  | 'blocked'
+  | 'noc';
+
+// ─── AvailabilityMatrix ────────────────────────────────────────
+
+// Outer key = doctorId, inner key = ISO date 'YYYY-MM-DD'.
+export type AvailabilityMatrix = Record<string, Record<string, AvailabilityStatus>>;
+
+// ─── InternalDayAssignment ─────────────────────────────────────
+// Richer than the public DayAssignment: carries fields needed for WTR
+// arithmetic (Unix ms timestamps), block tracking (blockId), and audit
+// (violations). Projected to DayAssignment at the boundary in Stage 3i.
+
+export interface InternalDayAssignment {
+  doctorId: string;
+  shiftKey: string;
+  shiftId: string;
+  slotIndex: number;
+  slotLabel: string | null;
+  durationHours: number;
+  startTime: string;              // "HH:MM"
+  endTime: string;                // "HH:MM"
+  shiftStartMs: number;           // Unix ms, UTC
+  shiftEndMs: number;              // Unix ms, UTC
+  isNightShift: boolean;
+  isOncall: boolean;
+  isLong: boolean;
+  blockId: string | null;         // same id for all nights in a block; null for day shifts
+  badges: string[];
+  violations: string[];           // audit-only rule IDs; never a hard failure
+}
+
+// ─── RestBlock ─────────────────────────────────────────────────
+
+export interface RestBlock {
+  startIso: string;
+  endUntilMs: number;             // Unix ms; doctor cannot be assigned before this point
+}
+
+// ─── DoctorState ───────────────────────────────────────────────
+// Mutable per-doctor construction state. Cloned per Monte Carlo iteration.
+
+export interface DoctorState {
+  doctorId: string;
+  assignments: InternalDayAssignment[];
+  restUntilMs: number;
+  weeklyHoursUsed: Record<string, number>;      // ISO week key 'YYYY-WNN' → hours
+  consecutiveShiftDates: string[];
+  consecutiveNightDates: string[];
+  consecutiveLongDates: string[];
+  weekendDatesWorked: string[];
+  nightBlockHistory: string[][];                // each inner array = one completed block
+  oncallDatesLast7: string[];
+  bucketHoursUsed: { oncall: number; nonOncall: number };
+  lieuDatesStaged: string[];                    // G55–G57 obligations pending commit
+}
+
+// ─── BucketFloors ──────────────────────────────────────────────
+// Key = doctorId. Values = minimum hours required per bucket after leave
+// deduction. Consumed by the Phase 0 V1 guard (§5.0).
+
+export type BucketFloors = Record<string, { oncall: number; nonOncall: number }>;
+
+// ─── UnfilledSlot ──────────────────────────────────────────────
+
+export interface UnfilledSlot {
+  date: string;                   // ISO date 'YYYY-MM-DD'
+  shiftKey: string;
+  slotIndex: number;
+  isCritical: boolean;            // true if slot count < staffing.min
+}
+
+// ─── IterationResult ───────────────────────────────────────────
+
+export interface IterationResult {
+  assignments: Record<string, InternalDayAssignment[]>;  // ISO date → assignments
+  doctorStates: DoctorState[];
+  unfilledSlots: UnfilledSlot[];
+}
+
+// ─── CheckResult ───────────────────────────────────────────────
+
+export interface CheckResult {
+  pass: boolean;
+  failedRule?: string;
+  reason?: string;
+}
+
+// ─── ShiftCandidate ────────────────────────────────────────────
+
+export interface ShiftCandidate {
+  doctorId: string;
+  fairnessScore: number;          // lower = more under-target = higher priority
+}
