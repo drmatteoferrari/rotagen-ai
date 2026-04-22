@@ -1496,14 +1496,6 @@ export default function Roster() {
                       )}
                     </div>
 
-                    {/* Survey status icon */}
-                    <div className="shrink-0">
-                      {doctor.survey_status === "submitted" && <Check className="h-4 w-4 text-emerald-600" />}
-                      {doctor.survey_status === "in_progress" && <Pencil className="h-4 w-4 text-amber-600" />}
-                      {(!doctor.survey_status || doctor.survey_status === "not_started") && (
-                        <CircleDashed className="h-4 w-4 text-muted-foreground" />
-                      )}
-                    </div>
                     {/* Invite counter icon */}
                     {(doctor.survey_invite_count ?? 0) > 0 && (
                       <span
