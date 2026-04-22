@@ -1345,7 +1345,7 @@ export default function Roster() {
         {/* ── END CONTROL ROW ── */}
 
         {/* Main List Container */}
-        <div className="space-y-2 lg:space-y-0 lg:divide-y lg:divide-border lg:rounded-lg lg:border lg:border-border lg:overflow-hidden lg:bg-card">
+        <div className="space-y-2">
           {loading && (
             <div className="flex justify-center py-8">
               <Loader2 className="h-5 w-5 animate-spin" />
@@ -1378,106 +1378,152 @@ export default function Roster() {
             return (
               <div
                 key={doctor.id}
-                className={cn(
-                  "bg-card",
-                  // Mobile/tablet: each doctor is its own card
-                  "rounded-lg border border-border overflow-hidden lg:rounded-none lg:border-0 lg:overflow-visible",
-                )}
+                className="bg-card rounded-lg border border-border overflow-hidden"
               >
-                {/* ── Desktop Row (lg and up) ── no collapse, full 1-line view */}
-                <div className="hidden lg:flex items-center gap-2 py-2.5 px-4 w-full min-w-0 overflow-hidden text-sm hover:bg-muted/30 transition-colors group">
-                  {/* Name */}
-                  <div className="flex-[2] min-w-0 font-semibold truncate text-[13px]">
-                    {formatDoctorName(doctor.first_name, doctor.last_name)}
-                  </div>
-                  {/* Grade */}
-                  <div className="w-16 shrink-0 text-muted-foreground text-xs truncate">
-                    {doctor.grade || "—"}
-                  </div>
-                  {/* Email */}
-                  <div className="flex-[2] min-w-0 text-muted-foreground text-xs truncate">
-                    {cached?.nhs_email ?? doctor.email ?? "—"}
-                  </div>
-                  {/* Phone */}
-                  <div className="w-24 shrink-0 text-muted-foreground text-xs truncate">
-                    {cached?.phone_number ?? "—"}
-                  </div>
-                  {/* WTE */}
-                  <div className="w-16 shrink-0 text-muted-foreground text-xs">
-                    {cached ? `${cached.wte_percent ?? 100}%` : "—"}
-                  </div>
-                  {/* Competencies */}
-                  <div className="w-[15%] min-w-[100px] flex flex-wrap gap-0.5 items-center">
-                    {cached &&
-                      (["iac", "iaoc", "icu", "transfer"] as const).map((k) => {
-                        const achieved = cached[`${k}_achieved`] ?? cached.competencies_json?.[k]?.achieved;
-                        const working = cached[`${k}_working`] ?? cached.competencies_json?.[k]?.workingTowards;
-                        const label = k === "transfer" ? "TR" : k.toUpperCase();
-                        const colour =
-                          achieved === true
-                            ? "bg-emerald-100 text-emerald-700"
-                            : working === true
-                              ? "bg-amber-100 text-amber-700"
-                              : "bg-red-100 text-red-700";
+                {/* ── Desktop Row (lg and up) ── card-style with collapse/expand */}
+                <div className="hidden lg:block">
+                  <div
+                    className="flex items-center gap-2 py-2.5 px-4 w-full min-w-0 text-sm hover:bg-muted/30 transition-colors cursor-pointer select-none"
+                    onClick={() => toggleExpand(doctor.id)}
+                  >
+                    {/* Survey status icon */}
+                    <div className="shrink-0">
+                      {doctor.survey_status === "submitted" && <Check className="h-4 w-4 text-emerald-600" />}
+                      {doctor.survey_status === "in_progress" && <Pencil className="h-4 w-4 text-amber-600" />}
+                      {(!doctor.survey_status || doctor.survey_status === "not_started") && (
+                        <CircleDashed className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </div>
+
+                    {/* Name */}
+                    <div className="flex-1 min-w-0 font-semibold truncate text-[13px]" style={{maxWidth: '500px'}}>
+                      {formatDoctorName(doctor.first_name, doctor.last_name)}
+                    </div>
+
+                    {/* Grade */}
+                    <div className="shrink-0 text-muted-foreground text-xs truncate" style={{width: '80px'}}>
+                      {doctor.grade || "—"}
+                    </div>
+
+                    {/* Email */}
+                    <div className="flex-1 min-w-0 text-muted-foreground text-xs truncate" style={{maxWidth: '340px'}}>
+                      {cached?.nhs_email ?? doctor.email ?? "—"}
+                    </div>
+
+                    {/* Phone — xl+ */}
+                    <div className="hidden xl:block w-28 shrink-0 text-muted-foreground text-xs truncate">
+                      {cached?.phone_number ?? "—"}
+                    </div>
+
+                    {/* WTE — xl+ */}
+                    <div className="hidden xl:block w-12 shrink-0 text-muted-foreground text-xs">
+                      {cached ? `${cached.wte_percent ?? 100}%` : "—"}
+                    </div>
+
+                    {/* Spacer — pushes competencies + status/actions to right edge */}
+                    <div className="flex-1" />
+
+                    {/* Competencies */}
+                    <div className="flex flex-wrap gap-1 items-center shrink-0 mr-2">
+                      {cached
+                        ? (["iac", "iaoc", "icu", "transfer"] as const).map((k) => {
+                            const achieved = cached[`${k}_achieved`] ?? cached.competencies_json?.[k]?.achieved;
+                            const working = cached[`${k}_working`] ?? cached.competencies_json?.[k]?.workingTowards;
+                            const label = k === "transfer" ? "TR" : k.toUpperCase();
+                            const colour =
+                              achieved === true
+                                ? "bg-emerald-100 text-emerald-700"
+                                : working === true
+                                  ? "bg-amber-100 text-amber-700"
+                                  : "bg-red-100 text-red-700";
+                            return (
+                              <span key={k} className={`px-1.5 py-0.5 rounded text-[9px] font-bold leading-tight ${colour}`}>
+                                {label}
+                              </span>
+                            );
+                          })
+                        : <span className="text-[11px] text-muted-foreground/50">—</span>}
+                    </div>
+
+                    {/* Survey status badge */}
+                    <div className="w-24 shrink-0">
+                      {doctor.survey_status === "submitted" && (
+                        <Badge className="bg-emerald-500/15 text-emerald-600 border-emerald-500/20 shadow-none pointer-events-none text-[10px] px-1.5 py-0">
+                          Submitted
+                        </Badge>
+                      )}
+                      {doctor.survey_status === "in_progress" && (
+                        <Badge className="bg-amber-500/15 text-amber-600 border-amber-500/20 shadow-none pointer-events-none text-[10px] px-1.5 py-0">
+                          In Progress
+                        </Badge>
+                      )}
+                      {(!doctor.survey_status || doctor.survey_status === "not_started") && (
+                        <Badge className="bg-muted text-muted-foreground border-border shadow-none pointer-events-none text-[10px] px-1.5 py-0">
+                          Not Started
+                        </Badge>
+                      )}
+                    </div>
+
+                    {/* Actions — stop propagation so clicks don't toggle expand */}
+                    <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                      {/* Send survey button */}
+                      {(() => {
+                        const sendState = getSendIconState(doctor);
                         return (
-                          <span key={k} className={`px-1 py-0.5 rounded text-[8px] font-bold leading-tight ${colour}`}>
-                            {label}
-                          </span>
+                          <button
+                            type="button"
+                            title={sendState.disabled ? sendState.tooltip : (doctor.survey_invite_sent_at ? "Resend survey" : "Send survey")}
+                            disabled={sendState.disabled}
+                            className="relative h-8 w-8 inline-flex items-center justify-center rounded-md text-teal-600 hover:text-teal-700 hover:bg-teal-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                            onClick={() => setDoctorToSend(doctor)}
+                          >
+                            <Send className="h-4 w-4" />
+                            {(doctor.survey_invite_count ?? 0) > 0 && (
+                              <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-primary text-[7px] font-bold text-primary-foreground leading-none pointer-events-none">
+                                {(doctor.survey_invite_count ?? 0) > 9 ? "9+" : doctor.survey_invite_count}
+                              </span>
+                            )}
+                          </button>
                         );
-                      })}
-                  </div>
-                  {/* Survey status */}
-                  <div className="w-20 shrink-0">
-                    {doctor.survey_status === "submitted" && (
-                      <Badge className="bg-emerald-500/15 text-emerald-600 border-emerald-500/20 shadow-none pointer-events-none text-[10px] px-1.5 py-0">
-                        Submitted
-                      </Badge>
-                    )}
-                    {doctor.survey_status === "in_progress" && (
-                      <Badge className="bg-amber-500/15 text-amber-600 border-amber-500/20 shadow-none pointer-events-none text-[10px] px-1.5 py-0">
-                        In Progress
-                      </Badge>
-                    )}
-                    {(!doctor.survey_status || doctor.survey_status === "not_started") && (
-                      <Badge className="bg-muted text-muted-foreground border-border shadow-none pointer-events-none text-[10px] px-1.5 py-0">
-                        Not Started
-                      </Badge>
-                    )}
-                  </div>
-                  {/* Invite counter icon — fixed width, no layout shift */}
-                  <div className="w-7 shrink-0 flex items-center justify-center">
-                    {(doctor.survey_invite_count ?? 0) > 0 && (
-                      <span
-                        title={`${doctor.survey_invite_count} invite${doctor.survey_invite_count !== 1 ? "s" : ""} sent`}
-                        className="relative inline-flex items-center justify-center h-6 w-6"
+                      })()}
+                      <button
+                        type="button"
+                        title="View Profile"
+                        className="h-8 w-8 inline-flex items-center justify-center rounded-md text-teal-600 hover:text-teal-700 hover:bg-teal-50 transition-colors"
+                        onClick={() => navigate(`/admin/doctor/${doctor.id}`)}
                       >
-                        <Send className="h-3 w-3 text-muted-foreground/50" />
-                        <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-primary text-[7px] font-bold text-primary-foreground leading-none">
-                          {(doctor.survey_invite_count ?? 0) > 9 ? "9+" : doctor.survey_invite_count}
-                        </span>
-                      </span>
-                    )}
+                        <User className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        title="View Calendar"
+                        className="h-8 w-8 inline-flex items-center justify-center rounded-md text-teal-600 hover:text-teal-700 hover:bg-teal-50 transition-colors"
+                        onClick={() => navigate(`/admin/doctor-calendar/${doctor.id}`)}
+                      >
+                        <CalendarDays className="h-4 w-4" />
+                      </button>
+                      {renderDoctorMenu(doctor)}
+                    </div>
+
+                    {/* Chevron */}
+                    {isExpanded
+                      ? <ChevronUp className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                      : <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />}
                   </div>
-                  {/* Actions */}
-                  <div className="flex items-center gap-1 shrink-0">
-                    <button
-                      type="button"
-                      title="View Profile"
-                      className="h-7 w-7 inline-flex items-center justify-center rounded-md text-teal-600 hover:text-teal-700 hover:bg-teal-50 transition-colors"
-                      onClick={(e) => { e.stopPropagation(); navigate(`/admin/doctor/${doctor.id}`); }}
-                    >
-                      <User className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      title="View Calendar"
-                      className="h-7 w-7 inline-flex items-center justify-center rounded-md text-teal-600 hover:text-teal-700 hover:bg-teal-50 transition-colors"
-                      onClick={(e) => { e.stopPropagation(); navigate(`/admin/doctor-calendar/${doctor.id}`); }}
-                    >
-                      <CalendarDays className="h-3.5 w-3.5" />
-                    </button>
-                    {renderDoctorMenu(doctor)}
-                  </div>
+
+                  {/* Expanded detail panel */}
+                  {isExpanded && (
+                    <div className="px-4 pb-3 pt-2 border-t border-border">
+                      <ExpandedDoctorPanel
+                        doctor={doctor}
+                        surveyData={cached}
+                        isLoading={surveyLoading[doctor.id] ?? false}
+                        invitedAt={doctor.survey_invite_sent_at}
+                        onNavigateProfile={() => navigate(`/admin/doctor/${doctor.id}`)}
+                        onNavigateCalendar={() => navigate(`/admin/doctor-calendar/${doctor.id}`)}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* ── Mobile/Tablet Row (below lg) ── */}
