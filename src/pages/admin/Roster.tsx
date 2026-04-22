@@ -1212,6 +1212,14 @@ export default function Roster() {
               </Popover>
             </div>
 
+            {/* Desktop/tablet: passed warning right next to date selector */}
+            {deadlineIsPast && (
+              <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-amber-100 border border-amber-300 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 shrink-0">
+                <AlertTriangle className="h-3 w-3 shrink-0" />
+                Deadline passed
+              </span>
+            )}
+
             {/* Divider */}
             <div className="hidden sm:block w-px h-5 bg-border shrink-0" />
 
