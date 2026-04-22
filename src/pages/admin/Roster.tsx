@@ -1182,7 +1182,7 @@ export default function Roster() {
             {/* Deadline picker */}
             <div className="flex items-center gap-1 shrink-0">
               <CalendarIcon className="hidden sm:block h-3.5 w-3.5 text-primary shrink-0" />
-              <span className="sm:hidden text-[11px] font-medium text-muted-foreground shrink-0">Deadline</span>
+              <span className="text-[11px] sm:text-xs font-medium text-muted-foreground shrink-0">Deadline</span>
               <Popover open={deadlineOpen} onOpenChange={setDeadlineOpen} modal={false}>
                 <PopoverTrigger asChild>
                   <Button
