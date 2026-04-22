@@ -1176,101 +1176,116 @@ export default function Roster() {
         )}
 
         {/* ── CONTROL ROW: Deadline · Add · Send · Search · Sort ── */}
-        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-          {/* Deadline picker */}
-          <div className="flex items-center gap-1 shrink-0">
-            <CalendarIcon className="hidden sm:block h-3.5 w-3.5 text-primary shrink-0" />
-            <Popover open={deadlineOpen} onOpenChange={setDeadlineOpen} modal={false}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className={cn(
-                    "h-7 sm:h-8 text-[11px] sm:text-xs font-normal px-2 sm:px-3 gap-1.5 min-w-0 sm:min-w-[110px] sm:max-w-[160px] justify-start",
-                    !surveyDeadline && "text-muted-foreground",
-                  )}
-                >
-                  <CalendarIcon className="sm:hidden h-3.5 w-3.5 text-primary shrink-0" />
-                  <span className="truncate">
-                    {surveyDeadline ? format(surveyDeadline, "d MMM yyyy") : "Set deadline"}
-                  </span>
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
-                <Calendar
-                  mode="single"
-                  selected={surveyDeadline}
-                  onSelect={handleDeadlineSelect}
-                  disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                  initialFocus
-                  className="p-3 pointer-events-auto"
-                />
-              </PopoverContent>
-            </Popover>
+        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-1.5 sm:gap-2">
+          {/* Row 1 (mobile): Deadline label + picker · Add · Send · passed warning */}
+          <div className="flex items-center gap-1.5 sm:contents">
+            {/* Deadline picker */}
+            <div className="flex items-center gap-1 shrink-0">
+              <CalendarIcon className="hidden sm:block h-3.5 w-3.5 text-primary shrink-0" />
+              <span className="sm:hidden text-[11px] font-medium text-muted-foreground shrink-0">Deadline</span>
+              <Popover open={deadlineOpen} onOpenChange={setDeadlineOpen} modal={false}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={cn(
+                      "h-7 sm:h-8 text-[11px] sm:text-xs font-normal px-2 sm:px-3 gap-1.5 min-w-0 sm:min-w-[110px] sm:max-w-[160px] justify-start",
+                      !surveyDeadline && "text-muted-foreground",
+                    )}
+                  >
+                    <CalendarIcon className="sm:hidden h-3.5 w-3.5 text-primary shrink-0" />
+                    <span className="truncate">
+                      {surveyDeadline ? format(surveyDeadline, "d MMM yyyy") : "Set deadline"}
+                    </span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={surveyDeadline}
+                    onSelect={handleDeadlineSelect}
+                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                    initialFocus
+                    className="p-3 pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* Divider */}
+            <div className="hidden sm:block w-px h-5 bg-border shrink-0" />
+
+            {/* Add Doctor — icon-only on mobile */}
+            <Button
+              size="sm"
+              className="gap-1.5 h-7 sm:h-8 text-xs shrink-0 px-2 sm:px-3"
+              onClick={() => setIsAddDoctorOpen(true)}
+              title="Add Doctor"
+            >
+              <UserPlus className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Add Doctor</span>
+            </Button>
+
+            {/* Send Invites — icon-only on mobile */}
+            {doctors.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={bulkSending}
+                title="Send Invites"
+                className={cn(
+                  "gap-1.5 h-7 sm:h-8 text-xs shrink-0 px-2 sm:px-3",
+                  actionableDoctors.length > 0
+                    ? "border-primary text-primary hover:bg-primary/5"
+                    : "text-muted-foreground",
+                )}
+                onClick={() => {
+                  if (!surveyDeadline) {
+                    toast.error("Set a survey deadline before sending invites");
+                    return;
+                  }
+                  setSendMode("never_invited");
+                  setSendModalOpen(true);
+                }}
+              >
+                {bulkSending ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Send className="h-3.5 w-3.5" />
+                )}
+                <span className="hidden sm:inline">{bulkSending ? "Sending…" : "Send Invites"}</span>
+              </Button>
+            )}
+
+            {/* Mobile: centered "passed" warning between buttons and right edge */}
             {deadlineIsPast && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 border border-amber-300 px-1.5 py-0.5 text-[9px] sm:text-[10px] font-semibold text-amber-700 shrink-0">
-                <AlertTriangle className="h-3 w-3 shrink-0" />
-                <span className="hidden sm:inline">Deadline passed</span>
-                <span className="sm:hidden">Passed</span>
+              <span className="sm:hidden flex-1 flex justify-center">
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 border border-amber-300 px-1.5 py-0.5 text-[9px] font-semibold text-amber-700">
+                  <AlertTriangle className="h-3 w-3 shrink-0" />
+                  Passed
+                </span>
               </span>
             )}
+
+            {/* Desktop/tablet: passed warning inline after buttons */}
+            {deadlineIsPast && (
+              <span className="hidden sm:inline-flex items-center gap-1 rounded-full bg-amber-100 border border-amber-300 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 shrink-0">
+                <AlertTriangle className="h-3 w-3 shrink-0" />
+                Deadline passed
+              </span>
+            )}
+
+            {/* No-email warning — inline chip, only on sm+ to save mobile space */}
+            {noEmailCount > 0 && (
+              <span className="hidden sm:inline-flex items-center gap-1 text-[10px] text-amber-600 font-medium shrink-0">
+                <AlertTriangle className="h-3 w-3 shrink-0" />
+                {noEmailCount} no email
+              </span>
+            )}
+
+            {/* Spacer — pushes search+sort to right on sm+ */}
+            <div className="flex-1 hidden sm:block min-w-0" />
           </div>
-
-          {/* Divider */}
-          <div className="hidden sm:block w-px h-5 bg-border shrink-0" />
-
-          {/* Add Doctor — icon-only on mobile */}
-          <Button
-            size="sm"
-            className="gap-1.5 h-7 sm:h-8 text-xs shrink-0 px-2 sm:px-3"
-            onClick={() => setIsAddDoctorOpen(true)}
-            title="Add Doctor"
-          >
-            <UserPlus className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Add Doctor</span>
-          </Button>
-
-          {/* Send Invites — icon-only on mobile */}
-          {doctors.length > 0 && (
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={bulkSending}
-              title="Send Invites"
-              className={cn(
-                "gap-1.5 h-7 sm:h-8 text-xs shrink-0 px-2 sm:px-3",
-                actionableDoctors.length > 0
-                  ? "border-primary text-primary hover:bg-primary/5"
-                  : "text-muted-foreground",
-              )}
-              onClick={() => {
-                if (!surveyDeadline) {
-                  toast.error("Set a survey deadline before sending invites");
-                  return;
-                }
-                setSendMode("never_invited");
-                setSendModalOpen(true);
-              }}
-            >
-              {bulkSending ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Send className="h-3.5 w-3.5" />
-              )}
-              <span className="hidden sm:inline">{bulkSending ? "Sending…" : "Send Invites"}</span>
-            </Button>
-          )}
-
-          {/* No-email warning — inline chip, only on sm+ to save mobile space */}
-          {noEmailCount > 0 && (
-            <span className="hidden sm:inline-flex items-center gap-1 text-[10px] text-amber-600 font-medium shrink-0">
-              <AlertTriangle className="h-3 w-3 shrink-0" />
-              {noEmailCount} no email
-            </span>
-          )}
-
-          {/* Spacer — pushes search+sort to right on sm+ */}
-          <div className="flex-1 hidden sm:block min-w-0" />
 
           {/* Search — flexes to fill remaining space on mobile, capped on sm+ */}
           <div className="relative flex items-center flex-1 min-w-[100px] sm:flex-none sm:w-44 md:w-52 shrink">
