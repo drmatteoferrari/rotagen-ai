@@ -1323,7 +1323,7 @@ export default function Roster() {
         {/* ── END CONTROL ROW ── */}
 
         {/* Main List Container */}
-        <div className="space-y-0 divide-y divide-border rounded-lg border border-border overflow-hidden bg-card">
+        <div className="space-y-2 lg:space-y-0 lg:divide-y lg:divide-border lg:rounded-lg lg:border lg:border-border lg:overflow-hidden lg:bg-card">
           {loading && (
             <div className="flex justify-center py-8">
               <Loader2 className="h-5 w-5 animate-spin" />
@@ -1352,9 +1352,18 @@ export default function Roster() {
           {sortedDoctors.map((doctor) => {
             const isExpanded = expandedIds.has(doctor.id);
             const cached = surveyCache[doctor.id];
+            const isLtft = (cached?.wte_percent ?? 100) < 100;
 
             return (
-              <div key={doctor.id} className="bg-card">
+              <div
+                key={doctor.id}
+                className={cn(
+                  "bg-card",
+                  // Mobile/tablet: each doctor is its own card
+                  "rounded-lg border overflow-hidden lg:rounded-none lg:border-0 lg:overflow-visible",
+                  isLtft ? "border-amber-300 lg:border-l-0" : "border-border",
+                )}
+              >
                 {/* ── Desktop Row (lg and up) ── no collapse, full 1-line view */}
                 <div className="hidden lg:flex items-center gap-2 py-2.5 px-4 w-full min-w-0 overflow-hidden text-sm hover:bg-muted/30 transition-colors group">
                   {/* Name */}
