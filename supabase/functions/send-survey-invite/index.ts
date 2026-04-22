@@ -3,7 +3,7 @@
 //   Project Settings → Edge Functions → Secrets
 // Or via Lovable Cloud → Backend → Secrets
 
-import { Resend } from "https://esm.sh/resend@4.6.0";
+import { Resend } from "npm:resend@4.6.0";
 
 const ALLOWED_ORIGINS = [
   "https://rotagen.co.uk",
