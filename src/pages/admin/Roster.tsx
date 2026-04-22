@@ -1523,6 +1523,12 @@ export default function Roster() {
                     <div onClick={(e) => e.stopPropagation()} className="shrink-0">
                       {renderDoctorMenu(doctor)}
                     </div>
+                    {/* Explicit expand/collapse cue — moved to right */}
+                    {isExpanded ? (
+                      <ChevronUp className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    )}
                   </div>
 
                   {/* Expanded detail panel */}
