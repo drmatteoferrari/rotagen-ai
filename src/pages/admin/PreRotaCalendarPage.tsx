@@ -1267,7 +1267,11 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
           (o.action === 'add' || o.action === 'modify') &&
           o.startDate <= date && date <= o.endDate
       );
-      if (activeOverrides.length > 1) {
+      const doctor = calendarData?.doctors.find((d) => d.doctorId === doctorId);
+      const isLtftDay = !!doctor && getLtftDaysOff(doctor).includes(getDayNameFromISO(date));
+      // Total selectable items = overrides + (1 if LTFT applies on this day)
+      const totalSelectable = activeOverrides.length + (isLtftDay ? 1 : 0);
+      if (totalSelectable > 1) {
         setPanelOpen(false);
         setSelectedCell(null);
         setPickerAction(action);
@@ -1282,7 +1286,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
         if (action === 'delete') handleActionDelete(doctorId, date, mergedCell);
       }
     },
-    [overrides, mergedAvailabilityByDoctor, handleActionEdit, handleActionCopy, handleActionDelete],
+    [overrides, mergedAvailabilityByDoctor, calendarData, handleActionEdit, handleActionCopy, handleActionDelete],
   );
 
   // CHANGE 6: Immediate open on click; double-tap/double-click navigates to doctor calendar
