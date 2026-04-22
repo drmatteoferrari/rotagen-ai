@@ -38,6 +38,7 @@ import SetupPage from "./pages/admin/SetupPage";
 import DepartmentSummary from "./pages/admin/DepartmentSummary";
 import RotaPeriodSummary from "./pages/admin/RotaPeriodSummary";
 import DoctorProfile from "./pages/admin/DoctorProfile";
+import FinalRota from "./pages/admin/FinalRota";
 import Feedback from "./pages/Feedback";
 import Privacy from "./pages/Privacy";
 import LandingPage from "./pages/LandingPage";
@@ -111,6 +112,7 @@ const App = () => (
             <Route path="/admin/rota-period/summary" element={<RotaPeriodSummary />} />
             <Route path="/admin/wtr/summary" element={<WtrStep5 />} />
             <Route path="/admin/doctor/:doctorId" element={<DoctorProfile />} />
+            <Route path="/admin/final-rota" element={<FinalRota />} />
           </Route>
           {/* Doctor survey — token-based, no auth required */}
           <Route path="/doctor/survey" element={<Survey />} />

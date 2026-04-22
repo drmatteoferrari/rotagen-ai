@@ -609,6 +609,62 @@ export type Database = {
           },
         ]
       }
+      final_rota_results: {
+        Row: {
+          assignments: Json
+          created_at: string | null
+          generated_at: string
+          id: string
+          iterations_completed: number
+          iterations_target: number
+          per_doctor: Json
+          rota_config_id: string
+          runtime_ms: number
+          score: Json
+          status: string
+          swap_log: Json
+          violations: Json
+        }
+        Insert: {
+          assignments?: Json
+          created_at?: string | null
+          generated_at?: string
+          id?: string
+          iterations_completed?: number
+          iterations_target?: number
+          per_doctor?: Json
+          rota_config_id: string
+          runtime_ms?: number
+          score?: Json
+          status: string
+          swap_log?: Json
+          violations?: Json
+        }
+        Update: {
+          assignments?: Json
+          created_at?: string | null
+          generated_at?: string
+          id?: string
+          iterations_completed?: number
+          iterations_target?: number
+          per_doctor?: Json
+          rota_config_id?: string
+          runtime_ms?: number
+          score?: Json
+          status?: string
+          swap_log?: Json
+          violations?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "final_rota_results_rota_config_id_fkey"
+            columns: ["rota_config_id"]
+            isOneToOne: false
+            referencedRelation: "rota_configs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ltft_patterns: {
         Row: {
           can_end_nights: boolean | null

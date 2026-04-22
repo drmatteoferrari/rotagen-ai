@@ -159,7 +159,7 @@ Deno.serve(async (req) => {
 
     const { error } = await resend.emails.send({
       from: "RotaGen <noreply@rotagen.co.uk>",
-      reply_to: "support@rotagen.co.uk",
+      replyTo: "support@rotagen.co.uk",
       to: [to],
       subject,
       html,
@@ -180,8 +180,9 @@ Deno.serve(async (req) => {
     // SECTION 3 COMPLETE
   } catch (err) {
     console.error("Edge function error:", err);
+    const message = err instanceof Error ? err.message : "Unknown error";
     return new Response(
-      JSON.stringify({ success: false, error: err.message ?? "Unknown error" }),
+      JSON.stringify({ success: false, error: message }),
       { status: 500, headers: { ...getCorsHeaders(req), "Content-Type": "application/json" } }
     );
   }
