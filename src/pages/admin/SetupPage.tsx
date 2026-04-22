@@ -26,8 +26,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { generatePreRota } from "@/lib/preRotaGenerator";
-import { buildFinalRotaInput, validateFinalRotaInput } from "@/lib/rotaGenInput";
-import { toast } from "@/hooks/use-toast";
+
 import type { PreRotaResult } from "@/lib/preRotaTypes";
 import { useDoctorsQuery, usePreRotaResultQuery, useInvalidateQuery } from "@/hooks/useAdminQueries";
 import { ResetModal } from "@/components/ResetModal";
@@ -51,7 +50,7 @@ export default function SetupPage() {
   const preRotaResult = localPreRota ?? cachedPreRota ?? null;
   const isStale = preRotaResult?.isStale ?? false;
 
-  const [finalLoading, setFinalLoading] = useState(false);
+  
   const [showFinalChecklist, setShowFinalChecklist] = useState(false);
   const [checklistItems, setChecklistItems] = useState<boolean[]>([false, false, false]);
   const allChecked = checklistItems.every(Boolean);
@@ -74,35 +73,8 @@ export default function SetupPage() {
 
   
 
-  const handleGenerateFinalRota = async () => {
-    if (!currentRotaConfigId) {
-      toast({ title: "No active rota config found", variant: "destructive" });
-      return;
-    }
-    setFinalLoading(true);
-    try {
-      const validation = await validateFinalRotaInput(currentRotaConfigId);
-      if (validation.blockers.length > 0) {
-        toast({ title: "Generation blocked", description: validation.blockers.join("\n"), variant: "destructive" });
-        setFinalLoading(false);
-        return;
-      }
-      if (validation.warnings.length > 0) {
-        toast({
-          title: "Warnings found — proceeding in 2 seconds",
-          description: validation.warnings.slice(0, 5).join("\n"),
-        });
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-      }
-      const result = await buildFinalRotaInput(currentRotaConfigId);
-      console.log("Final rota input:", result);
-      toast({ title: "Final rota input built successfully", description: "Check console for output." });
-    } catch (err: any) {
-      console.error("Final rota build failed:", err);
-      toast({ title: "Final rota build failed", description: err?.message || "Unknown error", variant: "destructive" });
-    } finally {
-      setFinalLoading(false);
-    }
+  const handleGenerateFinalRota = () => {
+    navigate("/admin/final-rota");
   };
 
   const getSurveyStatus = (): { color: string; text: string; shortText: string; bg: string } => {
@@ -508,28 +480,19 @@ export default function SetupPage() {
                 <Button
                   size="lg"
                   className={`w-full h-11 sm:h-12 text-sm relative overflow-hidden group transition-all ${
-                    canGeneratePreRota && preRotaResult && !finalLoading
+                    canGeneratePreRota && preRotaResult
                       ? "bg-primary text-primary-foreground shadow-md hover:shadow-lg"
                       : ""
                   }`}
-                  disabled={!canGeneratePreRota || finalLoading || !preRotaResult}
+                  disabled={!canGeneratePreRota || !preRotaResult}
                   onClick={() => setShowFinalChecklist(true)}
                 >
                   {/* Shimmer — only shown when button is fully active */}
-                  {canGeneratePreRota && preRotaResult && !finalLoading && (
+                  {canGeneratePreRota && preRotaResult && (
                     <div className="absolute inset-0 w-full animate-shimmer-btn bg-gradient-to-r from-transparent via-white/20 to-transparent" />
                   )}
                   <span className="relative z-10 flex items-center justify-center font-bold tracking-wide">
-                    {finalLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> EXECUTING ALGORITHM…
-                      </>
-                    ) : (
-                      <>
-                        <Wand2 className="mr-2 h-4 w-4 group-hover:rotate-12 transition-transform" /> GENERATE FINAL
-                        ROTA
-                      </>
-                    )}
+                    <Wand2 className="mr-2 h-4 w-4 group-hover:rotate-12 transition-transform" /> GENERATE FINAL ROTA
                   </span>
                 </Button>
               </div>
