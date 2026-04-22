@@ -535,6 +535,157 @@ function ActionButtonsPopover({
   );
 }
 
+// ── PickerModal — multi-select checkbox picker for cells with multiple events ──
+// Used when a day has multiple coordinator overrides and/or LTFT day-off,
+// so the coordinator can choose exactly which event(s) the action applies to.
+
+interface PickerItem {
+  kind: 'override' | 'ltft';
+  id: string;
+  label: string;
+  subLabel: string;
+}
+
+function PickerModal({
+  doctorName,
+  items,
+  actionVerb,
+  singleSelect,
+  onCancel,
+  onConfirm,
+}: {
+  doctorName: string;
+  items: PickerItem[];
+  actionVerb: string;
+  singleSelect: boolean;
+  onCancel: () => void;
+  onConfirm: (selectedIds: string[]) => void;
+}) {
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const toggle = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (singleSelect) {
+        next.clear();
+        if (!prev.has(id)) next.add(id);
+      } else {
+        if (next.has(id)) next.delete(id);
+        else next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const canConfirm = selected.size > 0 && (!singleSelect || selected.size === 1);
+
+  return (
+    <div
+      onClick={onCancel}
+      style={{
+        position: 'fixed', inset: 0, zIndex: 200,
+        background: 'rgba(0,0,0,0.35)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '16px',
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: '100%', maxWidth: 360,
+          background: '#fff', borderRadius: '14px',
+          padding: '16px', boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+        }}
+      >
+        <p style={{ fontSize: 13, fontWeight: 700, color: '#1e293b', marginBottom: 4 }}>
+          {doctorName}
+        </p>
+        <p style={{ fontSize: 11, color: '#64748b', marginBottom: 12 }}>
+          {singleSelect
+            ? `Select an event to ${actionVerb}:`
+            : `Select event(s) to ${actionVerb}:`}
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {items.map((item) => {
+            const isChecked = selected.has(item.id);
+            const isLtft = item.kind === 'ltft';
+            return (
+              <div
+                key={item.id}
+                onClick={() => toggle(item.id)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '9px 12px', borderRadius: 8,
+                  background: isChecked ? '#eff6ff' : '#f8fafc',
+                  border: `1px solid ${isChecked ? '#93c5fd' : '#e2e8f0'}`,
+                  cursor: 'pointer',
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={isChecked}
+                  onChange={() => toggle(item.id)}
+                  onClick={(e) => e.stopPropagation()}
+                  style={{ width: 16, height: 16, cursor: 'pointer', accentColor: '#2563eb' }}
+                />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{
+                    fontSize: 12, fontWeight: 600, color: '#1e293b',
+                    margin: 0,
+                  }}>
+                    {item.label}
+                    {isLtft && (
+                      <span style={{
+                        marginLeft: 6, fontSize: 10, fontWeight: 500,
+                        color: '#a16207',
+                        background: '#fef3c7',
+                        padding: '1px 6px', borderRadius: 4,
+                      }}>
+                        recurring
+                      </span>
+                    )}
+                  </p>
+                  <p style={{ fontSize: 10, color: '#64748b', margin: '2px 0 0' }}>
+                    {item.subLabel}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+          <button
+            onClick={onCancel}
+            style={{
+              flex: 1, padding: '8px',
+              fontSize: 12, fontWeight: 500,
+              background: '#fff', border: '1px solid #e2e8f0',
+              borderRadius: 8, cursor: 'pointer', color: '#64748b',
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => canConfirm && onConfirm(Array.from(selected))}
+            disabled={!canConfirm}
+            style={{
+              flex: 1, padding: '8px',
+              fontSize: 12, fontWeight: 600,
+              background: canConfirm ? '#2563eb' : '#cbd5e1',
+              border: 'none',
+              borderRadius: 8,
+              cursor: canConfirm ? 'pointer' : 'not-allowed',
+              color: '#fff',
+            }}
+          >
+            Confirm{selected.size > 1 ? ` (${selected.size})` : ''}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function PreRotaCalendarPage({ embedded = false }: { embedded?: boolean }) {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -1267,7 +1418,11 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
           (o.action === 'add' || o.action === 'modify') &&
           o.startDate <= date && date <= o.endDate
       );
-      if (activeOverrides.length > 1) {
+      const doctor = calendarData?.doctors.find((d) => d.doctorId === doctorId);
+      const isLtftDay = !!doctor && getLtftDaysOff(doctor).includes(getDayNameFromISO(date));
+      // Total selectable items = overrides + (1 if LTFT applies on this day)
+      const totalSelectable = activeOverrides.length + (isLtftDay ? 1 : 0);
+      if (totalSelectable > 1) {
         setPanelOpen(false);
         setSelectedCell(null);
         setPickerAction(action);
@@ -1282,7 +1437,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
         if (action === 'delete') handleActionDelete(doctorId, date, mergedCell);
       }
     },
-    [overrides, mergedAvailabilityByDoctor, handleActionEdit, handleActionCopy, handleActionDelete],
+    [overrides, mergedAvailabilityByDoctor, calendarData, handleActionEdit, handleActionCopy, handleActionDelete],
   );
 
   // CHANGE 6: Immediate open on click; double-tap/double-click navigates to doctor calendar
@@ -2486,86 +2641,80 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
             (o.action === 'add' || o.action === 'modify') &&
             o.startDate <= date && date <= o.endDate
         );
-        const doctorName =
-          calendarData?.doctors
-            .find((d) => d.doctorId === doctorId)
-            ?.doctorName.replace('Dr ', '') ?? '';
+        const doctor = calendarData?.doctors.find((d) => d.doctorId === doctorId);
+        const isLtftDay = !!doctor && getLtftDaysOff(doctor).includes(getDayNameFromISO(date));
+        const doctorName = doctor?.doctorName.replace('Dr ', '') ?? '';
+        // Build list of selectable items: overrides first, then synthetic LTFT entry
+        type PickerItem =
+          | { kind: 'override'; id: string; label: string; subLabel: string }
+          | { kind: 'ltft'; id: string; label: string; subLabel: string };
+        const items: PickerItem[] = [
+          ...activeOverrides.map((ov) => ({
+            kind: 'override' as const,
+            id: ov.id,
+            label: ov.eventType,
+            subLabel:
+              ov.startDate === ov.endDate
+                ? ov.startDate
+                : `${ov.startDate} \u2013 ${ov.endDate}`,
+          })),
+          ...(isLtftDay
+            ? [{
+                kind: 'ltft' as const,
+                id: 'ltft',
+                label: 'LTFT day off',
+                subLabel: getDayNameFromISO(date),
+              }]
+            : []),
+        ];
+
+        const isEdit = pickerAction === 'edit';
+        const actionVerb = pickerAction === 'edit' ? 'edit' : pickerAction === 'copy' ? 'copy' : 'remove';
+
         return (
-          <div
-            onClick={() => { setPickerAction(null); setPickerCell(null); }}
-            style={{
-              position: 'fixed', inset: 0, zIndex: 200,
-              background: 'rgba(0,0,0,0.35)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              padding: '16px',
+          <PickerModal
+            doctorName={doctorName}
+            items={items}
+            actionVerb={actionVerb}
+            singleSelect={isEdit}
+            onCancel={() => { setPickerAction(null); setPickerCell(null); }}
+            onConfirm={(selectedIds) => {
+              const action = pickerAction;
+              setPickerAction(null);
+              setPickerCell(null);
+              for (const id of selectedIds) {
+                if (id === 'ltft') {
+                  const syntheticCell: MergedCell = {
+                    primary: 'LTFT' as CellCode,
+                    secondary: null,
+                    label: 'LTFT',
+                    overrideId: null,
+                    overrideAction: null,
+                    isDeleted: false,
+                    deletedCode: null,
+                  };
+                  if (action === 'edit') handleActionEdit(doctorId, date, syntheticCell);
+                  if (action === 'copy') handleActionCopy(doctorId, date, syntheticCell);
+                  if (action === 'delete') handleActionDelete(doctorId, date, syntheticCell);
+                } else {
+                  const ov = activeOverrides.find((o) => o.id === id);
+                  if (!ov) continue;
+                  const syntheticCell: MergedCell = {
+                    primary: ov.eventType,
+                    secondary: null,
+                    label: ov.eventType,
+                    overrideId: ov.id,
+                    overrideAction: ov.action as 'add' | 'modify',
+                    isDeleted: false,
+                    deletedCode: null,
+                  };
+                  if (action === 'edit') handleActionEdit(doctorId, date, syntheticCell);
+                  if (action === 'copy') handleActionCopy(doctorId, date, syntheticCell);
+                  if (action === 'delete') handleActionDelete(doctorId, date, syntheticCell);
+                }
+              }
             }}
-          >
-            <div
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                width: '100%', maxWidth: 340,
-                background: '#fff', borderRadius: '14px',
-                padding: '16px', boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
-              }}
-            >
-              <p style={{ fontSize: 13, fontWeight: 700, color: '#1e293b', marginBottom: 4 }}>
-                {doctorName}
-              </p>
-              <p style={{ fontSize: 11, color: '#64748b', marginBottom: 12 }}>
-                Select event to {pickerAction}:
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {activeOverrides.map((ov) => {
-                  const rangeLabel =
-                    ov.startDate === ov.endDate
-                      ? ov.startDate
-                      : `${ov.startDate} \u2013 ${ov.endDate}`;
-                  return (
-                    <button
-                      key={ov.id}
-                      onClick={() => {
-                        const action = pickerAction;
-                        setPickerAction(null);
-                        setPickerCell(null);
-                        const syntheticCell: MergedCell = {
-                          primary: ov.eventType,
-                          secondary: null,
-                          label: ov.eventType,
-                          overrideId: ov.id,
-                          overrideAction: ov.action as 'add' | 'modify',
-                          isDeleted: false,
-                          deletedCode: null,
-                        };
-                        if (action === 'edit') handleActionEdit(doctorId, date, syntheticCell);
-                        if (action === 'copy') handleActionCopy(doctorId, date, syntheticCell);
-                        if (action === 'delete') handleActionDelete(doctorId, date, syntheticCell);
-                      }}
-                      style={{
-                        padding: '9px 14px', borderRadius: 8,
-                        fontSize: 12, fontWeight: 600,
-                        background: '#f8fafc', border: '1px solid #e2e8f0',
-                        cursor: 'pointer', textAlign: 'left', color: '#1e293b',
-                        width: '100%',
-                      }}
-                    >
-                      {ov.eventType} · {rangeLabel}
-                    </button>
-                  );
-                })}
-              </div>
-              <button
-                onClick={() => { setPickerAction(null); setPickerCell(null); }}
-                style={{
-                  marginTop: 12, width: '100%', padding: '8px',
-                  fontSize: 12, fontWeight: 500,
-                  background: '#fff', border: '1px solid #e2e8f0',
-                  borderRadius: 8, cursor: 'pointer', color: '#64748b',
-                }}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
+          />
         );
       })()}
       {embedded ? (
