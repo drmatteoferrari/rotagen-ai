@@ -686,7 +686,7 @@ function PickerModal({
   );
 }
 
-
+export default function PreRotaCalendarPage({ embedded = false }: { embedded?: boolean }) {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const todayISO = getTodayISO();
