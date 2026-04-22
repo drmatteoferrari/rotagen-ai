@@ -637,7 +637,16 @@ export default function Roster() {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-48 pointer-events-auto">
           <DropdownMenuItem disabled={sendState.disabled} onClick={() => setDoctorToSend(doctor)}>
-            <Send className="mr-2 h-4 w-4" /> {doctor.survey_invite_sent_at ? "Resend survey" : "Send survey"}
+            <Send className="mr-2 h-4 w-4" />
+            <span className="flex-1">{doctor.survey_invite_sent_at ? "Resend survey" : "Send survey"}</span>
+            {(doctor.survey_invite_count ?? 0) > 0 && (
+              <span
+                title={`${doctor.survey_invite_count} invite${doctor.survey_invite_count !== 1 ? "s" : ""} sent`}
+                className="ml-2 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-primary text-[9px] font-bold text-primary-foreground leading-none"
+              >
+                {(doctor.survey_invite_count ?? 0) > 9 ? "9+" : doctor.survey_invite_count}
+              </span>
+            )}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => copyMagicLink(doctor)}>
             <Copy className="mr-2 h-4 w-4" /> Copy link
