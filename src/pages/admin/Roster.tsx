@@ -1323,7 +1323,7 @@ export default function Roster() {
         {/* ── END CONTROL ROW ── */}
 
         {/* Main List Container */}
-        <div className="space-y-0 divide-y divide-border rounded-lg border border-border overflow-hidden bg-card">
+        <div className="space-y-2 lg:space-y-0 lg:divide-y lg:divide-border lg:rounded-lg lg:border lg:border-border lg:overflow-hidden lg:bg-card">
           {loading && (
             <div className="flex justify-center py-8">
               <Loader2 className="h-5 w-5 animate-spin" />
