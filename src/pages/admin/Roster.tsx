@@ -1505,11 +1505,11 @@ export default function Roster() {
                       )}
                     </div>
 
-                    {/* Invite counter icon */}
+                    {/* Invite counter icon — hidden on mobile, shown via menu instead */}
                     {(doctor.survey_invite_count ?? 0) > 0 && (
                       <span
                         title={`${doctor.survey_invite_count} invite${doctor.survey_invite_count !== 1 ? "s" : ""} sent`}
-                        className="relative inline-flex items-center justify-center h-5 w-5 shrink-0"
+                        className="relative hidden sm:inline-flex items-center justify-center h-5 w-5 shrink-0"
                       >
                         <Send className="h-3 w-3 text-muted-foreground/50" />
                         <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-primary text-[7px] font-bold text-primary-foreground leading-none">
