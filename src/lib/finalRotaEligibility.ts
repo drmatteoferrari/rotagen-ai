@@ -11,7 +11,10 @@
 //   1. B22–B26 via AvailabilityMatrix (AL / SL / PL / ROT / LTFT)
 //   2. C31   — NOC dates (Pass 1 hard-block; spec §7 line 984)
 //   3. B27   — exemptFromNights
-//   4. B28   — exemptFromWeekends
+//   4. B28   — exemptFromWeekends (overlap semantics — any Sat/Sun the
+//              shift's time span touches, matching A13 weekend-frequency
+//              counting; spec §7 line 942. A Fri 19:00 → Sat 08:00 night
+//              overlaps Saturday and so counts as weekend work.)
 //   5. B29   — exemptFromOncall
 //   6. B30   — Night D+1 check (D+1 not hard-blocked, not NOC)
 //   7. A20   — per-position grade restriction (permittedGrades[])
@@ -38,10 +41,25 @@
 //   - Reuses `canonicalGrade` from '@/lib/gradeOptions' (pure string
 //     helper — verified free of React/Supabase/globals). Does NOT import
 //     from '@/lib/shiftEligibility' (UI helper, different boundary).
+//   - Reuses `parseShiftTimes` and `getOverlappedWeekendDates` from
+//     '@/lib/finalRotaWtr' for B28 overlap-based weekend detection.
+//
+// Known risk — canonicalGrade case/whitespace sensitivity.
+//   `canonicalGrade(doctor.grade)` and `slot.permittedGrades[]` are
+//   compared by strict equality. Neither side is trimmed or case-
+//   normalised. A trailing space or case mismatch in DB-saved
+//   `permittedGrades` (coordinator UI input) would silently fail A20
+//   for all affected slots.
+//
+//   Not a Stage 3f defect — requires a cross-cutting investigation of
+//   UI save paths (rotaConfig.ts, DepartmentSetupContext.tsx) and a
+//   potential backfill. If a coordinator reports unexpected
+//   ineligibility in production, check here first.
 
 import type { FinalRotaInput, ShiftSlotEntry } from './rotaGenInput';
 import type { AvailabilityMatrix, AvailabilityStatus } from './finalRotaTypes';
 import { canonicalGrade } from './gradeOptions';
+import { parseShiftTimes, getOverlappedWeekendDates } from './finalRotaWtr';
 
 type Doctor = FinalRotaInput['doctors'][0];
 
@@ -77,12 +95,6 @@ function addDaysUtc(isoDate: string, delta: number): string {
   const base = new Date(Date.UTC(y, m - 1, d));
   base.setUTCDate(base.getUTCDate() + delta);
   return base.toISOString().slice(0, 10);
-}
-
-function isWeekendUtc(isoDate: string): boolean {
-  const [y, m, d] = isoDate.split('-').map(Number);
-  const dow = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
-  return dow === 0 || dow === 6; // Sun or Sat
 }
 
 // ─── isSlotEligible ───────────────────────────────────────────
@@ -123,7 +135,17 @@ export function isSlotEligible(
   if (isNight && doctor.constraints.hard.exemptFromNights) return false;
 
   // ── Rule 4 — B28: weekend exemption ───────────────────────
-  if (isWeekendUtc(date) && doctor.constraints.hard.exemptFromWeekends) return false;
+  // Overlap semantics: reject if the shift's time span touches any
+  // Saturday or Sunday calendar day (matching A13 weekend-frequency
+  // counting; spec §7 line 942). A Fri 19:00 → Sat 08:00 night
+  // overlaps Saturday and therefore counts as weekend work; a Sat
+  // short-day shift starts and ends on Saturday and likewise
+  // overlaps. A Mon short-day shift touches neither Sat nor Sun and
+  // returns an empty array → exemption does not trigger.
+  if (doctor.constraints.hard.exemptFromWeekends) {
+    const { startMs, endMs } = parseShiftTimes(slot, date);
+    if (getOverlappedWeekendDates(startMs, endMs).length > 0) return false;
+  }
 
   // ── Rule 5 — B29: on-call exemption ───────────────────────
   if (slot.isOncall && doctor.constraints.hard.exemptFromOncall) return false;

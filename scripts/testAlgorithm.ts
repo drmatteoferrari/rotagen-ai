@@ -16,6 +16,7 @@ import {
   getWeekKey,
   isWeekendDate,
   getRestUntilMs,
+  getOverlappedWeekendDates,
 } from '../src/lib/finalRotaWtr';
 import { isSlotEligible } from '../src/lib/finalRotaEligibility';
 import type {
@@ -825,6 +826,164 @@ async function run() {
     assert(
       isSlotEligible(doc1, unconstrainedBhSlot, 0, '2026-05-05', bhMatrix, PERIOD_END),
       'Stage 3f BH+unconstrained: doctor eligible on bank_holiday with empty slots[]',
+    );
+  }
+
+  // ─── Stage 3f audit-fix regression tests (I1–I6) ────────────
+
+  // (I1) B22/B23/B24/B25 individual rejects — guard HARD_BLOCK_STATUSES.
+  //      For each of the four matrix statuses, force doc-1's Tue cell to
+  //      that value and assert the short-day shift is rejected.
+  {
+    const statuses = ['annual_leave', 'study', 'parental', 'rotation'] as const;
+    for (const status of statuses) {
+      const statusMatrix = {
+        ...eligMatrix,
+        [doc1.doctorId]: { ...eligMatrix[doc1.doctorId], '2026-05-05': status },
+      };
+      assert(
+        !isSlotEligible(doc1, shortTueSlot, 0, '2026-05-05', statusMatrix, PERIOD_END),
+        `Stage 3f ${status}: HARD_BLOCK_STATUSES rejects ${status}`,
+      );
+    }
+  }
+
+  // (I2) B30 period-boundary pass — night on the last day of the rota.
+  //      D+1 (2026-06-01) is past PERIOD_END and has no matrix entry;
+  //      the within-period guard must short-circuit before lookup.
+  {
+    const lastDay = PERIOD_END; // '2026-05-31' = Sun
+    // Ensure doctor is available on the last day itself.
+    const lastDayMatrix = {
+      ...eligMatrix,
+      [doc1.doctorId]: { ...eligMatrix[doc1.doctorId], [lastDay]: 'available' as const },
+    };
+    // Fetch any night slot — parseShiftTimes uses only slot.startTime +
+    // slot.durationHours with the supplied isoDate, not slot.dayKey.
+    // B28 overlap will fire because the last day is a Sunday, so use a
+    // doctor without weekend exemption (doc1 is not exempt).
+    assert(
+      isSlotEligible(doc1, nightMonSlot, 0, lastDay, lastDayMatrix, PERIOD_END),
+      'Stage 3f B30: night on last day of rota passes (D+1 outside period)',
+    );
+  }
+
+  // (I3) B30 year-boundary UTC safety — night on 2026-12-31 must
+  //      correctly compute D+1 = 2027-01-01 via addDaysUtc and detect
+  //      AL there.
+  {
+    const yearBoundaryMatrix = {
+      [doc1.doctorId]: {
+        '2026-12-31': 'available' as const,
+        '2027-01-01': 'annual_leave' as const,
+      },
+    };
+    assert(
+      !isSlotEligible(doc1, nightMonSlot, 0, '2026-12-31', yearBoundaryMatrix, '2027-01-31'),
+      'Stage 3f B30: year-boundary D+1 (2027-01-01) AL rejects',
+    );
+  }
+
+  // (I4) A19 individual competencies — reqIaoc / reqIcu / reqTransfer.
+  //      reqIac already covered by tests 38/39. Each sub-case: slot
+  //      requires exactly one competency, doctor lacks it → reject;
+  //      doctor has it → pass.
+  {
+    const mkReqSlot = (
+      flag: 'reqIaoc' | 'reqIcu' | 'reqTransfer',
+    ): typeof shortTueSlot => ({
+      ...shortTueSlot,
+      slots: [{
+        slotIndex: 0, label: null, permittedGrades: [],
+        reqIac: 0, reqIaoc: 0, reqIcu: 0, reqTransfer: 0,
+        [flag]: 1,
+      }],
+    });
+
+    // reqIaoc
+    const iaocSlot = mkReqSlot('reqIaoc');
+    const noIaocDoc: typeof doc1 = { ...doc1, hasIaoc: false };
+    assert(
+      !isSlotEligible(noIaocDoc, iaocSlot, 0, '2026-05-05', eligMatrix, PERIOD_END),
+      'Stage 3f A19: reqIaoc > 0 rejects doctor without hasIaoc',
+    );
+    assert(
+      isSlotEligible(doc1, iaocSlot, 0, '2026-05-05', eligMatrix, PERIOD_END),
+      'Stage 3f A19: reqIaoc > 0 passes doctor with hasIaoc',
+    );
+
+    // reqIcu
+    const icuSlot = mkReqSlot('reqIcu');
+    const noIcuDoc: typeof doc1 = { ...doc1, hasIcu: false };
+    assert(
+      !isSlotEligible(noIcuDoc, icuSlot, 0, '2026-05-05', eligMatrix, PERIOD_END),
+      'Stage 3f A19: reqIcu > 0 rejects doctor without hasIcu',
+    );
+    assert(
+      isSlotEligible(doc1, icuSlot, 0, '2026-05-05', eligMatrix, PERIOD_END),
+      'Stage 3f A19: reqIcu > 0 passes doctor with hasIcu',
+    );
+
+    // reqTransfer
+    const transferSlot = mkReqSlot('reqTransfer');
+    const noTransferDoc: typeof doc1 = { ...doc1, hasTransfer: false };
+    assert(
+      !isSlotEligible(noTransferDoc, transferSlot, 0, '2026-05-05', eligMatrix, PERIOD_END),
+      'Stage 3f A19: reqTransfer > 0 rejects doctor without hasTransfer',
+    );
+    assert(
+      isSlotEligible(doc1, transferSlot, 0, '2026-05-05', eligMatrix, PERIOD_END),
+      'Stage 3f A19: reqTransfer > 0 passes doctor with hasTransfer',
+    );
+  }
+
+  // (I5) A20 legacy grade label — "CT1 (or ACCS)" canonicalises to "CT1"
+  //      and passes a slot with permittedGrades: ['CT1'].
+  {
+    const legacyGradeDoc: typeof doc1 = { ...doc1, grade: 'CT1 (or ACCS)' };
+    const ct1Slot: typeof shortTueSlot = {
+      ...shortTueSlot,
+      slots: [{
+        slotIndex: 0, label: null, permittedGrades: ['CT1'],
+        reqIac: 0, reqIaoc: 0, reqIcu: 0, reqTransfer: 0,
+      }],
+    };
+    assert(
+      isSlotEligible(legacyGradeDoc, ct1Slot, 0, '2026-05-05', eligMatrix, PERIOD_END),
+      'Stage 3f A20: legacy "CT1 (or ACCS)" canonicalises to CT1 and passes',
+    );
+  }
+
+  // (I6) B28 Friday-night overlap — exempt-from-weekends doctor on a
+  //      Fri 19:00 → Sat 08:00 night must be rejected because the
+  //      shift overlaps Saturday. Complement: same shift, no exemption
+  //      → passes.
+  {
+    const friday = '2026-05-08';
+    const nightFriSlot = getSlot(minimalInput, 'night', friday);
+    // Sanity: the slot's time span overlaps Saturday.
+    const { startMs: friStart, endMs: friEnd } = parseShiftTimes(nightFriSlot, friday);
+    const overlap = getOverlappedWeekendDates(friStart, friEnd);
+    assert(
+      overlap.includes('2026-05-09'),
+      'Stage 3f B28 precheck: Fri night overlaps Sat 2026-05-09',
+    );
+
+    const fridayNightExemptDoc: typeof doc1 = {
+      ...doc1,
+      constraints: {
+        ...doc1.constraints,
+        hard: { ...doc1.constraints.hard, exemptFromWeekends: true },
+      },
+    };
+    assert(
+      !isSlotEligible(fridayNightExemptDoc, nightFriSlot, 0, friday, eligMatrix, PERIOD_END),
+      'Stage 3f B28: weekend-exempt doctor rejected on Fri-night overlapping Sat',
+    );
+    // Complement — doc1 (no exemption) passes the same shift.
+    assert(
+      isSlotEligible(doc1, nightFriSlot, 0, friday, eligMatrix, PERIOD_END),
+      'Stage 3f B28: non-exempt doctor passes Fri-night overlapping Sat',
     );
   }
 
