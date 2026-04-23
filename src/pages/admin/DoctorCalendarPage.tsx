@@ -491,14 +491,14 @@ export default function DoctorCalendarPage() {
     }
   };
 
-  const handleRemoveSurveyEvent = async (date: string) => {
+  const handleRemoveSurveyEvent = async (date: string, code?: string) => {
     if (!calendarData) return;
     try {
       const {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user || !currentRotaConfigId || !doctorId) return;
-      const cellCode = mergedAvailability[date]?.primary ?? "AVAILABLE";
+      const cellCode = code ?? mergedAvailability[date]?.primary ?? "AVAILABLE";
       if (cellCode === "AVAILABLE") return;
       await supabase.from("coordinator_calendar_overrides").insert({
         rota_config_id: currentRotaConfigId,
@@ -561,9 +561,31 @@ export default function DoctorCalendarPage() {
   }, [doctor, overrides, calendarData]);
 
   // ─── Actions Handlers ───────────────────────────────────────
-  const handleActionEdit = (date: string, mergedCell: MergedCell | undefined) => {
+  // `code` (optional) targets a specific event on multi-event days.
+  // Resolution: try to find an override whose eventType matches `code` and that
+  // applies to this date; otherwise fall back to mergedCell.overrideId; otherwise
+  // treat as a survey-derived event with that code.
+  const resolveOverrideForCode = (
+    date: string,
+    mergedCell: MergedCell | undefined,
+    code?: string,
+  ): CalendarOverride | undefined => {
+    if (!code) {
+      return overrides.find((o) => o.id === mergedCell?.overrideId);
+    }
+    // Find any non-delete override on this date whose eventType matches `code`.
+    return overrides.find((o) => {
+      if (o.action === "delete") return false;
+      if (o.eventType !== code) return false;
+      // simple range/recurrence check — handles 'none' and inclusive ranges
+      if (o.recurrence === "custom") return o.recurrenceDates.includes(date);
+      return o.startDate <= date && date <= o.endDate;
+    });
+  };
+
+  const handleActionEdit = (date: string, mergedCell: MergedCell | undefined, code?: string) => {
     if (!mergedCell) return;
-    const dayOverride = overrides.find((o) => o.id === mergedCell.overrideId);
+    const dayOverride = resolveOverrideForCode(date, mergedCell, code);
     if (dayOverride) {
       setModalPrefill({
         eventType: dayOverride.eventType,
@@ -574,13 +596,14 @@ export default function DoctorCalendarPage() {
         originalEventType: dayOverride.originalEventType,
       });
     } else {
+      const targetCode = code ?? mergedCell.primary ?? "AVAILABLE";
       setModalPrefill({
-        eventType: mergedCell.primary ?? "AVAILABLE",
+        eventType: targetCode,
         startDate: date,
         endDate: date,
         note: "",
         overrideId: "",
-        originalEventType: mergedCell.primary ?? "AVAILABLE",
+        originalEventType: targetCode,
       });
     }
     setModalInitialDate(null);
@@ -589,9 +612,9 @@ export default function DoctorCalendarPage() {
     setPanelOpen(false);
   };
 
-  const handleActionCopy = (date: string, mergedCell: MergedCell | undefined) => {
+  const handleActionCopy = (date: string, mergedCell: MergedCell | undefined, code?: string) => {
     if (!mergedCell) return;
-    const dayOverride = overrides.find((o) => o.id === mergedCell.overrideId);
+    const dayOverride = resolveOverrideForCode(date, mergedCell, code);
     if (dayOverride) {
       setModalCopyFrom({
         eventType: dayOverride.eventType,
@@ -600,7 +623,7 @@ export default function DoctorCalendarPage() {
       });
     } else {
       setModalCopyFrom({
-        eventType: mergedCell.primary ?? "AVAILABLE",
+        eventType: code ?? mergedCell.primary ?? "AVAILABLE",
         startDate: date,
         endDate: date,
       });
@@ -611,13 +634,13 @@ export default function DoctorCalendarPage() {
     setPanelOpen(false);
   };
 
-  const handleActionDelete = (date: string, mergedCell: MergedCell | undefined) => {
+  const handleActionDelete = (date: string, mergedCell: MergedCell | undefined, code?: string) => {
     if (!mergedCell) return;
-    const dayOverride = overrides.find((o) => o.id === mergedCell.overrideId);
+    const dayOverride = resolveOverrideForCode(date, mergedCell, code);
     if (dayOverride) {
       handleDeleteOverride(dayOverride);
     } else {
-      handleRemoveSurveyEvent(date);
+      handleRemoveSurveyEvent(date, code);
     }
     setPanelOpen(false);
   };
@@ -630,7 +653,16 @@ export default function DoctorCalendarPage() {
     setPanelOpen(false);
   };
 
-  const ActionButtonsPopover = ({ date, mergedCell }: { date: string; mergedCell?: MergedCell }) => {
+  const ActionButtonsPopover = ({
+    date,
+    mergedCell,
+    code,
+  }: {
+    date: string;
+    mergedCell?: MergedCell;
+    /** When provided, actions target this specific event code (used for multi-event days). */
+    code?: string;
+  }) => {
     const eventsExist =
       mergedCell && mergedCell.primary !== "AVAILABLE" && mergedCell.primary !== "BH" && !mergedCell.isDeleted;
 
@@ -656,7 +688,7 @@ export default function DoctorCalendarPage() {
                 className="justify-start h-8 text-xs font-medium"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleActionEdit(date, mergedCell);
+                  handleActionEdit(date, mergedCell, code);
                 }}
               >
                 <Edit2 className="w-3.5 h-3.5 mr-2 text-muted-foreground" /> Edit Event
@@ -667,7 +699,7 @@ export default function DoctorCalendarPage() {
                 className="justify-start h-8 text-xs font-medium"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleActionCopy(date, mergedCell);
+                  handleActionCopy(date, mergedCell, code);
                 }}
               >
                 <Copy className="w-3.5 h-3.5 mr-2 text-muted-foreground" /> Copy Event
@@ -678,7 +710,7 @@ export default function DoctorCalendarPage() {
                 className="justify-start h-8 text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-50"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleActionDelete(date, mergedCell);
+                  handleActionDelete(date, mergedCell, code);
                 }}
               >
                 <Trash2 className="w-3.5 h-3.5 mr-2 text-red-500" /> Delete Event
@@ -1144,7 +1176,7 @@ export default function DoctorCalendarPage() {
                 const isExplicitOverride =
                   (code === mergedCell?.primary || code === mergedCell?.secondary) &&
                   (mergedCell?.overrideAction === "add" || mergedCell?.overrideAction === "modify");
-                const isLtftCode = code === "LTFT";
+                
 
                 const cardInner = (
                   <>
@@ -1168,19 +1200,6 @@ export default function DoctorCalendarPage() {
                   borderLeftColor: MONTH_EVENT_COLOURS[code] ?? "#6b7280",
                 };
 
-                // LTFT is a recurring pattern, not an editable override → show non-interactive card
-                if (isLtftCode) {
-                  return (
-                    <div
-                      key={code}
-                      className="rounded-lg border border-border bg-card p-3 sm:p-4 flex items-center justify-between"
-                      style={cardStyle}
-                    >
-                      {cardInner}
-                    </div>
-                  );
-                }
-
                 return (
                   <Popover key={code}>
                     <PopoverTrigger asChild>
@@ -1188,7 +1207,7 @@ export default function DoctorCalendarPage() {
                         {cardInner}
                       </button>
                     </PopoverTrigger>
-                    <ActionButtonsPopover date={currentDateISO} mergedCell={mergedCell} />
+                    <ActionButtonsPopover date={currentDateISO} mergedCell={mergedCell} code={code} />
                   </Popover>
                 );
               })}
