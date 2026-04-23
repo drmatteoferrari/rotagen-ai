@@ -1759,8 +1759,8 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
               className={`flex flex-col min-w-0 pr-1 shrink cursor-pointer hover:underline ${nameColor}`}
               title={doctor.doctorName}
             >
-              <div className="font-semibold text-xs truncate w-full">{firstName}</div>
-              {lastName && <div className="font-semibold text-[11px] truncate w-full">{lastName}</div>}
+              {lastName && <div className="font-semibold text-xs truncate w-full uppercase">{lastName}</div>}
+              <div className="font-semibold text-[11px] truncate w-full">{firstName}</div>
             </div>
 
             <div className={`${layoutClass} shrink-0 relative`}>
