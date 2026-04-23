@@ -383,3 +383,49 @@ export const minimalInputWithOncallSlot: FinalRotaInput = {
     ],
   },
 };
+
+// Variant used by Stage 3e's NROC (A14–A18) tests. Appends one
+// non-resident on-call shift type so Check Sequence A has an
+// isNonResOncall = true slot to evaluate. 12h duration keeps it below
+// wtrConstraints.maxShiftLengthH (13h) so A12's NROC-exempt branch is
+// unambiguously the reason lengths > 13h still pass under NROC.
+// Duration deliberately exceeds both oncall.dayAfterMaxHours (10h) and
+// oncall.dayAfterLastConsecMaxH (10h) so it can double as the
+// "day-after-NROC" probe if needed; the A16/A17 tests instead use the
+// existing 12.5h Long Day for that purpose.
+export const NROC_SHIFT_ENTRY: ShiftSlotEntry = {
+  shiftId: 'st-nroc',
+  shiftKey: 'nroc',
+  name: 'Non-Resident On-Call',
+  dayKey: 'sat',
+  startTime: '17:00',
+  endTime: '05:00',
+  durationHours: 12,
+  isOncall: true,
+  isNonResOncall: true,
+  badges: ['oncall', 'nonres'],
+  staffing: { min: 1, target: 1, max: 1 },
+  slots: [
+    {
+      slotIndex: 0,
+      label: null,
+      permittedGrades: [],
+      reqIac: 0,
+      reqIaoc: 0,
+      reqIcu: 0,
+      reqTransfer: 0,
+    },
+  ],
+  targetPct: 0,
+};
+
+export const minimalInputWithNroc: FinalRotaInput = {
+  ...minimalInput,
+  preRotaInput: {
+    ...minimalInput.preRotaInput,
+    shiftSlots: [
+      ...minimalInput.preRotaInput.shiftSlots,
+      NROC_SHIFT_ENTRY,
+    ],
+  },
+};
