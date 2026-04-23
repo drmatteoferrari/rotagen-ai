@@ -75,6 +75,27 @@ export interface DoctorState {
   oncallDatesLast7: string[];
   bucketHoursUsed: { oncall: number; nonOncall: number };
   lieuDatesStaged: string[];                    // G55–G57 obligations pending commit
+
+  // ─── Cascade placeholders (spec §7 D35) ──────────────────────
+  // Populated by finalRotaCascade.ts (Stage 3g.4). Read as empty /
+  // zero until that stage lands. Stage 3g.3 construction code may
+  // write actualHoursByShiftType as a convenience for downstream
+  // cascade consumption, but the cascade is the authoritative
+  // writer. Keys are shiftKey (matching DoctorShiftTarget.shiftKey).
+
+  // Hours actually assigned per shift type this iteration. Used by
+  // D35 Rule 1 to compute `debt(T) = effectiveCeiling(T) − actualHours(T)`.
+  actualHoursByShiftType: Record<string, number>;
+  // Carry-forward debt per shift type, accrued from prior cascade
+  // checkpoints in priority order (spec §7 D35 Rule 1). Added to
+  // raw `maxTargetHours(T)` at ceiling-check time to produce the
+  // cascade-adjusted effectiveCeiling.
+  debtCarriedForwardByShiftType: Record<string, number>;
+  // Per-doctor non-on-call deficit remaining after the final
+  // non-on-call cascade checkpoint (D35 Rule 4). Surfaces in
+  // PerDoctorMetrics as `unallocatedContractualHours`. Zero when
+  // all contractual hours are placed.
+  unallocatedContractualHours: number;
 }
 
 // ─── BucketFloors ──────────────────────────────────────────────

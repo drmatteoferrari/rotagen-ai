@@ -149,20 +149,24 @@ function overlapHours(aStart: number, aEnd: number, wStart: number, wEnd: number
   return overlapMs / MS_PER_HOUR;
 }
 
-function assignmentCalendarDate(a: InternalDayAssignment): string {
+// Exported for Stage 3g.2+ commit-path and cascade reuse — canonical
+// classifier / date-of-assignment accessor. Re-implementing these in
+// construction/cascade code would risk drift with CSA/CSB semantics.
+
+export function assignmentCalendarDate(a: InternalDayAssignment): string {
   return msToIsoDate(a.shiftStartMs);
 }
 
-function assignmentIsNroc(a: InternalDayAssignment): boolean {
+export function assignmentIsNroc(a: InternalDayAssignment): boolean {
   // NROC propagates as the 'nonres' badge from rotaGenInput.ts.
   return a.badges.includes('nonres');
 }
 
-function slotIsNroc(slot: ShiftSlotEntry): boolean {
+export function slotIsNroc(slot: ShiftSlotEntry): boolean {
   return slot.isNonResOncall === true;
 }
 
-// ─── Private: countSubsequentConsecutive ──────────────────────
+// ─── countSubsequentConsecutive ───────────────────────────────
 // Walks calendar dates forward from the day after `lastBlockDate`
 // and counts the unbroken run of consecutive days for which the
 // doctor already has an assignment satisfying `filterFn`. A date
@@ -170,8 +174,13 @@ function slotIsNroc(slot: ShiftSlotEntry): boolean {
 // to form the spec's `prior + block + subsequent` sum (§7 lines
 // 1427–1428) during cascade backfill, where committed shifts can
 // sit on either side of a newly inserted block.
+//
+// Exported for Stage 3g.2+ (tiling engine) and 3g.4 (cascade
+// backfill) reuse: both paths need subsequent-consecutive counts
+// when evaluating whether a newly inserted block plus any shifts
+// already committed on the far side fits under A4 / A7 caps.
 
-function countSubsequentConsecutive(
+export function countSubsequentConsecutive(
   state: DoctorState,
   lastBlockDate: string,
   filterFn: (a: InternalDayAssignment) => boolean,

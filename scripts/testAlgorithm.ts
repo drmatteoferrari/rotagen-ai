@@ -194,6 +194,9 @@ async function run() {
       oncallDatesLast7: [],
       bucketHoursUsed: { oncall: 0, nonOncall: 0 },
       lieuDatesStaged: [],
+      actualHoursByShiftType: {},
+      debtCarriedForwardByShiftType: {},
+      unallocatedContractualHours: 0,
     };
   }
 
