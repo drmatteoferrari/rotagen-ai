@@ -1135,7 +1135,62 @@ export default function DoctorCalendarPage() {
               </PopoverContent>
             </Popover>
           ) : finalCodes.length === 0 ? (
-...
+            <p className="text-xs sm:text-sm text-muted-foreground italic text-center py-4">
+              No events scheduled. Fully available.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {finalCodes.map((code) => {
+                const isExplicitOverride =
+                  (code === mergedCell?.primary || code === mergedCell?.secondary) &&
+                  (mergedCell?.overrideAction === "add" || mergedCell?.overrideAction === "modify");
+                const isLtftCode = code === "LTFT";
+
+                const cardInner = (
+                  <>
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <LeaveBadge type={code} size="large" />
+                      <span className="text-xs sm:text-sm font-semibold">{EVENT_LABELS[code] ?? code}</span>
+                    </div>
+                    {isExplicitOverride && (
+                      <span className="text-[9px] sm:text-xs text-orange-600 font-bold bg-orange-50 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded border border-orange-200 flex items-center gap-1 sm:gap-1.5">
+                        <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-orange-500"></span>
+                        Override
+                      </span>
+                    )}
+                  </>
+                );
+
+                const cardClasses =
+                  "w-full text-left rounded-lg border border-border bg-card p-3 sm:p-4 flex items-center justify-between transition-colors hover:bg-muted/40 cursor-pointer";
+                const cardStyle = {
+                  borderLeftWidth: "4px",
+                  borderLeftColor: MONTH_EVENT_COLOURS[code] ?? "#6b7280",
+                };
+
+                // LTFT is a recurring pattern, not an editable override → show non-interactive card
+                if (isLtftCode) {
+                  return (
+                    <div
+                      key={code}
+                      className="rounded-lg border border-border bg-card p-3 sm:p-4 flex items-center justify-between"
+                      style={cardStyle}
+                    >
+                      {cardInner}
+                    </div>
+                  );
+                }
+
+                return (
+                  <Popover key={code}>
+                    <PopoverTrigger asChild>
+                      <button type="button" className={cardClasses} style={cardStyle}>
+                        {cardInner}
+                      </button>
+                    </PopoverTrigger>
+                    <ActionButtonsPopover date={currentDateISO} mergedCell={mergedCell} />
+                  </Popover>
+                );
               })}
             </div>
           )}
