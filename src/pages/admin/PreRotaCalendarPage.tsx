@@ -8,6 +8,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useRotaContext } from "@/contexts/RotaContext";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { GradeBadge } from "@/components/GradeBadge";
 import {
   ChevronLeft,
   ChevronRight,
@@ -1818,8 +1819,9 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
               {doctor.doctorName.replace("Dr ", "")}
             </div>
             {/* Change 4: hide grade·wte and LTFT badge on mobile — name only */}
-            <div className="hidden sm:block text-[7px] sm:text-[8px] text-muted-foreground truncate shrink-0">
-              {doctor.grade}·{doctor.wte}%
+            <div className="hidden sm:flex items-center gap-1 truncate shrink-0">
+              <GradeBadge grade={doctor.grade} size="xs" />
+              <span className="text-[7px] sm:text-[8px] text-muted-foreground">{doctor.wte}%</span>
             </div>
             {ltftDays.length > 0 && (
               <span className="hidden sm:inline-block text-[7px] sm:text-[8px] font-semibold text-yellow-800 bg-yellow-100 border border-yellow-200 rounded px-1 truncate shrink-0">
@@ -1906,8 +1908,9 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
           <div className="font-semibold text-[10px] sm:text-[11px] text-blue-600 break-words whitespace-normal w-full">
             {doctor.doctorName.replace("Dr ", "")}
           </div>
-          <div className="text-[8px] sm:text-[9px] text-muted-foreground truncate mt-0.5 hidden sm:block">
-            {doctor.grade} · {doctor.wte}%
+          <div className="hidden sm:flex items-center gap-1 mt-0.5">
+            <GradeBadge grade={doctor.grade} size="xs" />
+            <span className="text-[8px] sm:text-[9px] text-muted-foreground">· {doctor.wte}%</span>
           </div>
         </td>
         {gridDates.map((date, idx) => {
