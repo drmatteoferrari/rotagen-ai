@@ -1200,19 +1200,6 @@ export default function DoctorCalendarPage() {
                   borderLeftColor: MONTH_EVENT_COLOURS[code] ?? "#6b7280",
                 };
 
-                // LTFT is a recurring pattern, not an editable override → show non-interactive card
-                if (isLtftCode) {
-                  return (
-                    <div
-                      key={code}
-                      className="rounded-lg border border-border bg-card p-3 sm:p-4 flex items-center justify-between"
-                      style={cardStyle}
-                    >
-                      {cardInner}
-                    </div>
-                  );
-                }
-
                 return (
                   <Popover key={code}>
                     <PopoverTrigger asChild>
@@ -1220,7 +1207,7 @@ export default function DoctorCalendarPage() {
                         {cardInner}
                       </button>
                     </PopoverTrigger>
-                    <ActionButtonsPopover date={currentDateISO} mergedCell={mergedCell} />
+                    <ActionButtonsPopover date={currentDateISO} mergedCell={mergedCell} code={code} />
                   </Popover>
                 );
               })}
