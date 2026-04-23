@@ -419,6 +419,224 @@ async function run() {
     expectFail(r, 'A18', 'CSA A18: rostered short-day on same date as NROC');
   }
 
+  // ── Stage 3e audit fixes — positive coverage gap closers ─────
+
+  // (15) A12 positive — non-NROC slot 14h > maxShiftLengthH (13h).
+  {
+    const s = freshState(D1.doctorId);
+    const longMon = getSlot(minimalInput, 'long-day', '2026-05-04');
+    const long14: ShiftSlotEntry = { ...longMon, durationHours: 14 };
+    const r = checkSequenceA(D1, '2026-05-04', long14, s, WTR, TOTAL_WEEKS);
+    expectFail(r, 'A12', 'CSA A12: non-NROC 14h shift exceeds 13h cap');
+  }
+
+  // (16) A12 mirror — NROC slot 14h is exempt and passes.
+  {
+    const s = freshState(D1.doctorId);
+    const nrocSlot = getSlot(minimalInputWithNroc, 'nroc', '2026-05-02');
+    const nroc14: ShiftSlotEntry = { ...nrocSlot, durationHours: 14 };
+    const r = checkSequenceA(D1, '2026-05-04', nroc14, s, NROC_WTR, TOTAL_WEEKS);
+    assert(r.pass, 'CSA A12: NROC 14h exempt from shift-length cap');
+  }
+
+  // (17) A13 positive — pre-populated weekend days push proposal over cap.
+  //     weekendDatesWorked = 2 (full weekend 1), propose Sat short-day
+  //     → prospective 3 days / 2 = 1.5 > 4 / 3 = 1.333.
+  {
+    const s = freshState(D1.doctorId);
+    s.weekendDatesWorked = ['2026-05-09', '2026-05-10'];
+    const satSlot = getSlot(minimalInput, 'short-day', '2026-05-16');
+    const r = checkSequenceA(D1, '2026-05-16', satSlot, s, WTR, TOTAL_WEEKS);
+    expectFail(r, 'A13', 'CSA A13: Sat short-day pushes weekend frequency over cap');
+  }
+
+  // (18) A13 Fri-night overlap variant — validates Defect 1 fix.
+  //     Fri 19:00 → Sat 08:00 overlaps Sat 05-09; combined with
+  //     pre-populated full weekend 05-16/17, prospective = 3 days.
+  {
+    const s = freshState(D1.doctorId);
+    s.weekendDatesWorked = ['2026-05-16', '2026-05-17'];
+    const friNight = getSlot(minimalInput, 'night', '2026-05-08');
+    const r = checkSequenceA(D1, '2026-05-08', friNight, s, WTR, TOTAL_WEEKS);
+    expectFail(r, 'A13', 'CSA A13: Fri-start night overlaps Sat, trips weekend cap');
+  }
+
+  // (19) A17 positive — day after last consec NROC: 9h short-day >
+  //     dayAfterLastConsecMaxH (overridden to 8h) but ≤ dayAfterMaxHours
+  //     (10h) so A16 passes and A17 is the first firing rule.
+  {
+    const A17_WTR = {
+      ...NROC_WTR,
+      oncall: { ...NROC_WTR.oncall, dayAfterLastConsecMaxH: 8 },
+    };
+    const s = freshState(D1.doctorId);
+    const nrocSlot = getSlot(minimalInputWithNroc, 'nroc', '2026-05-02');
+    s.assignments.push(mkAssignment(D1.doctorId, nrocSlot, '2026-05-04'));
+    const shortTue = getSlot(minimalInputWithNroc, 'short-day', '2026-05-05');
+    const r = checkSequenceA(D1, '2026-05-05', shortTue, s, A17_WTR, TOTAL_WEEKS);
+    expectFail(r, 'A17', 'CSA A17: 9h day after last consec NROC > 8h override cap');
+  }
+
+  // (20) CSB A2 per-night positive — three long-days commit 37.5h
+  //     inside the backward 168h window of a 3-night block's last
+  //     night; at night-3 end, 37.5 + 2×13 (prior nights) + 13 (self)
+  //     = 76.5h > 72h cap. Earlier nights pass.
+  {
+    const s = freshState(D1.doctorId);
+    for (const d of ['2026-05-03', '2026-05-04', '2026-05-05']) {
+      const longSlot = getSlot(minimalInput, 'long-day', d);
+      s.assignments.push(mkAssignment(D1.doctorId, longSlot, d));
+    }
+    const nightSlot = getSlot(minimalInput, 'night', '2026-05-06');
+    const matrix = buildAvailabilityMatrix(minimalInput);
+    const r = checkSequenceB(
+      D1,
+      ['2026-05-06', '2026-05-07', '2026-05-08'],
+      nightSlot,
+      s,
+      WTR,
+      matrix,
+      TOTAL_WEEKS,
+      PERIOD_END,
+    );
+    expectFail(r, 'A2', 'CSB A2: 76.5h in backward 168h window at night-3');
+  }
+
+  // (21) CSB A4 v1 — prior 2 + block 3 + subsequent 0 = 5 > 4 cap.
+  {
+    const s = freshState(D1.doctorId);
+    s.consecutiveNightDates = ['2026-05-01', '2026-05-02'];
+    const nightSlot = getSlot(minimalInput, 'night', '2026-05-06');
+    const matrix = buildAvailabilityMatrix(minimalInput);
+    const r = checkSequenceB(
+      D1,
+      ['2026-05-06', '2026-05-07', '2026-05-08'],
+      nightSlot,
+      s,
+      WTR,
+      matrix,
+      TOTAL_WEEKS,
+      PERIOD_END,
+    );
+    expectFail(r, 'A4', 'CSB A4: prior 2 + block 3 nights > cap 4');
+  }
+
+  // (22) CSB A4 v2 — validates Defect 2 fix: prior 1 + block 2 +
+  //     subsequent 2 pre-committed nights = 5 > 4.
+  {
+    const s = freshState(D1.doctorId);
+    s.consecutiveNightDates = ['2026-05-03'];
+    for (const d of ['2026-05-06', '2026-05-07']) {
+      const nSlot = getSlot(minimalInput, 'night', d);
+      s.assignments.push(mkAssignment(D1.doctorId, nSlot, d));
+    }
+    const nightSlot = getSlot(minimalInput, 'night', '2026-05-04');
+    const matrix = buildAvailabilityMatrix(minimalInput);
+    const r = checkSequenceB(
+      D1,
+      ['2026-05-04', '2026-05-05'],
+      nightSlot,
+      s,
+      WTR,
+      matrix,
+      TOTAL_WEEKS,
+      PERIOD_END,
+    );
+    expectFail(r, 'A4', 'CSB A4: prior 1 + block 2 + subsequent 2 nights > cap 4');
+  }
+
+  // (23) CSB A7 v1 — prior 5 + block 3 = 8 > 7.
+  {
+    const s = freshState(D1.doctorId);
+    s.consecutiveShiftDates = [
+      '2026-04-29', '2026-04-30', '2026-05-01', '2026-05-02', '2026-05-03',
+    ];
+    const nightSlot = getSlot(minimalInput, 'night', '2026-05-04');
+    const matrix = buildAvailabilityMatrix(minimalInput);
+    const r = checkSequenceB(
+      D1,
+      ['2026-05-04', '2026-05-05', '2026-05-06'],
+      nightSlot,
+      s,
+      WTR,
+      matrix,
+      TOTAL_WEEKS,
+      PERIOD_END,
+    );
+    expectFail(r, 'A7', 'CSB A7: prior 5 + block 3 shifts > cap 7');
+  }
+
+  // (24) CSB A7 v2 — validates Defect 2 fix: prior 2 + block 3 +
+  //     subsequent 3 committed day-shifts = 8 > 7.
+  {
+    const s = freshState(D1.doctorId);
+    s.consecutiveShiftDates = ['2026-05-02', '2026-05-03'];
+    for (const d of ['2026-05-07', '2026-05-08', '2026-05-09']) {
+      const shortSlot = getSlot(minimalInput, 'short-day', d);
+      s.assignments.push(mkAssignment(D1.doctorId, shortSlot, d));
+    }
+    const nightSlot = getSlot(minimalInput, 'night', '2026-05-04');
+    const matrix = buildAvailabilityMatrix(minimalInput);
+    const r = checkSequenceB(
+      D1,
+      ['2026-05-04', '2026-05-05', '2026-05-06'],
+      nightSlot,
+      s,
+      WTR,
+      matrix,
+      TOTAL_WEEKS,
+      PERIOD_END,
+    );
+    expectFail(r, 'A7', 'CSB A7: prior 2 + block 3 + subsequent 3 shifts > cap 7');
+  }
+
+  // (25) CSB A13 block positive — Fri→Sun night block adds weekend
+  //     days 05-09 and 05-10 via overlap; combined with pre-populated
+  //     05-16, prospective = 3 days / 2 = 1.5 > 1.333.
+  {
+    const s = freshState(D1.doctorId);
+    s.weekendDatesWorked = ['2026-05-16'];
+    const nightSlot = getSlot(minimalInput, 'night', '2026-05-08');
+    const matrix = buildAvailabilityMatrix(minimalInput);
+    const r = checkSequenceB(
+      D1,
+      ['2026-05-08', '2026-05-09', '2026-05-10'],
+      nightSlot,
+      s,
+      WTR,
+      matrix,
+      TOTAL_WEEKS,
+      PERIOD_END,
+    );
+    expectFail(r, 'A13', 'CSB A13: Fri-Sun block + prior weekend > cap');
+  }
+
+  // (26) CSB C32 positive — doctor's soft preference maxConsecNights=2,
+  //     proposed 3-night block exceeds it. A4 (hard cap 4) passes first.
+  {
+    const D1_strict = {
+      ...D1,
+      constraints: {
+        ...D1.constraints,
+        soft: { ...D1.constraints.soft, maxConsecNights: 2 },
+      },
+    };
+    const s = freshState(D1_strict.doctorId);
+    const nightSlot = getSlot(minimalInput, 'night', '2026-05-04');
+    const matrix = buildAvailabilityMatrix(minimalInput);
+    const r = checkSequenceB(
+      D1_strict,
+      ['2026-05-04', '2026-05-05', '2026-05-06'],
+      nightSlot,
+      s,
+      WTR,
+      matrix,
+      TOTAL_WEEKS,
+      PERIOD_END,
+    );
+    expectFail(r, 'C32', 'CSB C32: 3-night block > doctor soft preference 2');
+  }
+
   console.log('\nAll assertions passed.');
 }
 

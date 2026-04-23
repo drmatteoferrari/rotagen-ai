@@ -112,6 +112,36 @@ export function isWeekendDate(isoDate: string): boolean {
   return dow === 0 || dow === 6;
 }
 
+// ─── Helper: getOverlappedWeekendDates ────────────────────────
+// Spec §7 A13 / §10: "Weekend day = any Saturday or Sunday where a
+// shift overlaps 00:00–23:59 of that calendar day. Each calendar day
+// counted once maximum." A Fri 19:00 → Sat 08:00 night overlaps Sat;
+// a Sat 19:00 → Sun 08:00 night overlaps both Sat AND Sun; a Sun
+// 19:00 → Mon 07:00 night overlaps Sun only.
+//
+// Walks days from the shift-start date to the shift-end date
+// inclusive, returning the ISO dates of every Sat/Sun that has
+// non-zero overlap with [startMs, endMs). De-duplicated.
+
+export function getOverlappedWeekendDates(startMs: number, endMs: number): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  let cursor = msToIsoDate(startMs);
+  const last = msToIsoDate(endMs - 1); // inclusive last touched date
+  while (true) {
+    const dayStart = isoDateToUtcMidnightMs(cursor);
+    const dayEnd = dayStart + MS_PER_DAY;
+    const overlapMs = Math.max(0, Math.min(endMs, dayEnd) - Math.max(startMs, dayStart));
+    if (overlapMs > 0 && isWeekendDate(cursor) && !seen.has(cursor)) {
+      out.push(cursor);
+      seen.add(cursor);
+    }
+    if (cursor === last) break;
+    cursor = addDaysUtc(cursor, 1);
+  }
+  return out;
+}
+
 // ─── Private: overlap and classification ──────────────────────
 
 function overlapHours(aStart: number, aEnd: number, wStart: number, wEnd: number): number {
@@ -130,6 +160,35 @@ function assignmentIsNroc(a: InternalDayAssignment): boolean {
 
 function slotIsNroc(slot: ShiftSlotEntry): boolean {
   return slot.isNonResOncall === true;
+}
+
+// ─── Private: countSubsequentConsecutive ──────────────────────
+// Walks calendar dates forward from the day after `lastBlockDate`
+// and counts the unbroken run of consecutive days for which the
+// doctor already has an assignment satisfying `filterFn`. A date
+// with no matching assignment ends the run. Used by CSB A4 and A7
+// to form the spec's `prior + block + subsequent` sum (§7 lines
+// 1427–1428) during cascade backfill, where committed shifts can
+// sit on either side of a newly inserted block.
+
+function countSubsequentConsecutive(
+  state: DoctorState,
+  lastBlockDate: string,
+  filterFn: (a: InternalDayAssignment) => boolean,
+): number {
+  let cursor = addDaysUtc(lastBlockDate, 1);
+  let count = 0;
+  // Unbounded loop guard: rota period is at most ~52 weeks → 400 iterations
+  // is a hard ceiling that can't be reached in practice.
+  for (let guard = 0; guard < 400; guard += 1) {
+    const matches = state.assignments.some(
+      (a) => assignmentCalendarDate(a) === cursor && filterFn(a),
+    );
+    if (!matches) return count;
+    count += 1;
+    cursor = addDaysUtc(cursor, 1);
+  }
+  return count;
 }
 
 // ─── checkSequenceA ───────────────────────────────────────────
@@ -194,7 +253,10 @@ export function checkSequenceA(
   }
 
   // ── A12 — max shift length ────────────────────────────────
-  // NROC may run up to 24h per spec A12; skip the cap in that case.
+  // Spec §7 A12: "On-call up to 24h" — interpreted as NROC-only per
+  // NHS convention (resident on-call treated as a regular ≤13h shift).
+  // Exempts isNonResOncall only. If spec is later clarified to mean
+  // all on-call, revisit here.
   if (!isProposedNroc && slot.durationHours > wtr.maxShiftLengthH) {
     return {
       pass: false,
@@ -230,8 +292,17 @@ export function checkSequenceA(
     };
   }
 
-  // ── A5 — max consec long shifts (>10h) ────────────────────
-  if (slot.durationHours > 10 && state.consecutiveLongDates.length >= wtr.maxConsecutive.long) {
+  // ── A5 — max consec long shifts (badge.long) ─────────────
+  // Spec §7 line 906: "Consecutive badge.long shifts ≤ maxConsecLong".
+  // Uses the explicit 'long' badge, not a duration proxy — a 13h night
+  // carries the 'night' badge, not 'long', and must not count here.
+  // Contract: Stage 3g commit logic must only push badge.long shifts
+  // onto DoctorState.consecutiveLongDates so this gate and the
+  // counter stay aligned.
+  if (
+    slot.badges.includes('long') &&
+    state.consecutiveLongDates.length >= wtr.maxConsecutive.long
+  ) {
     return {
       pass: false,
       failedRule: 'A5',
@@ -256,9 +327,12 @@ export function checkSequenceA(
   }
 
   // ── A13 — weekend frequency (spec §10) ────────────────────
-  if (isWeekendDate(date)) {
+  // Uses shift-overlap (not just the slot's starting calendar date)
+  // so a Fri 19:00→Sat 08:00 night correctly contributes Saturday.
+  const overlappedWeekends = getOverlappedWeekendDates(proposedStartMs, proposedEndMs);
+  if (overlappedWeekends.length > 0) {
     const prospective = new Set(state.weekendDatesWorked);
-    prospective.add(date);
+    for (const w of overlappedWeekends) prospective.add(w);
     const equivalentFullWeekends = prospective.size / 2;
     const allowedEquivalent = totalWeekendsInRota / wtr.weekendFrequencyMax;
     if (equivalentFullWeekends > allowedEquivalent) {
@@ -372,6 +446,10 @@ export function checkSequenceB(
   periodEndIso: string,
 ): CheckResult {
   // ── Step 0: block length (E43 dictionary guard) ──────────
+  // Label 'E43_BLOCK_TOO_LONG' is a Stage 3e convention — spec §7
+  // Section E governs block patterns, and this length cap is
+  // logically adjacent. Kept for namespace clarity vs A-rule
+  // strings; downstream consumers grep this literal.
   if (blockDates.length < 1) {
     return { pass: false, failedRule: 'E43_BLOCK_TOO_LONG', reason: 'empty block' };
   }
@@ -387,12 +465,24 @@ export function checkSequenceB(
   const nightShifts = sorted.map((d) => ({ date: d, ...parseShiftTimes(slot, d) }));
 
   // ── A4 — max consecutive nights, full span ────────────────
+  // Spec §7 line 1427: prior + block + subsequent ≤ maxConsecNights.
+  // Subsequent is counted forward from the day after the block's
+  // last night and covers nights already committed on that side
+  // (cascade backfill scenarios).
   const priorConsecNights = state.consecutiveNightDates.length;
-  if (priorConsecNights + sorted.length > wtr.maxConsecutive.nights) {
+  const subsequentConsecNights = countSubsequentConsecutive(
+    state,
+    sorted[sorted.length - 1],
+    (a) => a.isNightShift,
+  );
+  if (
+    priorConsecNights + sorted.length + subsequentConsecNights >
+    wtr.maxConsecutive.nights
+  ) {
     return {
       pass: false,
       failedRule: 'A4',
-      reason: `prior ${priorConsecNights} nights + block ${sorted.length} > cap ${wtr.maxConsecutive.nights}`,
+      reason: `prior ${priorConsecNights} + block ${sorted.length} + subsequent ${subsequentConsecNights} nights > cap ${wtr.maxConsecutive.nights}`,
     };
   }
 
@@ -407,19 +497,36 @@ export function checkSequenceB(
   }
 
   // ── A7 — max consec shifts (all types, full span) ────────
+  // Spec §7 line 1428: prior + block + subsequent ≤ maxConsecStandard.
+  // Subsequent counts any shift type (filter always true); the run
+  // breaks on the first date with no committed assignment.
   const priorConsecShifts = state.consecutiveShiftDates.length;
-  if (priorConsecShifts + sorted.length > wtr.maxConsecutive.standard) {
+  const subsequentConsecShifts = countSubsequentConsecutive(
+    state,
+    sorted[sorted.length - 1],
+    () => true,
+  );
+  if (
+    priorConsecShifts + sorted.length + subsequentConsecShifts >
+    wtr.maxConsecutive.standard
+  ) {
     return {
       pass: false,
       failedRule: 'A7',
-      reason: `prior ${priorConsecShifts} shifts + block ${sorted.length} > cap ${wtr.maxConsecutive.standard}`,
+      reason: `prior ${priorConsecShifts} + block ${sorted.length} + subsequent ${subsequentConsecShifts} shifts > cap ${wtr.maxConsecutive.standard}`,
     };
   }
 
   // ── A13 — weekend frequency: unique Sat/Sun in block ─────
+  // Uses shift-overlap per §10: a Fri-start night contributes Sat,
+  // a Sat-start night contributes both Sat and Sun, etc. Dedup
+  // across nights so a Sat counted via Fri-night + Sat-night is
+  // still only one weekend day.
   const prospectiveWeekendDays = new Set(state.weekendDatesWorked);
-  for (const n of sorted) {
-    if (isWeekendDate(n)) prospectiveWeekendDays.add(n);
+  for (const n of nightShifts) {
+    for (const w of getOverlappedWeekendDates(n.startMs, n.endMs)) {
+      prospectiveWeekendDays.add(w);
+    }
   }
   const equivalentFullWeekends = prospectiveWeekendDays.size / 2;
   const allowedEquivalent = totalWeekendsInRota / wtr.weekendFrequencyMax;
