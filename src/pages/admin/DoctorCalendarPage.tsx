@@ -653,7 +653,16 @@ export default function DoctorCalendarPage() {
     setPanelOpen(false);
   };
 
-  const ActionButtonsPopover = ({ date, mergedCell }: { date: string; mergedCell?: MergedCell }) => {
+  const ActionButtonsPopover = ({
+    date,
+    mergedCell,
+    code,
+  }: {
+    date: string;
+    mergedCell?: MergedCell;
+    /** When provided, actions target this specific event code (used for multi-event days). */
+    code?: string;
+  }) => {
     const eventsExist =
       mergedCell && mergedCell.primary !== "AVAILABLE" && mergedCell.primary !== "BH" && !mergedCell.isDeleted;
 
@@ -679,7 +688,7 @@ export default function DoctorCalendarPage() {
                 className="justify-start h-8 text-xs font-medium"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleActionEdit(date, mergedCell);
+                  handleActionEdit(date, mergedCell, code);
                 }}
               >
                 <Edit2 className="w-3.5 h-3.5 mr-2 text-muted-foreground" /> Edit Event
@@ -690,7 +699,7 @@ export default function DoctorCalendarPage() {
                 className="justify-start h-8 text-xs font-medium"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleActionCopy(date, mergedCell);
+                  handleActionCopy(date, mergedCell, code);
                 }}
               >
                 <Copy className="w-3.5 h-3.5 mr-2 text-muted-foreground" /> Copy Event
@@ -701,7 +710,7 @@ export default function DoctorCalendarPage() {
                 className="justify-start h-8 text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-50"
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleActionDelete(date, mergedCell);
+                  handleActionDelete(date, mergedCell, code);
                 }}
               >
                 <Trash2 className="w-3.5 h-3.5 mr-2 text-red-500" /> Delete Event
