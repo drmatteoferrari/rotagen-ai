@@ -1549,16 +1549,13 @@ export default function Roster() {
                         <span className="font-semibold text-[13px] leading-tight flex-1 min-w-0 truncate">
                           {formatDoctorName(doctor.first_name, doctor.last_name)}
                         </span>
-                        {/* Grade — visible on sm and up only to save mobile space */}
-                        <span className="hidden sm:inline shrink-0">
+                        {/* Grade — always visible after name */}
+                        <span className="shrink-0">
                           <GradeBadge grade={doctor.grade} />
                         </span>
                       </div>
                       {!isExpanded && (
                         <div className="mt-1 flex items-center gap-1.5 text-[11px] leading-tight text-muted-foreground truncate">
-                          {/* Grade — mobile only */}
-                          <span className="sm:hidden shrink-0"><GradeBadge grade={doctor.grade} size="xs" /></span>
-                          <span className="sm:hidden w-1 h-1 rounded-full bg-border shrink-0" />
                           {/* Email */}
                           <span className="truncate">
                             {cached?.nhs_email ?? doctor.email ?? "No email"}
