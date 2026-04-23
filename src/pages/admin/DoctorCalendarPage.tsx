@@ -561,9 +561,31 @@ export default function DoctorCalendarPage() {
   }, [doctor, overrides, calendarData]);
 
   // ─── Actions Handlers ───────────────────────────────────────
-  const handleActionEdit = (date: string, mergedCell: MergedCell | undefined) => {
+  // `code` (optional) targets a specific event on multi-event days.
+  // Resolution: try to find an override whose eventType matches `code` and that
+  // applies to this date; otherwise fall back to mergedCell.overrideId; otherwise
+  // treat as a survey-derived event with that code.
+  const resolveOverrideForCode = (
+    date: string,
+    mergedCell: MergedCell | undefined,
+    code?: string,
+  ): CalendarOverride | undefined => {
+    if (!code) {
+      return overrides.find((o) => o.id === mergedCell?.overrideId);
+    }
+    // Find any non-delete override on this date whose eventType matches `code`.
+    return overrides.find((o) => {
+      if (o.action === "delete") return false;
+      if (o.eventType !== code) return false;
+      // simple range/recurrence check — handles 'none' and inclusive ranges
+      if (o.recurrence === "custom") return o.recurrenceDates.includes(date);
+      return o.startDate <= date && date <= o.endDate;
+    });
+  };
+
+  const handleActionEdit = (date: string, mergedCell: MergedCell | undefined, code?: string) => {
     if (!mergedCell) return;
-    const dayOverride = overrides.find((o) => o.id === mergedCell.overrideId);
+    const dayOverride = resolveOverrideForCode(date, mergedCell, code);
     if (dayOverride) {
       setModalPrefill({
         eventType: dayOverride.eventType,
@@ -574,13 +596,14 @@ export default function DoctorCalendarPage() {
         originalEventType: dayOverride.originalEventType,
       });
     } else {
+      const targetCode = code ?? mergedCell.primary ?? "AVAILABLE";
       setModalPrefill({
-        eventType: mergedCell.primary ?? "AVAILABLE",
+        eventType: targetCode,
         startDate: date,
         endDate: date,
         note: "",
         overrideId: "",
-        originalEventType: mergedCell.primary ?? "AVAILABLE",
+        originalEventType: targetCode,
       });
     }
     setModalInitialDate(null);
@@ -589,9 +612,9 @@ export default function DoctorCalendarPage() {
     setPanelOpen(false);
   };
 
-  const handleActionCopy = (date: string, mergedCell: MergedCell | undefined) => {
+  const handleActionCopy = (date: string, mergedCell: MergedCell | undefined, code?: string) => {
     if (!mergedCell) return;
-    const dayOverride = overrides.find((o) => o.id === mergedCell.overrideId);
+    const dayOverride = resolveOverrideForCode(date, mergedCell, code);
     if (dayOverride) {
       setModalCopyFrom({
         eventType: dayOverride.eventType,
@@ -600,7 +623,7 @@ export default function DoctorCalendarPage() {
       });
     } else {
       setModalCopyFrom({
-        eventType: mergedCell.primary ?? "AVAILABLE",
+        eventType: code ?? mergedCell.primary ?? "AVAILABLE",
         startDate: date,
         endDate: date,
       });
@@ -611,13 +634,13 @@ export default function DoctorCalendarPage() {
     setPanelOpen(false);
   };
 
-  const handleActionDelete = (date: string, mergedCell: MergedCell | undefined) => {
+  const handleActionDelete = (date: string, mergedCell: MergedCell | undefined, code?: string) => {
     if (!mergedCell) return;
-    const dayOverride = overrides.find((o) => o.id === mergedCell.overrideId);
+    const dayOverride = resolveOverrideForCode(date, mergedCell, code);
     if (dayOverride) {
       handleDeleteOverride(dayOverride);
     } else {
-      handleRemoveSurveyEvent(date);
+      handleRemoveSurveyEvent(date, code);
     }
     setPanelOpen(false);
   };
