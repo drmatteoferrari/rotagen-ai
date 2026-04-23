@@ -1101,47 +1101,41 @@ export default function DoctorCalendarPage() {
               This date is outside the rota period.
             </p>
           ) : showDeleted ? (
-            <div
-              className="rounded-lg border border-border bg-muted/30 p-3 sm:p-4 flex items-center gap-3"
-              style={{ borderLeft: `4px solid #d1d5db` }}
-            >
-              <span
-                className="inline-block rounded-full px-2 sm:px-2.5 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold"
-                style={{ backgroundColor: "#d1d5db", color: "#6b7280", textDecoration: "line-through" }}
-              >
-                {EVENT_LABELS[mergedCell!.deletedCode!] ?? mergedCell!.deletedCode}
-              </span>
-              <span className="text-xs sm:text-sm text-muted-foreground font-medium">Removed by coordinator</span>
-            </div>
-          ) : finalCodes.length === 0 ? (
-            <p className="text-xs sm:text-sm text-muted-foreground italic text-center py-4">
-              No events scheduled. Fully available.
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {finalCodes.map((code) => {
-                const isExplicitOverride =
-                  (code === mergedCell?.primary || code === mergedCell?.secondary) &&
-                  (mergedCell?.overrideAction === "add" || mergedCell?.overrideAction === "modify");
-
-                return (
-                  <div
-                    key={code}
-                    className={`rounded-lg border border-border bg-card p-3 sm:p-4 flex items-center justify-between transition-colors`}
-                    style={{ borderLeftWidth: "4px", borderLeftColor: MONTH_EVENT_COLOURS[code] ?? "#6b7280" }}
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className="w-full text-left rounded-lg border border-border bg-muted/30 p-3 sm:p-4 flex items-center gap-3 hover:bg-muted/50 transition-colors cursor-pointer"
+                  style={{ borderLeft: `4px solid #d1d5db` }}
+                >
+                  <span
+                    className="inline-block rounded-full px-2 sm:px-2.5 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold"
+                    style={{ backgroundColor: "#d1d5db", color: "#6b7280", textDecoration: "line-through" }}
                   >
-                    <div className="flex items-center gap-2 sm:gap-3">
-                      <LeaveBadge type={code} size="large" />
-                      <span className="text-xs sm:text-sm font-semibold">{EVENT_LABELS[code] ?? code}</span>
-                    </div>
-                    {isExplicitOverride && (
-                      <span className="text-[9px] sm:text-xs text-orange-600 font-bold bg-orange-50 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded border border-orange-200 flex items-center gap-1 sm:gap-1.5">
-                        <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-orange-500"></span>
-                        Override
-                      </span>
-                    )}
-                  </div>
-                );
+                    {EVENT_LABELS[mergedCell!.deletedCode!] ?? mergedCell!.deletedCode}
+                  </span>
+                  <span className="text-xs sm:text-sm text-muted-foreground font-medium">Removed by coordinator</span>
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-48 p-1 z-50 shadow-xl border-border/50" side="bottom" align="start">
+                <div className="flex flex-col gap-0.5">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="justify-start h-8 text-xs font-medium text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const dayOverride = overrides.find((o) => o.id === mergedCell!.overrideId);
+                      if (dayOverride) handleDeleteOverride(dayOverride);
+                    }}
+                  >
+                    <Plus className="w-3.5 h-3.5 mr-2 text-emerald-600 rotate-45" /> Restore Event
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
+          ) : finalCodes.length === 0 ? (
+...
               })}
             </div>
           )}
