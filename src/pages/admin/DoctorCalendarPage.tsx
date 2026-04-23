@@ -1176,7 +1176,7 @@ export default function DoctorCalendarPage() {
                 const isExplicitOverride =
                   (code === mergedCell?.primary || code === mergedCell?.secondary) &&
                   (mergedCell?.overrideAction === "add" || mergedCell?.overrideAction === "modify");
-                const isLtftCode = code === "LTFT";
+                
 
                 const cardInner = (
                   <>
