@@ -17,6 +17,7 @@ import {
   isWeekendDate,
   getRestUntilMs,
 } from '../src/lib/finalRotaWtr';
+import { isSlotEligible } from '../src/lib/finalRotaEligibility';
 import type {
   DoctorState,
   InternalDayAssignment,
@@ -635,6 +636,196 @@ async function run() {
       PERIOD_END,
     );
     expectFail(r, 'C32', 'CSB C32: 3-night block > doctor soft preference 2');
+  }
+
+  // ─── Stage 3f — Shift eligibility ───────────────────────────
+
+  console.log('\n=== Stage 3f — Shift eligibility ===');
+
+  const eligMatrix = buildAvailabilityMatrix(minimalInput);
+  const PERIOD_START = minimalInput.preRotaInput.period.startDate;
+  const nightMonSlot = getSlot(minimalInput, 'night', '2026-05-04');    // Mon
+  const nightTueSlot = getSlot(minimalInput, 'night', '2026-05-05');    // Tue
+  const shortMonSlot = getSlot(minimalInput, 'short-day', '2026-05-04');
+  const shortTueSlot = getSlot(minimalInput, 'short-day', '2026-05-05');
+  const satShortSlot = getSlot(minimalInput, 'short-day', '2026-05-09'); // Sat
+  const doc1 = minimalInput.doctors[0]; // Consultant, all competencies, FTE
+  const doc2 = minimalInput.doctors[1]; // SpR, all competencies, FTE
+  const doc3 = minimalInput.doctors[2]; // SpR LTFT Monday-off, 0.8 WTE
+
+  // (27) Prompt baseline — doc-1 eligible on a routine available date.
+  assert(
+    isSlotEligible(doc1, nightTueSlot, 0, '2026-05-05', eligMatrix, PERIOD_END),
+    'Stage 3f: doc-1 eligible for night on Tuesday 2026-05-05',
+  );
+
+  // (28) Prompt baseline — doc-3 ltft_off on Monday → reject (Rule 1 / B26).
+  assert(
+    !isSlotEligible(doc3, nightMonSlot, 0, PERIOD_START, eligMatrix, PERIOD_END),
+    'Stage 3f B26: doc-3 ltft_off on Monday cannot take night',
+  );
+
+  // (29) Prompt baseline — exemptFromNights blocks a night shift (B27).
+  {
+    const exemptNightDoc: typeof doc1 = {
+      ...doc1,
+      constraints: {
+        ...doc1.constraints,
+        hard: { ...doc1.constraints.hard, exemptFromNights: true },
+      },
+    };
+    assert(
+      !isSlotEligible(exemptNightDoc, nightTueSlot, 0, '2026-05-05', eligMatrix, PERIOD_END),
+      'Stage 3f B27: exempt-from-nights doctor cannot take night shift',
+    );
+  }
+
+  // (30) Prompt baseline — grade-restricted slot rejects SpR.
+  {
+    const restrictedSlot: typeof nightTueSlot = {
+      ...nightTueSlot,
+      slots: [{
+        slotIndex: 0, label: null, permittedGrades: ['Consultant'],
+        reqIac: 0, reqIaoc: 0, reqIcu: 0, reqTransfer: 0,
+      }],
+    };
+    assert(
+      !isSlotEligible(doc2, restrictedSlot, 0, '2026-05-05', eligMatrix, PERIOD_END),
+      'Stage 3f A20: SpR cannot fill Consultant-restricted slot',
+    );
+    // (31) Prompt baseline — Consultant passes the same slot.
+    assert(
+      isSlotEligible(doc1, restrictedSlot, 0, '2026-05-05', eligMatrix, PERIOD_END),
+      'Stage 3f A20: Consultant passes Consultant-restricted slot',
+    );
+  }
+
+  // (32) B30 positive — night on D where D+1 is hard-blocked (AL) → reject.
+  {
+    const alDoc: typeof doc1 = {
+      ...doc1,
+      constraints: {
+        ...doc1.constraints,
+        hard: { ...doc1.constraints.hard, annualLeaveDates: ['2026-05-06'] }, // Wed = D+1
+      },
+    };
+    const alMatrix = buildAvailabilityMatrix({ ...minimalInput, doctors: [alDoc, doc2, doc3] });
+    assert(
+      !isSlotEligible(alDoc, nightTueSlot, 0, '2026-05-05', alMatrix, PERIOD_END),
+      'Stage 3f B30: night on D where D+1 is AL rejects',
+    );
+  }
+
+  // (33) B30 negative — night on D where D+1 available → pass.
+  assert(
+    isSlotEligible(doc1, nightTueSlot, 0, '2026-05-05', eligMatrix, PERIOD_END),
+    'Stage 3f B30: night on D where D+1 available passes (baseline mirror)',
+  );
+
+  // (34) C31 positive — proposed date in nocDates → reject.
+  {
+    const nocDoc: typeof doc1 = {
+      ...doc1,
+      constraints: {
+        ...doc1.constraints,
+        soft: { ...doc1.constraints.soft, nocDates: ['2026-05-05'] },
+      },
+    };
+    assert(
+      !isSlotEligible(nocDoc, shortTueSlot, 0, '2026-05-05', eligMatrix, PERIOD_END),
+      'Stage 3f C31: date in nocDates rejects (Pass 1 hard-block)',
+    );
+  }
+
+  // (35) C31 night-D+1 positive — night on D where D+1 in nocDates → reject.
+  {
+    const nocNextDoc: typeof doc1 = {
+      ...doc1,
+      constraints: {
+        ...doc1.constraints,
+        soft: { ...doc1.constraints.soft, nocDates: ['2026-05-06'] },
+      },
+    };
+    assert(
+      !isSlotEligible(nocNextDoc, nightTueSlot, 0, '2026-05-05', eligMatrix, PERIOD_END),
+      'Stage 3f B30+C31: night on D where D+1 in nocDates rejects',
+    );
+  }
+
+  // (36) B28 positive — Sat shift + exemptFromWeekends → reject.
+  {
+    const weekendExemptDoc: typeof doc1 = {
+      ...doc1,
+      constraints: {
+        ...doc1.constraints,
+        hard: { ...doc1.constraints.hard, exemptFromWeekends: true },
+      },
+    };
+    assert(
+      !isSlotEligible(weekendExemptDoc, satShortSlot, 0, '2026-05-09', eligMatrix, PERIOD_END),
+      'Stage 3f B28: weekend-exempt doctor cannot take Sat shift',
+    );
+  }
+
+  // (37) B29 positive — on-call slot + exemptFromOncall → reject.
+  {
+    const oncallDoc: typeof doc1 = {
+      ...doc1,
+      constraints: {
+        ...doc1.constraints,
+        hard: { ...doc1.constraints.hard, exemptFromOncall: true },
+      },
+    };
+    const oncallSlot: typeof shortTueSlot = { ...shortTueSlot, isOncall: true };
+    assert(
+      !isSlotEligible(oncallDoc, oncallSlot, 0, '2026-05-05', eligMatrix, PERIOD_END),
+      'Stage 3f B29: oncall-exempt doctor cannot take oncall slot',
+    );
+  }
+
+  // (38) A19 positive — slot requires IAC, doctor lacks it → reject.
+  {
+    const iacSlot: typeof shortTueSlot = {
+      ...shortTueSlot,
+      slots: [{
+        slotIndex: 0, label: null, permittedGrades: [],
+        reqIac: 1, reqIaoc: 0, reqIcu: 0, reqTransfer: 0,
+      }],
+    };
+    const noIacDoc: typeof doc1 = { ...doc1, hasIac: false };
+    assert(
+      !isSlotEligible(noIacDoc, iacSlot, 0, '2026-05-05', eligMatrix, PERIOD_END),
+      'Stage 3f A19: slot requires IAC but doctor lacks hasIac → reject',
+    );
+    // (39) A19 negative — same slot, doctor has IAC → pass.
+    assert(
+      isSlotEligible(doc1, iacSlot, 0, '2026-05-05', eligMatrix, PERIOD_END),
+      'Stage 3f A19: slot requires IAC and doctor has it → pass',
+    );
+  }
+
+  // (40) Unconstrained slot (slots[] empty) — rules 7/8 skipped; BH
+  //      positive doubles as this test: matrix = 'bank_holiday' must
+  //      permit the assignment. Fixture has no BH by default, so we
+  //      synthesise an input variant adding 2026-05-05 as BH.
+  {
+    const bhInput: FinalRotaInput = {
+      ...minimalInput,
+      preRotaInput: {
+        ...minimalInput.preRotaInput,
+        period: { ...minimalInput.preRotaInput.period, bankHolidayDates: ['2026-05-05'] },
+      },
+    };
+    const bhMatrix = buildAvailabilityMatrix(bhInput);
+    assert(
+      bhMatrix['doc-1']['2026-05-05'] === 'bank_holiday',
+      'Stage 3f: BH matrix cell populated correctly',
+    );
+    const unconstrainedBhSlot: typeof shortTueSlot = { ...shortTueSlot, slots: [] };
+    assert(
+      isSlotEligible(doc1, unconstrainedBhSlot, 0, '2026-05-05', bhMatrix, PERIOD_END),
+      'Stage 3f BH+unconstrained: doctor eligible on bank_holiday with empty slots[]',
+    );
   }
 
   console.log('\nAll assertions passed.');
