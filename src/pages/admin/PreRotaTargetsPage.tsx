@@ -10,6 +10,7 @@ import { useIsMobile } from '@/hooks/use-mobile'
 import type { CalendarData, TargetsData, DoctorTargets } from '@/lib/preRotaTypes'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, Download, Loader2, AlertTriangle, Target, ChevronDown, ChevronUp } from 'lucide-react'
+import { GradeBadge } from '@/components/GradeBadge'
 
 function r1(n: number): number {
   return Math.round((n + Number.EPSILON) * 10) / 10
@@ -106,8 +107,8 @@ function DoctorCard({ doctor, shiftTypes }: {
           <div className="text-sm font-medium text-foreground">
             {doctor.doctorName.replace('Dr ', '')}
           </div>
-          <div className="text-[10px] text-muted-foreground">
-            {doctor.grade}
+          <div className="mt-0.5">
+            <GradeBadge grade={doctor.grade} size="xs" />
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -491,7 +492,7 @@ export default function PreRotaTargetsPage() {
                         <td className={`sticky left-0 ${rowBg} z-10 py-2 px-2 border-r border-border min-w-[140px]`}>
                           <span className="font-medium text-foreground whitespace-nowrap">{doctor.doctorName.replace('Dr ', '')}</span>
                         </td>
-                        <td className="py-2 px-2 text-muted-foreground">{doctor.grade}</td>
+                        <td className="py-2 px-2"><GradeBadge grade={doctor.grade} /></td>
                         <td className="py-2 px-2 text-center">
                           <span className={`font-mono ${doctor.wte < 100 ? 'text-amber-600 font-semibold' : 'text-muted-foreground'}`}>
                             {doctor.wte}%

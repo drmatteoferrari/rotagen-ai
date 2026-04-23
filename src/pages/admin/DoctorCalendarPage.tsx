@@ -12,6 +12,7 @@ import {
   type MergedCell,
 } from "@/lib/calendarOverrides";
 import type { CalendarData, CalendarDoctor } from "@/lib/preRotaTypes";
+import { GradeBadge } from "@/components/GradeBadge";
 import {
   ChevronLeft,
   ChevronRight,
@@ -1254,14 +1255,7 @@ export default function DoctorCalendarPage() {
               {doctor?.doctorName ?? "—"}
             </span>
             <div className="flex items-center gap-1 flex-wrap mt-0.5 overflow-hidden">
-              {doctor?.grade && (
-                <span
-                  className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] sm:text-[10px] font-semibold shrink-0"
-                  style={{ backgroundColor: "#f0fdfa", color: "#0f766e", border: "1px solid #99f6e4" }}
-                >
-                  {doctor.grade}
-                </span>
-              )}
+              {doctor?.grade && <GradeBadge grade={doctor.grade} />}
               {doctor?.wte != null && (
                 <span
                   className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] sm:text-[10px] font-semibold shrink-0"

@@ -38,6 +38,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
+import { GradeBadge } from "@/components/GradeBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { useRotaContext } from "@/contexts/RotaContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -104,7 +105,7 @@ function ExpandedDoctorPanel({
       <div className="space-y-2">
         <div className="grid grid-cols-[80px_1fr] sm:grid-cols-[90px_1fr] gap-x-3 gap-y-1.5 text-sm">
           <span className="text-muted-foreground">Grade</span>
-          <span className="font-medium text-foreground">{doctor.grade || "—"}</span>
+          <span className="font-medium text-foreground"><GradeBadge grade={doctor.grade} /></span>
           <span className="text-muted-foreground">Email</span>
           <span className="font-medium text-foreground truncate">{doctor.email || "—"}</span>
         </div>
@@ -1401,8 +1402,8 @@ export default function Roster() {
                     </div>
 
                     {/* Grade */}
-                    <div className="shrink-0 text-muted-foreground text-xs truncate" style={{width: '80px'}}>
-                      {doctor.grade || "—"}
+                    <div className="shrink-0 text-xs truncate" style={{width: '80px'}}>
+                      <GradeBadge grade={doctor.grade} />
                     </div>
 
                     {/* Email */}
@@ -1549,14 +1550,14 @@ export default function Roster() {
                           {formatDoctorName(doctor.first_name, doctor.last_name)}
                         </span>
                         {/* Grade — visible on sm and up only to save mobile space */}
-                        <span className="hidden sm:inline text-[11px] text-muted-foreground font-medium shrink-0">
-                          {doctor.grade || "—"}
+                        <span className="hidden sm:inline shrink-0">
+                          <GradeBadge grade={doctor.grade} />
                         </span>
                       </div>
                       {!isExpanded && (
                         <div className="mt-1 flex items-center gap-1.5 text-[11px] leading-tight text-muted-foreground truncate">
                           {/* Grade — mobile only */}
-                          <span className="sm:hidden shrink-0 font-medium">{doctor.grade || "—"}</span>
+                          <span className="sm:hidden shrink-0"><GradeBadge grade={doctor.grade} size="xs" /></span>
                           <span className="sm:hidden w-1 h-1 rounded-full bg-border shrink-0" />
                           {/* Email */}
                           <span className="truncate">
