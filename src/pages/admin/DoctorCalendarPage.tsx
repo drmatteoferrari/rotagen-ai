@@ -491,14 +491,14 @@ export default function DoctorCalendarPage() {
     }
   };
 
-  const handleRemoveSurveyEvent = async (date: string) => {
+  const handleRemoveSurveyEvent = async (date: string, code?: string) => {
     if (!calendarData) return;
     try {
       const {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user || !currentRotaConfigId || !doctorId) return;
-      const cellCode = mergedAvailability[date]?.primary ?? "AVAILABLE";
+      const cellCode = code ?? mergedAvailability[date]?.primary ?? "AVAILABLE";
       if (cellCode === "AVAILABLE") return;
       await supabase.from("coordinator_calendar_overrides").insert({
         rota_config_id: currentRotaConfigId,
