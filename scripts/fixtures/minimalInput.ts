@@ -86,58 +86,64 @@ function buildShiftSlots(): ShiftSlotEntry[] {
   return out;
 }
 
+// 4-week WTR-feasible targets.
+// FT: 52 + 75 + 45 = 172h over 4 weeks = 43h/week (under 48h WTR avg cap).
+// Per-shift ceilings = estimatedShiftCount × durationHours:
+//   4 × 13 = 52, 6 × 12.5 = 75, 5 × 9 = 45.
 const SHIFT_TARGETS_FT = [
   {
     shiftTypeId: 'st-night',
     shiftName: 'Night',
     shiftKey: 'night',
     isOncall: false,
-    maxTargetHours: 156,
-    estimatedShiftCount: 12,
+    maxTargetHours: 52,
+    estimatedShiftCount: 4,
   },
   {
     shiftTypeId: 'st-longday',
     shiftName: 'Long Day',
     shiftKey: 'long-day',
     isOncall: false,
-    maxTargetHours: 200,
-    estimatedShiftCount: 16,
+    maxTargetHours: 75,
+    estimatedShiftCount: 6,
   },
   {
     shiftTypeId: 'st-shortday',
     shiftName: 'Short Day',
     shiftKey: 'short-day',
     isOncall: false,
-    maxTargetHours: 124,
-    estimatedShiftCount: 14,
+    maxTargetHours: 45,
+    estimatedShiftCount: 5,
   },
 ];
 
-// D3 is 0.8 WTE — shiftTargets scaled to sum to totalMaxHours = 384h.
+// D3 is 0.8 WTE. 39 + 62.5 + 36 = 137.5h over 4 weeks = 34.4h/week.
+// Per-shift ceilings = estimatedShiftCount × durationHours:
+//   3 × 13 = 39, 5 × 12.5 = 62.5, 4 × 9 = 36.
 const SHIFT_TARGETS_D3 = [
   {
     shiftTypeId: 'st-night',
     shiftName: 'Night',
     shiftKey: 'night',
     isOncall: false,
-    maxTargetHours: 124.8,
-    estimatedShiftCount: 10,
+    maxTargetHours: 39,
+    estimatedShiftCount: 3,
   },
   {
     shiftTypeId: 'st-longday',
     shiftName: 'Long Day',
     shiftKey: 'long-day',
     isOncall: false,
-    maxTargetHours: 160,
-    estimatedShiftCount: 13,
+    maxTargetHours: 62.5,
+    estimatedShiftCount: 5,
   },
   {
     shiftTypeId: 'st-shortday',
     shiftName: 'Short Day',
     shiftKey: 'short-day',
     isOncall: false,
-    maxTargetHours: 99.2,
-    estimatedShiftCount: 11,
+    maxTargetHours: 36,
+    estimatedShiftCount: 4,
   },
 ];
 
@@ -222,15 +228,15 @@ export const minimalInput: FinalRotaInput = {
       ltft: { isLtft: false, daysOff: [], nightFlexibility: [] },
       constraints: { hard: emptyHard(), soft: emptySoft() },
       fairnessTargets: {
-        targetTotalHours: 480,
-        targetNightShiftCount: 8,
-        targetWeekendShiftCount: 4,
+        targetTotalHours: 172,
+        targetNightShiftCount: 4,
+        targetWeekendShiftCount: 3,
         targetOncallCount: 0,
         proportionFactor: 1.0,
       },
       shiftTargets: SHIFT_TARGETS_FT,
-      totalMaxHours: 480,
-      weekendCap: 8,
+      totalMaxHours: 172,
+      weekendCap: 4,
       hardWeeklyCap: 72,
     },
     {
@@ -246,15 +252,15 @@ export const minimalInput: FinalRotaInput = {
       ltft: { isLtft: false, daysOff: [], nightFlexibility: [] },
       constraints: { hard: emptyHard(), soft: emptySoft() },
       fairnessTargets: {
-        targetTotalHours: 480,
-        targetNightShiftCount: 8,
-        targetWeekendShiftCount: 4,
+        targetTotalHours: 172,
+        targetNightShiftCount: 4,
+        targetWeekendShiftCount: 3,
         targetOncallCount: 0,
         proportionFactor: 1.0,
       },
       shiftTargets: SHIFT_TARGETS_FT,
-      totalMaxHours: 480,
-      weekendCap: 8,
+      totalMaxHours: 172,
+      weekendCap: 4,
       hardWeeklyCap: 72,
     },
     {
@@ -273,20 +279,107 @@ export const minimalInput: FinalRotaInput = {
         soft: emptySoft(),
       },
       fairnessTargets: {
-        targetTotalHours: 384,
-        targetNightShiftCount: 6,
-        targetWeekendShiftCount: 3,
+        targetTotalHours: 137.5,
+        targetNightShiftCount: 3,
+        targetWeekendShiftCount: 2,
         targetOncallCount: 0,
         proportionFactor: 0.8,
       },
       shiftTargets: SHIFT_TARGETS_D3,
-      totalMaxHours: 384,
-      weekendCap: 6,
+      totalMaxHours: 137.5,
+      weekendCap: 3,
       hardWeeklyCap: 72,
     },
   ],
   constraints: {
     hard: [],
     soft: [],
+  },
+};
+
+// Variant used by Stage 3d's V1-guard violating test. Clones minimalInput
+// and overrides doc-1 with a deliberately small non-on-call floor plus
+// enough weekday AL dates that the §5.2 leave deduction pushes the
+// non-on-call bucket below zero:
+//   standardDayHours = 48 / 5 = 9.6h
+//   6 weekdays × 9.6h = 57.6h deducted from a 50h floor → -7.6h
+// 50h is not a realistic 4-week target — the variant exists solely to
+// exercise the V1 guard and is not reused elsewhere. fairnessTargets
+// and the sole shiftTargets entry are kept in lockstep with totalMaxHours
+// so the fixture is internally consistent for later stages.
+export const minimalInputWithOverdeductedLeave: FinalRotaInput = {
+  ...minimalInput,
+  doctors: [
+    {
+      ...minimalInput.doctors[0],
+      shiftTargets: [
+        {
+          shiftTypeId: 'st-shortday',
+          shiftName: 'Short Day',
+          shiftKey: 'short-day',
+          isOncall: false,
+          maxTargetHours: 50,
+          estimatedShiftCount: 5,
+        },
+      ],
+      totalMaxHours: 50,
+      fairnessTargets: {
+        ...minimalInput.doctors[0].fairnessTargets,
+        targetTotalHours: 50,
+      },
+      constraints: {
+        hard: {
+          ...emptyHard(),
+          annualLeaveDates: [
+            '2026-05-04', '2026-05-05', '2026-05-06',
+            '2026-05-07', '2026-05-08', '2026-05-11',
+          ],
+        },
+        soft: emptySoft(),
+      },
+    },
+    ...minimalInput.doctors.slice(1),
+  ],
+};
+
+// Variant used by Stage 3d's V2-guard test. Appends a single on-call
+// shift slot with no competency requirements and no grade restriction so
+// `collectZeroCompetencyWarnings` emits exactly one warning. All other
+// fields mirror minimalInput — no doctor changes are needed because the
+// V2 guard inspects shiftSlots only.
+const ON_CALL_UNCONSTRAINED_ENTRY: ShiftSlotEntry = {
+  shiftId: 'st-oncall',
+  shiftKey: 'oncall',
+  name: 'Resident On-Call',
+  dayKey: 'sat',
+  startTime: '08:00',
+  endTime: '20:00',
+  durationHours: 12,
+  isOncall: true,
+  isNonResOncall: false,
+  badges: ['oncall'],
+  staffing: { min: 1, target: 1, max: 1 },
+  slots: [
+    {
+      slotIndex: 0,
+      label: null,
+      permittedGrades: [],
+      reqIac: 0,
+      reqIaoc: 0,
+      reqIcu: 0,
+      reqTransfer: 0,
+    },
+  ],
+  targetPct: 0,
+};
+
+export const minimalInputWithOncallSlot: FinalRotaInput = {
+  ...minimalInput,
+  preRotaInput: {
+    ...minimalInput.preRotaInput,
+    shiftSlots: [
+      ...minimalInput.preRotaInput.shiftSlots,
+      ON_CALL_UNCONSTRAINED_ENTRY,
+    ],
   },
 };
