@@ -2184,31 +2184,9 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
 
       {/* Unified Nav Bar — compact */}
       <div className="flex flex-col gap-2 p-2 bg-card rounded-xl border border-border shadow-sm">
-        {/* Row 1: View toggle + prev/label/next + date picker */}
+        {/* Row 1: View toggle + date picker */}
         <div className="flex items-center gap-1.5 sm:gap-3 flex-wrap sm:flex-nowrap">
           <ViewToggle viewMode={effectiveViewMode} setViewMode={setViewMode} isMobile={isMobile} />
-
-          <div className="flex items-center gap-0.5 sm:gap-2 flex-1 justify-center min-w-0">
-            <button
-              type="button"
-              onClick={goPrev}
-              disabled={prevDisabled}
-              className="p-1 sm:p-1.5 rounded-md hover:bg-muted disabled:opacity-30 transition-colors shrink-0"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <span className="text-[11px] sm:text-sm font-semibold text-foreground text-center truncate px-1 sm:min-w-[150px]">
-              {navLabel}
-            </span>
-            <button
-              type="button"
-              onClick={goNext}
-              disabled={nextDisabled}
-              className="p-1 sm:p-1.5 rounded-md hover:bg-muted disabled:opacity-30 transition-colors shrink-0"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
 
           <input
             type="date"
@@ -2218,7 +2196,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
             onChange={(e) => {
               if (e.target.value && e.target.value.length === 10) handleDateChange(e.target.value);
             }}
-            className="text-[11px] sm:text-xs px-2 py-1 sm:px-3 sm:py-1.5 border border-border rounded-md bg-card text-foreground cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 h-[28px] sm:h-[34px] shrink-0"
+            className="ml-auto text-[11px] sm:text-xs px-2 py-1 sm:px-3 sm:py-1.5 border border-border rounded-md bg-card text-foreground cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 h-[28px] sm:h-[34px] shrink-0"
           />
         </div>
 
@@ -2285,6 +2263,29 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Period navigator — directly above calendar */}
+      <div className="flex items-center justify-center gap-2 px-2">
+        <button
+          type="button"
+          onClick={goPrev}
+          disabled={prevDisabled}
+          className="p-1.5 rounded-md hover:bg-muted disabled:opacity-30 transition-colors shrink-0"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        <span className="text-xs sm:text-sm font-semibold text-foreground text-center truncate min-w-[150px]">
+          {navLabel}
+        </span>
+        <button
+          type="button"
+          onClick={goNext}
+          disabled={nextDisabled}
+          className="p-1.5 rounded-md hover:bg-muted disabled:opacity-30 transition-colors shrink-0"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
       </div>
 
       {/* ── WEEK VIEW ── */}
