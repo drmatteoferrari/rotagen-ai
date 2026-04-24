@@ -2444,18 +2444,34 @@ async function run() {
     'Stage 3g.2b.2b enum: {Mon} single-night → [] (E42)',
   );
 
-  // (EXTRA) {Mon..Fri}+cap4 → [4N, PAIR, 3N_WED_FRI_WITH_BACKWARD, 3N_MON_WED]
+  // (EXTRA) {Mon..Fri}+cap4 — score-ascending order per unified scoring:
+  //   3N_WED_FRI_WITH_BACKWARD (35) < 4N_MON_THU+orphan (1000) <
+  //   TIER15_PAIR+orphan (1050) < 3N_MON_WED+2orphans (2010).
   {
     const patterns = enumeratePatternsForResidual(
       ['2026-05-04', '2026-05-05', '2026-05-06', '2026-05-07', '2026-05-08'], wtrCap4,
     );
     assert(
       patterns.length === 4
-        && patterns[0] === '4N_MON_THU'
-        && patterns[1] === 'TIER15_PAIR'
-        && patterns[2] === '3N_WED_FRI_WITH_BACKWARD'
+        && patterns[0] === '3N_WED_FRI_WITH_BACKWARD'
+        && patterns[1] === '4N_MON_THU'
+        && patterns[2] === 'TIER15_PAIR'
         && patterns[3] === '3N_MON_WED',
-      `Stage 3g.2b.2b enum: {Mon..Fri}+cap4 (got ${JSON.stringify(patterns)})`,
+      `Stage 3g.2b.2b enum: {Mon..Fri}+cap4 score-ordered (got ${JSON.stringify(patterns)})`,
+    );
+  }
+
+  // (EXTRA) {Mon..Fri}+cap3 — score-ascending, 4N dropped (E44 gate).
+  {
+    const patterns = enumeratePatternsForResidual(
+      ['2026-05-04', '2026-05-05', '2026-05-06', '2026-05-07', '2026-05-08'], wtrCap3,
+    );
+    assert(
+      patterns.length === 3
+        && patterns[0] === '3N_WED_FRI_WITH_BACKWARD'
+        && patterns[1] === 'TIER15_PAIR'
+        && patterns[2] === '3N_MON_WED',
+      `Stage 3g.2b.2b enum: {Mon..Fri}+cap3 score-ordered (got ${JSON.stringify(patterns)})`,
     );
   }
 
@@ -2767,8 +2783,20 @@ async function run() {
     const d3 = allAssignments.filter(a => a.doctorId === 'doc-3').length;
 
     assert(
-      allAssignments.length >= 8 && d1 > 0 && d2 + d3 > 0,
-      `Stage 3g.2b.2b multi-week: ≥8 assignments, D1 placed and at least one LTFT doctor placed (got total=${allAssignments.length}, d1=${d1}, d2=${d2}, d3=${d3}, paths=${JSON.stringify(paths)})`,
+      allAssignments.length >= 8,
+      `Stage 3g.2b.2b multi-week: ≥8 night assignments (got total=${allAssignments.length}, paths=${JSON.stringify(paths)})`,
+    );
+    assert(
+      d1 > 0,
+      `Stage 3g.2b.2b multi-week: D1 (FT) must get weekday exposure (got d1=${d1})`,
+    );
+    assert(
+      d2 > 0,
+      `Stage 3g.2b.2b multi-week: D2 (LTFT-Thu) must get weekday exposure — blocked from 4N and 2N_B but eligible for 2N_A and 3N_MON_WED (got d2=${d2})`,
+    );
+    assert(
+      d3 > 0,
+      `Stage 3g.2b.2b multi-week: D3 (LTFT-Mon) must get weekday exposure (got d3=${d3})`,
     );
   }
 

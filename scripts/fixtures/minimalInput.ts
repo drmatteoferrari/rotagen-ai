@@ -702,13 +702,13 @@ export const minimalInputWeekdayNights: FinalRotaInput = {
       hasTransfer: true,
       ltft: {
         isLtft: true,
-        daysOff: ['wednesday'],
+        daysOff: ['thursday'],
         nightFlexibility: [
-          { day: 'wednesday', canStartNightsOnDay: false, canEndNightsOnDay: false },
+          { day: 'thursday', canStartNightsOnDay: false, canEndNightsOnDay: false },
         ],
       },
       constraints: {
-        hard: { ...emptyHard(), ltftDaysBlocked: ['wednesday'] },
+        hard: { ...emptyHard(), ltftDaysBlocked: ['thursday'] },
         soft: emptySoft(),
       },
       fairnessTargets: {

@@ -1245,11 +1245,16 @@ export function enumeratePatternsForResidual(
       ? ['4N_MON_THU', 'TIER15_PAIR', '3N_MON_WED']
       : ['TIER15_PAIR', '3N_MON_WED'];
   }
-  // {mon, tue, wed, thu, fri}
+  // {mon, tue, wed, thu, fri} — ordered score-ascending per unified scoring:
+  //   3N_WED_FRI_WITH_BACKWARD covers all 5 nights (score 35, two doctors)
+  //   4N_MON_THU covers Mon..Thu leaving Fri orphan (score 0+1000=1000)
+  //   TIER15_PAIR covers Mon..Thu leaving Fri orphan (score 50+1000=1050)
+  //   3N_MON_WED covers Mon..Wed leaving Thu+Fri orphans (score 10+2000=2010)
+  // !fourNFeasible drops 4N_MON_THU.
   if (size === 5 && has('mon') && has('tue') && has('wed') && has('thu') && has('fri')) {
     return fourNFeasible(wtr)
-      ? ['4N_MON_THU', 'TIER15_PAIR', '3N_WED_FRI_WITH_BACKWARD', '3N_MON_WED']
-      : ['TIER15_PAIR', '3N_WED_FRI_WITH_BACKWARD', '3N_MON_WED'];
+      ? ['3N_WED_FRI_WITH_BACKWARD', '4N_MON_THU', 'TIER15_PAIR', '3N_MON_WED']
+      : ['3N_WED_FRI_WITH_BACKWARD', 'TIER15_PAIR', '3N_MON_WED'];
   }
   // {mon, tue, wed}
   if (size === 3 && has('mon') && has('tue') && has('wed') && !has('thu') && !has('fri')) {
