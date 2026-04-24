@@ -2182,35 +2182,34 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
 
       {/* CHANGE 9: info strip removed */}
 
-      {/* Unified Nav Bar */}
-      <div className={`flex flex-col gap-3 p-3 bg-card rounded-xl border border-border shadow-sm`}>
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          <div className="flex items-center justify-between sm:justify-start w-full sm:w-auto">
-            {/* pass isMobile to ViewToggle to disable month on mobile */}
-            <ViewToggle viewMode={effectiveViewMode} setViewMode={setViewMode} isMobile={isMobile} />
-          </div>
+      {/* Unified Nav Bar — compact */}
+      <div className="flex flex-col gap-2 p-2 bg-card rounded-xl border border-border shadow-sm">
+        {/* Row 1: View toggle + prev/label/next + date picker */}
+        <div className="flex items-center gap-1.5 sm:gap-3 flex-wrap sm:flex-nowrap">
+          <ViewToggle viewMode={effectiveViewMode} setViewMode={setViewMode} isMobile={isMobile} />
 
-          <div className="flex items-center justify-center gap-2 flex-1">
+          <div className="flex items-center gap-0.5 sm:gap-2 flex-1 justify-center min-w-0">
             <button
               type="button"
               onClick={goPrev}
               disabled={prevDisabled}
-              className="p-1.5 rounded-md hover:bg-muted disabled:opacity-30 transition-colors"
+              className="p-1 sm:p-1.5 rounded-md hover:bg-muted disabled:opacity-30 transition-colors shrink-0"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
-            <span className="text-sm font-semibold text-foreground min-w-[150px] text-center">{navLabel}</span>
+            <span className="text-[11px] sm:text-sm font-semibold text-foreground text-center truncate px-1 sm:min-w-[150px]">
+              {navLabel}
+            </span>
             <button
               type="button"
               onClick={goNext}
               disabled={nextDisabled}
-              className="p-1.5 rounded-md hover:bg-muted disabled:opacity-30 transition-colors"
+              className="p-1 sm:p-1.5 rounded-md hover:bg-muted disabled:opacity-30 transition-colors shrink-0"
             >
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>
 
-          {/* Controlled date input — works reliably on all devices including desktop/tablet */}
           <input
             type="date"
             value={currentDateForSync}
@@ -2219,70 +2218,71 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
             onChange={(e) => {
               if (e.target.value && e.target.value.length === 10) handleDateChange(e.target.value);
             }}
-            className="ml-auto text-xs px-3 py-1.5 border border-border rounded-md bg-card text-foreground cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 h-[34px] w-full sm:w-auto"
+            className="text-[11px] sm:text-xs px-2 py-1 sm:px-3 sm:py-1.5 border border-border rounded-md bg-card text-foreground cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 h-[28px] sm:h-[34px] shrink-0"
           />
         </div>
 
-        {/* Search and Sort Toolbar */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 bg-muted/30 p-2 border border-border/60 rounded-lg">
-          <div className="relative flex-1 w-full sm:max-w-sm">
-            <Search className="h-3.5 w-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+        {/* Row 2: Search + Availability + Sort — single row on all sizes */}
+        <div className="flex items-center gap-1.5 sm:gap-2 bg-muted/30 p-1.5 sm:p-2 border border-border/60 rounded-lg">
+          <div className="relative flex-1 min-w-0">
+            <Search className="h-3.5 w-3.5 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <input
               type="text"
-              placeholder="Search doctors..."
+              placeholder="Search..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 text-xs border border-border rounded-md bg-card focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-7 pr-2 py-1 sm:py-1.5 text-[11px] sm:text-xs border border-border rounded-md bg-card focus:outline-none focus:ring-2 focus:ring-blue-500 h-[28px] sm:h-auto"
             />
           </div>
-          <div className="flex items-center gap-3 justify-between sm:justify-end flex-wrap w-full sm:w-auto">
-            {effectiveViewMode === "day" && (
-              <button
-                type="button"
-                onClick={() => setGroupAvailability(!groupAvailability)}
-                className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border font-medium transition-all shadow-sm ${
-                  groupAvailability
-                    ? "bg-blue-600 text-white border-blue-600"
-                    : "bg-card text-muted-foreground border-border hover:bg-muted"
-                }`}
-              >
-                <div
-                  className={`w-2 h-2 rounded-full transition-colors ${groupAvailability ? "bg-white" : "bg-muted-foreground"}`}
-                />
-                Availability
-              </button>
-            )}
 
-            <div className="flex items-center gap-1.5">
-              <span className="text-[11px] text-muted-foreground font-medium hidden sm:inline">Sort:</span>
-              <select
-                value={sortConfig.key}
-                onChange={(e) =>
-                  setSortConfig((prev) => ({ ...prev, key: e.target.value as "name" | "grade" }))
-                }
-                className="text-xs px-2 py-1.5 border border-border rounded-md bg-card focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-              >
-                <option value="name">Name</option>
-                {effectiveViewMode === "day" && <option value="grade">Grade</option>}
-              </select>
-              <button
-                type="button"
-                onClick={() =>
-                  setSortConfig((prev) => ({
-                    ...prev,
-                    direction: prev.direction === "asc" ? "desc" : "asc",
-                  }))
-                }
-                className="p-1.5 rounded-md border border-border bg-card hover:bg-muted transition-colors text-muted-foreground"
-                title={sortConfig.direction === "asc" ? "Ascending — click to reverse" : "Descending — click to reverse"}
-              >
-                {sortConfig.direction === "asc" ? (
-                  <ArrowUp className="h-3.5 w-3.5" />
-                ) : (
-                  <ArrowDown className="h-3.5 w-3.5" />
-                )}
-              </button>
-            </div>
+          {effectiveViewMode === "day" && (
+            <button
+              type="button"
+              onClick={() => setGroupAvailability(!groupAvailability)}
+              title="Group by availability"
+              className={`flex items-center gap-1 text-[11px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded-full border font-medium transition-all shadow-sm shrink-0 ${
+                groupAvailability
+                  ? "bg-blue-600 text-white border-blue-600"
+                  : "bg-card text-muted-foreground border-border hover:bg-muted"
+              }`}
+            >
+              <div
+                className={`w-1.5 h-1.5 rounded-full transition-colors ${groupAvailability ? "bg-white" : "bg-muted-foreground"}`}
+              />
+              <span className="hidden sm:inline">Availability</span>
+              <span className="sm:hidden">Avail</span>
+            </button>
+          )}
+
+          <div className="flex items-center gap-1 shrink-0">
+            <span className="text-[11px] text-muted-foreground font-medium hidden sm:inline">Sort:</span>
+            <select
+              value={sortConfig.key}
+              onChange={(e) =>
+                setSortConfig((prev) => ({ ...prev, key: e.target.value as "name" | "grade" }))
+              }
+              className="text-[11px] sm:text-xs px-1.5 sm:px-2 py-1 sm:py-1.5 border border-border rounded-md bg-card focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer h-[28px] sm:h-auto"
+            >
+              <option value="name">Name</option>
+              {effectiveViewMode === "day" && <option value="grade">Grade</option>}
+            </select>
+            <button
+              type="button"
+              onClick={() =>
+                setSortConfig((prev) => ({
+                  ...prev,
+                  direction: prev.direction === "asc" ? "desc" : "asc",
+                }))
+              }
+              className="p-1 sm:p-1.5 rounded-md border border-border bg-card hover:bg-muted transition-colors text-muted-foreground"
+              title={sortConfig.direction === "asc" ? "Ascending — click to reverse" : "Descending — click to reverse"}
+            >
+              {sortConfig.direction === "asc" ? (
+                <ArrowUp className="h-3.5 w-3.5" />
+              ) : (
+                <ArrowDown className="h-3.5 w-3.5" />
+              )}
+            </button>
           </div>
         </div>
       </div>
