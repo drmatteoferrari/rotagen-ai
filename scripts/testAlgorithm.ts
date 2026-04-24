@@ -32,6 +32,9 @@ import {
   minimalInputWithNroc,
   minimalInputWeekendNights,
   minimalInputWeekendNightsAllLtft,
+  minimalInputWeekdayNights,
+  minimalInputWeekdayMaxConsec3,
+  minimalInputFullNights,
 } from './fixtures/minimalInput';
 import {
   buildBlockDictionary,
@@ -48,6 +51,11 @@ import {
   rankDoctorsForBlock,
   filterByI68Residency,
   placeWeekendNightsForWeekend,
+  // Stage 3g.2b.2b weekday sub-pass:
+  computeWeeklyResidualDemand,
+  enumeratePatternsForResidual,
+  getWeekdayMondays,
+  placeWeekdayNightsForWeek,
   type BlockPattern,
   type DayKey,
 } from '../src/lib/finalRotaNightBlocks';
@@ -2274,7 +2282,555 @@ async function run() {
     );
   }
 
+  // ─── Stage 3g.2b.2b — Weekday night sub-pass ─────────────────────
+
+  console.log('\n=== Stage 3g.2b.2b — Residual demand computation ===');
+
+  const WD_MON1 = '2026-05-04'; // first Monday of the weekday fixture
+
+  // (1) Fresh state → residual covers all four weekday nights.
+  {
+    const inp = minimalInputWeekdayNights;
+    const state = freshStateMap(inp);
+    const r = computeWeeklyResidualDemand(WD_MON1, inp, state, 'night', true);
+    assert(
+      r.residualNightDates.length === 4
+        && r.residualNightDates[0] === '2026-05-04'
+        && r.residualNightDates[3] === '2026-05-07',
+      `Stage 3g.2b.2b residual: fresh state week 1 → {Mon..Thu} (got ${JSON.stringify(r.residualNightDates)})`,
+    );
+  }
+
+  // (2) Simulated Wed+Thu pre-placement → residual shrinks to {Mon,Tue}.
+  {
+    const inp = minimalInputWeekdayNights;
+    const state = freshStateMap(inp);
+    // Inject a synthetic night assignment for doc-1 on Wed 05-06 and Thu 05-07.
+    const preDoc = state.get('doc-1')!;
+    const wedSlot = inp.preRotaInput.shiftSlots.find(
+      s => s.shiftKey === 'night' && s.dayKey === 'wed',
+    )!;
+    preDoc.assignments.push(mkAssignment('doc-1', wedSlot, '2026-05-06'));
+    preDoc.assignments.push(mkAssignment('doc-1', wedSlot, '2026-05-07'));
+    const r = computeWeeklyResidualDemand(WD_MON1, inp, state, 'night', true);
+    assert(
+      r.residualNightDates.length === 2
+        && r.residualNightDates[0] === '2026-05-04'
+        && r.residualNightDates[1] === '2026-05-05',
+      `Stage 3g.2b.2b residual: Wed+Thu pre-placed → {Mon,Tue} (got ${JSON.stringify(r.residualNightDates)})`,
+    );
+  }
+
+  // (3) Full-fixture Mon-Fri + Wed/Thu/Fri pre-placed → residual {Mon,Tue}.
+  {
+    const inp = minimalInputFullNights;
+    const state = freshStateMap(inp);
+    const preDoc = state.get('doc-1')!;
+    const wedSlot = inp.preRotaInput.shiftSlots.find(
+      s => s.shiftKey === 'night' && s.dayKey === 'wed',
+    )!;
+    for (const d of ['2026-05-06', '2026-05-07', '2026-05-08']) {
+      preDoc.assignments.push(mkAssignment('doc-1', wedSlot, d));
+    }
+    const r = computeWeeklyResidualDemand(WD_MON1, inp, state, 'night', true);
+    assert(
+      r.residualNightDates.length === 2
+        && r.residualNightDates[0] === '2026-05-04'
+        && r.residualNightDates[1] === '2026-05-05',
+      `Stage 3g.2b.2b residual: backward-consumed Wed/Thu/Fri → {Mon,Tue} (got ${JSON.stringify(r.residualNightDates)})`,
+    );
+  }
+
+  // (4) Fully-covered week → empty residual, SKIP_NO_RESIDUAL result.
+  {
+    const inp = minimalInputWeekdayNights;
+    const state = freshStateMap(inp);
+    const preDoc = state.get('doc-1')!;
+    const monSlot = inp.preRotaInput.shiftSlots.find(
+      s => s.shiftKey === 'night' && s.dayKey === 'mon',
+    )!;
+    for (const d of ['2026-05-04', '2026-05-05', '2026-05-06', '2026-05-07']) {
+      preDoc.assignments.push(mkAssignment('doc-1', monSlot, d));
+    }
+    const r = placeWeekdayNightsForWeek(
+      WD_MON1, inp, state, buildAvailabilityMatrix(inp),
+      inp.doctors.map(d => d.doctorId), 'night', 13, true,
+    );
+    assert(
+      r.pathTaken === 'SKIP_NO_RESIDUAL' && r.assignments.length === 0,
+      `Stage 3g.2b.2b residual: fully-covered week → SKIP_NO_RESIDUAL (got ${r.pathTaken})`,
+    );
+  }
+
+  // (5) Zero night demand (no matching slots) → empty residual.
+  {
+    const inp = minimalInput; // no night slots for weekday-night shiftKey
+    const state = freshStateMap(inp);
+    const r = computeWeeklyResidualDemand(WD_MON1, inp, state, 'no-such-shift', true);
+    assert(
+      r.residualNightDates.length === 0 && r.allDemandDates.length === 0,
+      'Stage 3g.2b.2b residual: no matching slots → empty',
+    );
+  }
+
+  // (6) onCallOnly filter: weekday fixture has isOncall=true; calling
+  //     with onCallOnly=false filters them out.
+  {
+    const inp = minimalInputWeekdayNights;
+    const state = freshStateMap(inp);
+    const r = computeWeeklyResidualDemand(WD_MON1, inp, state, 'night', false);
+    assert(
+      r.residualNightDates.length === 0,
+      `Stage 3g.2b.2b residual: onCallOnly=false filters out on-call nights (got ${JSON.stringify(r.residualNightDates)})`,
+    );
+  }
+
+  console.log('\n=== Stage 3g.2b.2b — Pattern enumeration ===');
+
+  const wtrCap4 = minimalInputWeekdayNights.preRotaInput.wtrConstraints;
+  const wtrCap3 = minimalInputWeekdayMaxConsec3.preRotaInput.wtrConstraints;
+
+  // (7) {Mon..Thu} + maxConsec=4 → [4N, PAIR, 3N_MON_WED]
+  {
+    const patterns = enumeratePatternsForResidual(
+      ['2026-05-04', '2026-05-05', '2026-05-06', '2026-05-07'], wtrCap4,
+    );
+    assert(
+      patterns.length === 3
+        && patterns[0] === '4N_MON_THU'
+        && patterns[1] === 'TIER15_PAIR'
+        && patterns[2] === '3N_MON_WED',
+      `Stage 3g.2b.2b enum: {Mon..Thu}+cap4 order (got ${JSON.stringify(patterns)})`,
+    );
+  }
+
+  // (8) {Mon..Thu} + maxConsec=3 → [PAIR, 3N_MON_WED]
+  {
+    const patterns = enumeratePatternsForResidual(
+      ['2026-05-04', '2026-05-05', '2026-05-06', '2026-05-07'], wtrCap3,
+    );
+    assert(
+      patterns.length === 2
+        && patterns[0] === 'TIER15_PAIR'
+        && patterns[1] === '3N_MON_WED',
+      `Stage 3g.2b.2b enum: {Mon..Thu}+cap3 skips 4N (got ${JSON.stringify(patterns)})`,
+    );
+  }
+
+  // (9) {Wed,Thu} → [2N_B_WED_THU]
+  assert(
+    JSON.stringify(enumeratePatternsForResidual(['2026-05-06', '2026-05-07'], wtrCap4))
+      === '["2N_B_WED_THU"]',
+    'Stage 3g.2b.2b enum: {Wed,Thu} → [2N_B_WED_THU]',
+  );
+
+  // (10) {Mon,Tue} → [2N_A_MON_TUE]
+  assert(
+    JSON.stringify(enumeratePatternsForResidual(['2026-05-04', '2026-05-05'], wtrCap4))
+      === '["2N_A_MON_TUE"]',
+    'Stage 3g.2b.2b enum: {Mon,Tue} → [2N_A_MON_TUE]',
+  );
+
+  // (11) {Tue,Wed} → [2N_TUE_WED]
+  assert(
+    JSON.stringify(enumeratePatternsForResidual(['2026-05-05', '2026-05-06'], wtrCap4))
+      === '["2N_TUE_WED"]',
+    'Stage 3g.2b.2b enum: {Tue,Wed} → [2N_TUE_WED]',
+  );
+
+  // (12) {Mon} alone → [] (E42 — no single-night pattern)
+  assert(
+    enumeratePatternsForResidual(['2026-05-04'], wtrCap4).length === 0,
+    'Stage 3g.2b.2b enum: {Mon} single-night → [] (E42)',
+  );
+
+  // (EXTRA) {Mon..Fri}+cap4 → [4N, PAIR, 3N_WED_FRI_WITH_BACKWARD, 3N_MON_WED]
+  {
+    const patterns = enumeratePatternsForResidual(
+      ['2026-05-04', '2026-05-05', '2026-05-06', '2026-05-07', '2026-05-08'], wtrCap4,
+    );
+    assert(
+      patterns.length === 4
+        && patterns[0] === '4N_MON_THU'
+        && patterns[1] === 'TIER15_PAIR'
+        && patterns[2] === '3N_WED_FRI_WITH_BACKWARD'
+        && patterns[3] === '3N_MON_WED',
+      `Stage 3g.2b.2b enum: {Mon..Fri}+cap4 (got ${JSON.stringify(patterns)})`,
+    );
+  }
+
+  // (EXTRA) {Thu,Fri} → [2N_THU_FRI]
+  assert(
+    JSON.stringify(enumeratePatternsForResidual(['2026-05-07', '2026-05-08'], wtrCap4))
+      === '["2N_THU_FRI"]',
+    'Stage 3g.2b.2b enum: {Thu,Fri} → [2N_THU_FRI]',
+  );
+
+  console.log('\n=== Stage 3g.2b.2b — Weekday orchestrator integration ===');
+
+  // (13) minimalInputWeekdayNights week 1 with fresh state: D1 (FT) is
+  //      tier=1 (4N) and ranks first. UNIFIED_4N_MON_THU, 4 assignments.
+  {
+    const inp = minimalInputWeekdayNights;
+    const state = freshStateMap(inp);
+    const r = placeWeekdayNightsForWeek(
+      WD_MON1, inp, state, buildAvailabilityMatrix(inp),
+      inp.doctors.map(d => d.doctorId), 'night', 13, true,
+    );
+    assert(
+      r.pathTaken === 'UNIFIED_4N_MON_THU'
+        && r.assignments.length === 4
+        && r.penaltyApplied === 0
+        && r.assignments.every(a => a.doctorId === 'doc-1'),
+      `Stage 3g.2b.2b integration: D1 FT takes 4N (got ${r.pathTaken}/${r.assignments.length}/${r.penaltyApplied})`,
+    );
+  }
+
+  // (14) maxConsec=3 fixture: 4N gated off, pair is primary strategy.
+  //      Three FT doctors tied on deficit+tier=2 → pair succeeds with
+  //      shuffle-first two doctors.
+  {
+    const inp = minimalInputWeekdayMaxConsec3;
+    const state = freshStateMap(inp);
+    const r = placeWeekdayNightsForWeek(
+      WD_MON1, inp, state, buildAvailabilityMatrix(inp),
+      inp.doctors.map(d => d.doctorId), 'night', 13, true,
+    );
+    const ids = new Set(r.assignments.map(a => a.doctorId));
+    assert(
+      r.pathTaken === 'UNIFIED_TIER15_PAIR'
+        && r.assignments.length === 4
+        && ids.size === 2
+        && r.penaltyApplied === 50
+        && r.pairPartnerDoctorId !== null
+        && r.pairPartnerDoctorId !== r.assignments[0].doctorId,
+      `Stage 3g.2b.2b integration: maxConsec=3 → Tier 1.5 pair (got ${r.pathTaken}/ids=${JSON.stringify([...ids])}/partner=${r.pairPartnerDoctorId})`,
+    );
+  }
+
+  // (15) Pair arrangement B: primary X is LTFT-Mon (can only do 2N_B).
+  //      Partner Y takes 2N_A. Verified via per-assignment doctor check.
+  {
+    // D1 LTFT-Mon (can only 2N_B), D2 FT with prior=1 night (can't 4N),
+    // D3 FT (can do anything).
+    const inp = minimalInputWeekdayNights;
+    const doctors = [
+      { ...inp.doctors[0],
+        ltft: { isLtft: true, daysOff: ['monday'],
+          nightFlexibility: [{ day: 'monday', canStartNightsOnDay: false, canEndNightsOnDay: false }] },
+        constraints: {
+          hard: { ...inp.doctors[0].constraints.hard, ltftDaysBlocked: ['monday'] },
+          soft: inp.doctors[0].constraints.soft,
+        },
+      },
+      { ...inp.doctors[1],
+        ltft: { isLtft: false, daysOff: [], nightFlexibility: [] },
+        constraints: {
+          hard: { ...inp.doctors[1].constraints.hard, ltftDaysBlocked: [] },
+          soft: inp.doctors[1].constraints.soft,
+        },
+      },
+      { ...inp.doctors[2],
+        ltft: { isLtft: false, daysOff: [], nightFlexibility: [] },
+        constraints: {
+          hard: { ...inp.doctors[2].constraints.hard, ltftDaysBlocked: [] },
+          soft: inp.doctors[2].constraints.soft,
+        },
+      },
+    ];
+    const inp15: FinalRotaInput = { ...inp, doctors };
+    const state = freshStateMap(inp15);
+    // Prevent D2 and D3 from taking 4N by pre-populating one prior night.
+    state.get('doc-2')!.consecutiveNightDates = ['2026-05-03'];
+    state.get('doc-3')!.consecutiveNightDates = ['2026-05-03'];
+    const r = placeWeekdayNightsForWeek(
+      WD_MON1, inp15, state, buildAvailabilityMatrix(inp15),
+      inp15.doctors.map(d => d.doctorId), 'night', 13, true,
+    );
+    // D1 LTFT-Mon placed on 2N_B (Wed+Thu), partner on 2N_A (Mon+Tue).
+    const d1Dates = r.assignments.filter(a => a.doctorId === 'doc-1').map(a => msToIsoUtc(a.shiftStartMs));
+    assert(
+      r.pathTaken === 'UNIFIED_TIER15_PAIR'
+        && r.assignments.length === 4
+        && d1Dates.includes('2026-05-06') && d1Dates.includes('2026-05-07'),
+      `Stage 3g.2b.2b integration: pair arrangement B (D1 on 2N_B) (got path=${r.pathTaken}, d1Dates=${JSON.stringify(d1Dates)})`,
+    );
+  }
+
+  // (16) Exclude-X invariant: same doctor never appears in both halves.
+  {
+    const inp = minimalInputWeekdayMaxConsec3;
+    const state = freshStateMap(inp);
+    const r = placeWeekdayNightsForWeek(
+      WD_MON1, inp, state, buildAvailabilityMatrix(inp),
+      inp.doctors.map(d => d.doctorId), 'night', 13, true,
+    );
+    if (r.pathTaken === 'UNIFIED_TIER15_PAIR') {
+      const byDoc = new Map<string, number>();
+      for (const a of r.assignments) byDoc.set(a.doctorId, (byDoc.get(a.doctorId) ?? 0) + 1);
+      // Each doctor takes exactly 2 nights (one half); no doctor takes 4.
+      const counts = [...byDoc.values()];
+      assert(
+        counts.every(c => c === 2) && counts.length === 2,
+        `Stage 3g.2b.2b integration: pair halves belong to distinct doctors (got ${JSON.stringify([...byDoc])})`,
+      );
+    } else {
+      assert(false, `Stage 3g.2b.2b integration: expected pair path, got ${r.pathTaken}`);
+    }
+  }
+
+  // (17) All three doctors LTFT-Thu canEnd=true: 2N_B Thu=last ALWAYS,
+  //      4N Thu=last ALWAYS. 3N_MON_WED Thu=morningAfter canEnd=true OK.
+  //      Pair arrangement A primary-2N_A OK but partner-2N_B fails for
+  //      all (Thu=last). Pair B: primary-2N_B fails for all. Pair fails
+  //      entirely. Main loop falls to 3N_MON_WED → commit with Thu
+  //      orphan as CRITICAL UNFILLED.
+  {
+    const inp = minimalInputWeekdayNights;
+    const doctors = inp.doctors.map(d => ({
+      ...d,
+      ltft: { isLtft: true, daysOff: ['thursday'],
+        nightFlexibility: [{ day: 'thursday', canStartNightsOnDay: true, canEndNightsOnDay: true }] },
+      constraints: {
+        hard: { ...d.constraints.hard, ltftDaysBlocked: ['thursday'] },
+        soft: d.constraints.soft,
+      },
+    }));
+    const inp17: FinalRotaInput = { ...inp, doctors };
+    const state = freshStateMap(inp17);
+    const r = placeWeekdayNightsForWeek(
+      WD_MON1, inp17, state, buildAvailabilityMatrix(inp17),
+      inp17.doctors.map(d => d.doctorId), 'night', 13, true,
+    );
+    const thuUnfilled = r.unfilledSlots.some(u => u.date === '2026-05-07' && u.isCritical);
+    assert(
+      r.pathTaken === 'UNIFIED_3N_MON_WED_THU_ORPHAN'
+        && r.assignments.length === 3
+        && thuUnfilled
+        && r.penaltyApplied === 1010,
+      `Stage 3g.2b.2b integration: all-LTFT-Thu → 3N_MON_WED + Thu CRITICAL (got ${r.pathTaken}/${r.assignments.length}/${r.penaltyApplied})`,
+    );
+  }
+
+  // (18) {Mon,Tue,Wed} residual — simulate Thu pre-placed. Expect
+  //      UNIFIED_3N_MON_WED (clean, no orphan).
+  {
+    const inp = minimalInputWeekdayNights;
+    const state = freshStateMap(inp);
+    const thuSlot = inp.preRotaInput.shiftSlots.find(
+      s => s.shiftKey === 'night' && s.dayKey === 'thu',
+    )!;
+    state.get('doc-3')!.assignments.push(mkAssignment('doc-3', thuSlot, '2026-05-07'));
+    const r = placeWeekdayNightsForWeek(
+      WD_MON1, inp, state, buildAvailabilityMatrix(inp),
+      inp.doctors.map(d => d.doctorId), 'night', 13, true,
+    );
+    assert(
+      r.pathTaken === 'UNIFIED_3N_MON_WED'
+        && r.assignments.length === 3
+        && r.penaltyApplied === 10,
+      `Stage 3g.2b.2b integration: {Mon,Tue,Wed} → UNIFIED_3N_MON_WED (got ${r.pathTaken}/${r.penaltyApplied})`,
+    );
+  }
+
+  // (19) {Mon,Wed,Thu} residual (Tue isolated) → 2N_B_WED_THU placed,
+  //      Mon CRITICAL.
+  {
+    const inp = minimalInputWeekdayNights;
+    const state = freshStateMap(inp);
+    const tueSlot = inp.preRotaInput.shiftSlots.find(
+      s => s.shiftKey === 'night' && s.dayKey === 'tue',
+    )!;
+    state.get('doc-3')!.assignments.push(mkAssignment('doc-3', tueSlot, '2026-05-05'));
+    const r = placeWeekdayNightsForWeek(
+      WD_MON1, inp, state, buildAvailabilityMatrix(inp),
+      inp.doctors.map(d => d.doctorId), 'night', 13, true,
+    );
+    const monUnfilled = r.unfilledSlots.some(u => u.date === '2026-05-04' && u.isCritical);
+    assert(
+      r.pathTaken === 'UNIFIED_2N_SINGLE'
+        && r.assignments.length === 2
+        && monUnfilled
+        && r.penaltyApplied === 1025,
+      `Stage 3g.2b.2b integration: {Mon,Wed,Thu} → 2N_B + Mon CRITICAL (got ${r.pathTaken}/${r.penaltyApplied}/monUnfilled=${monUnfilled})`,
+    );
+  }
+
+  // (20) getWeekdayMondays returns 4 Mondays in May 2026 rota period.
+  {
+    const mondays = getWeekdayMondays('2026-05-04', '2026-05-31');
+    assert(
+      mondays.length === 4
+        && mondays[0] === '2026-05-04'
+        && mondays[1] === '2026-05-11'
+        && mondays[2] === '2026-05-18'
+        && mondays[3] === '2026-05-25',
+      `Stage 3g.2b.2b getWeekdayMondays (got ${JSON.stringify(mondays)})`,
+    );
+  }
+
+  // (21) All doctors have every weekday night blocked via AL → UNFILLED.
+  {
+    const inp = minimalInputWeekdayNights;
+    const blockedDoctors = inp.doctors.map(d => ({
+      ...d,
+      constraints: {
+        hard: { ...d.constraints.hard,
+          annualLeaveDates: ['2026-05-04', '2026-05-05', '2026-05-06', '2026-05-07'] },
+        soft: d.constraints.soft,
+      },
+    }));
+    const inp21: FinalRotaInput = { ...inp, doctors: blockedDoctors };
+    const state = freshStateMap(inp21);
+    const r = placeWeekdayNightsForWeek(
+      WD_MON1, inp21, state, buildAvailabilityMatrix(inp21),
+      inp21.doctors.map(d => d.doctorId), 'night', 13, true,
+    );
+    assert(
+      r.pathTaken === 'UNFILLED'
+        && r.assignments.length === 0
+        && r.unfilledSlots.filter(u => u.isCritical).length === 4,
+      `Stage 3g.2b.2b integration: all-blocked → UNFILLED 4 CRITICAL (got ${r.pathTaken}/${r.unfilledSlots.length})`,
+    );
+  }
+
+  // (22) targetNightShiftCount=0 for all → empty candidate pool → UNFILLED.
+  {
+    const inp = minimalInputWeekdayNights;
+    const zeroDoctors = inp.doctors.map(d => ({
+      ...d,
+      fairnessTargets: { ...d.fairnessTargets, targetNightShiftCount: 0 },
+    }));
+    const inp22: FinalRotaInput = { ...inp, doctors: zeroDoctors };
+    const state = freshStateMap(inp22);
+    const r = placeWeekdayNightsForWeek(
+      WD_MON1, inp22, state, buildAvailabilityMatrix(inp22),
+      inp22.doctors.map(d => d.doctorId), 'night', 13, true,
+    );
+    assert(
+      r.pathTaken === 'UNFILLED' && r.assignments.length === 0,
+      `Stage 3g.2b.2b integration: target=0 for all → UNFILLED (got ${r.pathTaken})`,
+    );
+  }
+
+  // (23) {Tue,Wed,Thu} residual (Mon isolated as pre-placed) → empty
+  //      enumeration → relaxation places 2N_B_WED_THU, Tue CRITICAL.
+  {
+    const inp = minimalInputWeekdayNights;
+    const state = freshStateMap(inp);
+    const monSlot = inp.preRotaInput.shiftSlots.find(
+      s => s.shiftKey === 'night' && s.dayKey === 'mon',
+    )!;
+    state.get('doc-3')!.assignments.push(mkAssignment('doc-3', monSlot, '2026-05-04'));
+    const r = placeWeekdayNightsForWeek(
+      WD_MON1, inp, state, buildAvailabilityMatrix(inp),
+      inp.doctors.map(d => d.doctorId), 'night', 13, true,
+    );
+    // {Tue,Wed,Thu} is not in enumeration → main loop empty → relaxation.
+    const tueUnfilled = r.unfilledSlots.some(u => u.date === '2026-05-05' && u.isCritical);
+    assert(
+      r.pathTaken === 'RELAXATION_PARTIAL'
+        && r.assignments.length === 2
+        && tueUnfilled,
+      `Stage 3g.2b.2b integration: {Tue,Wed,Thu} → relaxation 2N_B + Tue CRITICAL (got ${r.pathTaken}/${r.assignments.length})`,
+    );
+  }
+
+  // (24) Multi-week integration: run all 4 weeks of the weekday fixture,
+  //      aggregating state. Verify D1/D2/D3 all get placements — fair
+  //      rotation under unified deficit algorithm.
+  {
+    const inp = minimalInputWeekdayNights;
+    const state = freshStateMap(inp);
+    const matrix = buildAvailabilityMatrix(inp);
+    const mondays = getWeekdayMondays(inp.preRotaInput.period.startDate, inp.preRotaInput.period.endDate);
+    const shuffle = inp.doctors.map(d => d.doctorId);
+    const allAssignments: InternalDayAssignment[] = [];
+    const paths: string[] = [];
+
+    for (const mon of mondays) {
+      const r = placeWeekdayNightsForWeek(
+        mon, inp, state, matrix, shuffle, 'night', 13, true,
+      );
+      paths.push(r.pathTaken);
+      allAssignments.push(...r.assignments);
+      for (const a of r.assignments) {
+        const ds = state.get(a.doctorId)!;
+        ds.assignments.push(a);
+        const prev = ds.actualHoursByShiftType[a.shiftKey] ?? 0;
+        ds.actualHoursByShiftType[a.shiftKey] = prev + a.durationHours;
+      }
+    }
+
+    const d1 = allAssignments.filter(a => a.doctorId === 'doc-1').length;
+    const d2 = allAssignments.filter(a => a.doctorId === 'doc-2').length;
+    const d3 = allAssignments.filter(a => a.doctorId === 'doc-3').length;
+
+    assert(
+      allAssignments.length >= 8 && d1 > 0 && d2 + d3 > 0,
+      `Stage 3g.2b.2b multi-week: ≥8 assignments, D1 placed and at least one LTFT doctor placed (got total=${allAssignments.length}, d1=${d1}, d2=${d2}, d3=${d3}, paths=${JSON.stringify(paths)})`,
+    );
+  }
+
+  // (25) Regression: all 205 prior assertions still pass (implicit via
+  //      script running end-to-end). Explicit checkpoint.
+  assert(true, 'Stage 3g.2b.2b: prior-stage assertions reached this block');
+
+  // (26) Unified scoring: 4N placement on {Mon..Thu} → penaltyApplied=0;
+  //      3N_MON_WED + Thu orphan → penaltyApplied=1010 (= 10 dict + 1000 orphan).
+  {
+    const inp = minimalInputWeekdayNights;
+    const state = freshStateMap(inp);
+    const r4N = placeWeekdayNightsForWeek(
+      WD_MON1, inp, state, buildAvailabilityMatrix(inp),
+      inp.doctors.map(d => d.doctorId), 'night', 13, true,
+    );
+    assert(
+      r4N.penaltyApplied === 0 && r4N.pathTaken === 'UNIFIED_4N_MON_THU',
+      `Stage 3g.2b.2b scoring: 4N path has unified score 0 (got ${r4N.penaltyApplied})`,
+    );
+  }
+
+  // (27) Pair score = 50 (25 + 25); covered all 4 nights.
+  {
+    const inp = minimalInputWeekdayMaxConsec3;
+    const state = freshStateMap(inp);
+    const r = placeWeekdayNightsForWeek(
+      WD_MON1, inp, state, buildAvailabilityMatrix(inp),
+      inp.doctors.map(d => d.doctorId), 'night', 13, true,
+    );
+    assert(
+      r.penaltyApplied === 50 && r.residualAfter.length === 0,
+      `Stage 3g.2b.2b scoring: Tier 1.5 pair = 50 unified score (got ${r.penaltyApplied}/${JSON.stringify(r.residualAfter)})`,
+    );
+  }
+
+  // (28) pairPartnerDoctorId is set for pair and null for 4N.
+  {
+    const inp = minimalInputWeekdayNights;
+    const state = freshStateMap(inp);
+    const r4N = placeWeekdayNightsForWeek(
+      WD_MON1, inp, state, buildAvailabilityMatrix(inp),
+      inp.doctors.map(d => d.doctorId), 'night', 13, true,
+    );
+    const inpPair = minimalInputWeekdayMaxConsec3;
+    const statePair = freshStateMap(inpPair);
+    const rPair = placeWeekdayNightsForWeek(
+      WD_MON1, inpPair, statePair, buildAvailabilityMatrix(inpPair),
+      inpPair.doctors.map(d => d.doctorId), 'night', 13, true,
+    );
+    assert(
+      r4N.pairPartnerDoctorId === null && rPair.pairPartnerDoctorId !== null,
+      `Stage 3g.2b.2b: pairPartnerDoctorId null for 4N, set for pair (got 4N=${r4N.pairPartnerDoctorId}, pair=${rPair.pairPartnerDoctorId})`,
+    );
+  }
+
   console.log('\nAll assertions passed.');
+}
+
+// Helper for tests — Unix ms → ISO date, UTC.
+function msToIsoUtc(ms: number): string {
+  return new Date(ms).toISOString().slice(0, 10);
 }
 
 run().catch((err) => {

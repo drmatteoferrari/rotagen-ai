@@ -1050,3 +1050,674 @@ export function placeWeekendNightsForWeekend(
   if (slotSun) markUnfilled(w.sun, slotSun);
   return finalise();
 }
+
+// ═══════════════════════════════════════════════════════════════
+// Stage 3g.2b.2b — Weekday Night Sub-Pass
+// ═══════════════════════════════════════════════════════════════
+//
+// Residual-aware weekday night coverage. Runs after the weekend sub-pass
+// has committed to state. Processes each ISO week (anchored on Monday)
+// in constraint-scarcity order, applies the unified deficit-driven loop,
+// and selects patterns based on the week's residual night-demand shape.
+//
+// Unified scoring model: every placement is scored as
+//   score = sum(dictionary penalties) + UNCOVERED_NIGHT_COST × orphans
+// where orphans are residual dates the placement did not cover. This
+// lets the orchestrator pick the lowest-score feasible option across
+// different pattern shapes (4N, Tier 1.5 pair, 3N with orphan, etc.).
+//
+// Shared infrastructure reused from the weekend sub-pass: block
+// dictionary, LTFT function, tryBlockForDoctor, buildLtftFlexMatrix,
+// deriveA8LieuDates, computeNormalisedNightDeficit, UTC date helpers.
+//
+// No DoctorState mutation — returns commit intent for the construction
+// driver to apply.
+
+const UNCOVERED_NIGHT_COST = 1000;
+
+const BLOCK_4N_MON_THU = BLOCK_PATTERNS.find(p => p.id === '4N_MON_THU')!;
+const BLOCK_3N_MON_WED = BLOCK_PATTERNS.find(p => p.id === '3N_MON_WED')!;
+const BLOCK_2N_A_MON_TUE = BLOCK_PATTERNS.find(p => p.id === '2N_A_MON_TUE')!;
+const BLOCK_2N_B_WED_THU = BLOCK_PATTERNS.find(p => p.id === '2N_B_WED_THU')!;
+const BLOCK_2N_TUE_WED = BLOCK_PATTERNS.find(p => p.id === '2N_TUE_WED')!;
+const BLOCK_2N_THU_FRI = BLOCK_PATTERNS.find(p => p.id === '2N_THU_FRI')!;
+
+export interface WeeklyResidualDemand {
+  weekStartIso: string;
+  residualNightDates: readonly string[];
+  alreadyAssignedDates: readonly string[];
+  allDemandDates: readonly string[];
+}
+
+export type CandidatePattern =
+  | '4N_MON_THU'
+  | 'TIER15_PAIR'
+  | '3N_MON_WED'
+  | '3N_WED_FRI'
+  | '3N_WED_FRI_WITH_BACKWARD'
+  | '2N_A_MON_TUE'
+  | '2N_B_WED_THU'
+  | '2N_TUE_WED'
+  | '2N_THU_FRI';
+
+export type WeekdayPathTaken =
+  | 'UNIFIED_4N_MON_THU'
+  | 'UNIFIED_TIER15_PAIR'
+  | 'UNIFIED_3N_MON_WED'
+  | 'UNIFIED_3N_MON_WED_THU_ORPHAN'
+  | 'UNIFIED_3N_WED_FRI'
+  | 'UNIFIED_3N_WED_FRI_WITH_BACKWARD'
+  | 'UNIFIED_2N_SINGLE'
+  | 'UNIFIED_TIER4'
+  | 'RELAXATION_PARTIAL'
+  | 'SKIP_NO_RESIDUAL'
+  | 'UNFILLED';
+
+export interface WeekdayPlacementResult {
+  assignments: readonly InternalDayAssignment[];
+  lieuStaged: ReadonlyArray<LieuStagedEntry>;
+  restStampsByDoctor: Readonly<Record<string, number>>;
+  unfilledSlots: readonly UnfilledSlot[];
+  penaltyApplied: number;                // unified score: dict + 1000×orphans
+  pathTaken: WeekdayPathTaken;
+  residualBefore: readonly string[];
+  residualAfter: readonly string[];      // empty iff fully placed
+  pairPartnerDoctorId: string | null;    // non-null for TIER15_PAIR / WITH_BACKWARD
+}
+
+interface CachedWeekdayAttempts {
+  deficit: number;
+  attempt4N: BlockAttemptResult | null;
+  attempt2NA: BlockAttemptResult | null;
+  attempt2NB: BlockAttemptResult | null;
+  attempt3NMW: BlockAttemptResult | null;
+  attempt3NWF: BlockAttemptResult | null;
+  attempt2NTW: BlockAttemptResult | null;
+  attempt2NTF: BlockAttemptResult | null;
+  tier: number | null;
+}
+
+// Gates 4N_MON_THU attempt on the WTR maxConsecNights cap (spec E44).
+// Departments with cap = 3 rely on the Tier 1.5 pair as primary strategy.
+function fourNFeasible(
+  wtr: FinalRotaInput['preRotaInput']['wtrConstraints'],
+): boolean {
+  return wtr.maxConsecutive.nights >= 4;
+}
+
+// Parallel to getWeekendSaturdays. Returns every Monday (UTC) that falls
+// within [periodStartIso, periodEndIso] inclusive.
+export function getWeekdayMondays(
+  periodStartIso: string,
+  periodEndIso: string,
+): readonly string[] {
+  const startMs = isoToUtcMs(periodStartIso);
+  const endMs = isoToUtcMs(periodEndIso);
+  if (endMs < startMs) return [];
+  const startDow = new Date(startMs).getUTCDay(); // 0=Sun..6=Sat
+  // Offset to next Monday (Mon has UTC-dow = 1). 0 when start is Mon.
+  const offsetToMon = (1 - startDow + 7) % 7;
+  const out: string[] = [];
+  let curMs = startMs + offsetToMon * MS_PER_DAY;
+  while (curMs <= endMs) {
+    out.push(msToIso(curMs));
+    curMs += 7 * MS_PER_DAY;
+  }
+  return out;
+}
+
+// Residual night demand for an ISO week (anchored on Monday).
+// All demand dates come from the input's shiftSlots for the target
+// nightShiftKey, filtered by `onCallOnly`. Already-assigned dates are
+// detected by walking every doctor's state.assignments for night
+// assignments on those dates.
+export function computeWeeklyResidualDemand(
+  weekStartIso: string,
+  input: FinalRotaInput,
+  state: Map<string, DoctorState>,
+  nightShiftKey: string,
+  onCallOnly: boolean,
+): WeeklyResidualDemand {
+  const periodStartIso = input.preRotaInput.period.startDate;
+  const periodEndIso = input.preRotaInput.period.endDate;
+
+  // 5 weekday dates Mon..Fri, filtered to the rota period.
+  const weekdayDates: string[] = [];
+  for (let i = 0; i < 5; i += 1) {
+    const d = addDaysUtc(weekStartIso, i);
+    if (d >= periodStartIso && d <= periodEndIso) weekdayDates.push(d);
+  }
+
+  const allDemandDates: string[] = [];
+  for (const date of weekdayDates) {
+    const dk = getDayKeyUtc(date);
+    const slot = input.preRotaInput.shiftSlots.find(
+      s => s.shiftKey === nightShiftKey && s.dayKey === dk,
+    );
+    if (!slot) continue;
+    if (onCallOnly && !slot.isOncall) continue;
+    if (!onCallOnly && slot.isOncall) continue;
+    allDemandDates.push(date);
+  }
+
+  const alreadyAssignedDates: string[] = [];
+  for (const date of allDemandDates) {
+    let assigned = false;
+    for (const ds of state.values()) {
+      if (ds.assignments.some(
+        a => a.isNightShift
+          && a.shiftKey === nightShiftKey
+          && msToIso(a.shiftStartMs) === date,
+      )) {
+        assigned = true;
+        break;
+      }
+    }
+    if (assigned) alreadyAssignedDates.push(date);
+  }
+
+  const assignedSet = new Set(alreadyAssignedDates);
+  const residualNightDates = allDemandDates.filter(d => !assignedSet.has(d));
+
+  return {
+    weekStartIso,
+    residualNightDates,
+    alreadyAssignedDates,
+    allDemandDates,
+  };
+}
+
+// Maps a residual shape (expressed as day-keys) to an ordered list of
+// candidate patterns to attempt. Ordering follows the locked-design
+// preference in §1.6 (simple-single-doctor first, then multi-doctor,
+// then orphan-producing fallback).
+export function enumeratePatternsForResidual(
+  residualShape: readonly string[],
+  wtr: FinalRotaInput['preRotaInput']['wtrConstraints'],
+): readonly CandidatePattern[] {
+  const dowSet = new Set<DayKey>(residualShape.map(d => getDayKeyUtc(d)));
+  const has = (k: DayKey): boolean => dowSet.has(k);
+  const size = dowSet.size;
+
+  // {mon, tue, wed, thu}
+  if (size === 4 && has('mon') && has('tue') && has('wed') && has('thu')) {
+    return fourNFeasible(wtr)
+      ? ['4N_MON_THU', 'TIER15_PAIR', '3N_MON_WED']
+      : ['TIER15_PAIR', '3N_MON_WED'];
+  }
+  // {mon, tue, wed, thu, fri}
+  if (size === 5 && has('mon') && has('tue') && has('wed') && has('thu') && has('fri')) {
+    return fourNFeasible(wtr)
+      ? ['4N_MON_THU', 'TIER15_PAIR', '3N_WED_FRI_WITH_BACKWARD', '3N_MON_WED']
+      : ['TIER15_PAIR', '3N_WED_FRI_WITH_BACKWARD', '3N_MON_WED'];
+  }
+  // {mon, tue, wed}
+  if (size === 3 && has('mon') && has('tue') && has('wed') && !has('thu') && !has('fri')) {
+    return ['3N_MON_WED'];
+  }
+  // {wed, thu, fri}
+  if (size === 3 && has('wed') && has('thu') && has('fri') && !has('mon') && !has('tue')) {
+    return ['3N_WED_FRI'];
+  }
+  // {mon, tue}
+  if (size === 2 && has('mon') && has('tue')) return ['2N_A_MON_TUE'];
+  // {wed, thu}
+  if (size === 2 && has('wed') && has('thu')) return ['2N_B_WED_THU'];
+  // {tue, wed}
+  if (size === 2 && has('tue') && has('wed')) return ['2N_TUE_WED'];
+  // {thu, fri}
+  if (size === 2 && has('thu') && has('fri')) return ['2N_THU_FRI'];
+  // {mon, wed, thu} — Mon isolated, cover Wed+Thu.
+  if (size === 3 && has('mon') && has('wed') && has('thu') && !has('tue') && !has('fri')) {
+    return ['2N_B_WED_THU'];
+  }
+  // {mon, tue, thu} — Thu isolated, cover Mon+Tue.
+  if (size === 3 && has('mon') && has('tue') && has('thu') && !has('wed') && !has('fri')) {
+    return ['2N_A_MON_TUE'];
+  }
+  // Any other shape (isolated nights, non-adjacent pairs) — fully CRITICAL.
+  return [];
+}
+
+// Best achievable tier for a weekday doctor. Used only for tied-deficit
+// tiebreak. Lower tier = better. Null = no clean pattern works.
+function bestAchievablePatternTierWeekday(
+  cached: {
+    attempt4N: BlockAttemptResult | null;
+    attempt2NA: BlockAttemptResult | null;
+    attempt2NB: BlockAttemptResult | null;
+    attempt3NMW: BlockAttemptResult | null;
+    attempt3NWF: BlockAttemptResult | null;
+    attempt2NTW: BlockAttemptResult | null;
+    attempt2NTF: BlockAttemptResult | null;
+  },
+): number | null {
+  if (cached.attempt4N?.ok) return 1;
+  if (cached.attempt2NA?.ok || cached.attempt2NB?.ok) return 2;
+  if (cached.attempt3NMW?.ok || cached.attempt3NWF?.ok) return 3;
+  if (cached.attempt2NTW?.ok || cached.attempt2NTF?.ok) return 4;
+  return null;
+}
+
+// Ranks doctors by (deficit DESC, tier ASC, shufflePos ASC). Doctors
+// whose best-tier is null sort to the end (still eligible for
+// relaxation-path placement).
+export function rankDoctorsForWeekdayWeek(
+  candidatePool: readonly string[],
+  cached: Map<string, CachedWeekdayAttempts>,
+  shuffleOrder: readonly string[],
+): readonly string[] {
+  const shufflePos = new Map<string, number>();
+  for (let i = 0; i < shuffleOrder.length; i += 1) {
+    shufflePos.set(shuffleOrder[i], i);
+  }
+  return [...candidatePool].sort((a, b) => {
+    const pa = cached.get(a)!;
+    const pb = cached.get(b)!;
+    if (pa.deficit !== pb.deficit) return pb.deficit - pa.deficit;
+    const tierA = pa.tier ?? Number.MAX_SAFE_INTEGER;
+    const tierB = pb.tier ?? Number.MAX_SAFE_INTEGER;
+    if (tierA !== tierB) return tierA - tierB;
+    return (shufflePos.get(a) ?? Number.MAX_SAFE_INTEGER)
+      - (shufflePos.get(b) ?? Number.MAX_SAFE_INTEGER);
+  });
+}
+
+// Generic secondary-doctor helper. Iterates the ranked pool minus the
+// primary, runs the full eligibility chain via tryBlockForDoctor, and
+// returns the first successful placement. Used for Tier 1.5 pair partner
+// lookup and for 3N_WED_FRI_WITH_BACKWARD's 2N_A partner.
+//
+// The weekend sub-pass has its own helpers (attemptForwardBridge-
+// Consumption, attemptBackwardOrphanConsumption) that predate this
+// generalised version. They are NOT modified in this session; duplicate
+// structure is accepted to keep the weekend sub-pass stable. A future
+// refactor can unify them.
+function attemptSecondaryDoctor(
+  block: BlockPattern,
+  blockDates: readonly string[],
+  primaryDoctorId: string,
+  rankedCandidates: readonly string[],
+  doctorById: Map<string, Doctor>,
+  state: Map<string, DoctorState>,
+  input: FinalRotaInput,
+  matrix: AvailabilityMatrix,
+  nightShiftKey: string,
+): { doctorId: string; attempt: BlockAttemptResult } | null {
+  for (const docId of rankedCandidates) {
+    if (docId === primaryDoctorId) continue;
+    const doctor = doctorById.get(docId);
+    const s = state.get(docId);
+    if (!doctor || !s) continue;
+    const attempt = tryBlockForDoctor(
+      doctor, block, blockDates, s, input, matrix, nightShiftKey,
+    );
+    if (attempt.ok) return { doctorId: docId, attempt };
+  }
+  return null;
+}
+
+// Constraint-scarcity primitive for week ordering. Counts (doctor ×
+// pattern) combinations viable for the residual. Lower = more
+// constrained = process first.
+export function scoreWeekScarcity(
+  weekStartIso: string,
+  residual: WeeklyResidualDemand,
+  eligibleDoctors: readonly Doctor[],
+  matrix: AvailabilityMatrix,
+  slotsByDate: Record<string, ShiftSlotEntry>,
+  wtr: FinalRotaInput['preRotaInput']['wtrConstraints'],
+  periodEndIso: string,
+): number {
+  void weekStartIso;
+  const patterns = enumeratePatternsForResidual(residual.residualNightDates, wtr);
+  let count = 0;
+  for (const doctor of eligibleDoctors) {
+    for (const pattern of patterns) {
+      const dates = patternDatesForResidualAnchor(pattern, residual.weekStartIso);
+      // Availability + LTFT check over the primary block's dates only —
+      // cheaper than running full CSB and sufficient for a scarcity score.
+      let ok = true;
+      for (const d of dates.primary) {
+        const slot = slotsByDate[d];
+        if (!slot) { ok = false; break; }
+        if (!isSlotEligible(doctor, slot, 0, d, matrix, periodEndIso)) {
+          ok = false; break;
+        }
+      }
+      if (!ok) continue;
+      const block = primaryBlockForPattern(pattern);
+      if (block) {
+        const ltft = checkLtftDisposition(block, [...dates.primary], doctor);
+        if (!ltft.allowed) continue;
+      }
+      count += 1;
+    }
+  }
+  return count;
+}
+
+interface PatternAnchorDates {
+  primary: readonly string[];
+  partner?: readonly string[];
+}
+
+function patternDatesForResidualAnchor(
+  pattern: CandidatePattern,
+  weekStartIso: string,
+): PatternAnchorDates {
+  const mon = weekStartIso;
+  const tue = addDaysUtc(mon, 1);
+  const wed = addDaysUtc(mon, 2);
+  const thu = addDaysUtc(mon, 3);
+  const fri = addDaysUtc(mon, 4);
+  switch (pattern) {
+    case '4N_MON_THU':                return { primary: [mon, tue, wed, thu] };
+    case '3N_MON_WED':                return { primary: [mon, tue, wed] };
+    case '3N_WED_FRI':                return { primary: [wed, thu, fri] };
+    case '2N_A_MON_TUE':              return { primary: [mon, tue] };
+    case '2N_B_WED_THU':              return { primary: [wed, thu] };
+    case '2N_TUE_WED':                return { primary: [tue, wed] };
+    case '2N_THU_FRI':                return { primary: [thu, fri] };
+    case 'TIER15_PAIR':               return { primary: [mon, tue], partner: [wed, thu] };
+    case '3N_WED_FRI_WITH_BACKWARD':  return { primary: [wed, thu, fri], partner: [mon, tue] };
+  }
+}
+
+function primaryBlockForPattern(pattern: CandidatePattern): BlockPattern | null {
+  switch (pattern) {
+    case '4N_MON_THU':                return BLOCK_4N_MON_THU;
+    case '3N_MON_WED':                return BLOCK_3N_MON_WED;
+    case '3N_WED_FRI':                return BLOCK_3N_WED_FRI;
+    case '2N_A_MON_TUE':              return BLOCK_2N_A_MON_TUE;
+    case '2N_B_WED_THU':              return BLOCK_2N_B_WED_THU;
+    case '2N_TUE_WED':                return BLOCK_2N_TUE_WED;
+    case '2N_THU_FRI':                return BLOCK_2N_THU_FRI;
+    case 'TIER15_PAIR':               return BLOCK_2N_A_MON_TUE; // arrangement-A primary
+    case '3N_WED_FRI_WITH_BACKWARD':  return BLOCK_3N_WED_FRI;
+  }
+}
+
+// Top-level weekday orchestrator. One deficit-driven loop per week,
+// parallel to the weekend sub-pass. See Session 3g.2b.2b prompt §1.5
+// for the full algorithm.
+export function placeWeekdayNightsForWeek(
+  weekStartIso: string,
+  input: FinalRotaInput,
+  state: Map<string, DoctorState>,
+  availabilityMatrix: AvailabilityMatrix,
+  shuffleOrder: readonly string[],
+  nightShiftKey: string,
+  avgNightShiftHours: number,
+  onCallOnly: boolean,
+): WeekdayPlacementResult {
+  const residual = computeWeeklyResidualDemand(
+    weekStartIso, input, state, nightShiftKey, onCallOnly,
+  );
+
+  if (residual.residualNightDates.length === 0) {
+    return {
+      assignments: [], lieuStaged: [], restStampsByDoctor: {},
+      unfilledSlots: [], penaltyApplied: 0,
+      pathTaken: 'SKIP_NO_RESIDUAL',
+      residualBefore: [], residualAfter: [],
+      pairPartnerDoctorId: null,
+    };
+  }
+
+  const wtr = input.preRotaInput.wtrConstraints;
+
+  // Candidate pool: doctors with non-zero night target and state entry.
+  const candidatePool: string[] = [];
+  for (const doctor of input.doctors) {
+    if (doctor.fairnessTargets.targetNightShiftCount === 0) continue;
+    if (!state.has(doctor.doctorId)) continue;
+    candidatePool.push(doctor.doctorId);
+  }
+
+  const doctorById = new Map<string, Doctor>();
+  for (const d of input.doctors) doctorById.set(d.doctorId, d);
+
+  const residualDOW = new Set<DayKey>(residual.residualNightDates.map(d => getDayKeyUtc(d)));
+  const has = (k: DayKey): boolean => residualDOW.has(k);
+
+  const mon = weekStartIso;
+  const tue = addDaysUtc(mon, 1);
+  const wed = addDaysUtc(mon, 2);
+  const thu = addDaysUtc(mon, 3);
+  const fri = addDaysUtc(mon, 4);
+
+  // Precompute per-doctor block attempts. Each attempt is gated on
+  // residual coverage — we skip patterns that would touch non-residual
+  // dates (those would conflict with already-placed assignments).
+  const cached = new Map<string, CachedWeekdayAttempts>();
+  for (const docId of candidatePool) {
+    const doctor = doctorById.get(docId)!;
+    const s = state.get(docId)!;
+    const deficit = computeNormalisedNightDeficit(
+      doctor, s, avgNightShiftHours, nightShiftKey,
+    );
+
+    const can4N = has('mon') && has('tue') && has('wed') && has('thu') && fourNFeasible(wtr);
+    const can2NA = has('mon') && has('tue');
+    const can2NB = has('wed') && has('thu');
+    const can3NMW = has('mon') && has('tue') && has('wed');
+    const can3NWF = has('wed') && has('thu') && has('fri');
+    const can2NTW = has('tue') && has('wed');
+    const can2NTF = has('thu') && has('fri');
+
+    const attempt4N = can4N
+      ? tryBlockForDoctor(doctor, BLOCK_4N_MON_THU, [mon, tue, wed, thu], s, input, availabilityMatrix, nightShiftKey)
+      : null;
+    const attempt2NA = can2NA
+      ? tryBlockForDoctor(doctor, BLOCK_2N_A_MON_TUE, [mon, tue], s, input, availabilityMatrix, nightShiftKey)
+      : null;
+    const attempt2NB = can2NB
+      ? tryBlockForDoctor(doctor, BLOCK_2N_B_WED_THU, [wed, thu], s, input, availabilityMatrix, nightShiftKey)
+      : null;
+    const attempt3NMW = can3NMW
+      ? tryBlockForDoctor(doctor, BLOCK_3N_MON_WED, [mon, tue, wed], s, input, availabilityMatrix, nightShiftKey)
+      : null;
+    const attempt3NWF = can3NWF
+      ? tryBlockForDoctor(doctor, BLOCK_3N_WED_FRI, [wed, thu, fri], s, input, availabilityMatrix, nightShiftKey)
+      : null;
+    const attempt2NTW = can2NTW
+      ? tryBlockForDoctor(doctor, BLOCK_2N_TUE_WED, [tue, wed], s, input, availabilityMatrix, nightShiftKey)
+      : null;
+    const attempt2NTF = can2NTF
+      ? tryBlockForDoctor(doctor, BLOCK_2N_THU_FRI, [thu, fri], s, input, availabilityMatrix, nightShiftKey)
+      : null;
+
+    const tier = bestAchievablePatternTierWeekday({
+      attempt4N, attempt2NA, attempt2NB, attempt3NMW, attempt3NWF, attempt2NTW, attempt2NTF,
+    });
+
+    cached.set(docId, {
+      deficit, attempt4N, attempt2NA, attempt2NB,
+      attempt3NMW, attempt3NWF, attempt2NTW, attempt2NTF, tier,
+    });
+  }
+
+  const ranked = rankDoctorsForWeekdayWeek(candidatePool, cached, shuffleOrder);
+  const patterns = enumeratePatternsForResidual(residual.residualNightDates, wtr);
+
+  // Accumulators.
+  const outAssignments: InternalDayAssignment[] = [];
+  const outLieu: LieuStagedEntry[] = [];
+  const outRest: Record<string, number> = {};
+  const outUnfilled: UnfilledSlot[] = [];
+  let outPath: WeekdayPathTaken = 'UNFILLED';
+  let outScore = 0;
+  let outPartnerId: string | null = null;
+  let outResidualAfter: readonly string[] = residual.residualNightDates;
+
+  const markUnfilledDate = (date: string): void => {
+    const dk = getDayKeyUtc(date);
+    const slot = input.preRotaInput.shiftSlots.find(
+      s => s.shiftKey === nightShiftKey && s.dayKey === dk,
+    );
+    if (!slot || slot.staffing.target <= 0) return;
+    outUnfilled.push({
+      date, shiftKey: nightShiftKey, slotIndex: 0,
+      isCritical: slot.staffing.min > 0,
+    });
+  };
+
+  function finalise(): WeekdayPlacementResult {
+    const sorted = [...outAssignments].sort((a, b) => a.shiftStartMs - b.shiftStartMs);
+    return {
+      assignments: sorted,
+      lieuStaged: outLieu,
+      restStampsByDoctor: outRest,
+      unfilledSlots: outUnfilled,
+      penaltyApplied: outScore,
+      pathTaken: outPath,
+      residualBefore: residual.residualNightDates,
+      residualAfter: outResidualAfter,
+      pairPartnerDoctorId: outPartnerId,
+    };
+  }
+
+  const commit = (
+    intents: readonly BlockAttemptResult[],
+    path: WeekdayPathTaken,
+    dictPenalty: number,
+    coveredDates: readonly string[],
+    partnerId: string | null,
+  ): WeekdayPlacementResult => {
+    const coveredSet = new Set(coveredDates);
+    for (const intent of intents) {
+      outAssignments.push(...intent.assignments);
+      outLieu.push(...intent.lieuStaged);
+      if (intent.assignments.length > 0) {
+        outRest[intent.assignments[0].doctorId] = intent.restUntilMs;
+      }
+    }
+    const orphans: string[] = [];
+    for (const d of residual.residualNightDates) {
+      if (!coveredSet.has(d)) orphans.push(d);
+    }
+    for (const d of orphans) markUnfilledDate(d);
+    outScore = dictPenalty + orphans.length * UNCOVERED_NIGHT_COST;
+    outPath = path;
+    outPartnerId = partnerId;
+    outResidualAfter = orphans;
+    return finalise();
+  };
+
+  // Main loop — per-doctor pattern enumeration (score-ordered per
+  // enumeratePatternsForResidual).
+  for (const docId of ranked) {
+    const c = cached.get(docId)!;
+    for (const pattern of patterns) {
+      if (pattern === '4N_MON_THU' && c.attempt4N?.ok) {
+        return commit([c.attempt4N], 'UNIFIED_4N_MON_THU', 0, [mon, tue, wed, thu], null);
+      }
+
+      if (pattern === 'TIER15_PAIR') {
+        // Arrangement A — X on 2N_A, partner on 2N_B.
+        if (c.attempt2NA?.ok) {
+          const partner = attemptSecondaryDoctor(
+            BLOCK_2N_B_WED_THU, [wed, thu], docId, ranked, doctorById,
+            state, input, availabilityMatrix, nightShiftKey,
+          );
+          if (partner) {
+            return commit(
+              [c.attempt2NA, partner.attempt], 'UNIFIED_TIER15_PAIR',
+              50, [mon, tue, wed, thu], partner.doctorId,
+            );
+          }
+        }
+        // Arrangement B — X on 2N_B, partner on 2N_A.
+        if (c.attempt2NB?.ok) {
+          const partner = attemptSecondaryDoctor(
+            BLOCK_2N_A_MON_TUE, [mon, tue], docId, ranked, doctorById,
+            state, input, availabilityMatrix, nightShiftKey,
+          );
+          if (partner) {
+            return commit(
+              [c.attempt2NB, partner.attempt], 'UNIFIED_TIER15_PAIR',
+              50, [mon, tue, wed, thu], partner.doctorId,
+            );
+          }
+        }
+        // Neither arrangement worked for X — fall through to next pattern.
+      }
+
+      if (pattern === '3N_MON_WED' && c.attempt3NMW?.ok) {
+        // Distinguish clean (exactly {Mon,Tue,Wed}) vs Thu-orphan case.
+        if (residual.residualNightDates.length === 3 && !has('thu') && !has('fri')) {
+          return commit([c.attempt3NMW], 'UNIFIED_3N_MON_WED', 10, [mon, tue, wed], null);
+        }
+        return commit(
+          [c.attempt3NMW], 'UNIFIED_3N_MON_WED_THU_ORPHAN',
+          10, [mon, tue, wed], null,
+        );
+      }
+
+      if (pattern === '3N_WED_FRI' && c.attempt3NWF?.ok) {
+        return commit([c.attempt3NWF], 'UNIFIED_3N_WED_FRI', 10, [wed, thu, fri], null);
+      }
+
+      if (pattern === '3N_WED_FRI_WITH_BACKWARD' && c.attempt3NWF?.ok) {
+        const backward = attemptSecondaryDoctor(
+          BLOCK_2N_A_MON_TUE, [mon, tue], docId, ranked, doctorById,
+          state, input, availabilityMatrix, nightShiftKey,
+        );
+        if (backward) {
+          return commit(
+            [c.attempt3NWF, backward.attempt], 'UNIFIED_3N_WED_FRI_WITH_BACKWARD',
+            35, [mon, tue, wed, thu, fri], backward.doctorId,
+          );
+        }
+        // Backward partner not found — fall through.
+      }
+
+      if (pattern === '2N_A_MON_TUE' && c.attempt2NA?.ok) {
+        return commit([c.attempt2NA], 'UNIFIED_2N_SINGLE', 25, [mon, tue], null);
+      }
+      if (pattern === '2N_B_WED_THU' && c.attempt2NB?.ok) {
+        return commit([c.attempt2NB], 'UNIFIED_2N_SINGLE', 25, [wed, thu], null);
+      }
+      if (pattern === '2N_TUE_WED' && c.attempt2NTW?.ok) {
+        return commit([c.attempt2NTW], 'UNIFIED_TIER4', 40, [tue, wed], null);
+      }
+      if (pattern === '2N_THU_FRI' && c.attempt2NTF?.ok) {
+        return commit([c.attempt2NTF], 'UNIFIED_TIER4', 40, [thu, fri], null);
+      }
+    }
+    // All enumerated patterns failed for this doctor — next doctor.
+  }
+
+  // Relaxation — accept any cached 2N/3N placement that fits, marking
+  // uncovered residual dates CRITICAL.
+  for (const docId of ranked) {
+    const c = cached.get(docId)!;
+    if (c.attempt2NA?.ok) {
+      return commit([c.attempt2NA], 'RELAXATION_PARTIAL', 25, [mon, tue], null);
+    }
+    if (c.attempt2NB?.ok) {
+      return commit([c.attempt2NB], 'RELAXATION_PARTIAL', 25, [wed, thu], null);
+    }
+    if (c.attempt3NMW?.ok) {
+      return commit([c.attempt3NMW], 'RELAXATION_PARTIAL', 10, [mon, tue, wed], null);
+    }
+    if (c.attempt3NWF?.ok) {
+      return commit([c.attempt3NWF], 'RELAXATION_PARTIAL', 10, [wed, thu, fri], null);
+    }
+    if (c.attempt2NTW?.ok) {
+      return commit([c.attempt2NTW], 'RELAXATION_PARTIAL', 40, [tue, wed], null);
+    }
+    if (c.attempt2NTF?.ok) {
+      return commit([c.attempt2NTF], 'RELAXATION_PARTIAL', 40, [thu, fri], null);
+    }
+  }
+
+  // Complete failure — every residual date CRITICAL UNFILLED.
+  for (const d of residual.residualNightDates) markUnfilledDate(d);
+  outScore = residual.residualNightDates.length * UNCOVERED_NIGHT_COST;
+  outPath = 'UNFILLED';
+  outResidualAfter = residual.residualNightDates;
+  return finalise();
+}
+

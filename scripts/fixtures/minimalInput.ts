@@ -599,6 +599,329 @@ export const minimalInputWeekendNights: FinalRotaInput = {
   constraints: { hard: [], soft: [] },
 };
 
+// ──────────────────────────────────────────────────────────────────
+// Stage 3g.2b.2b — Weekday night-block sub-pass fixtures.
+// Mon–Thu night demand only (no weekend), exercises residual-aware
+// tiling with 4N / Tier 1.5 pair / 3N_MON_WED paths.
+// ──────────────────────────────────────────────────────────────────
+
+const WEEKDAY_NIGHT_DAY_KEYS = ['mon', 'tue', 'wed', 'thu'] as const;
+
+function buildWeekdayNightSlots(): ShiftSlotEntry[] {
+  const out: ShiftSlotEntry[] = [];
+  for (const dayKey of WEEKDAY_NIGHT_DAY_KEYS) {
+    out.push({
+      shiftId: 'st-wd-night',
+      shiftKey: 'night',
+      name: 'Weekday Night',
+      dayKey,
+      startTime: '19:00',
+      endTime: '08:00',
+      durationHours: 13,
+      isOncall: true,
+      isNonResOncall: false,
+      badges: ['night', 'oncall'],
+      staffing: { min: 1, target: 1, max: 1 },
+      slots: [{ ...DEFAULT_SLOT, permittedGrades: [...DEFAULT_SLOT.permittedGrades] }],
+      targetPct: 100,
+    });
+  }
+  return out;
+}
+
+const WEEKDAY_SHIFT_TARGETS_FT = [
+  {
+    shiftTypeId: 'st-wd-night',
+    shiftName: 'Weekday Night',
+    shiftKey: 'night',
+    isOncall: true,
+    maxTargetHours: 208, // 16 nights × 13h ceiling headroom
+    estimatedShiftCount: 16,
+  },
+];
+
+const WEEKDAY_SHIFT_TARGETS_LTFT = [
+  {
+    shiftTypeId: 'st-wd-night',
+    shiftName: 'Weekday Night',
+    shiftKey: 'night',
+    isOncall: true,
+    maxTargetHours: 156,
+    estimatedShiftCount: 12,
+  },
+];
+
+// Weekday-only fixture: 4 weeks, Mon–Thu night demand. D1 full-time
+// Consultant, D2 LTFT-Wed (blocks 2N_B and 4N and 3N_MON_WED),
+// D3 LTFT-Mon (blocks 2N_A and 4N and 3N_MON_WED). Both LTFT doctors
+// have some viable pattern so pair-or-fallback scenarios can trigger.
+export const minimalInputWeekdayNights: FinalRotaInput = {
+  preRotaInput: {
+    ...minimalInput.preRotaInput,
+    shiftSlots: buildWeekdayNightSlots(),
+    distributionTargets: {
+      globalOncallPct: 100,
+      globalNonOncallPct: 0,
+      byShift: [{ shiftKey: 'night', targetPct: 100, isOncall: true }],
+    },
+  },
+  doctors: [
+    {
+      doctorId: 'doc-1',
+      name: 'Dr Alice Smith',
+      grade: 'Consultant',
+      wtePct: 100,
+      contractedHoursPerWeek: 48,
+      hasIac: true,
+      hasIaoc: true,
+      hasIcu: true,
+      hasTransfer: true,
+      ltft: { isLtft: false, daysOff: [], nightFlexibility: [] },
+      constraints: { hard: emptyHard(), soft: emptySoft() },
+      fairnessTargets: {
+        targetTotalHours: 208,
+        targetNightShiftCount: 8,
+        targetWeekendShiftCount: 0,
+        targetOncallCount: 8,
+        proportionFactor: 1.0,
+      },
+      shiftTargets: WEEKDAY_SHIFT_TARGETS_FT,
+      totalMaxHours: 208,
+      weekendCap: 4,
+      hardWeeklyCap: 72,
+    },
+    {
+      doctorId: 'doc-2',
+      name: 'Dr Bob Jones',
+      grade: 'ST5',
+      wtePct: 80,
+      contractedHoursPerWeek: 38.4,
+      hasIac: true,
+      hasIaoc: true,
+      hasIcu: true,
+      hasTransfer: true,
+      ltft: {
+        isLtft: true,
+        daysOff: ['wednesday'],
+        nightFlexibility: [
+          { day: 'wednesday', canStartNightsOnDay: false, canEndNightsOnDay: false },
+        ],
+      },
+      constraints: {
+        hard: { ...emptyHard(), ltftDaysBlocked: ['wednesday'] },
+        soft: emptySoft(),
+      },
+      fairnessTargets: {
+        targetTotalHours: 156,
+        targetNightShiftCount: 8,
+        targetWeekendShiftCount: 0,
+        targetOncallCount: 8,
+        proportionFactor: 0.8,
+      },
+      shiftTargets: WEEKDAY_SHIFT_TARGETS_LTFT,
+      totalMaxHours: 156,
+      weekendCap: 4,
+      hardWeeklyCap: 72,
+    },
+    {
+      doctorId: 'doc-3',
+      name: 'Dr Carol Lee',
+      grade: 'ST5',
+      wtePct: 80,
+      contractedHoursPerWeek: 38.4,
+      hasIac: true,
+      hasIaoc: true,
+      hasIcu: true,
+      hasTransfer: true,
+      ltft: {
+        isLtft: true,
+        daysOff: ['monday'],
+        nightFlexibility: [
+          { day: 'monday', canStartNightsOnDay: false, canEndNightsOnDay: false },
+        ],
+      },
+      constraints: {
+        hard: { ...emptyHard(), ltftDaysBlocked: ['monday'] },
+        soft: emptySoft(),
+      },
+      fairnessTargets: {
+        targetTotalHours: 156,
+        targetNightShiftCount: 8,
+        targetWeekendShiftCount: 0,
+        targetOncallCount: 8,
+        proportionFactor: 0.8,
+      },
+      shiftTargets: WEEKDAY_SHIFT_TARGETS_LTFT,
+      totalMaxHours: 156,
+      weekendCap: 4,
+      hardWeeklyCap: 72,
+    },
+  ],
+  constraints: { hard: [], soft: [] },
+};
+
+// maxConsecNights=3 variant — forces Tier 1.5 pair as primary for
+// {Mon..Thu} residuals (4N not attempted per E44 gating).
+export const minimalInputWeekdayMaxConsec3: FinalRotaInput = {
+  ...minimalInputWeekdayNights,
+  preRotaInput: {
+    ...minimalInputWeekdayNights.preRotaInput,
+    wtrConstraints: {
+      ...minimalInputWeekdayNights.preRotaInput.wtrConstraints,
+      maxConsecutive: {
+        ...minimalInputWeekdayNights.preRotaInput.wtrConstraints.maxConsecutive,
+        nights: 3,
+      },
+    },
+  },
+  doctors: minimalInputWeekdayNights.doctors.map(d => ({
+    ...d,
+    // Neutralise LTFT for the max-consec-3 scenarios so pair can form
+    // with two full-time doctors as primary + partner.
+    ltft: { isLtft: false, daysOff: [], nightFlexibility: [] },
+    constraints: {
+      hard: { ...d.constraints.hard, ltftDaysBlocked: [] },
+      soft: d.constraints.soft,
+    },
+  })),
+};
+
+// Full-nights variant — Mon..Sun demand, used for weekend + weekday
+// interplay integration tests.
+const FULL_NIGHT_DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
+
+function buildFullNightSlots(): ShiftSlotEntry[] {
+  const out: ShiftSlotEntry[] = [];
+  for (const dayKey of FULL_NIGHT_DAY_KEYS) {
+    out.push({
+      shiftId: 'st-full-night',
+      shiftKey: 'night',
+      name: 'Night',
+      dayKey,
+      startTime: '19:00',
+      endTime: '08:00',
+      durationHours: 13,
+      isOncall: true,
+      isNonResOncall: false,
+      badges: ['night', 'oncall'],
+      staffing: { min: 1, target: 1, max: 1 },
+      slots: [{ ...DEFAULT_SLOT, permittedGrades: [...DEFAULT_SLOT.permittedGrades] }],
+      targetPct: 100,
+    });
+  }
+  return out;
+}
+
+const FULL_SHIFT_TARGETS = [
+  {
+    shiftTypeId: 'st-full-night',
+    shiftName: 'Night',
+    shiftKey: 'night',
+    isOncall: true,
+    maxTargetHours: 260,
+    estimatedShiftCount: 20,
+  },
+];
+
+export const minimalInputFullNights: FinalRotaInput = {
+  preRotaInput: {
+    ...minimalInput.preRotaInput,
+    shiftSlots: buildFullNightSlots(),
+    distributionTargets: {
+      globalOncallPct: 100,
+      globalNonOncallPct: 0,
+      byShift: [{ shiftKey: 'night', targetPct: 100, isOncall: true }],
+    },
+  },
+  doctors: [
+    {
+      doctorId: 'doc-1',
+      name: 'Dr Alice Smith',
+      grade: 'Consultant',
+      wtePct: 100,
+      contractedHoursPerWeek: 48,
+      hasIac: true, hasIaoc: true, hasIcu: true, hasTransfer: true,
+      ltft: { isLtft: false, daysOff: [], nightFlexibility: [] },
+      constraints: { hard: emptyHard(), soft: emptySoft() },
+      fairnessTargets: {
+        targetTotalHours: 260, targetNightShiftCount: 5,
+        targetWeekendShiftCount: 2, targetOncallCount: 5,
+        proportionFactor: 1.0,
+      },
+      shiftTargets: FULL_SHIFT_TARGETS,
+      totalMaxHours: 260, weekendCap: 4, hardWeeklyCap: 72,
+    },
+    {
+      doctorId: 'doc-2',
+      name: 'Dr Bob Jones',
+      grade: 'Consultant',
+      wtePct: 100,
+      contractedHoursPerWeek: 48,
+      hasIac: true, hasIaoc: true, hasIcu: true, hasTransfer: true,
+      ltft: { isLtft: false, daysOff: [], nightFlexibility: [] },
+      constraints: { hard: emptyHard(), soft: emptySoft() },
+      fairnessTargets: {
+        targetTotalHours: 260, targetNightShiftCount: 5,
+        targetWeekendShiftCount: 2, targetOncallCount: 5,
+        proportionFactor: 1.0,
+      },
+      shiftTargets: FULL_SHIFT_TARGETS,
+      totalMaxHours: 260, weekendCap: 4, hardWeeklyCap: 72,
+    },
+    {
+      doctorId: 'doc-3',
+      name: 'Dr Carol Lee',
+      grade: 'ST5',
+      wtePct: 80,
+      contractedHoursPerWeek: 38.4,
+      hasIac: true, hasIaoc: true, hasIcu: true, hasTransfer: true,
+      ltft: {
+        isLtft: true, daysOff: ['monday'],
+        nightFlexibility: [
+          { day: 'monday', canStartNightsOnDay: false, canEndNightsOnDay: false },
+        ],
+      },
+      constraints: {
+        hard: { ...emptyHard(), ltftDaysBlocked: ['monday'] },
+        soft: emptySoft(),
+      },
+      fairnessTargets: {
+        targetTotalHours: 208, targetNightShiftCount: 4,
+        targetWeekendShiftCount: 2, targetOncallCount: 4,
+        proportionFactor: 0.8,
+      },
+      shiftTargets: FULL_SHIFT_TARGETS,
+      totalMaxHours: 208, weekendCap: 4, hardWeeklyCap: 72,
+    },
+    {
+      doctorId: 'doc-4',
+      name: 'Dr Dan Pool',
+      grade: 'ST5',
+      wtePct: 80,
+      contractedHoursPerWeek: 38.4,
+      hasIac: true, hasIaoc: true, hasIcu: true, hasTransfer: true,
+      ltft: {
+        isLtft: true, daysOff: ['friday'],
+        nightFlexibility: [
+          { day: 'friday', canStartNightsOnDay: false, canEndNightsOnDay: false },
+        ],
+      },
+      constraints: {
+        hard: { ...emptyHard(), ltftDaysBlocked: ['friday'] },
+        soft: emptySoft(),
+      },
+      fairnessTargets: {
+        targetTotalHours: 208, targetNightShiftCount: 4,
+        targetWeekendShiftCount: 2, targetOncallCount: 4,
+        proportionFactor: 0.8,
+      },
+      shiftTargets: FULL_SHIFT_TARGETS,
+      totalMaxHours: 208, weekendCap: 4, hardWeeklyCap: 72,
+    },
+  ],
+  constraints: { hard: [], soft: [] },
+};
+
 // All-LTFT variant: every doctor is LTFT with a weekend-adjacent
 // day-off that blocks 3N_FRI_SUN, forcing the orchestrator into Pass 2
 // / Relaxation territory. D3 blocks both Mon and Fri so even 2N
