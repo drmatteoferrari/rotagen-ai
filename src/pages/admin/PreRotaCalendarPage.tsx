@@ -2176,7 +2176,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
     <div className="space-y-4" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
       {/* Top bar — non-embedded only */}
       {!embedded && (
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+        <div className="flex flex-row items-center justify-between gap-2">
           <button
             type="button"
             onClick={() => navigate("/admin/pre-rota")}
@@ -2184,8 +2184,16 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
           >
             <ArrowLeft className="h-4 w-4" /> Back to Pre-rota
           </button>
-          <Button variant="outline" size="sm" onClick={handleDownload} type="button">
-            <Download className="h-4 w-4 mr-2" /> Export Calendar
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDownload}
+            type="button"
+            title="Export Calendar"
+            className="h-7 text-[11px] sm:text-xs gap-1.5 px-2 sm:px-2.5 shrink-0"
+          >
+            <Download className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Export</span>
           </Button>
         </div>
       )}
