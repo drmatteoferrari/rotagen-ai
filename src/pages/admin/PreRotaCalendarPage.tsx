@@ -1807,27 +1807,56 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
     const ltftDays = getLtftDaysOff(doctor);
     // Build the full 7-day Mon–Sun span from week startDate/endDate (Change 5)
     const weekAllDates = Array.from({ length: 7 }, (_, idx) => addDays(currentWeek.startDate, idx));
+    const nameParts = doctor.doctorName.replace("Dr ", "").trim().split(" ");
+    const firstName = nameParts[0];
+    const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
     return (
       <tr key={doctor.doctorId} className={`border-b border-border/50 ${rowBg}`}>
         <td className={`p-0.5 sm:p-1 border-r border-border align-middle overflow-hidden`}>
-          <div className="flex flex-row items-center gap-1 sm:gap-1.5 w-full pr-1">
-            <div
-              onClick={() => navigate(`/admin/doctor-calendar/${doctor.doctorId}?date=${currentDate}&view=week`)}
-              className="font-semibold text-blue-600 break-words min-w-0 cursor-pointer hover:underline text-[9px] sm:text-[10px]"
-              title={doctor.doctorName}
-            >
-              {doctor.doctorName.replace("Dr ", "")}
+          {/* Mobile (<sm): SURNAME / Name stacked, no extra info.
+              Tablet (sm..<lg): Row 1 = SURNAME + Name; Row 2 = grade · wte · LTFT.
+              Desktop (lg+): single row with SURNAME, Name, grade, wte, LTFT. */}
+          <div
+            onClick={() => navigate(`/admin/doctor-calendar/${doctor.doctorId}?date=${currentDate}&view=week`)}
+            className="cursor-pointer hover:underline text-blue-600 min-w-0 w-full pr-1"
+            title={doctor.doctorName}
+          >
+            {/* Mobile: stacked SURNAME / Name */}
+            <div className="flex flex-col sm:hidden min-w-0">
+              {lastName && (
+                <span className="font-semibold text-[10px] leading-tight truncate uppercase">{lastName}</span>
+              )}
+              <span className="font-semibold text-[9px] leading-tight truncate">{firstName}</span>
             </div>
-            {/* Change 4: hide grade·wte and LTFT badge on mobile — name only */}
-            <div className="hidden sm:flex items-center gap-1 truncate shrink-0">
-              <GradeBadge grade={doctor.grade} size="xs" />
-              <span className="text-[7px] sm:text-[8px] text-muted-foreground">{doctor.wte}%</span>
-            </div>
-            {ltftDays.length > 0 && (
-              <span className="hidden sm:inline-block text-[7px] sm:text-[8px] font-semibold text-yellow-800 bg-yellow-100 border border-yellow-200 rounded px-1 truncate shrink-0">
-                LTFT
+
+            {/* Tablet + Desktop: name row (and on desktop, info inline) */}
+            <div className="hidden sm:flex flex-row flex-wrap items-center gap-1 lg:gap-1.5 min-w-0">
+              {lastName && (
+                <span className="font-semibold text-[10px] truncate uppercase">{lastName}</span>
+              )}
+              <span className="font-semibold text-[10px] truncate">{firstName}</span>
+              {/* Desktop only: inline info */}
+              <span className="hidden lg:inline-flex items-center gap-1 shrink-0">
+                <GradeBadge grade={doctor.grade} size="xs" />
+                <span className="text-[8px] text-muted-foreground">{doctor.wte}%</span>
+                {ltftDays.length > 0 && (
+                  <span className="text-[8px] font-semibold text-yellow-800 bg-yellow-100 border border-yellow-200 rounded px-1 truncate">
+                    LTFT
+                  </span>
+                )}
               </span>
-            )}
+            </div>
+
+            {/* Tablet only: second row with info */}
+            <div className="hidden sm:flex lg:hidden flex-row items-center gap-1 mt-0.5 min-w-0">
+              <GradeBadge grade={doctor.grade} size="xs" />
+              <span className="text-[8px] text-muted-foreground">{doctor.wte}%</span>
+              {ltftDays.length > 0 && (
+                <span className="text-[8px] font-semibold text-yellow-800 bg-yellow-100 border border-yellow-200 rounded px-1 truncate shrink-0">
+                  LTFT
+                </span>
+              )}
+            </div>
           </div>
         </td>
         {/* Change 5: iterate full Mon–Sun 7-day span; Change 6: darken out-of-rota cells */}
