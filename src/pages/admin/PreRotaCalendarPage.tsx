@@ -1824,9 +1824,9 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
             {/* Mobile: stacked SURNAME / Name */}
             <div className="flex flex-col sm:hidden min-w-0">
               {lastName && (
-                <span className="font-semibold text-[10px] leading-tight truncate uppercase">{lastName}</span>
+                <span className="font-semibold text-[10px] leading-tight truncate uppercase mx-[5px]">{lastName}</span>
               )}
-              <span className="font-semibold text-[9px] leading-tight truncate">{firstName}</span>
+              <span className="font-semibold text-[9px] leading-tight truncate mx-[5px]">{firstName}</span>
             </div>
 
             {/* Tablet + Desktop: name row (and on desktop, info inline) */}
