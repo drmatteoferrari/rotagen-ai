@@ -1,32 +1,46 @@
 // src/lib/finalRotaNightBlocks.ts
-// Stage 3g.2b.1 — Tiling Engine foundation + weekend-night sub-pass.
+// Stage 3g.2b.1 Session A — Unified deficit-driven weekend-night sub-pass.
 //
 // Owns spec v2.9:
 //   §9.1 — block dictionary (extended to 12 patterns across 4 tiers; see
-//          Section 2 of the 3g.2b.1 prompt for the product decision).
+//          3g.2b.1 Section 2 product decision).
 //   §7 F49 / F50 / F51 — LTFT night flexibility (generic function;
-//          supersedes §9.3's tabular decision logic per 3g.2b.1
-//          Section 1.1 — the §9.3 table contains typos and omissions).
+//          supersedes §9.3's tabular decision logic — the §9.3 table
+//          contains typos and omissions).
 //   §7 F52 — REST-on-LTFT lieu generation.
 //   §7 F54 — multi-day LTFT composition (strictest wins).
-//   §7 I68 — resident-before-non-resident priority.
 //   §11 Layers 1–5 — candidate scoring (competency, night-target
-//          deviation, total-hours deviation, shuffle tiebreak).
+//          deviation, total-hours deviation, shuffle tiebreak) — applied
+//          through the deficit-driven unified loop.
 //
-// Weekend sub-pass (this session) covers night blocks touching
-// Fri / Sat / Sun of each weekend in the rota period. Cascading
-// strategy per weekend:
-//   PASS 1         3N_FRI_SUN for ranked doctor (residents first, I68)
-//   PASS 2 Group A 2N_SAT_SUN or 2N_FRI_SAT + 3N_SUN_TUE bridge for
-//                  doctors whose ONLY 3N blocker was LTFT flexibility
-//   PASS 2 Group B Same for doctors blocked for non-LTFT reasons
-//   RELAXATION     2N_SAT_SUN or 2N_FRI_SAT alone with CRITICAL UNFILLED
-//                  on the uncovered night
-//   UNFILLED       Fri / Sat / Sun all emitted as UnfilledSlot entries
+// Unified weekend algorithm (replaces Session Pre-A's Pass 1 / Pass 2 /
+// Relaxation structure). One deficit-driven loop per weekend:
+//
+//   1. Rank doctors by (normalised night-hour deficit DESC,
+//      best-achievable-pattern-tier ASC, shuffle-position ASC).
+//   2. For each doctor in ranked order, attempt patterns in preference
+//      order:
+//        a. 3N_FRI_SUN                  — commit on success.
+//        b. 2N_SAT_SUN + 3N_WED_FRI     — backward orphan consumption.
+//        c. 2N_FRI_SAT + 3N_SUN_TUE     — forward bridge consumption.
+//      Each orphan-consumption attempt is speculative: primary intent is
+//      discarded if the consumption doctor cannot be found.
+//   3. If no doctor succeeds with any orphan-consuming pattern, enter
+//      RELAXATION — accept 2N_SAT_SUN or 2N_FRI_SAT alone with the
+//      uncovered night marked CRITICAL UNFILLED.
+//   4. If even relaxation fails, emit all three weekend nights as
+//      CRITICAL UNFILLED.
+//
+// Orphan consumption is symmetric: the Fri/Sat/Sun weekend anchors a
+// bidirectional tiling. Backward (3N_WED_FRI) consumes the Wed/Thu
+// weekday slots of the SAME ISO week. Forward (3N_SUN_TUE bridge)
+// consumes the Mon/Tue of the following week. Both are Tier 2 dictionary
+// patterns; their placement is gated by the same eligibility chain as
+// any other block.
 //
 // Out of scope for this session (handled by later sub-sessions):
-//   - Weekday sub-pass (4N_MON_THU, 3N_MON_WED/WED_FRI, 2N_A / 2N_B,
-//     Tier-4 2N_TUE_WED / 2N_THU_FRI / 2N_SUN_MON) — Stage 3g.2b.2.
+//   - Weekday sub-pass (4N_MON_THU, 3N_MON_WED, 2N_A / 2N_B, Tier-4
+//     patterns outside weekend anchors) — Stage 3g.2b.2.
 //   - Cascade backfill (D35 Rule 2) invoking this engine — Stage 3g.4.
 //   - Lieu Phase 9 placement (G60 escalation) — Stage 3g.5.
 //   - Construction driver orchestration (Phase iteration, shift-type
@@ -106,11 +120,28 @@ export interface WeekendDates {
   nextTue: string;
 }
 
+export type LieuSource = 'AL' | 'SL' | 'LTFT';
+
 export interface LieuStagedEntry {
   doctorId: string;
   date: string;
-  source?: string;
+  source: LieuSource;
 }
+
+// pathTaken values after Session A:
+//   UNIFIED_3N                   — 3N_FRI_SUN placed, no orphan scenario.
+//   UNIFIED_2N_SATSUN_BACKWARD   — 2N_SAT_SUN + 3N_WED_FRI for Fri orphan.
+//   UNIFIED_2N_FRISAT_FORWARD    — 2N_FRI_SAT + 3N_SUN_TUE for Sun orphan.
+//   RELAXATION_2N_SATSUN         — 2N_SAT_SUN alone; Fri CRITICAL UNFILLED.
+//   RELAXATION_2N_FRISAT         — 2N_FRI_SAT alone; Sun CRITICAL UNFILLED.
+//   UNFILLED                     — Fri/Sat/Sun all CRITICAL UNFILLED.
+export type WeekendPathTaken =
+  | 'UNIFIED_3N'
+  | 'UNIFIED_2N_SATSUN_BACKWARD'
+  | 'UNIFIED_2N_FRISAT_FORWARD'
+  | 'RELAXATION_2N_SATSUN'
+  | 'RELAXATION_2N_FRISAT'
+  | 'UNFILLED';
 
 export interface WeekendPlacementResult {
   assignments: readonly InternalDayAssignment[];
@@ -118,8 +149,12 @@ export interface WeekendPlacementResult {
   restStampsByDoctor: Readonly<Record<string, number>>;
   unfilledSlots: readonly UnfilledSlot[];
   penaltyApplied: number;
-  pathTaken: 'PASS1' | 'PASS2_GROUP_A' | 'PASS2_GROUP_B' | 'RELAXATION' | 'UNFILLED';
-  orphanConsumedByBridge: boolean;
+  pathTaken: WeekendPathTaken;
+  // orphanConsumed reflects the orphan-coverage outcome:
+  //   true  — backward or forward consumption succeeded.
+  //   false — relaxation path used, orphan marked CRITICAL UNFILLED.
+  //   null  — no orphan scenario (3N_FRI_SUN or full UNFILLED).
+  orphanConsumed: boolean | null;
 }
 
 // ─── Constants ────────────────────────────────────────────────
@@ -140,8 +175,10 @@ const LTFT_DAY_NAME_MAP: Readonly<Record<string, DayKey>> = {
   fri: 'fri', sat: 'sat', sun: 'sun',
 };
 
-// Residency determination for I68. Training grades (CT1..ST9) are
-// resident; SAS / Post-CCT Fellow / Consultant are non-resident.
+// Residency determination — exported helper `filterByI68Residency` is
+// preserved for ancillary callers (construction-driver cascade ordering
+// may still want it), but the unified weekend loop does NOT consult it
+// — deficit + pattern-tier drive ranking.
 const RESIDENT_GRADES: ReadonlySet<string> = new Set<string>([
   'CT1', 'CT2', 'CT3', 'ST4', 'ST5', 'ST6', 'ST7', 'ST8', 'ST9',
 ]);
@@ -162,9 +199,6 @@ function msToIso(ms: number): string {
   return new Date(ms).toISOString().slice(0, 10);
 }
 
-// Exported — callers may need symmetric date helpers and the WTR module
-// keeps its own addDaysUtc private. Re-implementing once here keeps the
-// Tiling Engine self-contained for cascade backfill reuse in 3g.4.
 export function addDaysUtc(iso: string, n: number): string {
   return msToIso(isoToUtcMs(iso) + n * MS_PER_DAY);
 }
@@ -184,7 +218,7 @@ const BLOCK_PATTERNS: readonly BlockPattern[] = Object.freeze([
   // Tier 1 — ideal standard
   { id: '4N_MON_THU',   nightDowOffsets: [1, 2, 3, 4], startDow: 1, length: 4, crossesWeekBoundary: false, tier: 1, basePenalty: 0,  restDayOffsets: [1, 2] },
   { id: '3N_FRI_SUN',   nightDowOffsets: [5, 6, 7],    startDow: 5, length: 3, crossesWeekBoundary: false, tier: 1, basePenalty: 0,  restDayOffsets: [1, 2] },
-  // Tier 2 — acceptable alternative / LTFT relief
+  // Tier 2 — acceptable alternative / LTFT relief / orphan consumers
   { id: '3N_MON_WED',   nightDowOffsets: [1, 2, 3],    startDow: 1, length: 3, crossesWeekBoundary: false, tier: 2, basePenalty: 10, restDayOffsets: [1, 2] },
   { id: '3N_WED_FRI',   nightDowOffsets: [3, 4, 5],    startDow: 3, length: 3, crossesWeekBoundary: false, tier: 2, basePenalty: 10, restDayOffsets: [1, 2] },
   { id: '3N_SUN_TUE',   nightDowOffsets: [7, 1, 2],    startDow: 7, length: 3, crossesWeekBoundary: true,  tier: 2, basePenalty: 10, restDayOffsets: [1, 2] },
@@ -199,35 +233,27 @@ const BLOCK_PATTERNS: readonly BlockPattern[] = Object.freeze([
   { id: '2N_SUN_MON',   nightDowOffsets: [7, 1],       startDow: 7, length: 2, crossesWeekBoundary: true,  tier: 4, basePenalty: 40, restDayOffsets: [1, 2] },
 ] as const);
 
+const BLOCK_3N_FRI_SUN = BLOCK_PATTERNS.find(p => p.id === '3N_FRI_SUN')!;
+const BLOCK_2N_SAT_SUN = BLOCK_PATTERNS.find(p => p.id === '2N_SAT_SUN')!;
+const BLOCK_2N_FRI_SAT = BLOCK_PATTERNS.find(p => p.id === '2N_FRI_SAT')!;
+const BLOCK_3N_WED_FRI = BLOCK_PATTERNS.find(p => p.id === '3N_WED_FRI')!;
+const BLOCK_3N_SUN_TUE = BLOCK_PATTERNS.find(p => p.id === '3N_SUN_TUE')!;
+
 export function buildBlockDictionary(): readonly BlockPattern[] {
   return BLOCK_PATTERNS;
 }
 
-// Tier 1.5 atomic pair — 2N_A_MON_TUE + 2N_B_WED_THU form a "Tier 1.5"
-// composite when both placed in the same week (spec §9.1 implicit from
-// E44 "≤3: use 2N-A+2N-B"). Surfaced for the scoring path that applies
-// a +5 penalty bonus when the pair is detected. Not used in the weekend
-// sub-pass (no Mon..Thu coverage in 3g.2b.1), but exported for 3g.2b.2.
 export function isTier15AtomicPair(ids: readonly BlockPatternId[]): boolean {
   if (ids.length !== 2) return false;
   return ids.includes('2N_A_MON_TUE') && ids.includes('2N_B_WED_THU');
 }
 
-// Split-weekend detection (spec §9.1 line 1468) — 2N_FRI_SAT + 2N_SAT_SUN
-// used instead of a single 3N_FRI_SUN. Weekend sub-pass never places both
-// 2Ns (it always chooses one or the other), so this helper is primarily
-// for the weekday sub-pass's tiling scorer — exported for reuse.
 export function hasSplitWeekend(ids: readonly BlockPatternId[]): boolean {
   return ids.includes('2N_FRI_SAT') && ids.includes('2N_SAT_SUN');
 }
 
 // ─── LTFT helpers (Option A: internal canStart / canEnd) ──────
 
-// Resolves `doctor.ltft.nightFlexibility[{day, canStartNightsOnDay,
-// canEndNightsOnDay}]` → internal `{canStart, canEnd}` for a given
-// day-key. Returns both false for doctors with no LTFT entry for that
-// day (including entirely non-LTFT doctors), which is the safe default
-// for spec §7 F49/F50 — the flag must be explicitly true.
 export function getLtftFlags(
   doctor: Doctor,
   dayKey: DayKey,
@@ -245,8 +271,6 @@ export function getLtftFlags(
   return { canStart: false, canEnd: false };
 }
 
-// Returns the doctor's LTFT days-off as internal day-keys. Non-LTFT
-// doctors return []. De-duplicated; order preserved from input.
 export function getDoctorLtftDaysOff(doctor: Doctor): readonly DayKey[] {
   if (!doctor.ltft?.isLtft) return [];
   const out: DayKey[] = [];
@@ -262,24 +286,8 @@ export function getDoctorLtftDaysOff(doctor: Doctor): readonly DayKey[] {
 }
 
 // Authoritative LTFT disposition per spec §7 F49/F50/F51 + F52/F54.
-// For every calendar date spanning [firstNight, lastNight+2] whose
-// day-of-week matches one of the doctor's LTFT days off, classify the
-// overlap and collapse to the strictest composite disposition.
-//
-// Per-date classification:
-//   - Mid-block night on LTFT day  → ALWAYS_BLOCKED (F51)
-//   - First-night on LTFT day      → REQUIRES_CAN_START or OK (F49)
-//   - Last-night on LTFT day       → ALWAYS_BLOCKED (spec-silent edge;
-//                                     treated as strictly blocked — a
-//                                     doctor who is off this day must
-//                                     not work the night itself)
-//   - Morning-after on LTFT day    → REQUIRES_CAN_END or OK (F50)
-//   - REST-window day (+2) on LTFT → OK_WITH_LIEU (F52)
-//   - Otherwise (no real overlap)  → OK
-//
-// Composition (F54): ALWAYS_BLOCKED > REQUIRES_BOTH > REQUIRES_CAN_START
-// = REQUIRES_CAN_END > OK_WITH_LIEU > OK. `REQUIRES_BOTH` triggers only
-// when both a canStart-requiring day and a canEnd-requiring day appear.
+// Composition order (strictest wins): ALWAYS_BLOCKED > REQUIRES_BOTH >
+// REQUIRES_CAN_START = REQUIRES_CAN_END > OK_WITH_LIEU > OK.
 export function checkLtftDisposition(
   block: BlockPattern,
   blockNightDates: readonly string[],
@@ -289,9 +297,6 @@ export function checkLtftDisposition(
   if (daysOff.length === 0) {
     return { disposition: 'OK', allowed: true, requiresLieuOnDate: null };
   }
-  // Defensive: caller must pass aligned block + dates. If misaligned,
-  // fall through to permissive OK rather than crash. Stage 3g.3
-  // construction driver is the authoritative caller and never misaligns.
   if (blockNightDates.length !== block.length || blockNightDates.length === 0) {
     return { disposition: 'OK', allowed: true, requiresLieuOnDate: null };
   }
@@ -306,8 +311,6 @@ export function checkLtftDisposition(
   const perDayLieuDates: string[] = [];
 
   for (const dayKey of daysOff) {
-    // Enumerate every calendar date in [firstNight, restDay2] matching
-    // this LTFT day-of-week.
     let cursor = firstNightIso;
     for (let guard = 0; guard < 10; guard += 1) {
       if (getDayKeyUtc(cursor) === dayKey) {
@@ -325,8 +328,7 @@ export function checkLtftDisposition(
           // F49 — first-night overlap
           disposition = flags.canStart ? 'OK' : 'REQUIRES_CAN_START';
         } else if (cursor === lastNightIso) {
-          // Last-night on LTFT day — doctor should not be working the
-          // night itself. Blocked regardless of flags.
+          // Last-night on LTFT day — strictly blocked.
           disposition = 'ALWAYS_BLOCKED';
         } else if (cursor === morningAfterIso) {
           // F50 — morning-after overlap
@@ -346,7 +348,6 @@ export function checkLtftDisposition(
     }
   }
 
-  // Compose — strictest wins.
   if (perDayDispositions.some(d => d === 'ALWAYS_BLOCKED')) {
     return {
       disposition: 'ALWAYS_BLOCKED',
@@ -393,8 +394,6 @@ export function checkLtftDisposition(
 
 // ─── Weekend primitives ───────────────────────────────────────
 
-// All Saturdays in [periodStartIso, periodEndIso] inclusive, UTC.
-// Deterministic ascending order.
 export function getWeekendSaturdays(
   periodStartIso: string,
   periodEndIso: string,
@@ -402,7 +401,7 @@ export function getWeekendSaturdays(
   const startMs = isoToUtcMs(periodStartIso);
   const endMs = isoToUtcMs(periodEndIso);
   if (endMs < startMs) return [];
-  const startDow = new Date(startMs).getUTCDay(); // 0=Sun..6=Sat
+  const startDow = new Date(startMs).getUTCDay();
   const offsetToSat = (6 - startDow + 7) % 7;
   const out: string[] = [];
   let curMs = startMs + offsetToSat * MS_PER_DAY;
@@ -424,10 +423,6 @@ export function deriveWeekendDates(saturdayIso: string): WeekendDates {
 }
 
 // Normalised night deficit per §11 Layer 2.
-// `targetNightHours = targetNightShiftCount × avgNightShiftHours`; caller
-// pre-computes avgNightShiftHours once per iteration.
-// Returns (target − actual) / target ∈ (-∞, 1]. 1.0 = 100% below target;
-// 0 = on target. Zero-guard: target === 0 → returns 0.
 export function computeNormalisedNightDeficit(
   doctor: Doctor,
   state: DoctorState,
@@ -440,18 +435,12 @@ export function computeNormalisedNightDeficit(
   return (targetHours - actualHours) / targetHours;
 }
 
-// Sum of actualHoursByShiftType across all shift types — total-hours
-// deviation feeder for §11 Layer 3.
 function computeTotalActualHours(state: DoctorState): number {
   let sum = 0;
   for (const v of Object.values(state.actualHoursByShiftType)) sum += v;
   return sum;
 }
 
-// §11 Layer 1 competency scoring. One point per slot requirement the
-// doctor satisfies. Fallback path (no per-position requirements — see
-// rotaGenInput.ts fallback where `slots: []`) yields 0 for all doctors,
-// so Layer 1 collapses to a tie and Layer 2 takes over.
 function competencyScoreForSlot(doctor: Doctor, slot: ShiftSlotEntry): number {
   const pos = slot.slots[0];
   if (!pos) return 0;
@@ -463,9 +452,9 @@ function competencyScoreForSlot(doctor: Doctor, slot: ShiftSlotEntry): number {
   return score;
 }
 
-// §11 lexicographic comparator (Layers 1–5). Block param is reserved
-// for future block-aware boosting (Layer 4 look-ahead); unused here and
-// the block itself is ranked via caller (3N tried first, 2N fallback).
+// §11 lexicographic comparator for single-block ranking. Kept exported
+// for callers outside the weekend sub-pass; the unified weekend loop
+// uses a pattern-tier-aware comparator (`rankDoctorsForWeekend` below).
 export function rankDoctorsForBlock(
   eligibleDoctorIds: readonly string[],
   block: BlockPattern,
@@ -485,10 +474,10 @@ export function rankDoctorsForBlock(
   }
   interface Ranked {
     id: string;
-    deficit: number;       // higher first
-    compScore: number;     // higher first
-    totalDev: number;      // lower first
-    shufflePos: number;    // lower first
+    deficit: number;
+    compScore: number;
+    totalDev: number;
+    shufflePos: number;
   }
   const ranked: Ranked[] = [];
   for (const id of eligibleDoctorIds) {
@@ -513,7 +502,9 @@ export function rankDoctorsForBlock(
 }
 
 // §7 I68. Partitions doctor IDs into resident-first and non-resident
-// fallback pools. Order within each group is preserved from the input.
+// fallback pools. The unified weekend loop does not consult this helper —
+// it is preserved for the construction driver's shift-type sequencing
+// (resident-before-non-resident across the broader phase schedule).
 export function filterByI68Residency(
   doctorIds: readonly string[],
   doctors: readonly Doctor[],
@@ -531,18 +522,10 @@ export function filterByI68Residency(
   return { residentsFirst, fallbackPool };
 }
 
-// LTFT-aware matrix view. Spec §7 F49 / F50 permit night-on-LTFT-day
-// (canStart) and morning-after-on-LTFT-day (canEnd) when the doctor's
-// flag is set — but `isSlotEligible` is the strict Stage-3f gate and
-// flat-rejects every `ltft_off` status. The Tiling Engine is the
-// authoritative override point (spec F-rules + finalRotaEligibility.ts
-// header). Before calling `isSlotEligible` we relax the doctor's
-// `ltft_off` cells on the block's night dates plus the morning-after,
-// which is the exact scope over which F49/F50 grant flexibility.
-// `checkLtftDisposition` then gates with the spec-accurate decision.
-// Non-LTFT statuses (AL / SL / PL / ROT / BH) are never touched.
-// Other doctors' rows pass through unchanged — only the current
-// doctor's cells are rewritten on a shallow copy.
+// LTFT-aware matrix view — see Session Pre-A 2b.1 design notes.
+// Relaxes `ltft_off` cells on block nights + morning-after so
+// `isSlotEligible`'s strict Stage-3f rejection doesn't short-circuit
+// F49/F50 flexibility. `checkLtftDisposition` is the authoritative gate.
 function buildLtftFlexMatrix(
   doctor: Doctor,
   blockNightDates: readonly string[],
@@ -565,10 +548,9 @@ function buildLtftFlexMatrix(
   return { ...matrix, [doctor.doctorId]: doctorRow };
 }
 
-// Derives A8-window lieu staging (AL / SL / LTFT overlapping the 46h
-// REST window). Per Section 1.7 of the 3g.2b.1 prompt: CSB does not
-// currently return staged lieu — derive by inspecting rest days 1/2
-// against the availability matrix.
+// A8-window lieu staging (AL / SL / LTFT overlapping the 46h REST
+// window). CSB does not return staged lieu — derive by inspecting rest
+// days 1/2 against the availability matrix.
 function deriveA8LieuDates(
   lastNightIso: string,
   doctorId: string,
@@ -586,10 +568,11 @@ function deriveA8LieuDates(
   return out;
 }
 
-// Scarcity score for weekend ordering (3g.2b.1 Section 1.3). Counts
-// (doctor, weekend-pattern) combinations where the doctor is eligible
-// across every night of the pattern AND the pattern's LTFT disposition
-// is allowed. Lower score = more constrained weekend = processed first.
+// Scarcity score for weekend ordering. Counts (doctor, weekend-pattern)
+// combinations that pass the full eligibility chain. Lower = more
+// constrained. Partial-slot case: when a pattern's dates include a
+// missing slot, that pattern is skipped — the other patterns still
+// count.
 export function scoreWeekendScarcity(
   saturdayIso: string,
   eligibleDoctors: readonly Doctor[],
@@ -624,27 +607,22 @@ export function scoreWeekendScarcity(
   return count;
 }
 
-// ─── Orchestrator: weekend-night sub-pass ─────────────────────
+// ─── Orchestrator: unified weekend-night sub-pass ─────────────
 
 interface BlockAttemptResult {
   ok: boolean;
   assignments: readonly InternalDayAssignment[];
   lieuStaged: readonly LieuStagedEntry[];
   restUntilMs: number;
-  rejectionCategory: 'LTFT' | 'NON_LTFT' | 'NONE';
   rejectionReason: string;
 }
 
 // Per-doctor block attempt. Pipeline:
-//   1. Per-night isSlotEligible (fast fail on availability / exemption /
-//      grade / competency / NOC / B30 D+1).
+//   1. Per-night isSlotEligible (LTFT-flex matrix applied).
 //   2. checkLtftDisposition (spec §7 F49/F50/F51/F52/F54).
-//   3. checkSequenceB (spec §8 Check Sequence B — full WTR validation
-//      including E47 block atomicity).
-// Rejection category distinguishes LTFT-only blockers (Pass 2 Group A)
-// from non-LTFT blockers (Pass 2 Group B). On success builds commit
-// intent: assignments, lieu-staging (OK_WITH_LIEU + A8-window), and
-// post-block rest-until timestamp.
+//   3. checkSequenceB (spec §8 Check Sequence B — full WTR validation).
+// On success, builds commit intent: assignments, lieu staging, REST-
+// until timestamp.
 function tryBlockForDoctor(
   doctor: Doctor,
   pattern: BlockPattern,
@@ -658,7 +636,6 @@ function tryBlockForDoctor(
   const wtr = input.preRotaInput.wtrConstraints;
   const totalWeeks = input.preRotaInput.period.totalWeeks;
 
-  // Resolve per-night slot entries by (shiftKey, dayKey).
   const slotByDate: Record<string, ShiftSlotEntry> = {};
   for (const date of blockNightDates) {
     const dk = getDayKeyUtc(date);
@@ -668,40 +645,30 @@ function tryBlockForDoctor(
     if (!slot) {
       return {
         ok: false, assignments: [], lieuStaged: [], restUntilMs: 0,
-        rejectionCategory: 'NON_LTFT',
         rejectionReason: `no slot entry for ${nightShiftKey}/${dk}`,
       };
     }
     slotByDate[date] = slot;
   }
 
-  // Step 1 — per-night isSlotEligible pre-filter. LTFT-flex matrix
-  // relaxes the doctor's `ltft_off` cells on block nights + morning-
-  // after so §7 F49/F50 flexibility isn't short-circuited by
-  // Stage 3f's strict rejection. `checkLtftDisposition` (Step 2)
-  // gates authoritatively.
   const ltftFlexMatrix = buildLtftFlexMatrix(doctor, blockNightDates, availabilityMatrix);
   for (const date of blockNightDates) {
     if (!isSlotEligible(doctor, slotByDate[date], 0, date, ltftFlexMatrix, periodEndIso)) {
       return {
         ok: false, assignments: [], lieuStaged: [], restUntilMs: 0,
-        rejectionCategory: 'NON_LTFT',
         rejectionReason: `isSlotEligible fail on ${date}`,
       };
     }
   }
 
-  // Step 2 — LTFT disposition (§7 F49/F50/F51/F52/F54).
   const ltft = checkLtftDisposition(pattern, blockNightDates, doctor);
   if (!ltft.allowed) {
     return {
       ok: false, assignments: [], lieuStaged: [], restUntilMs: 0,
-      rejectionCategory: 'LTFT',
       rejectionReason: ltft.blockedReason ?? ltft.disposition,
     };
   }
 
-  // Step 3 — Check Sequence B (full WTR validation, block atomic).
   const representativeSlot = slotByDate[blockNightDates[0]];
   const csb = checkSequenceB(
     doctor,
@@ -716,12 +683,10 @@ function tryBlockForDoctor(
   if (!csb.pass) {
     return {
       ok: false, assignments: [], lieuStaged: [], restUntilMs: 0,
-      rejectionCategory: 'NON_LTFT',
       rejectionReason: `CSB ${csb.failedRule ?? 'fail'}: ${csb.reason ?? ''}`,
     };
   }
 
-  // Build commit intent.
   const blockId = `${doctor.doctorId}:${pattern.id}:${blockNightDates[0]}`;
   const assignments: InternalDayAssignment[] = [];
   for (const date of blockNightDates) {
@@ -746,20 +711,19 @@ function tryBlockForDoctor(
       violations: [],
     });
   }
-  // Post-block REST: 46h (wtr.minRestHoursAfter.nights) from last night end.
   const lastNightEndMs = assignments[assignments.length - 1].shiftEndMs;
   const restUntilMs = getRestUntilMs(lastNightEndMs, wtr.minRestHoursAfter.nights);
 
   // Lieu staging:
-  //   (a) OK_WITH_LIEU disposition — REST day falls on LTFT day (§7 F52).
-  //   (b) A8 REST window × AL/SL/LTFT (§7 G55/G56/G57).
-  // Deduplicate by (doctorId, date).
+  //   (a) OK_WITH_LIEU disposition — spec F52.
+  //   (b) A8 REST window × AL/SL/LTFT — spec G55/G56/G57.
+  // Deduplicate by (doctorId, date). Unified source label: 'LTFT'.
   const lieu: LieuStagedEntry[] = [];
   if (ltft.disposition === 'OK_WITH_LIEU' && ltft.requiresLieuOnDate) {
     lieu.push({
       doctorId: doctor.doctorId,
       date: ltft.requiresLieuOnDate,
-      source: 'LTFT_REST',
+      source: 'LTFT',
     });
   }
   const lastNightIso = blockNightDates[blockNightDates.length - 1];
@@ -774,13 +738,104 @@ function tryBlockForDoctor(
     assignments,
     lieuStaged: lieu,
     restUntilMs,
-    rejectionCategory: 'NONE',
     rejectionReason: '',
   };
 }
 
-// Top-level orchestrator. Places night coverage for a single weekend
-// anchored at `saturdayIso`. Returns commit intent + path diagnostics.
+// Best-achievable pattern tier for a doctor at a given weekend. Used for
+// tied-deficit tiebreak (Tier 1 beats Tier 3). Runs the full eligibility
+// chain — expensive, but bounded to three calls per (doctor, weekend).
+function bestAchievablePatternTier(
+  cached: CachedAttempts,
+): number | null {
+  if (cached.a3N?.ok) return 1;
+  if (cached.a2NSatSun?.ok || cached.a2NFriSat?.ok) return 3;
+  return null;
+}
+
+interface CachedAttempts {
+  a3N: BlockAttemptResult | null;
+  a2NSatSun: BlockAttemptResult | null;
+  a2NFriSat: BlockAttemptResult | null;
+}
+
+// Attempts forward-bridge (3N_SUN_TUE) consumption of the Sun orphan
+// created when a doctor takes 2N_FRI_SAT. Iterates the already-ranked
+// pool excluding the primary doctor; returns the first bridge doctor
+// whose full eligibility chain passes, or null if none found / slots
+// missing / bridge would extend past the rota period.
+function attemptForwardBridgeConsumption(
+  weekendDates: WeekendDates,
+  primaryDoctorId: string,
+  rankedDoctors: readonly string[],
+  doctorById: Map<string, Doctor>,
+  state: Map<string, DoctorState>,
+  input: FinalRotaInput,
+  availabilityMatrix: AvailabilityMatrix,
+  nightShiftKey: string,
+  slotFor: (date: string) => ShiftSlotEntry | null,
+): { doctorId: string; attempt: BlockAttemptResult } | null {
+  const periodEndIso = input.preRotaInput.period.endDate;
+  if (weekendDates.nextTue > periodEndIso) return null;
+  const slotSun = slotFor(weekendDates.sun);
+  const slotMon = slotFor(weekendDates.nextMon);
+  const slotTue = slotFor(weekendDates.nextTue);
+  if (!slotSun || !slotMon || !slotTue) return null;
+  for (const docId of rankedDoctors) {
+    if (docId === primaryDoctorId) continue;
+    const doctor = doctorById.get(docId);
+    const s = state.get(docId);
+    if (!doctor || !s) continue;
+    const attempt = tryBlockForDoctor(
+      doctor, BLOCK_3N_SUN_TUE,
+      [weekendDates.sun, weekendDates.nextMon, weekendDates.nextTue],
+      s, input, availabilityMatrix, nightShiftKey,
+    );
+    if (attempt.ok) return { doctorId: docId, attempt };
+  }
+  return null;
+}
+
+// Attempts backward-orphan (3N_WED_FRI) consumption of the Fri orphan
+// created when a doctor takes 2N_SAT_SUN. Mirrors the forward bridge:
+// iterates the already-ranked pool excluding the primary doctor; returns
+// the first Wed/Thu/Fri block that passes the eligibility chain. The
+// backward consumer runs entirely within the same ISO week as the
+// weekend anchor — no period-boundary concern.
+function attemptBackwardOrphanConsumption(
+  weekendDates: WeekendDates,
+  primaryDoctorId: string,
+  rankedDoctors: readonly string[],
+  doctorById: Map<string, Doctor>,
+  state: Map<string, DoctorState>,
+  input: FinalRotaInput,
+  availabilityMatrix: AvailabilityMatrix,
+  nightShiftKey: string,
+  slotFor: (date: string) => ShiftSlotEntry | null,
+): { doctorId: string; attempt: BlockAttemptResult } | null {
+  const wedIso = addDaysUtc(weekendDates.fri, -2);
+  const thuIso = addDaysUtc(weekendDates.fri, -1);
+  const friIso = weekendDates.fri;
+  const slotWed = slotFor(wedIso);
+  const slotThu = slotFor(thuIso);
+  const slotFri = slotFor(friIso);
+  if (!slotWed || !slotThu || !slotFri) return null;
+  for (const docId of rankedDoctors) {
+    if (docId === primaryDoctorId) continue;
+    const doctor = doctorById.get(docId);
+    const s = state.get(docId);
+    if (!doctor || !s) continue;
+    const attempt = tryBlockForDoctor(
+      doctor, BLOCK_3N_WED_FRI, [wedIso, thuIso, friIso],
+      s, input, availabilityMatrix, nightShiftKey,
+    );
+    if (attempt.ok) return { doctorId: docId, attempt };
+  }
+  return null;
+}
+
+// Top-level orchestrator. Unified deficit-driven loop replaces the
+// Pass 1 / Pass 2 / Relaxation cascade from Session Pre-A.
 export function placeWeekendNightsForWeekend(
   saturdayIso: string,
   input: FinalRotaInput,
@@ -795,9 +850,6 @@ export function placeWeekendNightsForWeekend(
   const periodStartIso = input.preRotaInput.period.startDate;
   const periodEndIso = input.preRotaInput.period.endDate;
 
-  // Resolve a slot for `date` honouring the onCallOnly phase flag and
-  // the rota-period bounds. Returns null for out-of-period dates or
-  // missing slot entries.
   const slotFor = (date: string): ShiftSlotEntry | null => {
     if (date < periodStartIso || date > periodEndIso) return null;
     const dk = getDayKeyUtc(date);
@@ -814,17 +866,14 @@ export function placeWeekendNightsForWeekend(
   const slotSat = slotFor(w.sat);
   const slotSun = slotFor(w.sun);
 
-  // Empty weekend (no night demand in any Fri/Sat/Sun slot) → no work.
   if (!slotFri && !slotSat && !slotSun) {
     return {
       assignments: [], lieuStaged: [], restStampsByDoctor: {},
       unfilledSlots: [], penaltyApplied: 0,
-      pathTaken: 'UNFILLED', orphanConsumedByBridge: false,
+      pathTaken: 'UNFILLED', orphanConsumed: null,
     };
   }
 
-  // Candidate pool: doctors with a non-zero night target that have a
-  // live DoctorState entry for this iteration.
   const candidatePool: string[] = [];
   for (const doctor of input.doctors) {
     if (doctor.fairnessTargets.targetNightShiftCount === 0) continue;
@@ -832,36 +881,54 @@ export function placeWeekendNightsForWeekend(
     candidatePool.push(doctor.doctorId);
   }
 
-  const block3N = BLOCK_PATTERNS.find(p => p.id === '3N_FRI_SUN')!;
-  const block2NSatSun = BLOCK_PATTERNS.find(p => p.id === '2N_SAT_SUN')!;
-  const block2NFriSat = BLOCK_PATTERNS.find(p => p.id === '2N_FRI_SAT')!;
-  const blockBridge = BLOCK_PATTERNS.find(p => p.id === '3N_SUN_TUE')!;
-
   const doctorById = new Map<string, Doctor>();
   for (const d of input.doctors) doctorById.set(d.doctorId, d);
 
-  // Rank once for 3N_FRI_SUN against the Fri slot (or the Sat slot if
-  // Fri has no demand). Used across Pass 1 and Pass 2 classification.
-  const rankingSlot = slotFri ?? slotSat ?? slotSun!;
-  const rankedAll = rankDoctorsForBlock(
-    candidatePool, block3N, rankingSlot, state, input.doctors,
-    avgNightShiftHours, nightShiftKey, shuffleOrder,
-  );
-  const i68 = filterByI68Residency(rankedAll, input.doctors);
-  const fullOrder = [...i68.residentsFirst, ...i68.fallbackPool];
+  // Precompute the three weekend-anchored attempts (3N_FRI_SUN,
+  // 2N_SAT_SUN, 2N_FRI_SAT) per doctor. Used both for ranking tiebreak
+  // and for the main loop — no duplicate CSB calls.
+  const precomputed = new Map<string, CachedAttempts & { deficit: number; tier: number | null }>();
+  for (const docId of candidatePool) {
+    const doctor = doctorById.get(docId)!;
+    const s = state.get(docId)!;
+    const a3N = (slotFri && slotSat && slotSun)
+      ? tryBlockForDoctor(doctor, BLOCK_3N_FRI_SUN, [w.fri, w.sat, w.sun], s, input, availabilityMatrix, nightShiftKey)
+      : null;
+    const a2NSatSun = (slotSat && slotSun)
+      ? tryBlockForDoctor(doctor, BLOCK_2N_SAT_SUN, [w.sat, w.sun], s, input, availabilityMatrix, nightShiftKey)
+      : null;
+    const a2NFriSat = (slotFri && slotSat)
+      ? tryBlockForDoctor(doctor, BLOCK_2N_FRI_SAT, [w.fri, w.sat], s, input, availabilityMatrix, nightShiftKey)
+      : null;
+    const deficit = computeNormalisedNightDeficit(doctor, s, avgNightShiftHours, nightShiftKey);
+    const tier = bestAchievablePatternTier({ a3N, a2NSatSun, a2NFriSat });
+    precomputed.set(docId, { a3N, a2NSatSun, a2NFriSat, deficit, tier });
+  }
+
+  // Ranking: deficit DESC → tier ASC (null = last) → shuffle ASC.
+  const shufflePos = new Map<string, number>();
+  for (let i = 0; i < shuffleOrder.length; i += 1) {
+    shufflePos.set(shuffleOrder[i], i);
+  }
+  const ranked = [...candidatePool].sort((a, b) => {
+    const pa = precomputed.get(a)!;
+    const pb = precomputed.get(b)!;
+    if (pa.deficit !== pb.deficit) return pb.deficit - pa.deficit;
+    const tierA = pa.tier ?? Number.MAX_SAFE_INTEGER;
+    const tierB = pb.tier ?? Number.MAX_SAFE_INTEGER;
+    if (tierA !== tierB) return tierA - tierB;
+    return (shufflePos.get(a) ?? Number.MAX_SAFE_INTEGER) - (shufflePos.get(b) ?? Number.MAX_SAFE_INTEGER);
+  });
 
   // Accumulators.
   const outAssignments: InternalDayAssignment[] = [];
   const outLieu: LieuStagedEntry[] = [];
   const outRest: Record<string, number> = {};
   const outUnfilled: UnfilledSlot[] = [];
-  let outPath: WeekendPlacementResult['pathTaken'] = 'UNFILLED';
+  let outPath: WeekendPathTaken = 'UNFILLED';
   let outPenalty = 0;
-  let outBridge = false;
+  let outOrphanConsumed: boolean | null = null;
 
-  // Helper: mark a date as unfilled (isCritical = min > 0 when nothing
-  // is assigned; target < min is also critical by spec but cannot occur
-  // with ≥ 0 assignments against a slot with min = target in fixtures).
   const markUnfilled = (date: string, slot: ShiftSlotEntry | null): void => {
     if (!slot || slot.staffing.target <= 0) return;
     outUnfilled.push({
@@ -872,188 +939,26 @@ export function placeWeekendNightsForWeekend(
     });
   };
 
-  // ── PASS 1 — 3N_FRI_SUN ──────────────────────────────────
-  // Requires all three slots present.
-  const pass1Results = new Map<string, BlockAttemptResult>();
-  if (slotFri && slotSat && slotSun) {
-    const pass1Dates = [w.fri, w.sat, w.sun];
-    for (const docId of fullOrder) {
-      const doctor = doctorById.get(docId)!;
-      const s = state.get(docId)!;
-      const attempt = tryBlockForDoctor(
-        doctor, block3N, pass1Dates, s, input, availabilityMatrix, nightShiftKey,
-      );
-      pass1Results.set(docId, attempt);
-      if (attempt.ok) {
-        outAssignments.push(...attempt.assignments);
-        outLieu.push(...attempt.lieuStaged);
-        outRest[docId] = attempt.restUntilMs;
-        outPath = 'PASS1';
-        outPenalty = block3N.basePenalty;
-        return finalise();
+  const commit = (
+    intents: readonly BlockAttemptResult[],
+    path: WeekendPathTaken,
+    penalty: number,
+    orphan: boolean | null,
+  ): WeekendPlacementResult => {
+    for (const intent of intents) {
+      outAssignments.push(...intent.assignments);
+      outLieu.push(...intent.lieuStaged);
+      if (intent.assignments.length > 0) {
+        outRest[intent.assignments[0].doctorId] = intent.restUntilMs;
       }
     }
-  }
-
-  // ── PASS 2 — 2N_SAT_SUN then 2N_FRI_SAT + bridge ─────────
-  // Classify remaining doctors. Cached Pass-1 rejection category drives
-  // Group A (LTFT-only blockers) vs Group B (non-LTFT blockers). Group A
-  // attempted first — these doctors are the most constrained and should
-  // consume limited weekend slots before fully-eligible doctors fall to
-  // alternative weekends.
-  const groupA: string[] = [];
-  const groupB: string[] = [];
-  for (const docId of fullOrder) {
-    const cached = pass1Results.get(docId);
-    if (cached && cached.rejectionCategory === 'LTFT') groupA.push(docId);
-    else groupB.push(docId);
-  }
-
-  const tryPass2Group = (
-    groupIds: readonly string[],
-    pathLabel: 'PASS2_GROUP_A' | 'PASS2_GROUP_B',
-  ): boolean => {
-    // 2N_SAT_SUN alone — Fri becomes orphan if it has demand.
-    if (slotSat && slotSun) {
-      for (const docId of groupIds) {
-        const doctor = doctorById.get(docId)!;
-        const s = state.get(docId)!;
-        const attempt = tryBlockForDoctor(
-          doctor, block2NSatSun, [w.sat, w.sun], s,
-          input, availabilityMatrix, nightShiftKey,
-        );
-        if (attempt.ok) {
-          outAssignments.push(...attempt.assignments);
-          outLieu.push(...attempt.lieuStaged);
-          outRest[docId] = attempt.restUntilMs;
-          outPath = pathLabel;
-          outPenalty = block2NSatSun.basePenalty;
-          // Fri orphan — E42 forbids single-night placement, so leave
-          // it as CRITICAL UNFILLED if demand exists.
-          if (slotFri) markUnfilled(w.fri, slotFri);
-          return true;
-        }
-      }
-    }
-    // 2N_FRI_SAT + 3N_SUN_TUE bridge — requires Mon+Tue slots within
-    // period (bridge extends 3 days beyond the Sat pivot).
-    if (slotFri && slotSat && w.nextTue <= periodEndIso) {
-      const slotMonBridge = slotFor(w.nextMon);
-      const slotTueBridge = slotFor(w.nextTue);
-      if (slotSun && slotMonBridge && slotTueBridge) {
-        for (const docId of groupIds) {
-          const doctor = doctorById.get(docId)!;
-          const s = state.get(docId)!;
-          const primary = tryBlockForDoctor(
-            doctor, block2NFriSat, [w.fri, w.sat], s,
-            input, availabilityMatrix, nightShiftKey,
-          );
-          if (!primary.ok) continue;
-
-          // Bridge attempt — excludes the 2N_FRI_SAT doctor (same
-          // doctor cannot take consecutive blocks across the REST
-          // window; formally enforced inside CSB A8 only when state is
-          // mutated, so we pre-filter here to keep state immutable).
-          const bridgePool = candidatePool.filter(id => id !== docId);
-          const bridgeRanked = rankDoctorsForBlock(
-            bridgePool, blockBridge, slotSun, state, input.doctors,
-            avgNightShiftHours, nightShiftKey, shuffleOrder,
-          );
-          const bridgeI68 = filterByI68Residency(bridgeRanked, input.doctors);
-          const bridgeOrder = [...bridgeI68.residentsFirst, ...bridgeI68.fallbackPool];
-          let bridgePlaced: BlockAttemptResult | null = null;
-          let bridgeDoctorId: string | null = null;
-          for (const bDocId of bridgeOrder) {
-            const bDoctor = doctorById.get(bDocId)!;
-            const bS = state.get(bDocId)!;
-            const bridgeAttempt = tryBlockForDoctor(
-              bDoctor, blockBridge, [w.sun, w.nextMon, w.nextTue], bS,
-              input, availabilityMatrix, nightShiftKey,
-            );
-            if (bridgeAttempt.ok) {
-              bridgePlaced = bridgeAttempt;
-              bridgeDoctorId = bDocId;
-              break;
-            }
-          }
-          if (!bridgePlaced || !bridgeDoctorId) {
-            // Bridge failed — discard speculative 2N and try next doctor.
-            continue;
-          }
-
-          outAssignments.push(...primary.assignments, ...bridgePlaced.assignments);
-          outLieu.push(...primary.lieuStaged, ...bridgePlaced.lieuStaged);
-          outRest[docId] = primary.restUntilMs;
-          outRest[bridgeDoctorId] = bridgePlaced.restUntilMs;
-          outPath = pathLabel;
-          outPenalty = block2NFriSat.basePenalty + blockBridge.basePenalty;
-          outBridge = true;
-          return true;
-        }
-      }
-    }
-    return false;
+    outPath = path;
+    outPenalty = penalty;
+    outOrphanConsumed = orphan;
+    return finalise();
   };
 
-  if (tryPass2Group(groupA, 'PASS2_GROUP_A')) return finalise();
-  if (tryPass2Group(groupB, 'PASS2_GROUP_B')) return finalise();
-
-  // ── RELAXATION — partial coverage with explicit CRITICAL UNFILLED ─
-  // Accepts a single 2N placement even when the other weekend night
-  // cannot be covered. Tried against the full ranked pool (no LTFT/non-
-  // LTFT partitioning) since at this point any valid fit is preferable
-  // to emitting three CRITICAL UNFILLED slots.
-  if (slotSat && slotSun) {
-    for (const docId of fullOrder) {
-      const doctor = doctorById.get(docId)!;
-      const s = state.get(docId)!;
-      const attempt = tryBlockForDoctor(
-        doctor, block2NSatSun, [w.sat, w.sun], s,
-        input, availabilityMatrix, nightShiftKey,
-      );
-      if (attempt.ok) {
-        outAssignments.push(...attempt.assignments);
-        outLieu.push(...attempt.lieuStaged);
-        outRest[docId] = attempt.restUntilMs;
-        outPath = 'RELAXATION';
-        outPenalty = block2NSatSun.basePenalty;
-        if (slotFri) markUnfilled(w.fri, slotFri);
-        return finalise();
-      }
-    }
-  }
-  if (slotFri && slotSat) {
-    for (const docId of fullOrder) {
-      const doctor = doctorById.get(docId)!;
-      const s = state.get(docId)!;
-      const attempt = tryBlockForDoctor(
-        doctor, block2NFriSat, [w.fri, w.sat], s,
-        input, availabilityMatrix, nightShiftKey,
-      );
-      if (attempt.ok) {
-        outAssignments.push(...attempt.assignments);
-        outLieu.push(...attempt.lieuStaged);
-        outRest[docId] = attempt.restUntilMs;
-        outPath = 'RELAXATION';
-        outPenalty = block2NFriSat.basePenalty;
-        // Sun orphan — no bridge attempted in relaxation (bridge
-        // success would put us back in Pass 2 territory; relaxation
-        // accepts the orphan).
-        if (slotSun) markUnfilled(w.sun, slotSun);
-        return finalise();
-      }
-    }
-  }
-
-  // ── UNFILLED — every weekend night with demand is CRITICAL UNFILLED.
-  outPath = 'UNFILLED';
-  if (slotFri) markUnfilled(w.fri, slotFri);
-  if (slotSat) markUnfilled(w.sat, slotSat);
-  if (slotSun) markUnfilled(w.sun, slotSun);
-  return finalise();
-
   function finalise(): WeekendPlacementResult {
-    // Stable chronological sort for deterministic downstream diffing.
     const sorted = [...outAssignments].sort((a, b) => a.shiftStartMs - b.shiftStartMs);
     return {
       assignments: sorted,
@@ -1062,7 +967,86 @@ export function placeWeekendNightsForWeekend(
       unfilledSlots: outUnfilled,
       penaltyApplied: outPenalty,
       pathTaken: outPath,
-      orphanConsumedByBridge: outBridge,
+      orphanConsumed: outOrphanConsumed,
     };
   }
+
+  // Main loop — per-doctor pattern sequence with orphan consumption.
+  for (const docId of ranked) {
+    const p = precomputed.get(docId)!;
+
+    // a. 3N_FRI_SUN — no orphan scenario.
+    if (p.a3N?.ok) {
+      return commit([p.a3N], 'UNIFIED_3N', BLOCK_3N_FRI_SUN.basePenalty, null);
+    }
+
+    // b. 2N_SAT_SUN + backward consumption (3N_WED_FRI for Fri orphan).
+    if (p.a2NSatSun?.ok) {
+      const backward = attemptBackwardOrphanConsumption(
+        w, docId, ranked, doctorById, state, input, availabilityMatrix,
+        nightShiftKey, slotFor,
+      );
+      if (backward) {
+        const penalty = BLOCK_2N_SAT_SUN.basePenalty + BLOCK_3N_WED_FRI.basePenalty;
+        return commit(
+          [p.a2NSatSun, backward.attempt],
+          'UNIFIED_2N_SATSUN_BACKWARD',
+          penalty,
+          true,
+        );
+      }
+      // Backward consumption failed → discard 2N_SAT_SUN intent,
+      // try 2N_FRI_SAT for this doctor.
+    }
+
+    // c. 2N_FRI_SAT + forward consumption (3N_SUN_TUE bridge for Sun orphan).
+    if (p.a2NFriSat?.ok) {
+      const forward = attemptForwardBridgeConsumption(
+        w, docId, ranked, doctorById, state, input, availabilityMatrix,
+        nightShiftKey, slotFor,
+      );
+      if (forward) {
+        const penalty = BLOCK_2N_FRI_SAT.basePenalty + BLOCK_3N_SUN_TUE.basePenalty;
+        return commit(
+          [p.a2NFriSat, forward.attempt],
+          'UNIFIED_2N_FRISAT_FORWARD',
+          penalty,
+          true,
+        );
+      }
+      // Forward bridge failed → discard 2N_FRI_SAT intent,
+      // move to next doctor.
+    }
+  }
+
+  // Relaxation — partial coverage with CRITICAL UNFILLED orphan.
+  for (const docId of ranked) {
+    const p = precomputed.get(docId)!;
+    if (p.a2NSatSun?.ok) {
+      if (slotFri) markUnfilled(w.fri, slotFri);
+      return commit(
+        [p.a2NSatSun],
+        'RELAXATION_2N_SATSUN',
+        BLOCK_2N_SAT_SUN.basePenalty,
+        false,
+      );
+    }
+    if (p.a2NFriSat?.ok) {
+      if (slotSun) markUnfilled(w.sun, slotSun);
+      return commit(
+        [p.a2NFriSat],
+        'RELAXATION_2N_FRISAT',
+        BLOCK_2N_FRI_SAT.basePenalty,
+        false,
+      );
+    }
+  }
+
+  // Complete failure — all three weekend nights CRITICAL UNFILLED.
+  outPath = 'UNFILLED';
+  outOrphanConsumed = null;
+  if (slotFri) markUnfilled(w.fri, slotFri);
+  if (slotSat) markUnfilled(w.sat, slotSat);
+  if (slotSun) markUnfilled(w.sun, slotSun);
+  return finalise();
 }

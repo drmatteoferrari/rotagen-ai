@@ -1491,13 +1491,15 @@ async function run() {
       SAT1, inp, stateMap, matrix, shuffle, 'night', 13, true,
     );
     assert(
-      r.pathTaken === 'PASS1' && r.assignments.length === 3 && r.penaltyApplied === 0,
-      `Stage 3g.2b.1 integration: clean 3-FT → PASS1 3 assignments (got ${r.pathTaken}/${r.assignments.length})`,
+      r.pathTaken === 'UNIFIED_3N' && r.assignments.length === 3 && r.penaltyApplied === 0,
+      `Stage 3g.2b.1 integration: clean 3-FT → UNIFIED_3N 3 assignments (got ${r.pathTaken}/${r.assignments.length})`,
     );
   }
 
   // (2) Mixed: D1 non-LTFT (Consultant), D2 LTFT-Mon, D3 LTFT-Fri.
-  //     Residents (D2, D3) try 3N first (I68) but LTFT blocks — D1 wins.
+  //     Under unified algorithm, all three tie on deficit=1.0. Pattern-
+  //     tier tiebreak: D1 can do 3N_FRI_SUN (Tier 1), D2/D3 only 2N
+  //     (Tier 3) — D1 wins on pattern tier regardless of I68.
   {
     const inp = minimalInputWeekendNights;
     const matrix = buildAvailabilityMatrix(inp);
@@ -1508,17 +1510,21 @@ async function run() {
     );
     const uniqueDocs = new Set(r.assignments.map(a => a.doctorId));
     assert(
-      r.pathTaken === 'PASS1'
+      r.pathTaken === 'UNIFIED_3N'
         && r.assignments.length === 3
         && uniqueDocs.size === 1
         && uniqueDocs.has('doc-1'),
-      `Stage 3g.2b.1 integration: mixed LTFT + FT → PASS1 D1 placed (got ${r.pathTaken}/${JSON.stringify([...uniqueDocs])})`,
+      `Stage 3g.2b.1 integration: mixed LTFT + FT → UNIFIED_3N D1 placed (got ${r.pathTaken}/${JSON.stringify([...uniqueDocs])})`,
     );
   }
 
-  // (3) Pass 2 Group A with 2N_SAT_SUN: D1 Sun-AL forces Group B;
-  //     D2 LTFT-Mon blocks 2N_SAT_SUN; D3 LTFT-Fri allows 2N_SAT_SUN
-  //     (Fri out of scope). D3 wins Pass 2A; Fri marked CRITICAL UNFILLED.
+  // (3) Backward orphan consumption: D1 Sun-AL (tier=null) + D2 LTFT-Mon
+  //     (tier=3 via 2N_FRI_SAT) + D3 LTFT-Fri (tier=3 via 2N_SAT_SUN).
+  //     Ranked D2, D3 (deficit+tier ties, shuffle picks D2 first).
+  //     D2 3N fail → 2N_SAT_SUN fail (Mon morning-after) → 2N_FRI_SAT
+  //     OK_WITH_LIEU + forward bridge. Bridge pool [D3, D1]: D3 LTFT-
+  //     Fri has no overlap with Sun/Mon/Tue → bridge succeeds with D3.
+  //     Expected: UNIFIED_2N_FRISAT_FORWARD, 5 assignments, bridge true.
   {
     const doctors = [
       cloneDoctorWithAL(minimalInputWeekendNights.doctors[0], ['2026-05-10']), // D1 Sun AL
@@ -1533,14 +1539,14 @@ async function run() {
       SAT1, inp, stateMap, matrix, shuffle, 'night', 13, true,
     );
     const uniqueDocs = new Set(r.assignments.map(a => a.doctorId));
-    const friUnfilled = r.unfilledSlots.some(u => u.date === '2026-05-08' && u.isCritical);
     assert(
-      r.pathTaken === 'PASS2_GROUP_A'
-        && r.assignments.length === 2
+      r.pathTaken === 'UNIFIED_2N_FRISAT_FORWARD'
+        && r.orphanConsumed === true
+        && r.assignments.length === 5
+        && uniqueDocs.has('doc-2')
         && uniqueDocs.has('doc-3')
-        && friUnfilled
-        && r.penaltyApplied === 25,
-      `Stage 3g.2b.1 integration: Pass 2A with 2N_SAT_SUN, Fri CRITICAL (got ${r.pathTaken}/${r.assignments.length}/${friUnfilled})`,
+        && r.penaltyApplied === 35,
+      `Stage 3g.2b.1 integration: unified forward-bridge path (got ${r.pathTaken}/${r.assignments.length}/orphan=${r.orphanConsumed})`,
     );
   }
 
@@ -1548,7 +1554,7 @@ async function run() {
   //     2N_SAT_SUN. D1 LTFT-Sun canEnd=true handles 2N_FRI_SAT
   //     (Sun=morning-after allowed). D3 LTFT-Sun canStart=true handles
   //     the bridge (Sun=first-night allowed). Expected outcome:
-  //     PASS2_GROUP_A with bridge consumed, 5 assignments.
+  //     UNIFIED_2N_FRISAT_FORWARD with bridge consumed, 5 assignments.
   {
     const base = minimalInputWeekendNights.doctors;
     const doctors = [
@@ -1591,12 +1597,12 @@ async function run() {
     );
     const uniqueDocs = new Set(r.assignments.map(a => a.doctorId));
     assert(
-      r.pathTaken === 'PASS2_GROUP_A'
-        && r.orphanConsumedByBridge === true
+      r.pathTaken === 'UNIFIED_2N_FRISAT_FORWARD'
+        && r.orphanConsumed === true
         && r.assignments.length === 5
         && uniqueDocs.size === 2
         && r.penaltyApplied === 35,
-      `Stage 3g.2b.1 integration: bridge success (got ${r.pathTaken}/${r.assignments.length}/bridge=${r.orphanConsumedByBridge})`,
+      `Stage 3g.2b.1 integration: bridge success (got ${r.pathTaken}/${r.assignments.length}/orphan=${r.orphanConsumed})`,
     );
   }
 
@@ -1658,10 +1664,10 @@ async function run() {
       'night', 13, true,
     );
     assert(
-      r.pathTaken === 'RELAXATION'
-        && r.orphanConsumedByBridge === false
+      r.pathTaken === 'RELAXATION_2N_FRISAT'
+        && r.orphanConsumed === false
         && r.assignments.length === 2,
-      `Stage 3g.2b.1 integration: bridge fail → Relaxation 2 assignments (got ${r.pathTaken}/${r.assignments.length})`,
+      `Stage 3g.2b.1 integration: bridge fail → RELAXATION_2N_FRISAT 2 assignments (got ${r.pathTaken}/${r.assignments.length})`,
     );
   }
 
@@ -1755,11 +1761,11 @@ async function run() {
     );
     const d3Placed = r2.assignments.some(a => a.doctorId === 'doc-3');
     const hasLtftLieu = r2.lieuStaged.some(
-      l => l.doctorId === 'doc-3' && l.date === '2026-05-12' && l.source === 'LTFT_REST',
+      l => l.doctorId === 'doc-3' && l.date === '2026-05-12' && l.source === 'LTFT',
     );
     assert(
       d3Placed && hasLtftLieu,
-      `Stage 3g.2b.1 integration: D3 LTFT-Tue placed with LTFT_REST lieu on Tue (d3=${d3Placed} lieu=${hasLtftLieu})`,
+      `Stage 3g.2b.1 integration: D3 LTFT-Tue placed with LTFT lieu on Tue (d3=${d3Placed} lieu=${hasLtftLieu})`,
     );
   }
 
@@ -1793,7 +1799,7 @@ async function run() {
       l => l.doctorId === 'doc-1' && l.date === '2026-05-12' && l.source === 'AL',
     );
     assert(
-      r.pathTaken === 'PASS1' && hasAlLieu,
+      r.pathTaken === 'UNIFIED_3N' && hasAlLieu,
       `Stage 3g.2b.1 integration: AL-on-restDay2 staged with source AL (got path=${r.pathTaken} lieu=${hasAlLieu})`,
     );
   }
@@ -1941,8 +1947,8 @@ async function run() {
       SAT_LAST, inp, stateMap, matrix, shuffle, 'night', 13, true,
     );
     assert(
-      r.orphanConsumedByBridge === false,
-      `Stage 3g.2b.1 integration: bridge not attempted past period end (bridge=${r.orphanConsumedByBridge}, path=${r.pathTaken})`,
+      r.orphanConsumed === false,
+      `Stage 3g.2b.1 integration: bridge not attempted past period end (orphan=${r.orphanConsumed}, path=${r.pathTaken})`,
     );
   }
 
@@ -1979,6 +1985,294 @@ async function run() {
   // (18) All 82 prior assertions implicitly regressed by the script
   //      running end-to-end; surface an explicit checkpoint.
   assert(true, 'Stage 3g.2b.1 integration: prior-stage assertions reach this block');
+
+  // ─── Stage 3g.2b.1 Session A — LTFT 84-cell coverage expansion ──
+
+  console.log('\n=== Stage 3g.2b.1 Session A — LTFT cell-coverage expansion ===');
+
+  const pattern3NMonWed = DICT.find(p => p.id === '3N_MON_WED')!;
+  const pattern3NWedFri = DICT.find(p => p.id === '3N_WED_FRI')!;
+  const pattern3NSunTue = DICT.find(p => p.id === '3N_SUN_TUE')!;
+  const pattern2NAMonTue = DICT.find(p => p.id === '2N_A_MON_TUE')!;
+  const pattern2NBWedThu = DICT.find(p => p.id === '2N_B_WED_THU')!;
+  const pattern2NTueWed = DICT.find(p => p.id === '2N_TUE_WED')!;
+  const pattern2NThuFri = DICT.find(p => p.id === '2N_THU_FRI')!;
+  const pattern2NSunMon = DICT.find(p => p.id === '2N_SUN_MON')!;
+
+  // Date slices (May 2026 reference):
+  // 3N_MON_WED:   [05-04, 05-05, 05-06] morningAfter=Thu 05-07, rest+2=Fri 05-08
+  // 3N_WED_FRI:   [05-06, 05-07, 05-08] morningAfter=Sat 05-09, rest+2=Sun 05-10
+  // 3N_SUN_TUE:   [05-10, 05-11, 05-12] morningAfter=Wed 05-13, rest+2=Thu 05-14
+  // 2N_A_MON_TUE: [05-04, 05-05]        morningAfter=Wed 05-06, rest+2=Thu 05-07
+  // 2N_B_WED_THU: [05-06, 05-07]        morningAfter=Fri 05-08, rest+2=Sat 05-09
+  // 2N_TUE_WED:   [05-05, 05-06]        morningAfter=Thu 05-07, rest+2=Fri 05-08
+  // 2N_THU_FRI:   [05-07, 05-08]        morningAfter=Sat 05-09, rest+2=Sun 05-10
+  // 2N_SUN_MON:   [05-10, 05-11]        morningAfter=Tue 05-12, rest+2=Wed 05-13
+
+  const dates3NMonWed = ['2026-05-04', '2026-05-05', '2026-05-06'];
+  const dates3NWedFri = ['2026-05-06', '2026-05-07', '2026-05-08'];
+  const dates3NSunTue = ['2026-05-10', '2026-05-11', '2026-05-12'];
+  const dates2NAMonTue = ['2026-05-04', '2026-05-05'];
+  const dates2NBWedThu = ['2026-05-06', '2026-05-07'];
+  const dates2NTueWed = ['2026-05-05', '2026-05-06'];
+  const dates2NThuFri = ['2026-05-07', '2026-05-08'];
+  const dates2NSunMon = ['2026-05-10', '2026-05-11'];
+
+  const ltftMon = ltftDoctor(['monday'], { monday: { canStart: false, canEnd: false } });
+  const ltftMonOK = ltftDoctor(['monday'], { monday: { canStart: true, canEnd: true } });
+  const ltftWed = ltftDoctor(['wednesday'], { wednesday: { canStart: false, canEnd: false } });
+  const ltftThu = ltftDoctor(['thursday'], { thursday: { canStart: false, canEnd: false } });
+  const ltftFri = ltftDoctor(['friday'], { friday: { canStart: false, canEnd: false } });
+  const ltftSatNone = ltftDoctor(['saturday'], { saturday: { canStart: false, canEnd: false } });
+  const ltftSunNone = ltftDoctor(['sunday'], { sunday: { canStart: false, canEnd: false } });
+
+  // 3N_MON_WED — Mon first, Tue mid, Wed last, Thu morning-after, Fri rest+2.
+  {
+    const r = checkLtftDisposition(pattern3NMonWed, dates3NMonWed, ltftMon);
+    assert(r.disposition === 'REQUIRES_CAN_START', '3N_MON_WED Mon-off canStart=false → REQUIRES_CAN_START');
+  }
+  assert(
+    checkLtftDisposition(pattern3NMonWed, dates3NMonWed, ltftTue).disposition === 'ALWAYS_BLOCKED',
+    '3N_MON_WED Tue-off mid-block → ALWAYS_BLOCKED',
+  );
+  assert(
+    checkLtftDisposition(pattern3NMonWed, dates3NMonWed, ltftWed).disposition === 'ALWAYS_BLOCKED',
+    '3N_MON_WED Wed-off lastNight → ALWAYS_BLOCKED',
+  );
+  assert(
+    checkLtftDisposition(pattern3NMonWed, dates3NMonWed, ltftThu).disposition === 'REQUIRES_CAN_END',
+    '3N_MON_WED Thu-off morningAfter canEnd=false → REQUIRES_CAN_END',
+  );
+  {
+    const r = checkLtftDisposition(pattern3NMonWed, dates3NMonWed, ltftFri);
+    assert(
+      r.disposition === 'OK_WITH_LIEU' && r.requiresLieuOnDate === '2026-05-08',
+      `3N_MON_WED Fri-off rest+2 → OK_WITH_LIEU on 2026-05-08 (got ${r.disposition}/${r.requiresLieuOnDate})`,
+    );
+  }
+
+  // 3N_WED_FRI — Wed first, Thu mid, Fri last, Sat morningAfter, Sun rest+2.
+  assert(
+    checkLtftDisposition(pattern3NWedFri, dates3NWedFri, ltftWed).disposition === 'REQUIRES_CAN_START',
+    '3N_WED_FRI Wed-off canStart=false → REQUIRES_CAN_START',
+  );
+  assert(
+    checkLtftDisposition(pattern3NWedFri, dates3NWedFri, ltftThu).disposition === 'ALWAYS_BLOCKED',
+    '3N_WED_FRI Thu-off mid-block → ALWAYS_BLOCKED',
+  );
+  assert(
+    checkLtftDisposition(pattern3NWedFri, dates3NWedFri, ltftFri).disposition === 'ALWAYS_BLOCKED',
+    '3N_WED_FRI Fri-off lastNight → ALWAYS_BLOCKED',
+  );
+  assert(
+    checkLtftDisposition(pattern3NWedFri, dates3NWedFri, ltftSatNone).disposition === 'REQUIRES_CAN_END',
+    '3N_WED_FRI Sat-off morningAfter canEnd=false → REQUIRES_CAN_END',
+  );
+  {
+    const r = checkLtftDisposition(pattern3NWedFri, dates3NWedFri, ltftSunNone);
+    assert(
+      r.disposition === 'OK_WITH_LIEU' && r.requiresLieuOnDate === '2026-05-10',
+      `3N_WED_FRI Sun-off rest+2 → OK_WITH_LIEU on 2026-05-10 (got ${r.disposition})`,
+    );
+  }
+
+  // 3N_SUN_TUE (bridge) — Sun first, Mon mid, Tue last, Wed morningAfter, Thu rest+2.
+  assert(
+    checkLtftDisposition(pattern3NSunTue, dates3NSunTue, ltftSunNone).disposition === 'REQUIRES_CAN_START',
+    '3N_SUN_TUE Sun-off canStart=false → REQUIRES_CAN_START',
+  );
+  assert(
+    checkLtftDisposition(pattern3NSunTue, dates3NSunTue, ltftMon).disposition === 'ALWAYS_BLOCKED',
+    '3N_SUN_TUE Mon-off mid-block → ALWAYS_BLOCKED',
+  );
+  assert(
+    checkLtftDisposition(pattern3NSunTue, dates3NSunTue, ltftTue).disposition === 'ALWAYS_BLOCKED',
+    '3N_SUN_TUE Tue-off lastNight → ALWAYS_BLOCKED',
+  );
+  assert(
+    checkLtftDisposition(pattern3NSunTue, dates3NSunTue, ltftWed).disposition === 'REQUIRES_CAN_END',
+    '3N_SUN_TUE Wed-off morningAfter canEnd=false → REQUIRES_CAN_END',
+  );
+  {
+    const r = checkLtftDisposition(pattern3NSunTue, dates3NSunTue, ltftThu);
+    assert(
+      r.disposition === 'OK_WITH_LIEU' && r.requiresLieuOnDate === '2026-05-14',
+      `3N_SUN_TUE Thu-off rest+2 → OK_WITH_LIEU on 2026-05-14 (got ${r.disposition})`,
+    );
+  }
+
+  // 2N_A_MON_TUE — Mon first, Tue last, Wed morningAfter, Thu rest+2.
+  assert(
+    checkLtftDisposition(pattern2NAMonTue, dates2NAMonTue, ltftMon).disposition === 'REQUIRES_CAN_START',
+    '2N_A_MON_TUE Mon-off canStart=false → REQUIRES_CAN_START',
+  );
+  assert(
+    checkLtftDisposition(pattern2NAMonTue, dates2NAMonTue, ltftTue).disposition === 'ALWAYS_BLOCKED',
+    '2N_A_MON_TUE Tue-off lastNight → ALWAYS_BLOCKED',
+  );
+  assert(
+    checkLtftDisposition(pattern2NAMonTue, dates2NAMonTue, ltftWed).disposition === 'REQUIRES_CAN_END',
+    '2N_A_MON_TUE Wed-off morningAfter canEnd=false → REQUIRES_CAN_END',
+  );
+  {
+    const r = checkLtftDisposition(pattern2NAMonTue, dates2NAMonTue, ltftThu);
+    assert(
+      r.disposition === 'OK_WITH_LIEU' && r.requiresLieuOnDate === '2026-05-07',
+      '2N_A_MON_TUE Thu-off rest+2 → OK_WITH_LIEU on 2026-05-07',
+    );
+  }
+
+  // 2N_B_WED_THU — Wed first, Thu last, Fri morningAfter, Sat rest+2.
+  assert(
+    checkLtftDisposition(pattern2NBWedThu, dates2NBWedThu, ltftWed).disposition === 'REQUIRES_CAN_START',
+    '2N_B_WED_THU Wed-off canStart=false → REQUIRES_CAN_START',
+  );
+  assert(
+    checkLtftDisposition(pattern2NBWedThu, dates2NBWedThu, ltftThu).disposition === 'ALWAYS_BLOCKED',
+    '2N_B_WED_THU Thu-off lastNight → ALWAYS_BLOCKED',
+  );
+  assert(
+    checkLtftDisposition(pattern2NBWedThu, dates2NBWedThu, ltftFri).disposition === 'REQUIRES_CAN_END',
+    '2N_B_WED_THU Fri-off morningAfter canEnd=false → REQUIRES_CAN_END',
+  );
+  {
+    const r = checkLtftDisposition(pattern2NBWedThu, dates2NBWedThu, ltftSatNone);
+    assert(
+      r.disposition === 'OK_WITH_LIEU' && r.requiresLieuOnDate === '2026-05-09',
+      '2N_B_WED_THU Sat-off rest+2 → OK_WITH_LIEU on 2026-05-09',
+    );
+  }
+
+  // Tier 4 — 2N_TUE_WED (Tue first, Wed last).
+  assert(
+    checkLtftDisposition(pattern2NTueWed, dates2NTueWed, ltftTue).disposition === 'REQUIRES_CAN_START',
+    '2N_TUE_WED Tue-off firstNight → REQUIRES_CAN_START',
+  );
+  assert(
+    checkLtftDisposition(pattern2NTueWed, dates2NTueWed, ltftWed).disposition === 'ALWAYS_BLOCKED',
+    '2N_TUE_WED Wed-off lastNight → ALWAYS_BLOCKED',
+  );
+
+  // Tier 4 — 2N_THU_FRI (Thu first, Fri last).
+  assert(
+    checkLtftDisposition(pattern2NThuFri, dates2NThuFri, ltftThu).disposition === 'REQUIRES_CAN_START',
+    '2N_THU_FRI Thu-off firstNight → REQUIRES_CAN_START',
+  );
+  assert(
+    checkLtftDisposition(pattern2NThuFri, dates2NThuFri, ltftFri).disposition === 'ALWAYS_BLOCKED',
+    '2N_THU_FRI Fri-off lastNight → ALWAYS_BLOCKED',
+  );
+
+  // Tier 4 — 2N_SUN_MON (Sun first, Mon last, crosses week).
+  assert(
+    checkLtftDisposition(pattern2NSunMon, dates2NSunMon, ltftSunNone).disposition === 'REQUIRES_CAN_START',
+    '2N_SUN_MON Sun-off firstNight → REQUIRES_CAN_START',
+  );
+  assert(
+    checkLtftDisposition(pattern2NSunMon, dates2NSunMon, ltftMon).disposition === 'ALWAYS_BLOCKED',
+    '2N_SUN_MON Mon-off lastNight → ALWAYS_BLOCKED',
+  );
+
+  // Positive controls: doctor OK when flag is set.
+  assert(
+    checkLtftDisposition(pattern3NMonWed, dates3NMonWed, ltftMonOK).disposition === 'OK',
+    '3N_MON_WED Mon-off canStart=true → OK (positive control)',
+  );
+  void ltftMonOK;
+
+  // ─── Stage 3g.2b.1 Session A — scoreWeekendScarcity partial slots ──
+
+  console.log('\n=== Stage 3g.2b.1 Session A — scarcity partial slots ===');
+
+  // Fri slot absent: only Sat and Sun present. 3N_FRI_SUN and
+  // 2N_FRI_SAT both need Fri → skipped. Only 2N_SAT_SUN counted.
+  {
+    const inp = minimalInputWeekendNights;
+    const matrix = buildAvailabilityMatrix(inp);
+    const satSlot = inp.preRotaInput.shiftSlots.find(s => s.shiftKey === 'night' && s.dayKey === 'sat')!;
+    const sunSlot = inp.preRotaInput.shiftSlots.find(s => s.shiftKey === 'night' && s.dayKey === 'sun')!;
+    const partialSlots: Record<string, ShiftSlotEntry> = {
+      '2026-05-09': satSlot,
+      '2026-05-10': sunSlot,
+      // '2026-05-08' (Fri) intentionally omitted
+    };
+    const partialScore = scoreWeekendScarcity(
+      '2026-05-09', inp.doctors, matrix, partialSlots, inp.preRotaInput.period.endDate,
+    );
+    // Per-doctor: D1 passes 2N_SAT_SUN, D2 LTFT-Mon blocked on 2N_SAT_SUN
+    // (Mon morning-after), D3 LTFT-Fri passes 2N_SAT_SUN. = 2 combinations.
+    assert(
+      partialScore === 2,
+      `Stage 3g.2b.1 Session A: scarcity with absent Fri slot counts only 2N_SAT_SUN (got ${partialScore}, expected 2)`,
+    );
+  }
+
+  // ─── Stage 3g.2b.1 Session A — multi-weekend integration ──
+
+  console.log('\n=== Stage 3g.2b.1 Session A — multi-weekend integration ===');
+
+  // Run all 4 weekends of minimalInputWeekendNights sequentially,
+  // aggregating state between calls. Verifies the unified algorithm
+  // produces fair rotation across weekends — D2 and D3 (LTFT-Mon,
+  // LTFT-Fri) must both receive weekend exposure even though D1
+  // (full-time) can always take 3N on weekend 1.
+  {
+    const inp = minimalInputWeekendNights;
+    const matrix = buildAvailabilityMatrix(inp);
+    const saturdays = getWeekendSaturdays(inp.preRotaInput.period.startDate, inp.preRotaInput.period.endDate);
+    const stateMap = freshStateMap(inp);
+    const shuffle = inp.doctors.map(d => d.doctorId);
+
+    const allAssignments: InternalDayAssignment[] = [];
+    const pathHistory: string[] = [];
+
+    // Import the weekend-day overlap helper from the WTR module via
+    // existing getOverlappedWeekendDates import. Loop each Saturday.
+    for (const sat of saturdays) {
+      const r = placeWeekendNightsForWeekend(
+        sat, inp, stateMap, matrix, shuffle, 'night', 13, true,
+      );
+      pathHistory.push(r.pathTaken);
+      allAssignments.push(...r.assignments);
+
+      // Apply state mutations (simulating the construction driver).
+      for (const a of r.assignments) {
+        const ds = stateMap.get(a.doctorId)!;
+        ds.assignments.push(a);
+        const prev = ds.actualHoursByShiftType[a.shiftKey] ?? 0;
+        ds.actualHoursByShiftType[a.shiftKey] = prev + a.durationHours;
+        // Update weekendDatesWorked via shift-time overlap.
+        for (const w of getOverlappedWeekendDates(a.shiftStartMs, a.shiftEndMs)) {
+          if (!ds.weekendDatesWorked.includes(w)) ds.weekendDatesWorked.push(w);
+        }
+      }
+    }
+
+    const d1Assignments = allAssignments.filter(a => a.doctorId === 'doc-1');
+    const d2Assignments = allAssignments.filter(a => a.doctorId === 'doc-2');
+    const d3Assignments = allAssignments.filter(a => a.doctorId === 'doc-3');
+
+    assert(
+      allAssignments.length >= 8,
+      `Stage 3g.2b.1 Session A multi-weekend: ≥8 night assignments across 4 weekends (got ${allAssignments.length})`,
+    );
+    assert(
+      d1Assignments.length > 0,
+      `Stage 3g.2b.1 Session A multi-weekend: D1 gets weekend exposure (got ${d1Assignments.length})`,
+    );
+    assert(
+      d2Assignments.length > 0,
+      `Stage 3g.2b.1 Session A multi-weekend: D2 (LTFT-Mon) gets weekend exposure — fairness (got ${d2Assignments.length})`,
+    );
+    assert(
+      d3Assignments.length > 0,
+      `Stage 3g.2b.1 Session A multi-weekend: D3 (LTFT-Fri) gets weekend exposure — fairness (got ${d3Assignments.length})`,
+    );
+    assert(
+      pathHistory.some(p => p === 'UNIFIED_3N'),
+      `Stage 3g.2b.1 Session A multi-weekend: at least one weekend uses UNIFIED_3N (paths=${JSON.stringify(pathHistory)})`,
+    );
+  }
 
   console.log('\nAll assertions passed.');
 }
