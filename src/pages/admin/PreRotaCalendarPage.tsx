@@ -2296,25 +2296,6 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Direction toggle */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              setSortConfig((prev) => ({
-                ...prev,
-                direction: prev.direction === "asc" ? "desc" : "asc",
-              }))
-            }
-            title={sortConfig.direction === "asc" ? "Ascending — click to reverse" : "Descending — click to reverse"}
-            className="h-7 sm:h-8 px-1.5 sm:px-2 shrink-0"
-          >
-            {sortConfig.direction === "asc" ? (
-              <ArrowUp className="h-3.5 w-3.5" />
-            ) : (
-              <ArrowDown className="h-3.5 w-3.5" />
-            )}
-          </Button>
         </div>
       </div>
       {/* ── END CONTROL ROW ── */}
