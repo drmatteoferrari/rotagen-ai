@@ -7,7 +7,15 @@ import type { CalendarData, CalendarDoctor, TargetsData, CellCode } from "@/lib/
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useRotaContext } from "@/contexts/RotaContext";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 import { GradeBadge } from "@/components/GradeBadge";
 import {
   ChevronLeft,
@@ -29,6 +37,8 @@ import {
   Copy,
   Trash2,
   User,
+  Check,
+  ListFilter,
   CalendarDays as CalendarIcon,
 } from "lucide-react";
 import {
@@ -2182,88 +2192,124 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
 
       {/* CHANGE 9: info strip removed */}
 
-      {/* Unified Nav Bar — compact */}
-      <div className="flex flex-col gap-2 p-2 bg-card rounded-xl border border-border shadow-sm">
-        {/* Row 1: View toggle + date picker */}
-        <div className="flex items-center gap-1.5 sm:gap-3 flex-wrap sm:flex-nowrap">
+      {/* ── CONTROL ROW: View · Date · Availability · Search · Sort ── */}
+      <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-1.5 sm:gap-2">
+        {/* Row 1 (mobile): View toggle · Date picker · Availability */}
+        <div className="flex items-center gap-1.5 sm:contents">
           <ViewToggle viewMode={effectiveViewMode} setViewMode={setViewMode} isMobile={isMobile} />
 
-          <input
-            type="date"
-            value={currentDateForSync}
-            min={calendarData?.rotaStartDate ?? allDates[0]}
-            max={calendarData?.rotaEndDate ?? allDates[allDates.length - 1]}
-            onChange={(e) => {
-              if (e.target.value && e.target.value.length === 10) handleDateChange(e.target.value);
-            }}
-            className="ml-auto text-[11px] sm:text-xs px-2 py-1 sm:px-3 sm:py-1.5 border border-border rounded-md bg-card text-foreground cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 h-[28px] sm:h-[34px] shrink-0"
-          />
-        </div>
-
-        {/* Row 2: Search + Availability + Sort — single row on all sizes */}
-        <div className="flex items-center gap-1.5 sm:gap-2 bg-muted/30 p-1.5 sm:p-2 border border-border/60 rounded-lg">
-          <div className="relative flex-1 min-w-0">
-            <Search className="h-3.5 w-3.5 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          {/* Date picker */}
+          <div className="flex items-center gap-1 shrink-0">
+            <CalendarIcon className="hidden sm:block h-3.5 w-3.5 text-primary shrink-0" />
             <input
-              type="text"
-              placeholder="Search..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-7 pr-2 py-1 sm:py-1.5 text-[11px] sm:text-xs border border-border rounded-md bg-card focus:outline-none focus:ring-2 focus:ring-blue-500 h-[28px] sm:h-auto"
+              type="date"
+              value={currentDateForSync}
+              min={calendarData?.rotaStartDate ?? allDates[0]}
+              max={calendarData?.rotaEndDate ?? allDates[allDates.length - 1]}
+              onChange={(e) => {
+                if (e.target.value && e.target.value.length === 10) handleDateChange(e.target.value);
+              }}
+              className="h-7 sm:h-8 text-[11px] sm:text-xs px-2 border border-input rounded-md bg-background text-foreground cursor-pointer focus:outline-none focus:ring-2 focus:ring-ring shrink-0"
             />
           </div>
 
+          {/* Divider */}
+          <div className="hidden sm:block w-px h-5 bg-border shrink-0" />
+
+          {/* Availability toggle (day view only) */}
           {effectiveViewMode === "day" && (
-            <button
-              type="button"
+            <Button
+              variant={groupAvailability ? "default" : "outline"}
+              size="sm"
               onClick={() => setGroupAvailability(!groupAvailability)}
               title="Group by availability"
-              className={`flex items-center gap-1 text-[11px] sm:text-xs px-2 sm:px-3 py-1 sm:py-1.5 rounded-full border font-medium transition-all shadow-sm shrink-0 ${
-                groupAvailability
-                  ? "bg-blue-600 text-white border-blue-600"
-                  : "bg-card text-muted-foreground border-border hover:bg-muted"
-              }`}
+              className="h-7 sm:h-8 text-[11px] sm:text-xs gap-1.5 shrink-0 px-2 sm:px-3"
             >
               <div
-                className={`w-1.5 h-1.5 rounded-full transition-colors ${groupAvailability ? "bg-white" : "bg-muted-foreground"}`}
+                className={cn(
+                  "w-1.5 h-1.5 rounded-full",
+                  groupAvailability ? "bg-primary-foreground" : "bg-muted-foreground",
+                )}
               />
               <span className="hidden sm:inline">Availability</span>
               <span className="sm:hidden">Avail</span>
-            </button>
+            </Button>
           )}
 
-          <div className="flex items-center gap-1 shrink-0">
-            <span className="text-[11px] text-muted-foreground font-medium hidden sm:inline">Sort:</span>
-            <select
-              value={sortConfig.key}
-              onChange={(e) =>
-                setSortConfig((prev) => ({ ...prev, key: e.target.value as "name" | "grade" }))
-              }
-              className="text-[11px] sm:text-xs px-1.5 sm:px-2 py-1 sm:py-1.5 border border-border rounded-md bg-card focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer h-[28px] sm:h-auto"
-            >
-              <option value="name">Name</option>
-              {effectiveViewMode === "day" && <option value="grade">Grade</option>}
-            </select>
-            <button
-              type="button"
-              onClick={() =>
-                setSortConfig((prev) => ({
-                  ...prev,
-                  direction: prev.direction === "asc" ? "desc" : "asc",
-                }))
-              }
-              className="p-1 sm:p-1.5 rounded-md border border-border bg-card hover:bg-muted transition-colors text-muted-foreground"
-              title={sortConfig.direction === "asc" ? "Ascending — click to reverse" : "Descending — click to reverse"}
-            >
-              {sortConfig.direction === "asc" ? (
-                <ArrowUp className="h-3.5 w-3.5" />
-              ) : (
-                <ArrowDown className="h-3.5 w-3.5" />
-              )}
-            </button>
+          {/* Spacer — pushes search+sort to right on sm+ */}
+          <div className="flex-1 hidden sm:block min-w-0" />
+        </div>
+
+        {/* Row 2 (mobile): Search left · Sort right */}
+        <div className="flex items-center gap-1.5 sm:contents">
+          {/* Search */}
+          <div className="relative flex items-center flex-1 min-w-[100px] sm:flex-none sm:w-44 md:w-52 shrink">
+            <Search className="absolute left-2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+            <Input
+              placeholder="Search…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-7 sm:pl-8 h-7 sm:h-8 text-[11px] sm:text-xs w-full"
+            />
           </div>
+
+          {/* Sort dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-7 sm:h-8 text-xs gap-1 shrink-0 px-1.5 sm:px-2.5">
+                <ListFilter className="h-3.5 w-3.5 shrink-0" />
+                <span className="hidden sm:inline">
+                  {sortConfig.key === "name" ? "Name" : "Grade"}
+                </span>
+                <ChevronDown className="hidden sm:inline-block h-3 w-3 opacity-50 shrink-0" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-32 pointer-events-auto">
+              <DropdownMenuItem
+                onClick={() => setSortConfig((prev) => ({ ...prev, key: "name" }))}
+                className={cn("text-xs cursor-pointer", sortConfig.key === "name" && "font-semibold text-primary")}
+              >
+                <span className="mr-2 w-3 inline-flex shrink-0">
+                  {sortConfig.key === "name" && <Check className="h-3 w-3 text-primary" />}
+                </span>
+                Name
+              </DropdownMenuItem>
+              {effectiveViewMode === "day" && (
+                <DropdownMenuItem
+                  onClick={() => setSortConfig((prev) => ({ ...prev, key: "grade" }))}
+                  className={cn("text-xs cursor-pointer", sortConfig.key === "grade" && "font-semibold text-primary")}
+                >
+                  <span className="mr-2 w-3 inline-flex shrink-0">
+                    {sortConfig.key === "grade" && <Check className="h-3 w-3 text-primary" />}
+                  </span>
+                  Grade
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Direction toggle */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              setSortConfig((prev) => ({
+                ...prev,
+                direction: prev.direction === "asc" ? "desc" : "asc",
+              }))
+            }
+            title={sortConfig.direction === "asc" ? "Ascending — click to reverse" : "Descending — click to reverse"}
+            className="h-7 sm:h-8 px-1.5 sm:px-2 shrink-0"
+          >
+            {sortConfig.direction === "asc" ? (
+              <ArrowUp className="h-3.5 w-3.5" />
+            ) : (
+              <ArrowDown className="h-3.5 w-3.5" />
+            )}
+          </Button>
         </div>
       </div>
+      {/* ── END CONTROL ROW ── */}
 
       {/* Period navigator — directly above calendar */}
       <div className="flex items-center justify-center gap-2 px-2">
