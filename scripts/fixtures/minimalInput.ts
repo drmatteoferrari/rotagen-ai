@@ -429,3 +429,213 @@ export const minimalInputWithNroc: FinalRotaInput = {
     ],
   },
 };
+
+// ──────────────────────────────────────────────────────────────────
+// Stage 3g.2b.1 — Weekend night-block sub-pass fixtures.
+// One on-call night shift type across Fri/Sat/Sun for every week in
+// the rota period. Three doctors: one full-time, two LTFT with
+// blocking day-offs that exercise the Pass 1 → Pass 2 → Relaxation
+// cascade.
+// ──────────────────────────────────────────────────────────────────
+
+// Day keys covered by the weekend-night fixture. Mon and Tue are
+// included so the 3N_SUN_TUE bridge has landing slots; they are
+// otherwise treated as pure bridge-support positions (unlike Fri/Sat/
+// Sun these are NOT primary weekend targets).
+const WEEKEND_NIGHT_DAY_KEYS = ['fri', 'sat', 'sun', 'mon', 'tue'] as const;
+
+function buildWeekendNightSlots(): ShiftSlotEntry[] {
+  const out: ShiftSlotEntry[] = [];
+  for (const dayKey of WEEKEND_NIGHT_DAY_KEYS) {
+    out.push({
+      shiftId: 'st-wn-night',
+      shiftKey: 'night',
+      name: 'On-Call Night',
+      dayKey,
+      startTime: '19:00',
+      endTime: '08:00',
+      durationHours: 13,
+      isOncall: true,
+      isNonResOncall: false,
+      badges: ['night', 'oncall'],
+      staffing: { min: 1, target: 1, max: 1 },
+      slots: [{ ...DEFAULT_SLOT, permittedGrades: [...DEFAULT_SLOT.permittedGrades] }],
+      targetPct: 100,
+    });
+  }
+  return out;
+}
+
+// Weekend-night variant: 4-week period (2026-05-04 Mon → 2026-05-31 Sun,
+// 4 Saturdays: 05-09, 05-16, 05-23, 05-30). D1 is full-time, D2 and D3
+// are LTFT with blocking day-offs (D2 Monday, D3 Friday). targetTotal/
+// targetNight mirror the scale of the base minimalInput fairness
+// targets; per-shift maxTargetHours kept ≥ 4 × 13h so D33 doesn't fire
+// before the sub-pass Monte Carlo logic is exercised.
+const WEEKEND_SHIFT_TARGETS_FT = [
+  {
+    shiftTypeId: 'st-wn-night',
+    shiftName: 'On-Call Night',
+    shiftKey: 'night',
+    isOncall: true,
+    maxTargetHours: 156,
+    estimatedShiftCount: 12,
+  },
+];
+
+const WEEKEND_SHIFT_TARGETS_LTFT = [
+  {
+    shiftTypeId: 'st-wn-night',
+    shiftName: 'On-Call Night',
+    shiftKey: 'night',
+    isOncall: true,
+    maxTargetHours: 117,
+    estimatedShiftCount: 9,
+  },
+];
+
+export const minimalInputWeekendNights: FinalRotaInput = {
+  preRotaInput: {
+    ...minimalInput.preRotaInput,
+    shiftSlots: buildWeekendNightSlots(),
+    distributionTargets: {
+      globalOncallPct: 100,
+      globalNonOncallPct: 0,
+      byShift: [{ shiftKey: 'night', targetPct: 100, isOncall: true }],
+    },
+  },
+  doctors: [
+    {
+      doctorId: 'doc-1',
+      name: 'Dr Alice Smith',
+      grade: 'Consultant',
+      wtePct: 100,
+      contractedHoursPerWeek: 48,
+      hasIac: true,
+      hasIaoc: true,
+      hasIcu: true,
+      hasTransfer: true,
+      ltft: { isLtft: false, daysOff: [], nightFlexibility: [] },
+      constraints: { hard: emptyHard(), soft: emptySoft() },
+      fairnessTargets: {
+        targetTotalHours: 120,
+        targetNightShiftCount: 4,
+        targetWeekendShiftCount: 2,
+        targetOncallCount: 4,
+        proportionFactor: 1.0,
+      },
+      shiftTargets: WEEKEND_SHIFT_TARGETS_FT,
+      totalMaxHours: 156,
+      weekendCap: 4,
+      hardWeeklyCap: 72,
+    },
+    {
+      doctorId: 'doc-2',
+      name: 'Dr Bob Jones',
+      grade: 'ST5',
+      wtePct: 80,
+      contractedHoursPerWeek: 38.4,
+      hasIac: true,
+      hasIaoc: true,
+      hasIcu: true,
+      hasTransfer: true,
+      ltft: {
+        isLtft: true,
+        daysOff: ['monday'],
+        nightFlexibility: [
+          { day: 'monday', canStartNightsOnDay: false, canEndNightsOnDay: false },
+        ],
+      },
+      constraints: {
+        hard: { ...emptyHard(), ltftDaysBlocked: ['monday'] },
+        soft: emptySoft(),
+      },
+      fairnessTargets: {
+        targetTotalHours: 120,
+        targetNightShiftCount: 4,
+        targetWeekendShiftCount: 2,
+        targetOncallCount: 4,
+        proportionFactor: 0.8,
+      },
+      shiftTargets: WEEKEND_SHIFT_TARGETS_LTFT,
+      totalMaxHours: 117,
+      weekendCap: 4,
+      hardWeeklyCap: 72,
+    },
+    {
+      doctorId: 'doc-3',
+      name: 'Dr Carol Lee',
+      grade: 'ST5',
+      wtePct: 80,
+      contractedHoursPerWeek: 38.4,
+      hasIac: true,
+      hasIaoc: true,
+      hasIcu: true,
+      hasTransfer: true,
+      ltft: {
+        isLtft: true,
+        daysOff: ['friday'],
+        nightFlexibility: [
+          { day: 'friday', canStartNightsOnDay: false, canEndNightsOnDay: false },
+        ],
+      },
+      constraints: {
+        hard: { ...emptyHard(), ltftDaysBlocked: ['friday'] },
+        soft: emptySoft(),
+      },
+      fairnessTargets: {
+        targetTotalHours: 120,
+        targetNightShiftCount: 4,
+        targetWeekendShiftCount: 2,
+        targetOncallCount: 4,
+        proportionFactor: 0.8,
+      },
+      shiftTargets: WEEKEND_SHIFT_TARGETS_LTFT,
+      totalMaxHours: 117,
+      weekendCap: 4,
+      hardWeeklyCap: 72,
+    },
+  ],
+  constraints: { hard: [], soft: [] },
+};
+
+// All-LTFT variant: every doctor is LTFT with a weekend-adjacent
+// day-off that blocks 3N_FRI_SUN, forcing the orchestrator into Pass 2
+// / Relaxation territory. D3 blocks both Mon and Fri so even 2N
+// options become constrained.
+export const minimalInputWeekendNightsAllLtft: FinalRotaInput = {
+  ...minimalInputWeekendNights,
+  doctors: [
+    {
+      ...minimalInputWeekendNights.doctors[0],
+      grade: 'ST5',
+      ltft: {
+        isLtft: true,
+        daysOff: ['monday'],
+        nightFlexibility: [
+          { day: 'monday', canStartNightsOnDay: false, canEndNightsOnDay: false },
+        ],
+      },
+      constraints: {
+        hard: { ...emptyHard(), ltftDaysBlocked: ['monday'] },
+        soft: emptySoft(),
+      },
+    },
+    minimalInputWeekendNights.doctors[1],
+    {
+      ...minimalInputWeekendNights.doctors[2],
+      ltft: {
+        isLtft: true,
+        daysOff: ['monday', 'friday'],
+        nightFlexibility: [
+          { day: 'monday', canStartNightsOnDay: false, canEndNightsOnDay: false },
+          { day: 'friday', canStartNightsOnDay: false, canEndNightsOnDay: false },
+        ],
+      },
+      constraints: {
+        hard: { ...emptyHard(), ltftDaysBlocked: ['monday', 'friday'] },
+        soft: emptySoft(),
+      },
+    },
+  ],
+};
