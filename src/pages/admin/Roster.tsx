@@ -1675,6 +1675,13 @@ export default function Roster() {
                         invitedAt={doctor.survey_invite_sent_at}
                         onNavigateProfile={() => navigate(`/admin/doctor/${doctor.id}`)}
                         onNavigateCalendar={() => navigate(`/admin/doctor-calendar/${doctor.id}`)}
+                        onSendSurvey={() => setDoctorToSend(doctor)}
+                        onCopyLink={() => copyMagicLink(doctor)}
+                        onOpenSurvey={() => doctor.survey_token && window.open(buildSurveyLink(doctor.survey_token), "_blank")}
+                        onEditSurvey={() => navigate(`/admin/survey-override/${doctor.id}/1?from=/admin/roster`)}
+                        onResetSurvey={() => setDoctorToResetSurvey(doctor)}
+                        onRemoveDoctor={() => setDoctorToRemove(doctor)}
+                        sendDisabled={getSendIconState(doctor).disabled}
                       />
                     </div>
                   )}
