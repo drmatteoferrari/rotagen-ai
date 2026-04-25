@@ -210,62 +210,55 @@ function ExpandedDoctorPanel({
         </p>
       )}
 
-      {/* Action Sections — grouped by category. Mobile = icon-only square buttons; sm+ = labelled */}
+      {/* Action Sections — grouped by category for clarity */}
       <div className="flex flex-col gap-2 pt-1 sm:flex-row sm:flex-wrap sm:items-stretch">
         {/* ── DOCTOR section ── */}
-        <div className="min-w-0 rounded-md border border-border bg-card/50 p-2 sm:flex-1">
+        <div className="flex-1 min-w-0 rounded-md border border-border bg-card/50 p-2">
           <div className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5 px-0.5">
             Doctor
           </div>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="grid grid-cols-3 gap-1.5">
             <button
               type="button"
               onClick={onNavigateProfile}
-              aria-label="Profile"
-              title="Profile"
-              className="inline-flex justify-center items-center gap-1 rounded-md bg-teal-600 hover:bg-teal-700 text-white text-[11px] font-semibold h-8 w-8 sm:w-auto sm:flex-1 sm:px-2 transition-colors whitespace-nowrap"
+              className="inline-flex justify-center items-center gap-1 rounded-md bg-teal-600 hover:bg-teal-700 text-white text-[11px] font-semibold px-2 py-1.5 transition-colors min-w-0"
             >
-              <User className="h-3.5 w-3.5 shrink-0" /> <span className="hidden sm:inline">Profile</span>
+              <User className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">Profile</span>
             </button>
             <button
               type="button"
               onClick={onNavigateCalendar}
-              aria-label="Calendar"
-              title="Calendar"
-              className="inline-flex justify-center items-center gap-1 rounded-md bg-teal-600 hover:bg-teal-700 text-white text-[11px] font-semibold h-8 w-8 sm:w-auto sm:flex-1 sm:px-2 transition-colors whitespace-nowrap"
+              className="inline-flex justify-center items-center gap-1 rounded-md bg-teal-600 hover:bg-teal-700 text-white text-[11px] font-semibold px-2 py-1.5 transition-colors min-w-0"
             >
-              <CalendarDays className="h-3.5 w-3.5 shrink-0" /> <span className="hidden sm:inline">Calendar</span>
+              <CalendarDays className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">Calendar</span>
             </button>
             <button
               type="button"
               onClick={onRemoveDoctor}
-              aria-label="Remove"
-              title="Remove"
-              className="inline-flex justify-center items-center gap-1 rounded-md bg-destructive/10 hover:bg-destructive/20 text-destructive text-[11px] font-semibold h-8 w-8 sm:w-auto sm:flex-1 sm:px-2 transition-colors whitespace-nowrap"
+              className="inline-flex justify-center items-center gap-1 rounded-md bg-destructive/10 hover:bg-destructive/20 text-destructive text-[11px] font-semibold px-2 py-1.5 transition-colors min-w-0"
             >
-              <Trash2 className="h-3.5 w-3.5 shrink-0" /> <span className="hidden sm:inline">Remove</span>
+              <Trash2 className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">Remove doctor</span>
             </button>
           </div>
         </div>
 
         {/* ── SURVEY section ── */}
-        <div className="min-w-0 rounded-md border border-border bg-card/50 p-2 sm:flex-[2]">
+        <div className="flex-[2] min-w-0 rounded-md border border-border bg-card/50 p-2">
           <div className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5 px-0.5">
             Survey
           </div>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-1.5">
             <button
               type="button"
               onClick={onSendSurvey}
               disabled={sendDisabled}
-              title={sendDisabled ? "Set deadline & email first" : (doctor.survey_invite_sent_at ? "Resend" : "Send")}
-              aria-label={doctor.survey_invite_sent_at ? "Resend survey" : "Send survey"}
-              className="relative inline-flex justify-center items-center gap-1 rounded-md bg-primary hover:bg-primary/90 text-primary-foreground text-[11px] font-semibold h-8 w-8 sm:w-auto sm:flex-1 sm:px-2 transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+              title={sendDisabled ? "Set deadline & email first" : ""}
+              className="inline-flex justify-center items-center gap-1 rounded-md bg-primary hover:bg-primary/90 text-primary-foreground text-[11px] font-semibold px-2 py-1.5 transition-colors min-w-0 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Send className="h-3.5 w-3.5 shrink-0" />
-              <span className="hidden sm:inline">{doctor.survey_invite_sent_at ? "Resend" : "Send"}</span>
+              <span className="truncate">{doctor.survey_invite_sent_at ? "Resend" : "Send"}</span>
               {(doctor.survey_invite_count ?? 0) > 0 && (
-                <span className="absolute -top-1 -right-1 sm:static sm:ml-0.5 inline-flex items-center justify-center h-3.5 min-w-3.5 px-1 rounded-full bg-white/25 text-[9px] font-bold leading-none ring-1 ring-card sm:ring-0">
+                <span className="ml-0.5 inline-flex items-center justify-center h-3.5 min-w-3.5 px-1 rounded-full bg-white/25 text-[9px] font-bold leading-none">
                   {(doctor.survey_invite_count ?? 0) > 9 ? "9+" : doctor.survey_invite_count}
                 </span>
               )}
@@ -273,39 +266,31 @@ function ExpandedDoctorPanel({
             <button
               type="button"
               onClick={onCopyLink}
-              aria-label="Copy link"
-              title="Copy link"
-              className="inline-flex justify-center items-center gap-1 rounded-md bg-muted hover:bg-muted/80 text-foreground text-[11px] font-semibold h-8 w-8 sm:w-auto sm:flex-1 sm:px-2 transition-colors whitespace-nowrap"
+              className="inline-flex justify-center items-center gap-1 rounded-md bg-muted hover:bg-muted/80 text-foreground text-[11px] font-semibold px-2 py-1.5 transition-colors min-w-0"
             >
-              <Copy className="h-3.5 w-3.5 shrink-0" /> <span className="hidden sm:inline">Copy link</span>
+              <Copy className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">Copy link</span>
             </button>
             <button
               type="button"
               onClick={onOpenSurvey}
               disabled={!doctor.survey_token}
-              aria-label="Open survey"
-              title="Open survey"
-              className="inline-flex justify-center items-center gap-1 rounded-md bg-muted hover:bg-muted/80 text-foreground text-[11px] font-semibold h-8 w-8 sm:w-auto sm:flex-1 sm:px-2 transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex justify-center items-center gap-1 rounded-md bg-muted hover:bg-muted/80 text-foreground text-[11px] font-semibold px-2 py-1.5 transition-colors min-w-0 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <ExternalLink className="h-3.5 w-3.5 shrink-0" /> <span className="hidden sm:inline">Open</span>
+              <ExternalLink className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">Open</span>
             </button>
             <button
               type="button"
               onClick={onEditSurvey}
-              aria-label="Edit survey"
-              title="Edit survey"
-              className="inline-flex justify-center items-center gap-1 rounded-md bg-muted hover:bg-muted/80 text-foreground text-[11px] font-semibold h-8 w-8 sm:w-auto sm:flex-1 sm:px-2 transition-colors whitespace-nowrap"
+              className="inline-flex justify-center items-center gap-1 rounded-md bg-muted hover:bg-muted/80 text-foreground text-[11px] font-semibold px-2 py-1.5 transition-colors min-w-0"
             >
-              <Pencil className="h-3.5 w-3.5 shrink-0" /> <span className="hidden sm:inline">Edit</span>
+              <Pencil className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">Edit</span>
             </button>
             <button
               type="button"
               onClick={onResetSurvey}
-              aria-label="Reset survey"
-              title="Reset survey"
-              className="inline-flex justify-center items-center gap-1 rounded-md bg-warning/10 hover:bg-warning/20 text-warning text-[11px] font-semibold h-8 w-8 sm:w-auto sm:flex-1 sm:px-2 transition-colors whitespace-nowrap"
+              className="inline-flex justify-center items-center gap-1 rounded-md bg-warning/10 hover:bg-warning/20 text-warning text-[11px] font-semibold px-2 py-1.5 transition-colors min-w-0"
             >
-              <RotateCcw className="h-3.5 w-3.5 shrink-0" /> <span className="hidden sm:inline">Reset</span>
+              <RotateCcw className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">Reset</span>
             </button>
           </div>
         </div>
