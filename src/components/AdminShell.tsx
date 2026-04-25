@@ -171,13 +171,13 @@ function AdminShellInner() {
               to={item.url}
               end
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-lg transition-colors",
                 "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                 collapsed && "justify-center px-0"
               )}
               activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
             >
-              <item.icon className="h-4 w-4 shrink-0" />
+              <item.icon className="w-[20px] h-[20px] shrink-0" />
               {!collapsed && <span>{item.title}</span>}
             </NavLink>
           ))}
