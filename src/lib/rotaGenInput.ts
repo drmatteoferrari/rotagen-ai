@@ -261,66 +261,44 @@ function countTotalSlots(
   return total;
 }
 
-// ─── DoctorPreference ─────────────────────────────────────────
-
-export interface DoctorPreference {
-  doctorId: string;
-  name: string;
-  grade: string;
-  wtePct: number;
-  ltftDaysOff: string[];
-  ltftNightFlexibility: Array<{
-    day: string;
-    canStartNightsOnDay: boolean;
-    canEndNightsOnDay: boolean;
-  }>;
-  maxConsecNights: number;
-  annualLeave: Array<{ startDate: string; endDate: string; notes: string }>;
-  studyLeave: Array<{ startDate: string; endDate: string; reason: string }>;
-  nocDates: string[];
-  parentalLeaveDates: string[];
-  parentalLeaveNotes?: string;
-  exemptFromNights: boolean;
-  exemptFromWeekends: boolean;
-  exemptFromOncall: boolean;
-  additionalNotes: string;
-}
-
 // ─── FinalRotaInput ───────────────────────────────────────────
 
 export interface FinalRotaInput {
   preRotaInput: PreRotaInput;
+  resolvedAvailability: Array<{
+    doctorId: string;
+    date: string;
+    status: string;        // 'AVAILABLE' | 'AL' | 'SL' | 'PL' | 'ROT' | 'BH' | 'NOC' | 'LTFT'
+    source: string;        // 'survey' | 'coordinator_override'
+    canStartNights: boolean | null;  // populated only when status = 'LTFT'
+    canEndNights: boolean | null;    // populated only when status = 'LTFT'
+  }>;
   doctors: Array<{
     doctorId: string;
     name: string;
     grade: string;
     wtePct: number;
     contractedHoursPerWeek: number;
-    // Competency flags — read from survey, used for slot eligibility
     hasIac: boolean;
     hasIaoc: boolean;
     hasIcu: boolean;
     hasTransfer: boolean;
     ltft: {
       isLtft: boolean;
-      daysOff: string[];
-      nightFlexibility: DoctorPreference["ltftNightFlexibility"];
+      daysOff: string[];    // day names e.g. ['monday', 'tuesday'] — doctor-level metadata
     };
     constraints: {
       hard: {
-        annualLeaveDates: string[];
-        studyLeaveDates: string[];
-        parentalLeaveDates: string[];
-        rotationDates: string[];           // expanded from unavailability_blocks reason='rotation'
+        // Leave dates are NOT here — they are encoded in resolvedAvailability rows.
+        // Only global per-doctor flags that have no per-date equivalent belong here.
         exemptFromNights: boolean;
         exemptFromWeekends: boolean;
         exemptFromOncall: boolean;
-        ltftDaysBlocked: string[];
       };
       soft: {
-        nocDates: string[];
-        maxConsecNights: number;
-        additionalNotes: string;
+        // nocDates NOT here — encoded as NOC status in resolvedAvailability rows.
+        maxConsecNights: number;      // WTR-derived preference ceiling
+        additionalNotes: string;      // free-text from survey
       };
     };
     fairnessTargets: {
@@ -335,10 +313,6 @@ export interface FinalRotaInput {
     weekendCap: number;
     hardWeeklyCap: number;
   }>;
-  constraints: {
-    hard: string[];
-    soft: string[];
-  };
 }
 
 // ─── DoctorSurveyResponse ─────────────────────────────────────
@@ -397,103 +371,30 @@ export async function getSurveyResponsesForConfig(configId: string): Promise<Doc
   return (data ?? []) as DoctorSurveyResponse[];
 }
 
-// ─── expandDateRange ──────────────────────────────────────────
-
-function expandDateRange(start: string, end: string): string[] {
-  const dates: string[] = [];
-  const [sy, sm, sd] = start.split('-').map(Number);
-  const [ey, em, ed] = end.split('-').map(Number);
-  const d = new Date(Date.UTC(sy, sm - 1, sd));
-  const e = new Date(Date.UTC(ey, em - 1, ed));
-  while (d <= e) {
-    dates.push(d.toISOString().slice(0, 10));
-    d.setUTCDate(d.getUTCDate() + 1);
-  }
-  return dates;
-}
-
-// ─── mapResponseToPreference ──────────────────────────────────
-
-function mapResponseToPreference(resp: DoctorSurveyResponse): DoctorPreference {
-  const annualLeave = Array.isArray(resp.annual_leave) ? resp.annual_leave : [];
-  const studyLeave = Array.isArray(resp.study_leave) ? resp.study_leave : [];
-
-  const nocDates = Array.isArray(resp.noc_dates)
-    ? resp.noc_dates.flatMap((n: any) => {
-        if (typeof n === "string") return [n];
-        const start = n?.startDate ?? n?.start_date ?? n?.date ?? "";
-        const end = n?.endDate ?? n?.end_date ?? n?.date ?? "";
-        if (!start) return [];
-        if (!end || end === start) return [start];
-        return expandDateRange(start, end);
-      })
-    : [];
-
-  const ltftNightFlex = Array.isArray(resp.ltft_night_flexibility) ? resp.ltft_night_flexibility : [];
-
-  const parentalLeaveDates: string[] = (() => {
-    if (!resp.parental_leave_expected) return [];
-    const start = resp.parental_leave_start;
-    const end = resp.parental_leave_end;
-    if (!start) return [];
-    if (!end || end === start) return [start];
-    return expandDateRange(start, end);
-  })();
-
-  return {
-    doctorId: resp.doctor_id,
-    name: resp.full_name ?? "",
-    grade: resp.grade ?? "",
-    wtePct: resp.wte_percent ?? 100,
-    ltftDaysOff: (resp.ltft_days_off ?? []).map((d: string) => d.toLowerCase()),
-    ltftNightFlexibility: ltftNightFlex.map((f: any) => ({
-      ...f,
-      day: (f.day ?? "").toLowerCase(),
-    })),
-    maxConsecNights: 0, // replaced in buildFinalRotaInput with WTR value
-    annualLeave: annualLeave.map((l: any) => ({
-      startDate: l.startDate ?? l.start_date ?? "",
-      endDate: l.endDate ?? l.end_date ?? "",
-      notes: l.notes ?? "",
-    })),
-    studyLeave: studyLeave.map((l: any) => ({
-      startDate: l.startDate ?? l.start_date ?? "",
-      endDate: l.endDate ?? l.end_date ?? "",
-      reason: l.reason ?? "",
-    })),
-    nocDates,
-    parentalLeaveDates,
-    parentalLeaveNotes: resp.parental_leave_notes ?? undefined,
-    exemptFromNights: resp.exempt_from_nights ?? false,
-    exemptFromWeekends: resp.exempt_from_weekends ?? false,
-    exemptFromOncall: resp.exempt_from_oncall ?? false,
-    additionalNotes: [resp.other_requests, resp.additional_restrictions].filter(Boolean).join("\n"),
-  };
-}
-
 // ─── buildFinalRotaInput ──────────────────────────────────────
 
 export async function buildFinalRotaInput(configId: string): Promise<FinalRotaInput> {
   // ── 1. Parallel fetches — zero sequential round trips ──────────────
-  const [preRotaInput, cfg, responsesRaw, preRotaRow, blocksRaw, ltftRaw] = await Promise.all([
-    buildPreRotaInput(configId),
-    getRotaConfig(configId),
-    getSurveyResponsesForConfig(configId),
-    supabase
-      .from('pre_rota_results')
-      .select('targets_data, status')
-      .eq('rota_config_id', configId)
-      .maybeSingle(),
-    supabase
-      .from('unavailability_blocks')
-      .select('doctor_id, reason, start_date, end_date, location')
-      .eq('rota_config_id', configId),
-    supabase
-      .from('ltft_patterns')
-      .select('doctor_id, day, is_day_off, can_start_nights, can_end_nights')
-      .eq('rota_config_id', configId)
-      .eq('is_day_off', true),
-  ]);
+  const [preRotaInput, cfg, responsesRaw, preRotaRow, ltftRaw, resolvedRaw] =
+    await Promise.all([
+      buildPreRotaInput(configId),
+      getRotaConfig(configId),
+      getSurveyResponsesForConfig(configId),
+      supabase
+        .from('pre_rota_results')
+        .select('targets_data, status')
+        .eq('rota_config_id', configId)
+        .maybeSingle(),
+      supabase
+        .from('ltft_patterns')
+        .select('doctor_id, day, is_day_off, can_start_nights, can_end_nights')
+        .eq('rota_config_id', configId)
+        .eq('is_day_off', true),
+      supabase
+        .from('resolved_availability')
+        .select('doctor_id, date, status, source, can_start_nights, can_end_nights')
+        .eq('rota_config_id', configId),
+    ]);
 
   const totalWeeks = preRotaInput.period.totalWeeks || 1;
   const maxConsecNights = cfg.wtr?.maxConsecNights ?? 4;
@@ -528,13 +429,6 @@ export async function buildFinalRotaInput(configId: string): Promise<FinalRotaIn
   }
 
   // ── 4. Group relational tables by doctor_id ───────────────────────
-  const blocksByDoctor = new Map<string, NonNullable<typeof blocksRaw.data>>();
-  for (const b of blocksRaw.data ?? []) {
-    const arr = blocksByDoctor.get(b.doctor_id) ?? [];
-    arr.push(b);
-    blocksByDoctor.set(b.doctor_id, arr);
-  }
-
   const ltftByDoctor = new Map<string, NonNullable<typeof ltftRaw.data>>();
   for (const l of ltftRaw.data ?? []) {
     const arr = ltftByDoctor.get(l.doctor_id) ?? [];
@@ -560,72 +454,10 @@ export async function buildFinalRotaInput(configId: string): Promise<FinalRotaIn
     const proportion = (resp.wte_percent ?? 100) / 100;
     const wtePct = resp.wte_percent ?? 100;
 
-    const blocks = blocksByDoctor.get(doctorId) ?? [];
     const ltftRows = ltftByDoctor.get(doctorId) ?? [];
 
-    // ── Leave: read from relational tables (canonical post-normalisation source)
-    // Fall back to JSONB for doctors whose surveys haven't been normalised yet.
-    const hasNormalized = blocks.length > 0 || ltftRows.length > 0 || resp.status === 'submitted';
-
-    const annualLeaveDates = hasNormalized
-      ? blocks
-          .filter((b) => b.reason === 'annual')
-          .flatMap((b) => expandDateRange(b.start_date, b.end_date))
-      : (Array.isArray(resp.annual_leave) ? resp.annual_leave as any[] : [])
-          .flatMap((l: any) => expandDateRange(l.startDate ?? l.start_date ?? '', l.endDate ?? l.end_date ?? ''));
-
-    const studyLeaveDates = hasNormalized
-      ? blocks
-          .filter((b) => b.reason === 'study')
-          .flatMap((b) => expandDateRange(b.start_date, b.end_date))
-      : (Array.isArray(resp.study_leave) ? resp.study_leave as any[] : [])
-          .flatMap((l: any) => expandDateRange(l.startDate ?? l.start_date ?? '', l.endDate ?? l.end_date ?? ''));
-
-    const parentalBlock = blocks.find((b) => b.reason === 'parental');
-    const parentalLeaveDates = hasNormalized
-      ? (parentalBlock ? expandDateRange(parentalBlock.start_date, parentalBlock.end_date) : [])
-      : (() => {
-          if (!resp.parental_leave_expected || !resp.parental_leave_start) return [];
-          return expandDateRange(resp.parental_leave_start, resp.parental_leave_end ?? resp.parental_leave_start);
-        })();
-
-    const rotationDates = hasNormalized
-      ? blocks
-          .filter((b) => b.reason === 'rotation')
-          .flatMap((b) => expandDateRange(b.start_date, b.end_date))
-      : (Array.isArray((resp as any).other_unavailability) ? (resp as any).other_unavailability as any[] : [])
-          .flatMap((l: any) => expandDateRange(l.startDate ?? l.start_date ?? '', l.endDate ?? l.end_date ?? ''));
-
-    const nocDates = hasNormalized
-      ? blocks
-          .filter((b) => b.reason === 'noc')
-          .flatMap((b) => expandDateRange(b.start_date, b.end_date))
-      : (Array.isArray(resp.noc_dates) ? resp.noc_dates as any[] : [])
-          .flatMap((n: any) => {
-            if (typeof n === 'string') return [n];
-            const start = n?.startDate ?? n?.start_date ?? n?.date ?? '';
-            const end = n?.endDate ?? n?.end_date ?? n?.date ?? '';
-            if (!start) return [];
-            return expandDateRange(start, end || start);
-          });
-
-    // ── LTFT: read from ltft_patterns (canonical) with JSONB fallback ──
-    const ltftDaysOff = hasNormalized
-      ? ltftRows.map((l) => l.day as string)
-      : ((resp.ltft_days_off ?? []) as string[]).map((d: string) => d.toLowerCase());
-
-    const ltftNightFlexibility = hasNormalized
-      ? ltftRows.map((l) => ({
-          day: l.day as string,
-          canStartNightsOnDay: (l.can_start_nights ?? false) as boolean,
-          canEndNightsOnDay: (l.can_end_nights ?? false) as boolean,
-        }))
-      : (Array.isArray(resp.ltft_night_flexibility) ? resp.ltft_night_flexibility as any[] : [])
-          .map((f: any) => ({
-            day: (f.day ?? '').toLowerCase(),
-            canStartNightsOnDay: f.canStartNightsOnDay ?? f.canStart ?? false,
-            canEndNightsOnDay: f.canEndNightsOnDay ?? f.canEnd ?? false,
-          }));
+    // ── LTFT: ltft_patterns is the canonical source ───────────────────
+    const ltftDaysOff = ltftRows.map(l => l.day.toLowerCase());
 
     // ── Competency flags: flat columns first, JSONB fallback ──────────
     // Flat columns written by handle_survey_normalization on submission.
@@ -663,30 +495,23 @@ export async function buildFinalRotaInput(configId: string): Promise<FinalRotaIn
       hasIcu,
       hasTransfer,
       ltft: {
-        isLtft: ltftDaysOff.length > 0,          // Bug 9 fix: was wtePct < 100
+        isLtft: ltftDaysOff.length > 0,
         daysOff: ltftDaysOff,
-        nightFlexibility: ltftNightFlexibility,
       },
       constraints: {
         hard: {
-          annualLeaveDates,
-          studyLeaveDates,
-          parentalLeaveDates,
-          rotationDates,                           // Bug 4 fix: was missing entirely
           exemptFromNights: resp.exempt_from_nights ?? false,
           exemptFromWeekends: resp.exempt_from_weekends ?? false,
           exemptFromOncall: resp.exempt_from_oncall ?? false,
-          ltftDaysBlocked: ltftDaysOff,
         },
         soft: {
-          nocDates,
           maxConsecNights,
           additionalNotes: [resp.other_requests, resp.additional_restrictions]
             .filter(Boolean).join('\n'),
         },
       },
       fairnessTargets: {
-        targetTotalHours: totalMaxHours,           // Bug 3 fix: was (wtePct/100)*40*weeks
+        targetTotalHours: totalMaxHours,
         targetNightShiftCount: Math.round((totalNightSlots / doctorCount) * proportion),
         targetWeekendShiftCount: Math.round((totalWeekendSlots / doctorCount) * proportion),
         targetOncallCount: Math.round((totalOncallSlots / doctorCount) * proportion),
@@ -701,28 +526,15 @@ export async function buildFinalRotaInput(configId: string): Promise<FinalRotaIn
 
   return {
     preRotaInput,
+    resolvedAvailability: (resolvedRaw.data ?? []).map(row => ({
+      doctorId: row.doctor_id,
+      date: row.date,
+      status: row.status,
+      source: row.source,
+      canStartNights: row.can_start_nights ?? null,
+      canEndNights: row.can_end_nights ?? null,
+    })),
     doctors,
-    constraints: {
-      hard: [
-        'WTR_MAX_HOURS_PER_WEEK', 'WTR_MAX_HOURS_PER_168H',
-        'WTR_MIN_REST_AFTER_NIGHTS', 'WTR_MIN_REST_AFTER_LONG_SHIFTS',
-        'WTR_MIN_REST_AFTER_STANDARD_SHIFTS', 'WTR_MAX_CONSEC_NIGHTS',
-        'WTR_MAX_CONSEC_LONG', 'WTR_MAX_CONSEC_STANDARD',
-        'ANNUAL_LEAVE_DATES_BLOCKED', 'STUDY_LEAVE_DATES_BLOCKED',
-        'PARENTAL_LEAVE_DATES_BLOCKED', 'ROTATION_DATES_BLOCKED',
-        'LTFT_DAYS_BLOCKED', 'NIGHT_EXEMPTIONS_RESPECTED',
-        'WEEKEND_EXEMPTIONS_RESPECTED', 'ONCALL_EXEMPTIONS_RESPECTED',
-        'MIN_STAFFING_MET_ALL_SHIFTS', 'ONCALL_MAX_PER_7_DAYS',
-        'ONCALL_DAY_AFTER_MAX_HOURS', 'NO_SIMULTANEOUS_ONCALL_AND_SHIFT',
-        'SLOT_ELIGIBILITY_MET', 'WEEKEND_CAP_RESPECTED',
-      ],
-      soft: [
-        'SOFT_NOC_DATES_RESPECTED', 'SOFT_MAX_CONSEC_NIGHTS_PREFERENCE',
-        'SOFT_WEEKEND_FREQUENCY_TARGET', 'SOFT_FAIR_NIGHT_DISTRIBUTION',
-        'SOFT_FAIR_WEEKEND_DISTRIBUTION', 'SOFT_FAIR_ONCALL_DISTRIBUTION',
-        'SOFT_FAIR_LONG_DAY_DISTRIBUTION', 'SOFT_LTFT_NIGHT_FLEXIBILITY',
-      ],
-    },
   };
 }
 
