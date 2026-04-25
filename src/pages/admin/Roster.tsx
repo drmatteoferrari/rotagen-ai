@@ -211,7 +211,7 @@ function ExpandedDoctorPanel({
       )}
 
       {/* Action Sections — grouped by category for clarity */}
-      <div className="flex flex-col gap-2 pt-1 sm:flex-row sm:flex-wrap sm:items-stretch">
+      <div className="flex flex-col gap-2 pt-1 lg:flex-row lg:flex-wrap lg:items-stretch">
         {/* ── DOCTOR section ── */}
         <div className="flex-1 min-w-0 rounded-md border border-border bg-card/50 p-2">
           <div className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5 px-0.5">
@@ -237,7 +237,7 @@ function ExpandedDoctorPanel({
               onClick={onRemoveDoctor}
               className="inline-flex justify-center items-center gap-1 rounded-md bg-destructive/10 hover:bg-destructive/20 text-destructive text-[11px] font-semibold px-2 py-1.5 transition-colors min-w-0"
             >
-              <Trash2 className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">Remove doctor</span>
+              <Trash2 className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">Remove</span>
             </button>
           </div>
         </div>
