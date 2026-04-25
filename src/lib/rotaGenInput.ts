@@ -738,13 +738,18 @@ export async function validateFinalRotaInput(configId: string): Promise<Validati
   const warnings: string[] = [];
   const blockers: string[] = [];
 
-  const [responses, preRotaRow] = await Promise.all([
+  const [responses, preRotaRow, activeDoctorsResult] = await Promise.all([
     getSurveyResponsesForConfig(configId),
     supabase
       .from('pre_rota_results')
-      .select('status, targets_data')
+      .select('status, targets_data, calendar_data')
       .eq('rota_config_id', configId)
       .maybeSingle(),
+    supabase
+      .from('doctors')
+      .select('id')
+      .eq('rota_config_id', configId)
+      .eq('is_active', true),
   ]);
 
   // Pre-rota must exist and not be blocked
@@ -756,6 +761,23 @@ export async function validateFinalRotaInput(configId: string): Promise<Validati
     const td = preRotaRow.data.targets_data as unknown as TargetsData | null;
     if (!td?.doctors?.length) {
       blockers.push('Shift hour targets are missing. Re-generate the pre-rota to rebuild them.');
+    }
+
+    // Doctor roster drift check
+    // Active doctors absent from calendarData have no resolved_availability
+    // rows — the algorithm cannot safely run until the pre-rota is regenerated.
+    const cd = preRotaRow.data.calendar_data as unknown as
+      { doctors?: Array<{ doctorId: string }> } | null;
+    const calendarDoctorIds = new Set(
+      (cd?.doctors ?? []).map(d => d.doctorId)
+    );
+    const activeDoctorIds = (activeDoctorsResult.data ?? []).map(d => d.id);
+    const driftCount = activeDoctorIds.filter(id => !calendarDoctorIds.has(id)).length;
+    if (driftCount > 0) {
+      blockers.push(
+        `${driftCount} doctor(s) have been added to the roster since the pre-rota ` +
+        `was last generated. Regenerate the pre-rota before generating the final rota.`
+      );
     }
   }
 
