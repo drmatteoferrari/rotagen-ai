@@ -492,7 +492,7 @@ export default function SetupPage() {
                     <div className="absolute inset-0 w-full animate-shimmer-btn bg-gradient-to-r from-transparent via-white/20 to-transparent" />
                   )}
                   <span className="relative z-10 flex items-center justify-center font-bold tracking-wide">
-                    <Wand2 className="mr-2 h-4 w-4 group-hover:rotate-12 transition-transform" /> GENERATE FINAL ROTA
+                    <Wand2 className="mr-2 h-4 w-4 group-hover:rotate-12 transition-transform" /> GENERATE FINAL ROTA — coming soon
                   </span>
                 </Button>
               </div>
