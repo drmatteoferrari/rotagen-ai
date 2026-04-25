@@ -113,6 +113,7 @@
   animation: pulse-once 0.6s ease-out;
 }
 
+html,
 body,
 #root {
   background-color: #ffffff;
