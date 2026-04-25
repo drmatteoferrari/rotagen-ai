@@ -19,7 +19,7 @@
 //     fields per build-guide Rule 23. Sub-passes return commit
 //     intent only; the driver applies it atomically (§3 of design).
 
-import type { FinalRotaInput } from './rotaGenInput';
+import type { FinalRotaInput, ShiftSlotEntry } from './rotaGenInput';
 import type {
   AvailabilityMatrix,
   BucketFloors,
@@ -34,6 +34,35 @@ import type {
   WeekendPlacementResult,
   WeekdayPlacementResult,
 } from './finalRotaNightBlocks';
+import {
+  addDaysUtc,
+  getDayKeyUtc,
+  getWeekendSaturdays,
+  getWeekdayMondays,
+  placeWeekendNightsForWeekend,
+  placeWeekdayNightsForWeek,
+  scoreWeekendScarcity,
+  scoreWeekScarcity,
+  computeWeeklyResidualDemand,
+} from './finalRotaNightBlocks';
+import { getOverlappedWeekendDates, getWeekKey } from './finalRotaWtr';
+
+const MS_PER_DAY = 86_400_000;
+
+// ─── Local UTC date helpers ───────────────────────────────────
+// Internal copies of common UTC arithmetic primitives used by the
+// per-assignment commit loop. Kept private to avoid widening the
+// public surface of finalRotaWtr.ts / finalRotaNightBlocks.ts; the
+// behaviour matches their internal copies bit-for-bit.
+
+function isoDateToUtcMidnightMs(iso: string): number {
+  const [y, m, d] = iso.split('-').map(Number);
+  return Date.UTC(y, m - 1, d);
+}
+
+function msToIsoDate(ms: number): string {
+  return new Date(ms).toISOString().slice(0, 10);
+}
 
 // ─── Empty result singletons (design v2 §6 + Nit C2) ──────────
 // Object.freeze for runtime mutation guard; `as const` for compile-
@@ -148,6 +177,93 @@ export function computeAvgHoursByKey(
   return out;
 }
 
+// ─── keyMatchesOnCallStatus ───────────────────────────────────
+// Returns true iff this nightShiftKey has any slot whose isOncall
+// flag matches the current phase. Used to filter per-key iteration
+// so on-call phases skip non-on-call keys and vice versa.
+
+function keyMatchesOnCallStatus(
+  input: FinalRotaInput,
+  key: string,
+  onCallOnly: boolean,
+): boolean {
+  for (const slot of input.preRotaInput.shiftSlots) {
+    if (slot.shiftKey !== key) continue;
+    if (slot.badges.includes('night') && slot.isOncall === onCallOnly) return true;
+  }
+  return false;
+}
+
+// ─── slotsByDate builders ─────────────────────────────────────
+// scoreWeekendScarcity / scoreWeekScarcity expect a date→slot map
+// that the driver assembles from the night ShiftSlotEntry pool for
+// a given key. Out-of-period dates are skipped.
+
+function buildSlotsByDateForWeekend(
+  input: FinalRotaInput,
+  saturdayIso: string,
+  nightShiftKey: string,
+): Record<string, ShiftSlotEntry> {
+  const slots: Record<string, ShiftSlotEntry> = {};
+  const startIso = input.preRotaInput.period.startDate;
+  const endIso = input.preRotaInput.period.endDate;
+  // Cover Fri (offset −1) through Tue (offset +3): all dates a Tier 1–4
+  // weekend pattern may touch.
+  for (let offset = -1; offset <= 3; offset += 1) {
+    const date = addDaysUtc(saturdayIso, offset);
+    if (date < startIso || date > endIso) continue;
+    const dk = getDayKeyUtc(date);
+    const slot = input.preRotaInput.shiftSlots.find(
+      (s) => s.shiftKey === nightShiftKey && s.dayKey === dk,
+    );
+    if (slot) slots[date] = slot;
+  }
+  return slots;
+}
+
+function buildSlotsByDateForWeek(
+  input: FinalRotaInput,
+  weekStartIso: string,
+  nightShiftKey: string,
+): Record<string, ShiftSlotEntry> {
+  const slots: Record<string, ShiftSlotEntry> = {};
+  const startIso = input.preRotaInput.period.startDate;
+  const endIso = input.preRotaInput.period.endDate;
+  for (let offset = 0; offset < 5; offset += 1) {
+    const date = addDaysUtc(weekStartIso, offset);
+    if (date < startIso || date > endIso) continue;
+    const dk = getDayKeyUtc(date);
+    const slot = input.preRotaInput.shiftSlots.find(
+      (s) => s.shiftKey === nightShiftKey && s.dayKey === dk,
+    );
+    if (slot) slots[date] = slot;
+  }
+  return slots;
+}
+
+// ─── isOrphanedSundayWeek ─────────────────────────────────────
+// Spec §8: "Orphaned-Sunday weeks processed FIRST" in Phase 2/6.
+// A week is orphaned if its preceding Sunday was left CRITICAL
+// UNFILLED for the same nightShiftKey (typically because Phase 1's
+// weekend pass took the RELAXATION_2N_FRISAT path — Fri/Sat covered,
+// Sunday escalated). The accumulator carries unfilled slots cumulatively
+// across phases, so by the time Phase 2/6 runs the relevant entries are
+// in place.
+
+function isOrphanedSundayWeek(
+  mondayIso: string,
+  nightShiftKey: string,
+  accumulator: IterationAccumulator,
+): boolean {
+  const sundayBefore = addDaysUtc(mondayIso, -1);
+  return accumulator.unfilledSlots.some(
+    (u) =>
+      u.date === sundayBefore &&
+      u.shiftKey === nightShiftKey &&
+      u.isCritical,
+  );
+}
+
 // ─── Driver-state accumulator ─────────────────────────────────
 // Internal scratch that the per-phase commit helpers write into;
 // projected to IterationResult at the end of runSingleIteration.
@@ -170,51 +286,367 @@ function freshAccumulator(): IterationAccumulator {
   };
 }
 
-// ─── Stub commit helpers (Commit 3 will populate) ─────────────
+// ─── Per-assignment commit loop (design v2 §3 + Delta 3) ──────
+// Applies a single InternalDayAssignment to the owning DoctorState.
+// Implements Semantic-A reset rules for the three consecutive*Dates
+// arrays (verified against finalRotaWtr.ts:313/330/481/512), plus
+// hours, weekend-day, oncall-window, weekly-hours, and bucket
+// updates. The consecutiveX branches each carry a same-day no-op
+// guard (Delta 3) to defend against hypothetical Tiling Engine
+// changes that emit two assignments on the same calendar date for
+// the same doctor — not currently produced, but cheap to guard.
+
+function applySingleAssignment(
+  stateMap: Map<string, DoctorState>,
+  a: InternalDayAssignment,
+): void {
+  const ds = stateMap.get(a.doctorId);
+  if (!ds) return;
+
+  ds.assignments.push(a);
+  ds.actualHoursByShiftType[a.shiftKey] =
+    (ds.actualHoursByShiftType[a.shiftKey] ?? 0) + a.durationHours;
+
+  for (const w of getOverlappedWeekendDates(a.shiftStartMs, a.shiftEndMs)) {
+    if (!ds.weekendDatesWorked.includes(w)) ds.weekendDatesWorked.push(w);
+  }
+
+  const D = msToIsoDate(a.shiftStartMs);
+
+  // ── consecutiveShiftDates (Semantic A + Delta 3 guard) ────
+  const lastShift = ds.consecutiveShiftDates[ds.consecutiveShiftDates.length - 1];
+  if (lastShift === D) {
+    // Same-day duplicate guard — defensive against future Tiling
+    // Engine changes that might emit two same-date assignments
+    // per doctor.
+  } else if (
+    ds.consecutiveShiftDates.length === 0 ||
+    lastShift === addDaysUtc(D, -1)
+  ) {
+    ds.consecutiveShiftDates.push(D);
+  } else {
+    ds.consecutiveShiftDates = [D];
+  }
+
+  // ── consecutiveNightDates (Semantic A + Delta 3 guard) ────
+  if (a.isNightShift) {
+    const lastNight = ds.consecutiveNightDates[ds.consecutiveNightDates.length - 1];
+    if (lastNight === D) {
+      // Same-day duplicate guard — defensive against future Tiling
+      // Engine changes that might emit two same-date assignments
+      // per doctor.
+    } else if (
+      ds.consecutiveNightDates.length === 0 ||
+      lastNight === addDaysUtc(D, -1)
+    ) {
+      ds.consecutiveNightDates.push(D);
+    } else {
+      ds.consecutiveNightDates = [D];
+    }
+  } else {
+    ds.consecutiveNightDates = [];
+  }
+
+  // ── consecutiveLongDates (Semantic A + Delta 3 guard) ─────
+  if (a.badges.includes('long')) {
+    const lastLong = ds.consecutiveLongDates[ds.consecutiveLongDates.length - 1];
+    if (lastLong === D) {
+      // Same-day duplicate guard — defensive against future Tiling
+      // Engine changes that might emit two same-date assignments
+      // per doctor.
+    } else if (
+      ds.consecutiveLongDates.length === 0 ||
+      lastLong === addDaysUtc(D, -1)
+    ) {
+      ds.consecutiveLongDates.push(D);
+    } else {
+      ds.consecutiveLongDates = [D];
+    }
+  } else {
+    ds.consecutiveLongDates = [];
+  }
+
+  // ── oncallDatesLast7 with 7-day prune relative to D ────────
+  if (a.isOncall) {
+    if (!ds.oncallDatesLast7.includes(D)) ds.oncallDatesLast7.push(D);
+    const cutoffMs = isoDateToUtcMidnightMs(D) - 7 * MS_PER_DAY;
+    ds.oncallDatesLast7 = ds.oncallDatesLast7.filter(
+      (d) => isoDateToUtcMidnightMs(d) >= cutoffMs,
+    );
+  }
+
+  // ── weeklyHoursUsed ───────────────────────────────────────
+  const weekKey = getWeekKey(D);
+  ds.weeklyHoursUsed[weekKey] =
+    (ds.weeklyHoursUsed[weekKey] ?? 0) + a.durationHours;
+
+  // ── bucketHoursUsed ───────────────────────────────────────
+  if (a.isOncall) ds.bucketHoursUsed.oncall += a.durationHours;
+  else ds.bucketHoursUsed.nonOncall += a.durationHours;
+}
+
+// ─── applyWeekendResult (design v2 §3 + Delta 1) ──────────────
+// Applies a WeekendPlacementResult to state map + accumulator.
+// Delta 1: defensive sort of `result.assignments` by (doctorId,
+// shiftStartMs) ascending before per-assignment iteration. This
+// keeps Semantic-A streak invariants correct even if a future
+// Tiling Engine change emits assignments in non-chronological
+// order. `commitNightBlockHistory` performs its own per-blockId
+// sort and is not affected.
 
 function applyWeekendResult(
-  _stateMap: Map<string, DoctorState>,
-  _result: WeekendPlacementResult,
-  _accumulator: IterationAccumulator,
-  _key: string,
+  stateMap: Map<string, DoctorState>,
+  result: WeekendPlacementResult,
+  accumulator: IterationAccumulator,
+  pathKey: string,
 ): void {
-  // Implemented in Commit 3 per design v2 §3 commit loop +
-  // Deltas 1 (defensive sort) and 3 (same-day no-op guards).
+  // Delta 1: defensive sort. result.assignments is `readonly`, so
+  // spread before sort to avoid mutating Tiling Engine output.
+  const sortedAssignments = [...result.assignments].sort((a, b) => {
+    if (a.doctorId !== b.doctorId) return a.doctorId.localeCompare(b.doctorId);
+    return a.shiftStartMs - b.shiftStartMs;
+  });
+
+  for (const a of sortedAssignments) applySingleAssignment(stateMap, a);
+
+  for (const [doctorId, restMs] of Object.entries(result.restStampsByDoctor)) {
+    const ds = stateMap.get(doctorId);
+    if (!ds) continue;
+    if (restMs > ds.restUntilMs) ds.restUntilMs = restMs;
+  }
+
+  for (const entry of result.lieuStaged) {
+    const ds = stateMap.get(entry.doctorId);
+    if (!ds) continue;
+    if (!ds.lieuDatesStaged.includes(entry.date)) {
+      ds.lieuDatesStaged.push(entry.date);
+    }
+  }
+
+  for (const u of result.unfilledSlots) accumulator.unfilledSlots.push(u);
+  accumulator.pathsTaken[pathKey] = result.pathTaken;
+  accumulator.totalPenaltyScore += result.penaltyApplied;
+  if (result.orphanConsumed === true) accumulator.orphansConsumedCount += 1;
+  if (result.orphanConsumed === false) accumulator.orphansRelaxedCount += 1;
 }
+
+// ─── applyWeekdayResult (design v2 §3 + Delta 1) ──────────────
+// Same shape as applyWeekendResult but for weekday sub-pass output.
+// `residualBefore`/`residualAfter` and `pairPartnerDoctorId` carry
+// diagnostic value for the CLI / tests but no DoctorState write.
 
 function applyWeekdayResult(
-  _stateMap: Map<string, DoctorState>,
-  _result: WeekdayPlacementResult,
-  _accumulator: IterationAccumulator,
-  _key: string,
+  stateMap: Map<string, DoctorState>,
+  result: WeekdayPlacementResult,
+  accumulator: IterationAccumulator,
+  pathKey: string,
 ): void {
-  // Implemented in Commit 3 per design v2 §3 commit loop +
-  // Deltas 1 (defensive sort) and 3 (same-day no-op guards).
+  // Delta 1: defensive sort.
+  const sortedAssignments = [...result.assignments].sort((a, b) => {
+    if (a.doctorId !== b.doctorId) return a.doctorId.localeCompare(b.doctorId);
+    return a.shiftStartMs - b.shiftStartMs;
+  });
+
+  for (const a of sortedAssignments) applySingleAssignment(stateMap, a);
+
+  for (const [doctorId, restMs] of Object.entries(result.restStampsByDoctor)) {
+    const ds = stateMap.get(doctorId);
+    if (!ds) continue;
+    if (restMs > ds.restUntilMs) ds.restUntilMs = restMs;
+  }
+
+  for (const entry of result.lieuStaged) {
+    const ds = stateMap.get(entry.doctorId);
+    if (!ds) continue;
+    if (!ds.lieuDatesStaged.includes(entry.date)) {
+      ds.lieuDatesStaged.push(entry.date);
+    }
+  }
+
+  for (const u of result.unfilledSlots) accumulator.unfilledSlots.push(u);
+  accumulator.pathsTaken[pathKey] = result.pathTaken;
+  accumulator.totalPenaltyScore += result.penaltyApplied;
+  // WeekdayPlacementResult does not currently carry orphanConsumed
+  // (the weekday pass does not have the orphan tri-state — it has
+  // residualAfter as the "did we cover everything" signal). Counts
+  // remain weekend-driven.
 }
+
+// ─── commitNightBlockHistory (design v2 §3) ───────────────────
+// After per-assignment commits land, group this sub-pass's NEW
+// night assignments by blockId. One inner array per (doctor,
+// blockId) — sorted chronologically within the array. Day-shift
+// assignments (blockId === null) are never pushed.
 
 function commitNightBlockHistory(
-  _stateMap: Map<string, DoctorState>,
-  _result: WeekendPlacementResult | WeekdayPlacementResult,
+  stateMap: Map<string, DoctorState>,
+  result: WeekendPlacementResult | WeekdayPlacementResult,
 ): void {
-  // Implemented in Commit 3 per design v2 §3 "Night-block history commit".
+  // Outer key: doctorId. Inner key: blockId. Value: list of dates.
+  const groups = new Map<string, Map<string, string[]>>();
+
+  for (const a of result.assignments) {
+    if (!a.isNightShift) continue;
+    if (a.blockId === null) continue;
+    let perDoctor = groups.get(a.doctorId);
+    if (!perDoctor) {
+      perDoctor = new Map();
+      groups.set(a.doctorId, perDoctor);
+    }
+    const date = msToIsoDate(a.shiftStartMs);
+    const bucket = perDoctor.get(a.blockId) ?? [];
+    bucket.push(date);
+    perDoctor.set(a.blockId, bucket);
+  }
+
+  for (const [doctorId, perDoctor] of groups) {
+    const ds = stateMap.get(doctorId);
+    if (!ds) continue;
+    // Iterate blocks in deterministic order: sort blockIds
+    // lexicographically so the inner-array push order is stable
+    // when a sub-pass emits multiple blocks per doctor (not
+    // currently produced, but the API admits it).
+    const blockIds = [...perDoctor.keys()].sort();
+    for (const bid of blockIds) {
+      const dates = perDoctor.get(bid);
+      if (!dates || dates.length === 0) continue;
+      const sorted = [...dates].sort();
+      ds.nightBlockHistory.push(sorted);
+    }
+  }
 }
 
-// ─── Phase entry points ───────────────────────────────────────
-// Stage 3g.3a Commit 2: skeletons that return without doing work.
-// Commit 3 fills the night-phase bodies.
+// ─── runNightPhase ────────────────────────────────────────────
+// Single phase body shared by Phase 1/2/5/6. Per design v2 §2:
+// - Weekend phases (kind === 'weekend'): iterate Saturdays in
+//   ASCENDING scarcity order (lower score = more constrained =
+//   process first per finalRotaNightBlocks.ts:571 and 1366).
+// - Weekday phases (kind === 'weekday'): iterate Mondays orphaned-
+//   Sunday-first, then ascending scarcity, then ISO ascending.
+// Per-key iteration nests inside each anchor (Q1 option (a)) so
+// multi-key inputs handle each key's blocks at the same anchor
+// before moving on. Per-anchor sorting uses the FIRST eligible
+// nightShiftKey as scoring key — a deterministic approximation
+// for the rare multi-key case; single-key fixtures are exact.
 
 function runNightPhase(
-  _kind: 'weekend' | 'weekday',
-  _onCallOnly: boolean,
-  _input: FinalRotaInput,
-  _matrix: AvailabilityMatrix,
-  _stateMap: Map<string, DoctorState>,
-  _shuffleOrder: readonly string[],
-  _nightShiftKeys: readonly string[],
-  _avgHoursByKey: Record<string, number>,
-  _accumulator: IterationAccumulator,
+  kind: 'weekend' | 'weekday',
+  onCallOnly: boolean,
+  input: FinalRotaInput,
+  matrix: AvailabilityMatrix,
+  stateMap: Map<string, DoctorState>,
+  shuffleOrder: readonly string[],
+  nightShiftKeys: readonly string[],
+  avgHoursByKey: Record<string, number>,
+  accumulator: IterationAccumulator,
 ): void {
-  // Implemented in Commit 3.
+  if (nightShiftKeys.length === 0) return;
+
+  const periodStartIso = input.preRotaInput.period.startDate;
+  const periodEndIso = input.preRotaInput.period.endDate;
+  const wtr = input.preRotaInput.wtrConstraints;
+
+  // Filter to keys that exist for this phase's on-call status. The
+  // first surviving key drives scarcity scoring.
+  const phaseKeys = nightShiftKeys.filter(
+    (k) => keyMatchesOnCallStatus(input, k, onCallOnly) && avgHoursByKey[k] !== undefined,
+  );
+  if (phaseKeys.length === 0) return;
+  const scoringKey = phaseKeys[0];
+
+  if (kind === 'weekend') {
+    const saturdays = getWeekendSaturdays(periodStartIso, periodEndIso);
+    if (saturdays.length === 0) return;
+
+    const scored = saturdays.map((sat) => {
+      const slotsByDate = buildSlotsByDateForWeekend(input, sat, scoringKey);
+      const score = scoreWeekendScarcity(
+        sat,
+        input.doctors,
+        matrix,
+        slotsByDate,
+        periodEndIso,
+      );
+      return { sat, score };
+    });
+    // Ascending by scarcity score (most constrained first); tiebreaking
+    // by Saturday ISO ascending for determinism.
+    scored.sort((a, b) => a.score - b.score || a.sat.localeCompare(b.sat));
+
+    for (const { sat } of scored) {
+      for (const key of phaseKeys) {
+        const avg = avgHoursByKey[key];
+        if (avg === undefined) continue;
+        const result = placeWeekendNightsForWeekend(
+          sat,
+          input,
+          stateMap,
+          matrix,
+          shuffleOrder,
+          key,
+          avg,
+          onCallOnly,
+        );
+        const pathKey = `${sat}#${key}`;
+        applyWeekendResult(stateMap, result, accumulator, pathKey);
+        commitNightBlockHistory(stateMap, result);
+      }
+    }
+    return;
+  }
+
+  // ── weekday ─────────────────────────────────────────────
+  const mondays = getWeekdayMondays(periodStartIso, periodEndIso);
+  if (mondays.length === 0) return;
+
+  const scored = mondays.map((mon) => {
+    const residual = computeWeeklyResidualDemand(
+      mon,
+      input,
+      stateMap,
+      scoringKey,
+      onCallOnly,
+    );
+    const slotsByDate = buildSlotsByDateForWeek(input, mon, scoringKey);
+    const score = scoreWeekScarcity(
+      mon,
+      residual,
+      input.doctors,
+      matrix,
+      slotsByDate,
+      wtr,
+      periodEndIso,
+    );
+    const orphan = isOrphanedSundayWeek(mon, scoringKey, accumulator);
+    return { mon, score, orphan };
+  });
+  // Orphan-Sunday first (boolean true sorts ahead of false), then
+  // ascending scarcity, then ISO ascending for determinism.
+  scored.sort((a, b) => {
+    if (a.orphan !== b.orphan) return a.orphan ? -1 : 1;
+    if (a.score !== b.score) return a.score - b.score;
+    return a.mon.localeCompare(b.mon);
+  });
+
+  for (const { mon } of scored) {
+    for (const key of phaseKeys) {
+      const avg = avgHoursByKey[key];
+      if (avg === undefined) continue;
+      const result = placeWeekdayNightsForWeek(
+        mon,
+        input,
+        stateMap,
+        matrix,
+        shuffleOrder,
+        key,
+        avg,
+        onCallOnly,
+      );
+      const pathKey = `${mon}#${key}`;
+      applyWeekdayResult(stateMap, result, accumulator, pathKey);
+      commitNightBlockHistory(stateMap, result);
+    }
+  }
 }
 
 // ─── Day-shift phase stubs (Stage 3g.3b will replace) ─────────
@@ -293,7 +725,7 @@ function buildIterationResult(
   const byDate: Record<string, InternalDayAssignment[]> = {};
   for (const ds of stateMap.values()) {
     for (const a of ds.assignments) {
-      const date = new Date(a.shiftStartMs).toISOString().slice(0, 10);
+      const date = msToIsoDate(a.shiftStartMs);
       const bucket = byDate[date] ?? [];
       bucket.push(a);
       byDate[date] = bucket;
@@ -400,3 +832,4 @@ export {
   runNightPhase,
   EMPTY_DAY_RESULT,
 };
+export type { IterationAccumulator };
