@@ -260,6 +260,8 @@ export default function Roster() {
   // Dialog states for generic actions
   const [doctorToSend, setDoctorToSend] = useState<Doctor | null>(null);
   const [doctorToRemove, setDoctorToRemove] = useState<Doctor | null>(null);
+  const [doctorToResetSurvey, setDoctorToResetSurvey] = useState<Doctor | null>(null);
+  const [resettingSurvey, setResettingSurvey] = useState(false);
 
   // Copy tooltip state
   const [copiedId, setCopiedId] = useState<string | null>(null);
