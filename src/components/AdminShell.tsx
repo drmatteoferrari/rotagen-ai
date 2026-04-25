@@ -156,16 +156,20 @@ function AdminShellInner() {
         )}
       >
         {/* Logo */}
-        <div className="flex h-16 items-center justify-center border-b border-sidebar-border px-4">
-          {collapsed
-            ? <RotaGenIcon size={40} variant="light" />
-            : (
-              <div className="flex items-center gap-2">
-                <RotaGenIcon size={40} variant="light" />
-                <RotaGenLogo size="sm" variant="dark" showIcon={false} />
-              </div>
-            )
-          }
+        <div className="flex h-16 items-center border-b border-sidebar-border px-3 overflow-hidden">
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="w-10 h-10 shrink-0 flex items-center justify-center">
+              <RotaGenIcon size={40} variant="light" />
+            </div>
+            <div
+              className={cn(
+                "overflow-hidden transition-all duration-300",
+                collapsed ? "max-w-0 opacity-0" : "max-w-[200px] opacity-100"
+              )}
+            >
+              <RotaGenLogo size="sm" variant="dark" showIcon={false} />
+            </div>
+          </div>
         </div>
 
         {/* Nav */}
