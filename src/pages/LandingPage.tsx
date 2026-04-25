@@ -2,6 +2,7 @@ import { useEffect, useState, type MutableRefObject } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { BarChart3, Mail, ShieldCheck, Star, Wand2 } from "lucide-react";
 import { useScrollReveal } from "@/lib/useScrollReveal";
+import { useAuth } from "@/contexts/AuthContext";
 import RotaGenLogo from "@/components/brand/RotaGenLogo";
 import PublicTopBar from "@/components/PublicTopBar";
 import screenshotDashboard from "@/assets/screenshot-dashboard.jpg";
@@ -44,6 +45,7 @@ const featureCards = [
 export default function LandingPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { isAuthenticated, authLoading } = useAuth();
 
   const [activeScreenshot, setActiveScreenshot] = useState(0);
 
@@ -72,6 +74,13 @@ export default function LandingPage() {
     }, 80);
     return () => window.clearTimeout(timeout);
   }, [location.hash]);
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (isAuthenticated) {
+      navigate("/admin/dashboard", { replace: true });
+    }
+  }, [isAuthenticated, authLoading, navigate]);
 
   const scrollToSection = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
