@@ -46,6 +46,15 @@ import {
   computeWeeklyResidualDemand,
 } from './finalRotaNightBlocks';
 import { getOverlappedWeekendDates, getWeekKey } from './finalRotaWtr';
+// TRACE: diagnostic tracing — zero cost when ROTAGEN_TRACE !== '1'
+import {
+  TRACE_ENABLED,
+  emit as traceEmit,
+  flush as traceFlush,
+  type AssignmentSummary,
+  type PerDoctorStateSnapshot,
+  type PhaseId,
+} from './finalRotaTrace';
 
 const MS_PER_DAY = 86_400_000;
 
@@ -516,6 +525,57 @@ function commitNightBlockHistory(
   }
 }
 
+// TRACE: helpers used only inside `if (TRACE_ENABLED)` guards.
+// They convert internal types to the trace module's projection shapes.
+// Every captured array/record is spread-copied so subsequent commits
+// cannot mutate the captured snapshot.
+
+function _phaseIdFor(
+  kind: 'weekend' | 'weekday',
+  onCallOnly: boolean,
+): PhaseId {
+  if (kind === 'weekend' && onCallOnly) return 1;
+  if (kind === 'weekday' && onCallOnly) return 2;
+  if (kind === 'weekend' && !onCallOnly) return 5;
+  return 6;
+}
+
+function _assignmentToSummary(a: InternalDayAssignment): AssignmentSummary {
+  return {
+    doctorId: a.doctorId,
+    date: msToIsoDate(a.shiftStartMs),
+    shiftKey: a.shiftKey,
+    isNightShift: a.isNightShift,
+    isOncall: a.isOncall,
+    isLong: a.isLong,
+    blockId: a.blockId,
+    shiftStartMs: a.shiftStartMs,
+    durationHours: a.durationHours,
+  };
+}
+
+function _buildPerDoctorSnapshot(
+  stateMap: Map<string, DoctorState>,
+): PerDoctorStateSnapshot[] {
+  const out: PerDoctorStateSnapshot[] = [];
+  for (const ds of stateMap.values()) {
+    out.push({
+      doctorId: ds.doctorId,
+      restUntilMs: ds.restUntilMs,
+      consecutiveShiftDates: [...ds.consecutiveShiftDates],
+      consecutiveNightDates: [...ds.consecutiveNightDates],
+      consecutiveLongDates: [...ds.consecutiveLongDates],
+      weekendDatesWorked: [...ds.weekendDatesWorked],
+      oncallDatesLast7: [...ds.oncallDatesLast7],
+      weeklyHoursUsed: { ...ds.weeklyHoursUsed },
+      bucketHoursUsed: { ...ds.bucketHoursUsed },
+      actualHoursByShiftType: { ...ds.actualHoursByShiftType },
+      assignments: ds.assignments.map(_assignmentToSummary),
+    });
+  }
+  return out;
+}
+
 // ─── runNightPhase ────────────────────────────────────────────
 // Single phase body shared by Phase 1/2/5/6. Per design v2 §2:
 // - Weekend phases (kind === 'weekend'): iterate Saturdays in
@@ -577,6 +637,25 @@ function runNightPhase(
       for (const key of phaseKeys) {
         const avg = avgHoursByKey[key];
         if (avg === undefined) continue;
+        // TRACE: phase_enter + state_snapshot before each sub-pass call
+        if (TRACE_ENABLED) {
+          const phaseId = _phaseIdFor('weekend', onCallOnly);
+          traceEmit({
+            type: 'phase_enter',
+            phase: phaseId,
+            kind: 'weekend',
+            anchorDate: sat,
+            nightShiftKey: key,
+          });
+          traceEmit({
+            type: 'state_snapshot',
+            phase: phaseId,
+            kind: 'weekend',
+            anchorDate: sat,
+            nightShiftKey: key,
+            perDoctor: _buildPerDoctorSnapshot(stateMap),
+          });
+        }
         const result = placeWeekendNightsForWeekend(
           sat,
           input,
@@ -587,6 +666,27 @@ function runNightPhase(
           avg,
           onCallOnly,
         );
+        // TRACE: subpass_result captured before commit (assignments / unfilled
+        // are immutable readonly views from the Tiling Engine; spread to copy)
+        if (TRACE_ENABLED) {
+          traceEmit({
+            type: 'subpass_result',
+            phase: _phaseIdFor('weekend', onCallOnly),
+            kind: 'weekend',
+            anchorDate: sat,
+            nightShiftKey: key,
+            pathTaken: result.pathTaken,
+            penaltyApplied: result.penaltyApplied,
+            orphanConsumed: result.orphanConsumed,
+            assignments: result.assignments.map(_assignmentToSummary),
+            unfilledSlots: result.unfilledSlots.map((u) => ({
+              date: u.date,
+              shiftKey: u.shiftKey,
+              slotIndex: u.slotIndex,
+              isCritical: u.isCritical,
+            })),
+          });
+        }
         const pathKey = `${sat}#${key}`;
         applyWeekendResult(stateMap, result, accumulator, pathKey);
         commitNightBlockHistory(stateMap, result);
@@ -632,6 +732,25 @@ function runNightPhase(
     for (const key of phaseKeys) {
       const avg = avgHoursByKey[key];
       if (avg === undefined) continue;
+      // TRACE: phase_enter + state_snapshot before each sub-pass call
+      if (TRACE_ENABLED) {
+        const phaseId = _phaseIdFor('weekday', onCallOnly);
+        traceEmit({
+          type: 'phase_enter',
+          phase: phaseId,
+          kind: 'weekday',
+          anchorDate: mon,
+          nightShiftKey: key,
+        });
+        traceEmit({
+          type: 'state_snapshot',
+          phase: phaseId,
+          kind: 'weekday',
+          anchorDate: mon,
+          nightShiftKey: key,
+          perDoctor: _buildPerDoctorSnapshot(stateMap),
+        });
+      }
       const result = placeWeekdayNightsForWeek(
         mon,
         input,
@@ -642,6 +761,29 @@ function runNightPhase(
         avg,
         onCallOnly,
       );
+      // TRACE: subpass_result with weekday-only residual diagnostics
+      if (TRACE_ENABLED) {
+        traceEmit({
+          type: 'subpass_result',
+          phase: _phaseIdFor('weekday', onCallOnly),
+          kind: 'weekday',
+          anchorDate: mon,
+          nightShiftKey: key,
+          pathTaken: result.pathTaken,
+          penaltyApplied: result.penaltyApplied,
+          orphanConsumed: null,
+          assignments: result.assignments.map(_assignmentToSummary),
+          unfilledSlots: result.unfilledSlots.map((u) => ({
+            date: u.date,
+            shiftKey: u.shiftKey,
+            slotIndex: u.slotIndex,
+            isCritical: u.isCritical,
+          })),
+          residualBefore: [...result.residualBefore],
+          residualAfter: [...result.residualAfter],
+          pairPartnerDoctorId: result.pairPartnerDoctorId,
+        });
+      }
       const pathKey = `${mon}#${key}`;
       applyWeekdayResult(stateMap, result, accumulator, pathKey);
       commitNightBlockHistory(stateMap, result);
@@ -819,7 +961,20 @@ export function runSingleIteration(
   void runLieuPhase9(stateMap, input, matrix);
 
   // Phase 10: Compose IterationResult.
-  return buildIterationResult(stateMap, accumulator);
+  const out = buildIterationResult(stateMap, accumulator);
+
+  // TRACE: flush buffered events to JSONL. Wrapped in try/catch so a
+  // disk failure during diagnostic writeout does not crash the run.
+  if (TRACE_ENABLED) {
+    try {
+      traceFlush();
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[finalRotaTrace] flush failed:', err);
+    }
+  }
+
+  return out;
 }
 
 // Test-only re-exports for unit tests (Commit 4). Not part of the
