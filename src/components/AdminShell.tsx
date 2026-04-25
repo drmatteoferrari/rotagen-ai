@@ -158,8 +158,8 @@ function AdminShellInner() {
         {/* Logo */}
         <div className="flex h-16 items-center justify-center border-b border-sidebar-border px-4">
           {collapsed
-            ? <RotaGenIcon size={28} variant="dark" />
-            : <RotaGenLogo size="sm" variant="dark" />
+            ? <RotaGenIcon size={28} variant="light" />
+            : <RotaGenLogo size="sm" variant="dark" showIcon={false} />
           }
         </div>
 
