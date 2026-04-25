@@ -237,7 +237,7 @@ function ExpandedDoctorPanel({
               onClick={onRemoveDoctor}
               className="inline-flex justify-center items-center gap-1 rounded-md bg-destructive/10 hover:bg-destructive/20 text-destructive text-[11px] font-semibold px-2 py-1.5 transition-colors min-w-0"
             >
-              <Trash2 className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">Remove doctor</span>
+              <Trash2 className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">Remove</span>
             </button>
           </div>
         </div>
