@@ -9,6 +9,12 @@
 //
 // No imports from React, Supabase, or any browser API. Node-runnable.
 
+import type {
+  WeekendPathTaken,
+  WeekdayPathTaken,
+  LieuStagedEntry,
+} from './finalRotaNightBlocks';
+
 // ─── AvailabilityStatus ────────────────────────────────────────
 
 export type AvailabilityStatus =
@@ -114,11 +120,33 @@ export interface UnfilledSlot {
 }
 
 // ─── IterationResult ───────────────────────────────────────────
+// Stage 3g.3a additions (per design v2 §4 + Delta 2):
+//   - pathsTaken              : weekendIso|weekStartIso → typed path enum
+//   - totalPenaltyScore       : sum of unified penaltyApplied numbers across sub-passes
+//   - orphansConsumedCount    : count where orphanConsumed === true
+//   - orphansRelaxedCount     : count where orphanConsumed === false (deliberate CRITICAL UNFILLED)
+//   - restBlocks              : empty stub now; Stage 3g.4 cascade populates
+//   - lieuStaged              : empty stub now; Stage 3g.5 lieu phase populates the
+//                               post-Phase-9 LieuDay[] view in a separate field.
+//                               Renamed from `lieuDays` per Delta 2 — this field
+//                               carries staged obligations (LieuStagedEntry), not
+//                               committed lieu days.
+// `returnedLeave` (spec §4.1) intentionally omitted until a consumer exists.
 
 export interface IterationResult {
   assignments: Record<string, InternalDayAssignment[]>;  // ISO date → assignments
   doctorStates: DoctorState[];
   unfilledSlots: UnfilledSlot[];
+
+  // ─── Stage 3g.3a additions ─────────────────────────────────
+  pathsTaken: Record<string, WeekendPathTaken | WeekdayPathTaken>;
+  totalPenaltyScore: number;
+  orphansConsumedCount: number;
+  orphansRelaxedCount: number;
+
+  // ─── Spec §4.1 stubs (populated by later stages) ──────────
+  restBlocks: RestBlock[];          // Stage 3g.4 cascade
+  lieuStaged: LieuStagedEntry[];    // Stage 3g.5 lieu phase (Delta 2 rename: was lieuDays)
 }
 
 // ─── CheckResult ───────────────────────────────────────────────
