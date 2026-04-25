@@ -106,6 +106,7 @@ export default function Login() {
                 <div className="relative flex items-center justify-center">
                   <div className="absolute inset-0 rounded-full bg-primary/10 blur-xl group-hover:bg-primary/20 transition-colors duration-500" />
                   <RotaGenIcon
+                    animated
                     size={52}
                     variant="light"
                     className="relative z-10 transition-transform group-hover:scale-105 duration-300"
