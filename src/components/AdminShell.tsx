@@ -152,7 +152,7 @@ function AdminShellInner() {
       <aside
         className={cn(
           "flex flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-300",
-          collapsed ? "w-16" : "w-64"
+          collapsed ? "w-14" : "w-52"
         )}
       >
         {/* Logo */}
