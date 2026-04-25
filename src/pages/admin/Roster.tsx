@@ -399,6 +399,85 @@ export default function Roster() {
     setDoctorToRemove(null);
   };
 
+  // ─── Reset doctor's survey to factory ───
+  const resetDoctorSurvey = async (doctor: Doctor) => {
+    setResettingSurvey(true);
+    try {
+      await Promise.all([
+        supabase.from("unavailability_blocks").delete().eq("doctor_id", doctor.id).eq("rota_config_id", doctor.rota_config_id),
+        supabase.from("ltft_patterns").delete().eq("doctor_id", doctor.id).eq("rota_config_id", doctor.rota_config_id),
+        supabase.from("training_requests").delete().eq("doctor_id", doctor.id).eq("rota_config_id", doctor.rota_config_id),
+        supabase.from("dual_specialties").delete().eq("doctor_id", doctor.id).eq("rota_config_id", doctor.rota_config_id),
+        supabase.from("resolved_availability").delete().eq("doctor_id", doctor.id).eq("rota_config_id", doctor.rota_config_id),
+      ]);
+      await supabase
+        .from("doctor_survey_responses")
+        .update({
+          status: "not_started",
+          submitted_at: null,
+          signature_name: null,
+          signature_date: null,
+          wte_percent: null,
+          wte_other_value: null,
+          al_entitlement: null,
+          ltft_days_off: null,
+          ltft_night_flexibility: null,
+          annual_leave: null,
+          study_leave: null,
+          noc_dates: null,
+          other_unavailability: null,
+          competencies_json: null,
+          exempt_from_nights: null,
+          exempt_from_weekends: null,
+          exempt_from_oncall: null,
+          exemption_details: null,
+          other_restrictions: null,
+          additional_restrictions: null,
+          parental_leave_expected: null,
+          parental_leave_start: null,
+          parental_leave_end: null,
+          parental_leave_notes: null,
+          specialties_requested: null,
+          special_sessions: null,
+          signoff_needs: null,
+          dual_specialty: null,
+          dual_specialty_types: null,
+          additional_notes: null,
+          other_interests: null,
+          want_pain_sessions: null,
+          pain_session_notes: null,
+          want_preop: null,
+          iac_achieved: null,
+          iac_working: null,
+          iac_remote: null,
+          iaoc_achieved: null,
+          iaoc_working: null,
+          iaoc_remote: null,
+          icu_achieved: null,
+          icu_working: null,
+          icu_remote: null,
+          transfer_achieved: null,
+          transfer_working: null,
+          transfer_remote: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("doctor_id", doctor.id)
+        .eq("rota_config_id", doctor.rota_config_id);
+      await supabase
+        .from("doctors")
+        .update({ survey_status: "not_started", survey_submitted_at: null })
+        .eq("id", doctor.id);
+      toast.success("Survey reset — all responses cleared");
+      setDoctorToResetSurvey(null);
+      invalidateDoctors();
+    } catch (err) {
+      console.error("Reset survey failed:", err);
+      toast.error("Failed to reset survey — please try again");
+    } finally {
+      setResettingSurvey(false);
+    }
+  };
+
   // Save deadline to DB on change
   const handleDeadlineSelect = async (date: Date | undefined) => {
     setSurveyDeadline(date);
