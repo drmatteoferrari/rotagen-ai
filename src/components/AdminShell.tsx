@@ -73,7 +73,7 @@ function AdminShellInner() {
   };
   const PageIcon = pageIcon;
 
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
