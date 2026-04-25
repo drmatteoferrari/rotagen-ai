@@ -85,6 +85,13 @@ function ExpandedDoctorPanel({
   invitedAt,
   onNavigateProfile,
   onNavigateCalendar,
+  onSendSurvey,
+  onCopyLink,
+  onOpenSurvey,
+  onEditSurvey,
+  onResetSurvey,
+  onRemoveDoctor,
+  sendDisabled,
 }: {
   doctor: Doctor;
   surveyData: any;
@@ -92,6 +99,13 @@ function ExpandedDoctorPanel({
   invitedAt: string | null;
   onNavigateProfile: () => void;
   onNavigateCalendar: () => void;
+  onSendSurvey: () => void;
+  onCopyLink: () => void;
+  onOpenSurvey: () => void;
+  onEditSurvey: () => void;
+  onResetSurvey: () => void;
+  onRemoveDoctor: () => void;
+  sendDisabled: boolean;
 }) {
   if (isLoading) {
     return (
