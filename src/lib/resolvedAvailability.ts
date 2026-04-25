@@ -2,16 +2,15 @@ import { supabase } from '@/integrations/supabase/client'
 import { mergeOverridesIntoAvailability, mapOverrideRow } from '@/lib/calendarOverrides'
 import { buildTargetsData } from './preRotaTargets'
 import type { CalendarData, CalendarCell } from './preRotaTypes'
+import type { TablesInsert } from '@/integrations/supabase/types'
 
-type ResolvedRow = {
-  rota_config_id: string
-  doctor_id: string
-  date: string
-  status: string
-  source: string
-  override_id: string | null
-  rebuilt_at: string
+function getUTCDayName(isoDate: string): string {
+  const [y, m, d] = isoDate.split('-').map(Number)
+  const days = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday']
+  return days[new Date(Date.UTC(y, m - 1, d)).getUTCDay()]
 }
+
+type ResolvedRow = TablesInsert<'resolved_availability'>
 
 /**
  * Full rebuild — called after pre-rota generation (all doctors).
@@ -23,11 +22,32 @@ export async function rebuildResolvedAvailability(
   calendarData: CalendarData,
 ): Promise<void> {
   // 1. Fetch all coordinator overrides for this config
-  const { data: overrideRows } = await supabase
-    .from('coordinator_calendar_overrides')
-    .select('*')
-    .eq('rota_config_id', rotaConfigId)
-  const allOverrides = (overrideRows ?? []).map(mapOverrideRow)
+  const [overrideResult, ltftResult] = await Promise.all([
+    supabase
+      .from('coordinator_calendar_overrides')
+      .select('*')
+      .eq('rota_config_id', rotaConfigId),
+    supabase
+      .from('ltft_patterns')
+      .select('doctor_id, day, can_start_nights, can_end_nights')
+      .eq('rota_config_id', rotaConfigId)
+      .eq('is_day_off', true),
+  ])
+  const allOverrides = (overrideResult.data ?? []).map(mapOverrideRow)
+  const ltftRows = ltftResult.data ?? []
+
+  // Map: doctorId → Map<dayName, {canStartNights, canEndNights}>
+  const ltftMap = new Map<string, Map<string, {
+    canStartNights: boolean | null
+    canEndNights: boolean | null
+  }>>()
+  for (const row of ltftRows) {
+    if (!ltftMap.has(row.doctor_id)) ltftMap.set(row.doctor_id, new Map())
+    ltftMap.get(row.doctor_id)!.set(row.day, {
+      canStartNights: row.can_start_nights ?? null,
+      canEndNights: row.can_end_nights ?? null,
+    })
+  }
 
   // 2. Build rows for every doctor × every date
   const rows: ResolvedRow[] = []
@@ -46,6 +66,11 @@ export async function rebuildResolvedAvailability(
       // CRITICAL: status = cell.primary always.
       // When action='delete', mergeOverridesIntoAvailability sets primary='AVAILABLE'.
       // cell.isDeleted and cell.deletedCode are display-only — never used here.
+      const ltftFlags = cell.primary === 'LTFT'
+        ? (ltftMap.get(doctor.doctorId)?.get(getUTCDayName(date)) ??
+           { canStartNights: null, canEndNights: null })
+        : { canStartNights: null, canEndNights: null }
+
       rows.push({
         rota_config_id: rotaConfigId,
         doctor_id: doctor.doctorId,
@@ -54,6 +79,8 @@ export async function rebuildResolvedAvailability(
         source: cell.overrideId !== null ? 'coordinator_override' : 'survey',
         override_id: cell.overrideId,
         rebuilt_at: now,
+        can_start_nights: ltftFlags.canStartNights,
+        can_end_nights: ltftFlags.canEndNights,
       })
     }
   }
@@ -101,12 +128,32 @@ export async function refreshResolvedAvailabilityForDoctor(
   if (!doctor) return
 
   // 2. Fetch all current overrides for this doctor
-  const { data: overrideRows } = await supabase
-    .from('coordinator_calendar_overrides')
-    .select('*')
-    .eq('rota_config_id', rotaConfigId)
-    .eq('doctor_id', doctorId)
-  const doctorOverrides = (overrideRows ?? []).map(mapOverrideRow)
+  const [overrideResult, ltftResult] = await Promise.all([
+    supabase
+      .from('coordinator_calendar_overrides')
+      .select('*')
+      .eq('rota_config_id', rotaConfigId)
+      .eq('doctor_id', doctorId),
+    supabase
+      .from('ltft_patterns')
+      .select('day, can_start_nights, can_end_nights')
+      .eq('rota_config_id', rotaConfigId)
+      .eq('doctor_id', doctorId)
+      .eq('is_day_off', true),
+  ])
+  const doctorOverrides = (overrideResult.data ?? []).map(mapOverrideRow)
+  const ltftRows = ltftResult.data ?? []
+
+  const ltftDayMap = new Map<string, {
+    canStartNights: boolean | null
+    canEndNights: boolean | null
+  }>()
+  for (const row of ltftRows) {
+    ltftDayMap.set(row.day, {
+      canStartNights: row.can_start_nights ?? null,
+      canEndNights: row.can_end_nights ?? null,
+    })
+  }
 
   // 3. Merge base availability with all current overrides
   const merged = mergeOverridesIntoAvailability(
@@ -118,15 +165,23 @@ export async function refreshResolvedAvailabilityForDoctor(
 
   // 4. Build upsert rows — status = primary always (see note above)
   const now = new Date().toISOString()
-  const rows: ResolvedRow[] = Object.entries(merged).map(([date, cell]) => ({
-    rota_config_id: rotaConfigId,
-    doctor_id: doctorId,
-    date,
-    status: cell.primary,
-    source: cell.overrideId !== null ? 'coordinator_override' : 'survey',
-    override_id: cell.overrideId,
-    rebuilt_at: now,
-  }))
+  const rows: ResolvedRow[] = Object.entries(merged).map(([date, cell]) => {
+    const ltftFlags = cell.primary === 'LTFT'
+      ? (ltftDayMap.get(getUTCDayName(date)) ??
+         { canStartNights: null, canEndNights: null })
+      : { canStartNights: null, canEndNights: null }
+    return {
+      rota_config_id: rotaConfigId,
+      doctor_id: doctorId,
+      date,
+      status: cell.primary,
+      source: cell.overrideId !== null ? 'coordinator_override' : 'survey',
+      override_id: cell.overrideId,
+      rebuilt_at: now,
+      can_start_nights: ltftFlags.canStartNights,
+      can_end_nights: ltftFlags.canEndNights,
+    }
+  })
 
   if (rows.length === 0) return
 
