@@ -80,33 +80,37 @@ function expandOverrideDates(
   } else if (override.recurrence === 'none') {
     rangeInclusive(override.startDate, override.endDate).filter(inRota).forEach(d => dates.push(d))
   } else if (override.recurrence === 'weekly') {
+    const [wsy, wsm, wsd] = override.startDate.split('-').map(Number)
+    const [wey, wem, wed] = override.endDate.split('-').map(Number)
     const blockLen = Math.round(
-      (new Date(override.endDate + 'T00:00:00').getTime() -
-        new Date(override.startDate + 'T00:00:00').getTime()) / 86400000
+      (Date.UTC(wey, wem - 1, wed) - Date.UTC(wsy, wsm - 1, wsd)) / 86400000
     )
     let cursor = override.startDate
     while (cursor <= rotaEndDate) {
-      const blockEnd = new Date(cursor + 'T00:00:00')
-      blockEnd.setDate(blockEnd.getDate() + blockLen)
+      const [cy, cm, cd] = cursor.split('-').map(Number)
+      const blockEnd = new Date(Date.UTC(cy, cm - 1, cd))
+      blockEnd.setUTCDate(blockEnd.getUTCDate() + blockLen)
       rangeInclusive(cursor, blockEnd.toISOString().split('T')[0])
         .filter(inRota).forEach(d => dates.push(d))
-      const next = new Date(cursor + 'T00:00:00')
-      next.setDate(next.getDate() + 7)
+      const next = new Date(Date.UTC(cy, cm - 1, cd))
+      next.setUTCDate(next.getUTCDate() + 7)
       cursor = next.toISOString().split('T')[0]
     }
   } else if (override.recurrence === 'monthly') {
+    const [msy, msm, msd] = override.startDate.split('-').map(Number)
+    const [mey, mem, med] = override.endDate.split('-').map(Number)
     const blockLen = Math.round(
-      (new Date(override.endDate + 'T00:00:00').getTime() -
-        new Date(override.startDate + 'T00:00:00').getTime()) / 86400000
+      (Date.UTC(mey, mem - 1, med) - Date.UTC(msy, msm - 1, msd)) / 86400000
     )
     let cursor = override.startDate
     while (cursor <= rotaEndDate) {
-      const blockEnd = new Date(cursor + 'T00:00:00')
-      blockEnd.setDate(blockEnd.getDate() + blockLen)
+      const [cy, cm, cd] = cursor.split('-').map(Number)
+      const blockEnd = new Date(Date.UTC(cy, cm - 1, cd))
+      blockEnd.setUTCDate(blockEnd.getUTCDate() + blockLen)
       rangeInclusive(cursor, blockEnd.toISOString().split('T')[0])
         .filter(inRota).forEach(d => dates.push(d))
-      const next = new Date(cursor + 'T00:00:00')
-      next.setMonth(next.getMonth() + 1)
+      const next = new Date(Date.UTC(cy, cm - 1, cd))
+      next.setUTCMonth(next.getUTCMonth() + 1)
       cursor = next.toISOString().split('T')[0]
     }
   }
