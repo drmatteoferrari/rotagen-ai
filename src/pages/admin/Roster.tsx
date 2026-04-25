@@ -210,21 +210,72 @@ function ExpandedDoctorPanel({
         </p>
       )}
 
-      {/* Navigation Buttons */}
-      <div className="flex gap-2 pt-1">
+      {/* Action Buttons — responsive: 2 cols (xs) → 3 cols (sm) → 4 cols (md) → all 8 in 1 row (lg+) */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-1.5 pt-1">
         <button
           type="button"
           onClick={onNavigateProfile}
-          className="flex-1 inline-flex justify-center items-center gap-1.5 rounded-md bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold px-3 py-2 transition-colors"
+          className="inline-flex justify-center items-center gap-1 rounded-md bg-teal-600 hover:bg-teal-700 text-white text-[11px] font-semibold px-2 py-1.5 transition-colors min-w-0"
         >
-          <User className="h-4 w-4" /> Profile
+          <User className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">Profile</span>
         </button>
         <button
           type="button"
           onClick={onNavigateCalendar}
-          className="flex-1 inline-flex justify-center items-center gap-1.5 rounded-md bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold px-3 py-2 transition-colors"
+          className="inline-flex justify-center items-center gap-1 rounded-md bg-teal-600 hover:bg-teal-700 text-white text-[11px] font-semibold px-2 py-1.5 transition-colors min-w-0"
         >
-          <CalendarDays className="h-4 w-4" /> Calendar
+          <CalendarDays className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">Calendar</span>
+        </button>
+        <button
+          type="button"
+          onClick={onSendSurvey}
+          disabled={sendDisabled}
+          title={sendDisabled ? "Set deadline & email first" : ""}
+          className="inline-flex justify-center items-center gap-1 rounded-md bg-primary hover:bg-primary/90 text-primary-foreground text-[11px] font-semibold px-2 py-1.5 transition-colors min-w-0 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Send className="h-3.5 w-3.5 shrink-0" />
+          <span className="truncate">{doctor.survey_invite_sent_at ? "Resend" : "Send"}</span>
+          {(doctor.survey_invite_count ?? 0) > 0 && (
+            <span className="ml-0.5 inline-flex items-center justify-center h-3.5 min-w-3.5 px-1 rounded-full bg-white/25 text-[9px] font-bold leading-none">
+              {(doctor.survey_invite_count ?? 0) > 9 ? "9+" : doctor.survey_invite_count}
+            </span>
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={onCopyLink}
+          className="inline-flex justify-center items-center gap-1 rounded-md bg-muted hover:bg-muted/80 text-foreground text-[11px] font-semibold px-2 py-1.5 transition-colors min-w-0"
+        >
+          <Copy className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">Copy link</span>
+        </button>
+        <button
+          type="button"
+          onClick={onOpenSurvey}
+          disabled={!doctor.survey_token}
+          className="inline-flex justify-center items-center gap-1 rounded-md bg-muted hover:bg-muted/80 text-foreground text-[11px] font-semibold px-2 py-1.5 transition-colors min-w-0 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <ExternalLink className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">Open</span>
+        </button>
+        <button
+          type="button"
+          onClick={onEditSurvey}
+          className="inline-flex justify-center items-center gap-1 rounded-md bg-muted hover:bg-muted/80 text-foreground text-[11px] font-semibold px-2 py-1.5 transition-colors min-w-0"
+        >
+          <Pencil className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">Edit</span>
+        </button>
+        <button
+          type="button"
+          onClick={onResetSurvey}
+          className="inline-flex justify-center items-center gap-1 rounded-md bg-warning/10 hover:bg-warning/20 text-warning text-[11px] font-semibold px-2 py-1.5 transition-colors min-w-0"
+        >
+          <RotateCcw className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">Reset</span>
+        </button>
+        <button
+          type="button"
+          onClick={onRemoveDoctor}
+          className="inline-flex justify-center items-center gap-1 rounded-md bg-destructive/10 hover:bg-destructive/20 text-destructive text-[11px] font-semibold px-2 py-1.5 transition-colors min-w-0"
+        >
+          <Trash2 className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">Remove</span>
         </button>
       </div>
     </div>
