@@ -759,6 +759,12 @@ export default function Roster() {
           <DropdownMenuSeparator />
           <DropdownMenuItem
             className="text-red-600 focus:bg-red-50 focus:text-red-700 font-medium cursor-pointer"
+            onClick={() => setDoctorToResetSurvey(doctor)}
+          >
+            <RotateCcw className="mr-2 h-4 w-4" /> Reset survey
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            className="text-red-600 focus:bg-red-50 focus:text-red-700 font-medium cursor-pointer"
             onClick={() => setDoctorToRemove(doctor)}
           >
             <Trash2 className="mr-2 h-4 w-4" /> Remove doctor
