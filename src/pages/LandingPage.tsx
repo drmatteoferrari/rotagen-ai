@@ -126,7 +126,7 @@ export default function LandingPage() {
               {/* 1. Logo & Tagline (fade-up-1 & fade-up-2 for both Mobile and Desktop) */}
               <div className="flex flex-col items-center text-center w-full max-w-sm mb-2 md:mb-0">
                 <div className="fade-up-1 flex justify-center">
-                  <RotaGenLogo size="lg" />
+                  <RotaGenLogo size="lg" animated />
                 </div>
                 <div className="fade-up-2 mt-1.5 md:mt-3 text-base md:text-xl">
                   <p className="text-muted-foreground" style={{ lineHeight: 1.25 }}>
