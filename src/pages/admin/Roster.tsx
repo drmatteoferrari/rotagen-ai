@@ -2122,6 +2122,34 @@ export default function Roster() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Global Reset Survey Dialog */}
+      <Dialog open={!!doctorToResetSurvey} onOpenChange={(open) => !open && !resettingSurvey && setDoctorToResetSurvey(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>
+              Reset {doctorToResetSurvey?.first_name}'s survey?
+            </DialogTitle>
+            <DialogDescription>
+              This will permanently delete all survey responses, leave blocks, LTFT patterns, training requests, and availability overrides for this rota period. The doctor will need to complete their survey again. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setDoctorToResetSurvey(null)} disabled={resettingSurvey}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => doctorToResetSurvey && resetDoctorSurvey(doctorToResetSurvey)}
+              disabled={resettingSurvey}
+              className="gap-1.5"
+            >
+              {resettingSurvey && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+              Yes, reset survey
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 }
