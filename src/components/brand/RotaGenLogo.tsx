@@ -4,6 +4,7 @@ interface RotaGenLogoProps {
   size?: "sm" | "md" | "lg";
   variant?: "light" | "dark";
   showIcon?: boolean;
+  animated?: boolean;
 }
 
 const sizeConfig = {
@@ -12,13 +13,13 @@ const sizeConfig = {
   lg: { iconSize: 56, fontSize: "36px", gap: "14px" },
 };
 
-export default function RotaGenLogo({ size = "md", variant = "light", showIcon = true }: RotaGenLogoProps) {
+export default function RotaGenLogo({ size = "md", variant = "light", showIcon = true, animated = false }: RotaGenLogoProps) {
   const cfg = sizeConfig[size];
   const isLight = variant === "light";
 
   return (
     <div style={{ display: "flex", alignItems: "center", gap: cfg.gap }}>
-      {showIcon && <RotaGenIcon size={cfg.iconSize} variant={variant} />}
+      {showIcon && <RotaGenIcon size={cfg.iconSize} variant={variant} animated={animated} />}
       <span style={{ fontFamily: "Poppins, sans-serif", fontWeight: 700, fontSize: cfg.fontSize }}>
         {/* ROTA is black in light mode, white in dark mode */}
         <span className="text-3xl text-primary-foreground" style={{ color: isLight ? "#000000" : "white" }}>ROTA</span>
