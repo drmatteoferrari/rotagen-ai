@@ -173,21 +173,29 @@ function AdminShellInner() {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 space-y-1 px-2 py-4 text-lg">
+        <nav className="flex-1 space-y-1 px-3 py-4 text-lg">
           {navItems.map((item) => (
             <NavLink
               key={item.url}
               to={item.url}
               end
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-lg transition-colors",
-                "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                collapsed && "justify-center px-0"
+                "flex items-center gap-2 rounded-lg py-2.5 text-lg transition-colors overflow-hidden",
+                "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               )}
               activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
             >
-              <item.icon className="w-[20px] h-[20px] shrink-0" />
-              {!collapsed && <span className="text-lg">{item.title}</span>}
+              <div className="w-10 h-10 shrink-0 flex items-center justify-center">
+                <item.icon className="w-[20px] h-[20px] shrink-0" />
+              </div>
+              <span
+                className={cn(
+                  "overflow-hidden whitespace-nowrap transition-all duration-300 text-lg",
+                  collapsed ? "max-w-0 opacity-0" : "max-w-[200px] opacity-100"
+                )}
+              >
+                {item.title}
+              </span>
             </NavLink>
           ))}
         </nav>
