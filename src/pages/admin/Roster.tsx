@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,6 +34,7 @@ import {
   MoreVertical,
   CalendarDays,
   User,
+  RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -259,6 +260,8 @@ export default function Roster() {
   // Dialog states for generic actions
   const [doctorToSend, setDoctorToSend] = useState<Doctor | null>(null);
   const [doctorToRemove, setDoctorToRemove] = useState<Doctor | null>(null);
+  const [doctorToResetSurvey, setDoctorToResetSurvey] = useState<Doctor | null>(null);
+  const [resettingSurvey, setResettingSurvey] = useState(false);
 
   // Copy tooltip state
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -394,6 +397,85 @@ export default function Roster() {
     invalidateInactiveDoctors();
     toast.success("Doctor moved to inactive");
     setDoctorToRemove(null);
+  };
+
+  // ─── Reset doctor's survey to factory ───
+  const resetDoctorSurvey = async (doctor: Doctor) => {
+    setResettingSurvey(true);
+    try {
+      await Promise.all([
+        supabase.from("unavailability_blocks").delete().eq("doctor_id", doctor.id).eq("rota_config_id", doctor.rota_config_id),
+        supabase.from("ltft_patterns").delete().eq("doctor_id", doctor.id).eq("rota_config_id", doctor.rota_config_id),
+        supabase.from("training_requests").delete().eq("doctor_id", doctor.id).eq("rota_config_id", doctor.rota_config_id),
+        supabase.from("dual_specialties").delete().eq("doctor_id", doctor.id).eq("rota_config_id", doctor.rota_config_id),
+        supabase.from("resolved_availability").delete().eq("doctor_id", doctor.id).eq("rota_config_id", doctor.rota_config_id),
+      ]);
+      await supabase
+        .from("doctor_survey_responses")
+        .update({
+          status: "not_started",
+          submitted_at: null,
+          signature_name: null,
+          signature_date: null,
+          wte_percent: null,
+          wte_other_value: null,
+          al_entitlement: null,
+          ltft_days_off: null,
+          ltft_night_flexibility: null,
+          annual_leave: null,
+          study_leave: null,
+          noc_dates: null,
+          other_unavailability: null,
+          competencies_json: null,
+          exempt_from_nights: null,
+          exempt_from_weekends: null,
+          exempt_from_oncall: null,
+          exemption_details: null,
+          other_restrictions: null,
+          additional_restrictions: null,
+          parental_leave_expected: null,
+          parental_leave_start: null,
+          parental_leave_end: null,
+          parental_leave_notes: null,
+          specialties_requested: null,
+          special_sessions: null,
+          signoff_needs: null,
+          dual_specialty: null,
+          dual_specialty_types: null,
+          additional_notes: null,
+          other_interests: null,
+          want_pain_sessions: null,
+          pain_session_notes: null,
+          want_preop: null,
+          iac_achieved: null,
+          iac_working: null,
+          iac_remote: null,
+          iaoc_achieved: null,
+          iaoc_working: null,
+          iaoc_remote: null,
+          icu_achieved: null,
+          icu_working: null,
+          icu_remote: null,
+          transfer_achieved: null,
+          transfer_working: null,
+          transfer_remote: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("doctor_id", doctor.id)
+        .eq("rota_config_id", doctor.rota_config_id);
+      await supabase
+        .from("doctors")
+        .update({ survey_status: "not_started", survey_submitted_at: null })
+        .eq("id", doctor.id);
+      toast.success("Survey reset — all responses cleared");
+      setDoctorToResetSurvey(null);
+      invalidateDoctors();
+    } catch (err) {
+      console.error("Reset survey failed:", err);
+      toast.error("Failed to reset survey — please try again");
+    } finally {
+      setResettingSurvey(false);
+    }
   };
 
   // Save deadline to DB on change
@@ -675,6 +757,12 @@ export default function Roster() {
             <CalendarDays className="mr-2 h-4 w-4" /> Go to calendar
           </DropdownMenuItem>
           <DropdownMenuSeparator />
+          <DropdownMenuItem
+            className="text-red-600 focus:bg-red-50 focus:text-red-700 font-medium cursor-pointer"
+            onClick={() => setDoctorToResetSurvey(doctor)}
+          >
+            <RotateCcw className="mr-2 h-4 w-4" /> Reset survey
+          </DropdownMenuItem>
           <DropdownMenuItem
             className="text-red-600 focus:bg-red-50 focus:text-red-700 font-medium cursor-pointer"
             onClick={() => setDoctorToRemove(doctor)}
@@ -2031,6 +2119,34 @@ export default function Roster() {
                 Cancel
               </Button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Global Reset Survey Dialog */}
+      <Dialog open={!!doctorToResetSurvey} onOpenChange={(open) => !open && !resettingSurvey && setDoctorToResetSurvey(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>
+              Reset {doctorToResetSurvey?.first_name}'s survey?
+            </DialogTitle>
+            <DialogDescription>
+              This will permanently delete all survey responses, leave blocks, LTFT patterns, training requests, and availability overrides for this rota period. The doctor will need to complete their survey again. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setDoctorToResetSurvey(null)} disabled={resettingSurvey}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => doctorToResetSurvey && resetDoctorSurvey(doctorToResetSurvey)}
+              disabled={resettingSurvey}
+              className="gap-1.5"
+            >
+              {resettingSurvey && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+              Yes, reset survey
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
