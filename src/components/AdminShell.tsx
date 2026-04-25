@@ -169,7 +169,7 @@ function AdminShellInner() {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 space-y-1 px-2 py-4">
+        <nav className="flex-1 space-y-1 px-2 py-4 text-lg">
           {navItems.map((item) => (
             <NavLink
               key={item.url}
@@ -183,7 +183,7 @@ function AdminShellInner() {
               activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
             >
               <item.icon className="w-[20px] h-[20px] shrink-0" />
-              {!collapsed && <span>{item.title}</span>}
+              {!collapsed && <span className="text-lg">{item.title}</span>}
             </NavLink>
           ))}
         </nav>
