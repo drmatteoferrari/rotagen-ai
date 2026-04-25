@@ -180,7 +180,7 @@ function AdminShellInner() {
               to={item.url}
               end
               className={cn(
-                "flex items-center gap-2 rounded-lg py-2.5 text-lg transition-colors overflow-hidden",
+                "flex items-center gap-2 rounded-lg text-lg transition-colors overflow-hidden h-10",
                 "hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               )}
               activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
@@ -190,7 +190,7 @@ function AdminShellInner() {
               </div>
               <span
                 className={cn(
-                  "overflow-hidden whitespace-nowrap transition-all duration-300 text-lg",
+                  "overflow-hidden whitespace-nowrap transition-all duration-300 text-lg pr-2",
                   collapsed ? "max-w-0 opacity-0" : "max-w-[200px] opacity-100"
                 )}
               >
