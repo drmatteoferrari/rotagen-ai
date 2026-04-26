@@ -49,17 +49,19 @@ export default function SplashScreen() {
   const { status: bankHolidaysStatus } = useCalendarBankHolidaysQuery();
   const { status: surveysStatus }      = useCalendarSurveysQuery();
   const { status: doctorsStatus }      = useDoctorsQuery();
+  const { status: rosterSurveysStatus } = useRosterSurveysQuery();
 
   // Prime cache only — do not use return values
   useInactiveDoctorsQuery();
   useRotaConfigDetailsQuery();
 
   const allQueriesSettled =
-    (preRotaStatus      === "success" || preRotaStatus      === "error") &&
-    (shiftTypesStatus   === "success" || shiftTypesStatus   === "error") &&
-    (bankHolidaysStatus === "success" || bankHolidaysStatus === "error") &&
-    (surveysStatus      === "success" || surveysStatus      === "error") &&
-    (doctorsStatus      === "success" || doctorsStatus      === "error");
+    (preRotaStatus       === "success" || preRotaStatus       === "error") &&
+    (shiftTypesStatus    === "success" || shiftTypesStatus    === "error") &&
+    (bankHolidaysStatus  === "success" || bankHolidaysStatus  === "error") &&
+    (surveysStatus       === "success" || surveysStatus       === "error") &&
+    (doctorsStatus       === "success" || doctorsStatus       === "error") &&
+    (rosterSurveysStatus === "success" || rosterSurveysStatus === "error");
 
   const isDataReady = restoredFromDb && (!currentRotaConfigId || allQueriesSettled);
 
