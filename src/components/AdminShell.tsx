@@ -256,6 +256,7 @@ function AdminShellInner() {
         </main>
       </div>
     </div>
+    </>
   );
 }
 
