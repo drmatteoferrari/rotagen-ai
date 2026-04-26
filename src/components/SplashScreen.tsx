@@ -71,6 +71,15 @@ export default function SplashScreen() {
   );
   const [fading, setFading]                 = useState(false);
 
+  useEffect(() => {
+    if (!visible) return;
+    const prev = document.body.style.backgroundColor;
+    document.body.style.backgroundColor = '#2563EB';
+    return () => {
+      document.body.style.backgroundColor = prev;
+    };
+  }, [visible]);
+
   const dismiss = useCallback(() => {
     sessionStorage.setItem('rg_splash_shown', 'true');
     setFading(true);
