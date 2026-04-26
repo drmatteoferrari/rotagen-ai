@@ -47,6 +47,13 @@ export default function LandingPage() {
   const location = useLocation();
   const { isAuthenticated, authLoading } = useAuth();
 
+  const [pendingAutoLogin, setPendingAutoLogin] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return Object.keys(localStorage).some(
+      (k) => k.startsWith('sb-') && k.endsWith('-auth-token')
+    );
+  });
+
   const [activeScreenshot, setActiveScreenshot] = useState(0);
 
   useEffect(() => {
@@ -79,6 +86,8 @@ export default function LandingPage() {
     if (authLoading) return;
     if (isAuthenticated) {
       navigate("/admin/dashboard", { replace: true });
+    } else {
+      setPendingAutoLogin(false);
     }
   }, [isAuthenticated, authLoading, navigate]);
 
@@ -101,6 +110,12 @@ export default function LandingPage() {
       </button>
     </div>
   );
+
+  if (pendingAutoLogin || isAuthenticated) {
+    return (
+      <div style={{ position: 'fixed', inset: 0, backgroundColor: '#2563EB', zIndex: 9999 }} />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground">
