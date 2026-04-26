@@ -66,34 +66,38 @@ export default function SplashScreen() {
   const isDataReady = restoredFromDb && (!currentRotaConfigId || allQueriesSettled);
 
   const [minTimeElapsed, setMinTimeElapsed] = useState(false);
-  const [visible, setVisible]               = useState(true);
+  const [visible, setVisible]               = useState(
+    () => sessionStorage.getItem('rg_splash_shown') !== 'true'
+  );
   const [fading, setFading]                 = useState(false);
+
+  const dismiss = useCallback(() => {
+    sessionStorage.setItem('rg_splash_shown', 'true');
+    setFading(true);
+    setTimeout(() => setVisible(false), 400);
+  }, []);
 
   // 2s minimum — lets the full animation play
   useEffect(() => {
+    if (!visible) return;
     const t = setTimeout(() => setMinTimeElapsed(true), 2000);
     return () => clearTimeout(t);
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 8s hard maximum — safety net if restoredFromDb never fires
   useEffect(() => {
-    const t = setTimeout(() => {
-      setFading(true);
-      setTimeout(() => setVisible(false), 400);
-    }, 8000);
+    if (!visible) return;
+    const t = setTimeout(dismiss, 8000);
     return () => clearTimeout(t);
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Preferred dismissal path — with 300ms paint buffer
   useEffect(() => {
     if (isDataReady && minTimeElapsed && visible && !fading) {
-      const buffer = setTimeout(() => {
-        setFading(true);
-        setTimeout(() => setVisible(false), 400);
-      }, 300);
+      const buffer = setTimeout(dismiss, 300);
       return () => clearTimeout(buffer);
     }
-  }, [isDataReady, minTimeElapsed, visible, fading]);
+  }, [isDataReady, minTimeElapsed, visible, fading, dismiss]);
 
   if (!visible) return null;
 
