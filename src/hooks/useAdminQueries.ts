@@ -221,6 +221,30 @@ export function useCalendarSurveysQuery() {
   });
 }
 
+// ─── Roster: bulk survey cache (competencies, WTE, LTFT) ───
+export function useRosterSurveysQuery() {
+  const { currentRotaConfigId } = useRotaContext();
+  return useQuery({
+    queryKey: ["roster_surveys", currentRotaConfigId],
+    queryFn: async (): Promise<Record<string, any>> => {
+      if (!currentRotaConfigId) return {};
+      const { data } = await supabase
+        .from("doctor_survey_responses")
+        .select(
+          "doctor_id, wte_percent, ltft_days_off, competencies_json, grade, nhs_email, phone_number, iac_achieved, iac_working, iac_remote, iaoc_achieved, iaoc_working, iaoc_remote, icu_achieved, icu_working, icu_remote, transfer_achieved, transfer_working, transfer_remote"
+        )
+        .eq("rota_config_id", currentRotaConfigId);
+      const cache: Record<string, any> = {};
+      (data ?? []).forEach((row) => {
+        cache[row.doctor_id] = row;
+      });
+      return cache;
+    },
+    enabled: !!currentRotaConfigId,
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
 // ─── Invalidation helpers ───
 export function useInvalidateQuery() {
   const qc = useQueryClient();

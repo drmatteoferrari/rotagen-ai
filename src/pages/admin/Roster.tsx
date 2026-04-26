@@ -49,6 +49,7 @@ import {
   useInactiveDoctorsQuery,
   useRotaConfigDetailsQuery,
   useInvalidateQuery,
+  useRosterSurveysQuery,
 } from "@/hooks/useAdminQueries";
 import { GRADE_OPTIONS, GRADE_ORDER } from "@/lib/gradeOptions";
 
@@ -324,6 +325,14 @@ export default function Roster() {
 
   // Cached deadline from React Query
   const { data: configDetails } = useRotaConfigDetailsQuery();
+  const { data: rosterSurveysData } = useRosterSurveysQuery();
+
+  useEffect(() => {
+    if (rosterSurveysData && Object.keys(rosterSurveysData).length > 0) {
+      setSurveyCache(rosterSurveysData);
+    }
+  }, [rosterSurveysData]);
+
 
   // Deadline picker state
   const [surveyDeadline, setSurveyDeadline] = useState<Date | undefined>(undefined);
@@ -376,30 +385,6 @@ export default function Roster() {
   const loadDoctors = useCallback(async () => {
     invalidateDoctors();
   }, [invalidateDoctors]);
-
-  // ─── Auto-fetch Survey Data for all doctors upfront ───
-  useEffect(() => {
-    if (!currentRotaConfigId) return;
-
-    const fetchAllSurveys = async () => {
-      const { data, error } = await supabase
-        .from("doctor_survey_responses")
-        .select(
-          "doctor_id, wte_percent, ltft_days_off, competencies_json, grade, nhs_email, phone_number, iac_achieved, iac_working, iac_remote, iaoc_achieved, iaoc_working, iaoc_remote, icu_achieved, icu_working, icu_remote, transfer_achieved, transfer_working, transfer_remote",
-        )
-        .eq("rota_config_id", currentRotaConfigId);
-
-      if (data) {
-        const newCache: Record<string, any> = {};
-        data.forEach((row) => {
-          newCache[row.doctor_id] = row;
-        });
-        setSurveyCache((prev) => ({ ...prev, ...newCache }));
-      }
-    };
-
-    fetchAllSurveys();
-  }, [currentRotaConfigId, doctorsData, inactiveDoctorsData]);
 
   // ─── Backfill null survey tokens ───
   const backfillRan = useRef(false);
