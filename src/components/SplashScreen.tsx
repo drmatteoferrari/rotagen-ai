@@ -9,6 +9,7 @@ import {
   useDoctorsQuery,
   useInactiveDoctorsQuery,
   useRotaConfigDetailsQuery,
+  useRosterSurveysQuery,
 } from "@/hooks/useAdminQueries";
 
 const ANIM_CSS = `
