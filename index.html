@@ -57,6 +57,20 @@
     />
   </head>
   <body>
+    <script>
+      (function () {
+        try {
+          for (var i = 0; i < localStorage.length; i++) {
+            var k = localStorage.key(i);
+            if (k && k.indexOf('sb-') === 0 && k.slice(-11) === '-auth-token') {
+              document.documentElement.style.backgroundColor = '#2563EB';
+              document.body.style.backgroundColor = '#2563EB';
+              break;
+            }
+          }
+        } catch (e) {}
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
