@@ -20,7 +20,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showSplash, setShowSplash] = useState(false);
+  
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -62,28 +62,11 @@ export default function Login() {
     if (signInError) {
       setError("Invalid email or password.");
       setLoading(false);
-    } else {
-      setShowSplash(true);
     }
   };
 
   return (
     <>
-      {/* Loading Splash Screen */}
-      {showSplash && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-primary animate-in fade-in duration-300">
-          <RotaGenLogo size="lg" variant="dark" />
-          <div className="mt-5 h-1 w-48 overflow-hidden rounded-full bg-white/20">
-            <div
-              className="h-full rounded-full bg-white"
-              style={{ animation: "splashBar 1.8s ease-in-out forwards" }}
-            />
-          </div>
-          <p className="mt-4 text-[13px] font-medium text-blue-100 animate-pulse">Loading your rota…</p>
-          <style>{`@keyframes splashBar { from { width: 0% } to { width: 100% } }`}</style>
-        </div>
-      )}
-
       {/* Main Layout Area - Locked height & width, zero scroll */}
       <div className="relative flex h-[100dvh] max-h-[100dvh] w-screen max-w-[100vw] flex-col bg-blue-50 overflow-hidden font-sans">
         {/* Soft Ambient Background Blobs for Visual Aesthetics */}
