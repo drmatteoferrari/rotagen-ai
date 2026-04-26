@@ -64,6 +64,7 @@ export default function Login() {
       setLoading(false);
     } else {
       sessionStorage.removeItem('rg_splash_shown');
+      document.body.style.backgroundColor = '#2563EB';
       // navigation handled by isAuthenticated effect
     }
   };
@@ -225,6 +226,7 @@ export default function Login() {
                         setLoading(false);
                       } else {
                         sessionStorage.removeItem('rg_splash_shown');
+                        document.body.style.backgroundColor = '#2563EB';
                       }
                     }}
                     className="w-full flex items-center justify-center gap-1.5 py-1 text-[11px] font-medium text-slate-400 hover:text-slate-600 transition-colors"
