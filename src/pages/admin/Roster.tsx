@@ -388,8 +388,20 @@ export default function Roster() {
 
   // ─── Backfill null survey tokens ───
   const backfillRan = useRef(false);
-  const touchStartY = useRef<number>(0);
-  const isTouchScrolling = useRef<boolean>(false);
+  const isScrolling = useRef<boolean>(false);
+  useEffect(() => {
+    let timeout: ReturnType<typeof setTimeout>;
+    const onScroll = () => {
+      isScrolling.current = true;
+      clearTimeout(timeout);
+      timeout = setTimeout(() => { isScrolling.current = false; }, 150);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      clearTimeout(timeout);
+    };
+  }, []);
   useEffect(() => {
     if (backfillRan.current) return;
     const nullTokenDoctors = doctors.filter((d) => !d.survey_token);
@@ -787,21 +799,10 @@ export default function Roster() {
             variant="ghost"
             size="icon"
             className="h-8 w-8 text-muted-foreground hover:text-foreground shrink-0"
-            onTouchStart={(e) => {
-              touchStartY.current = e.touches[0].clientY;
-              isTouchScrolling.current = false;
-            }}
-            onTouchMove={(e) => {
-              if (Math.abs(e.touches[0].clientY - touchStartY.current) > 8) {
-                isTouchScrolling.current = true;
-              }
-            }}
-            onClick={(e) => {
-              if (isTouchScrolling.current) {
+            onPointerDown={(e) => {
+              if (isScrolling.current) {
                 e.preventDefault();
                 e.stopPropagation();
-                isTouchScrolling.current = false;
-                return;
               }
             }}
           >
