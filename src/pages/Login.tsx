@@ -216,8 +216,7 @@ export default function Login() {
                     onClick={async () => {
                       setLoading(true);
                       const result = await login("matteferro31@gmail.com", "matteferro31");
-                      if (result.success) setShowSplash(true);
-                      else {
+                      if (!result.success) {
                         setError(result.error ?? "Dev login failed");
                         setLoading(false);
                       }
