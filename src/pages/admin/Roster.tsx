@@ -325,6 +325,14 @@ export default function Roster() {
 
   // Cached deadline from React Query
   const { data: configDetails } = useRotaConfigDetailsQuery();
+  const { data: rosterSurveysData } = useRosterSurveysQuery();
+
+  useEffect(() => {
+    if (rosterSurveysData && Object.keys(rosterSurveysData).length > 0) {
+      setSurveyCache(rosterSurveysData);
+    }
+  }, [rosterSurveysData]);
+
 
   // Deadline picker state
   const [surveyDeadline, setSurveyDeadline] = useState<Date | undefined>(undefined);
