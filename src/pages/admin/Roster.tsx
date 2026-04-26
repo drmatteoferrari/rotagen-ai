@@ -779,13 +779,14 @@ export default function Roster() {
     return { disabled: false, tooltip: "" };
   };
 
-  const renderDoctorMenu = (doctor: Doctor) => {
+  const renderDoctorMenu = (doctor: Doctor, variant: "desktop" | "mobile") => {
     const sendState = getSendIconState(doctor);
+    const id = `${variant}-${doctor.id}`;
     return (
       <DropdownMenu
         modal={false}
-        open={openMenuId === doctor.id}
-        onOpenChange={(o) => setOpenMenuId(o ? doctor.id : null)}
+        open={openMenuId === id}
+        onOpenChange={(o) => setOpenMenuId(o ? id : null)}
       >
         <DropdownMenuTrigger asChild>
           <Button
@@ -793,7 +794,7 @@ export default function Roster() {
             size="icon"
             className="h-8 w-8 text-muted-foreground hover:text-foreground shrink-0"
             onPointerDown={(e) => e.preventDefault()}
-            onClick={() => setOpenMenuId((prev) => (prev === doctor.id ? null : doctor.id))}
+            onClick={() => setOpenMenuId((prev) => (prev === id ? null : id))}
           >
             <MoreVertical className="h-4 w-4" />
           </Button>
@@ -1671,7 +1672,7 @@ export default function Roster() {
                       >
                         <CalendarDays className="h-4 w-4" />
                       </button>
-                      {renderDoctorMenu(doctor)}
+                      {renderDoctorMenu(doctor, "desktop")}
                     </div>
 
                     {/* Chevron */}
@@ -1760,7 +1761,7 @@ export default function Roster() {
                     )}
                     {/* Kebab menu — stop propagation */}
                     <div onClick={(e) => e.stopPropagation()} className="shrink-0">
-                      {renderDoctorMenu(doctor)}
+                      {renderDoctorMenu(doctor, "mobile")}
                     </div>
                     {/* Explicit expand/collapse cue — moved to right */}
                     {isExpanded ? (
