@@ -63,6 +63,7 @@ export default function Login() {
       setError("Invalid email or password.");
       setLoading(false);
     } else {
+      sessionStorage.removeItem('rg_splash_shown');
       // navigation handled by isAuthenticated effect
     }
   };
