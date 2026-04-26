@@ -429,7 +429,10 @@ export interface FinalRotaInput {
   preRotaInput: PreRotaInput;
   // Canonical per-doctor-per-date availability — pre-fetched from
   // resolved_availability table. ONLY source for canWork decisions.
-  // canStartNights/canEndNights populated only when status = 'LTFT'.
+  // canStartNights/canEndNights populated whenever the doctor has an
+  // LTFT pattern matching the date's day-of-week — independent of
+  // primary status, so a coincident BH/NOC override still carries the
+  // LTFT edge-flexibility hint.
   resolvedAvailability: Array<{
     doctorId: string;
     date: string;

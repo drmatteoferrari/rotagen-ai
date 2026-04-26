@@ -334,7 +334,7 @@ export interface DoctorSurveyResponse {
   exempt_from_nights: boolean;
   exempt_from_weekends: boolean;
   exempt_from_oncall: boolean;
-  other_requests: string | null;
+  other_restrictions: string | null;
   additional_restrictions: string | null;
   additional_notes: string | null;
   status: string;
@@ -402,6 +402,10 @@ export async function buildFinalRotaInput(configId: string): Promise<FinalRotaIn
 
   // ── 2. Submitted survey responses only ────────────────────────────
   const submittedResponses = responsesRaw.filter((r) => r.status === 'submitted');
+
+  // Set of all active doctor IDs — used to exclude stale
+  // resolved_availability rows for deactivated doctors
+  const activeDoctorIds = new Set(responsesRaw.map(r => r.doctor_id))
 
   // ── 3. Read leave-adjusted, override-aware targets from pre_rota_results ──
   // pre_rota_results.targets_data is rebuilt by refreshPreRotaTargets on every
@@ -506,8 +510,11 @@ export async function buildFinalRotaInput(configId: string): Promise<FinalRotaIn
         },
         soft: {
           maxConsecNights,
-          additionalNotes: [resp.other_requests, resp.additional_restrictions]
-            .filter(Boolean).join('\n'),
+          additionalNotes: [
+            resp.other_restrictions,
+            resp.additional_restrictions,
+            resp.additional_notes,
+          ].filter(Boolean).join('\n'),
         },
       },
       fairnessTargets: {
@@ -526,14 +533,16 @@ export async function buildFinalRotaInput(configId: string): Promise<FinalRotaIn
 
   return {
     preRotaInput,
-    resolvedAvailability: (resolvedRaw.data ?? []).map(row => ({
-      doctorId: row.doctor_id,
-      date: row.date,
-      status: row.status,
-      source: row.source,
-      canStartNights: row.can_start_nights ?? null,
-      canEndNights: row.can_end_nights ?? null,
-    })),
+    resolvedAvailability: (resolvedRaw.data ?? [])
+      .filter(row => activeDoctorIds.has(row.doctor_id))
+      .map(row => ({
+        doctorId: row.doctor_id,
+        date: row.date,
+        status: row.status,
+        source: row.source,
+        canStartNights: row.can_start_nights ?? null,
+        canEndNights: row.can_end_nights ?? null,
+      })),
     doctors,
   };
 }
@@ -550,11 +559,11 @@ export async function validateFinalRotaInput(configId: string): Promise<Validati
   const warnings: string[] = [];
   const blockers: string[] = [];
 
-  const [responses, preRotaRow, activeDoctorsResult] = await Promise.all([
+  const [responses, preRotaRow, activeDoctorsResult, latestSurveyRow] = await Promise.all([
     getSurveyResponsesForConfig(configId),
     supabase
       .from('pre_rota_results')
-      .select('status, targets_data, calendar_data')
+      .select('status, targets_data, calendar_data, generated_at')
       .eq('rota_config_id', configId)
       .maybeSingle(),
     supabase
@@ -562,6 +571,13 @@ export async function validateFinalRotaInput(configId: string): Promise<Validati
       .select('id')
       .eq('rota_config_id', configId)
       .eq('is_active', true),
+    supabase
+      .from('doctor_survey_responses')
+      .select('updated_at')
+      .eq('rota_config_id', configId)
+      .eq('status', 'submitted')
+      .order('updated_at', { ascending: false })
+      .limit(1),
   ]);
 
   // Pre-rota must exist and not be blocked
@@ -590,6 +606,18 @@ export async function validateFinalRotaInput(configId: string): Promise<Validati
         `${driftCount} doctor(s) have been added to the roster since the pre-rota ` +
         `was last generated. Regenerate the pre-rota before generating the final rota.`
       );
+    }
+
+    // Staleness warning — pre-rota predates a survey re-submission
+    const preRotaGeneratedAt = preRotaRow.data.generated_at as string | null
+    const latestSurveyUpdatedAt = latestSurveyRow.data?.[0]?.updated_at ?? null
+    if (preRotaGeneratedAt && latestSurveyUpdatedAt &&
+        latestSurveyUpdatedAt > preRotaGeneratedAt) {
+      warnings.push(
+        'A doctor has updated their survey since the pre-rota was last ' +
+        'generated. Regenerate the pre-rota to ensure availability data ' +
+        'is current before generating the final rota.'
+      )
     }
   }
 

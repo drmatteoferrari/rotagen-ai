@@ -66,9 +66,11 @@ export async function rebuildResolvedAvailability(
       // CRITICAL: status = cell.primary always.
       // When action='delete', mergeOverridesIntoAvailability sets primary='AVAILABLE'.
       // cell.isDeleted and cell.deletedCode are display-only — never used here.
-      const ltftFlags = cell.primary === 'LTFT'
-        ? (ltftMap.get(doctor.doctorId)?.get(getUTCDayName(date)) ??
-           { canStartNights: null, canEndNights: null })
+      const ltftDayName = getUTCDayName(date)
+      const ltftEntry = ltftMap.get(doctor.doctorId)?.get(ltftDayName)
+      const ltftFlags = ltftEntry
+        ? { canStartNights: ltftEntry.canStartNights,
+            canEndNights: ltftEntry.canEndNights }
         : { canStartNights: null, canEndNights: null }
 
       rows.push({
@@ -85,20 +87,37 @@ export async function rebuildResolvedAvailability(
     }
   }
 
-  // 3. Delete all existing rows for this config, then bulk insert
-  await supabase
-    .from('resolved_availability')
-    .delete()
-    .eq('rota_config_id', rotaConfigId)
-
   if (rows.length === 0) return
 
   // Insert in batches of 500 to stay within Supabase payload limits
   const BATCH = 500
+
+  // Upsert all rows — old rows survive if any batch fails
   for (let i = 0; i < rows.length; i += BATCH) {
-    await supabase
+    const { error: upsertError } = await supabase
       .from('resolved_availability')
-      .insert(rows.slice(i, i + BATCH))
+      .upsert(rows.slice(i, i + BATCH), {
+        onConflict: 'rota_config_id,doctor_id,date',
+      })
+    if (upsertError) {
+      throw new Error(
+        `resolved_availability upsert failed (batch ${Math.floor(i / BATCH) + 1}): ` +
+        upsertError.message
+      )
+    }
+  }
+
+  // Delete rows not refreshed by this rebuild (stale rows
+  // from doctors removed since last generation, or old dates)
+  const { error: cleanupError } = await supabase
+    .from('resolved_availability')
+    .delete()
+    .eq('rota_config_id', rotaConfigId)
+    .lt('rebuilt_at', now)
+  if (cleanupError) {
+    // Non-fatal — stale rows don't affect correctness,
+    // next rebuild will clean them up
+    console.error('resolved_availability stale-row cleanup failed:', cleanupError)
   }
 }
 
@@ -166,9 +185,11 @@ export async function refreshResolvedAvailabilityForDoctor(
   // 4. Build upsert rows — status = primary always (see note above)
   const now = new Date().toISOString()
   const rows: ResolvedRow[] = Object.entries(merged).map(([date, cell]) => {
-    const ltftFlags = cell.primary === 'LTFT'
-      ? (ltftDayMap.get(getUTCDayName(date)) ??
-         { canStartNights: null, canEndNights: null })
+    const ltftDayName = getUTCDayName(date)
+    const ltftEntry = ltftDayMap.get(ltftDayName)
+    const ltftFlags = ltftEntry
+      ? { canStartNights: ltftEntry.canStartNights,
+          canEndNights: ltftEntry.canEndNights }
       : { canStartNights: null, canEndNights: null }
     return {
       rota_config_id: rotaConfigId,
@@ -188,9 +209,13 @@ export async function refreshResolvedAvailabilityForDoctor(
   // 5. Upsert — UNIQUE(rota_config_id, doctor_id, date) resolves conflicts
   const BATCH = 500
   for (let i = 0; i < rows.length; i += BATCH) {
-    await supabase
+    const { error: upsertError } = await supabase
       .from('resolved_availability')
       .upsert(rows.slice(i, i + BATCH), { onConflict: 'rota_config_id,doctor_id,date' })
+    if (upsertError) {
+      console.error('resolved_availability upsert failed:', upsertError)
+      return  // early exit — caller is fire-and-forget
+    }
   }
 }
 

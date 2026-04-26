@@ -232,8 +232,11 @@ function formDataToDbRow(fd: SurveyFormData) {
     competencies_json: competencies_json as any,
     wte_percent: fd.wtePercent === 0 ? fd.wteOtherValue : fd.wtePercent,
     wte_other_value: fd.wteOtherValue,
-    ltft_days_off: fd.ltftDaysOff,
-    ltft_night_flexibility: fd.ltftNightFlexibility as any,
+    ltft_days_off: fd.ltftDaysOff.map((d: string) => d.toLowerCase()),
+    ltft_night_flexibility: fd.ltftNightFlexibility.map((f: any) => ({
+      ...f,
+      day: typeof f.day === 'string' ? f.day.toLowerCase() : f.day,
+    })) as any,
     al_entitlement: fd.alEntitlement,
     annual_leave: fd.annualLeave as any,
     study_leave: fd.studyLeave as any,
@@ -289,8 +292,17 @@ function dbRowToFormData(draft: any, base: SurveyFormData): SurveyFormData {
     transferRemoteSupervision: cj.transfer?.remoteSupervision ?? null,
     wtePercent: draft.wte_percent != null ? Number(draft.wte_percent) : 100,
     wteOtherValue: draft.wte_other_value != null ? Number(draft.wte_other_value) : null,
-    ltftDaysOff: draft.ltft_days_off || [],
-    ltftNightFlexibility: draft.ltft_night_flexibility || [],
+    ltftDaysOff: (draft.ltft_days_off || []).map((d: string) =>
+      d === 'flexible' ? d : d.charAt(0).toUpperCase() + d.slice(1)
+    ),
+    ltftNightFlexibility: (draft.ltft_night_flexibility || []).map(
+      (f: any) => ({
+        ...f,
+        day: typeof f.day === 'string' && f.day !== 'flexible'
+          ? f.day.charAt(0).toUpperCase() + f.day.slice(1)
+          : f.day,
+      })
+    ),
     alEntitlement: draft.al_entitlement ?? null,
     annualLeave: draft.annual_leave || [],
     studyLeave: draft.study_leave || [],

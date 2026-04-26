@@ -98,7 +98,8 @@ export function buildCalendarData(inputs: CalendarBuilderInputs): CalendarData {
     const availability: Record<string, CalendarCell> = {}
 
     for (const date of allDates) {
-      const dayName = DAY_NAMES[new Date(date + 'T00:00:00').getDay()]
+      const [dy, dm, dd] = date.split('-').map(Number)
+      const dayName = DAY_NAMES[new Date(Date.UTC(dy, dm - 1, dd)).getUTCDay()]
       const events: CellCode[] = []
 
       if (bhSet.has(date)) events.push('BH')
