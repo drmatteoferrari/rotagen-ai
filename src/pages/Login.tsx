@@ -20,7 +20,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showSplash, setShowSplash] = useState(false);
+  
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -63,7 +63,7 @@ export default function Login() {
       setError("Invalid email or password.");
       setLoading(false);
     } else {
-      setShowSplash(true);
+      // navigation handled by isAuthenticated effect
     }
   };
 
