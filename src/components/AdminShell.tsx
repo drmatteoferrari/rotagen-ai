@@ -148,8 +148,11 @@ function AdminShellInner() {
   }
 
   return (
-    <div style={{ backgroundColor: bgColor }} className="flex h-dvh w-full overflow-hidden">
+    <>
+      <SplashScreen />
+      <div style={{ backgroundColor: bgColor }} className="flex h-dvh w-full overflow-hidden">
       {/* Sidebar */}
+
       <aside
         className={cn(
           "flex flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-300",
