@@ -386,6 +386,11 @@ export default function Roster() {
     invalidateDoctors();
   }, [invalidateDoctors]);
 
+  // ─── Per-row kebab menu open state + touch tracking (blocks scroll-triggered opens) ───
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const touchStartY = useRef(0);
+  const touchMoved = useRef(false);
+
   // ─── Backfill null survey tokens ───
   const backfillRan = useRef(false);
   useEffect(() => {
@@ -779,9 +784,30 @@ export default function Roster() {
   const renderDoctorMenu = (doctor: Doctor) => {
     const sendState = getSendIconState(doctor);
     return (
-      <DropdownMenu>
+      <DropdownMenu open={openMenuId === doctor.id} onOpenChange={(o) => setOpenMenuId(o ? doctor.id : null)}>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground shrink-0" style={{ touchAction: "pan-y" }}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-muted-foreground hover:text-foreground shrink-0"
+            onPointerDown={(e) => {
+              // Radix opens on pointerdown for all pointer types. For touch, block it
+              // and decide on touchend whether the gesture was a tap or a scroll.
+              if (e.pointerType === "touch") e.preventDefault();
+            }}
+            onTouchStart={(e) => {
+              touchStartY.current = e.touches[0].clientY;
+              touchMoved.current = false;
+            }}
+            onTouchMove={(e) => {
+              if (Math.abs(e.touches[0].clientY - touchStartY.current) > 8) {
+                touchMoved.current = true;
+              }
+            }}
+            onTouchEnd={() => {
+              if (!touchMoved.current) setOpenMenuId(doctor.id);
+            }}
+          >
             <MoreVertical className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
