@@ -20,7 +20,8 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+  const [loginSucceeded, setLoginSucceeded] = useState(false);
+
 
   useEffect(() => {
     if (!isAuthenticated) return;
@@ -63,11 +64,18 @@ export default function Login() {
       setError("Invalid email or password.");
       setLoading(false);
     } else {
+      setLoginSucceeded(true);
       sessionStorage.removeItem('rg_splash_shown');
       document.body.style.backgroundColor = '#2563EB';
       // navigation handled by isAuthenticated effect
     }
   };
+
+  if (loginSucceeded) {
+    return (
+      <div style={{ position: 'fixed', inset: 0, backgroundColor: '#2563EB', zIndex: 9999 }} />
+    );
+  }
 
   return (
     <>
@@ -225,6 +233,7 @@ export default function Login() {
                         setError(result.error ?? "Dev login failed");
                         setLoading(false);
                       } else {
+                        setLoginSucceeded(true);
                         sessionStorage.removeItem('rg_splash_shown');
                         document.body.style.backgroundColor = '#2563EB';
                       }
