@@ -388,20 +388,6 @@ export default function Roster() {
 
   // ─── Backfill null survey tokens ───
   const backfillRan = useRef(false);
-  const isScrolling = useRef<boolean>(false);
-  useEffect(() => {
-    let timeout: ReturnType<typeof setTimeout>;
-    const onScroll = () => {
-      isScrolling.current = true;
-      clearTimeout(timeout);
-      timeout = setTimeout(() => { isScrolling.current = false; }, 150);
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-      clearTimeout(timeout);
-    };
-  }, []);
   useEffect(() => {
     if (backfillRan.current) return;
     const nullTokenDoctors = doctors.filter((d) => !d.survey_token);
@@ -795,17 +781,7 @@ export default function Roster() {
     return (
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-muted-foreground hover:text-foreground shrink-0"
-            onPointerDown={(e) => {
-              if (isScrolling.current) {
-                e.preventDefault();
-                e.stopPropagation();
-              }
-            }}
-          >
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground shrink-0">
             <MoreVertical className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
