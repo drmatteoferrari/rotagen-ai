@@ -86,7 +86,7 @@ export default function SplashScreen() {
           justifyContent: "center",
         }}
       >
-        <RotaGenIcon animated size={200} variant="dark" style={{ width: "100%", height: "100%" }} />
+        <RotaGenIcon animated size={200} variant="dark" className="w-full h-full" />
       </div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
         {letters.map((ch, i) => (
