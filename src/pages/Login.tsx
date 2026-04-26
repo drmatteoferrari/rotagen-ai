@@ -63,6 +63,7 @@ export default function Login() {
       setError("Invalid email or password.");
       setLoading(false);
     } else {
+      sessionStorage.removeItem('rg_splash_shown');
       // navigation handled by isAuthenticated effect
     }
   };
@@ -222,6 +223,8 @@ export default function Login() {
                       if (!result.success) {
                         setError(result.error ?? "Dev login failed");
                         setLoading(false);
+                      } else {
+                        sessionStorage.removeItem('rg_splash_shown');
                       }
                     }}
                     className="w-full flex items-center justify-center gap-1.5 py-1 text-[11px] font-medium text-slate-400 hover:text-slate-600 transition-colors"
