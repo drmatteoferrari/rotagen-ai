@@ -49,6 +49,7 @@ import {
   useInactiveDoctorsQuery,
   useRotaConfigDetailsQuery,
   useInvalidateQuery,
+  useRosterSurveysQuery,
 } from "@/hooks/useAdminQueries";
 import { GRADE_OPTIONS, GRADE_ORDER } from "@/lib/gradeOptions";
 
