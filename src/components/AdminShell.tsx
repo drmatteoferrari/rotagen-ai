@@ -18,7 +18,6 @@ import { useAdminShell, AdminShellProvider } from "@/contexts/AdminShellContext"
 import RotaGenLogo from "@/components/brand/RotaGenLogo";
 import RotaGenIcon from "@/components/brand/RotaGenIcon";
 import Dashboard from "@/pages/admin/Dashboard";
-import SplashScreen from "@/components/SplashScreen";
 
 const navItems = [
   { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
@@ -91,9 +90,7 @@ function AdminShellInner() {
   // Mobile and tablet both use bottom nav bar layout
   if (isMobile || isTablet) {
     return (
-      <>
-        <SplashScreen />
-        <div style={{ backgroundColor: bgColor }} className="flex h-dvh w-full flex-col overflow-hidden">
+      <div style={{ backgroundColor: bgColor }} className="flex h-dvh w-full flex-col overflow-hidden">
         {/* Header */}
         <header className="flex h-14 items-center justify-between border-b border-border bg-card px-4 shrink-0">
           <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -146,14 +143,11 @@ function AdminShellInner() {
           })}
         </nav>
       </div>
-      </>
     );
   }
 
   return (
-    <>
-      <SplashScreen />
-      <div style={{ backgroundColor: bgColor }} className="flex h-dvh w-full overflow-hidden">
+    <div style={{ backgroundColor: bgColor }} className="flex h-dvh w-full overflow-hidden">
       {/* Sidebar */}
       <aside
         className={cn(
@@ -261,7 +255,6 @@ function AdminShellInner() {
         </main>
       </div>
     </div>
-    </>
   );
 }
 
