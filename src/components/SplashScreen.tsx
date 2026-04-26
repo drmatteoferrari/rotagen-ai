@@ -84,12 +84,14 @@ export default function SplashScreen() {
     return () => clearTimeout(t);
   }, []);
 
-  // Preferred dismissal path
+  // Preferred dismissal path — with 300ms paint buffer
   useEffect(() => {
     if (isDataReady && minTimeElapsed && visible && !fading) {
-      setFading(true);
-      const t = setTimeout(() => setVisible(false), 400);
-      return () => clearTimeout(t);
+      const buffer = setTimeout(() => {
+        setFading(true);
+        setTimeout(() => setVisible(false), 400);
+      }, 300);
+      return () => clearTimeout(buffer);
     }
   }, [isDataReady, minTimeElapsed, visible, fading]);
 
