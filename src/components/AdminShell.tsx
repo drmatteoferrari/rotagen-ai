@@ -146,7 +146,8 @@ function AdminShellInner() {
             );
           })}
         </nav>
-      </div>
+        </div>
+      </>
     );
   }
 
