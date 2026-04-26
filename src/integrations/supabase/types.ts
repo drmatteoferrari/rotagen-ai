@@ -843,8 +843,6 @@ export type Database = {
       }
       resolved_availability: {
         Row: {
-          can_end_nights: boolean | null
-          can_start_nights: boolean | null
           date: string
           doctor_id: string
           id: string
@@ -855,8 +853,6 @@ export type Database = {
           status: string
         }
         Insert: {
-          can_end_nights?: boolean | null
-          can_start_nights?: boolean | null
           date: string
           doctor_id: string
           id?: string
@@ -867,8 +863,6 @@ export type Database = {
           status: string
         }
         Update: {
-          can_end_nights?: boolean | null
-          can_start_nights?: boolean | null
           date?: string
           doctor_id?: string
           id?: string
