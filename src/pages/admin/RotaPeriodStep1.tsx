@@ -131,14 +131,16 @@ export default function RotaPeriodStep1() {
         ref={containerRef}
         className="mx-auto w-full max-w-4xl h-full flex flex-col gap-3 sm:gap-4 animate-fadeSlideUp"
       >
-        {/* Hint banner — context-aware guidance. */}
+        {/* Hint banner — context-aware guidance, single line. */}
         <div className="shrink-0 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 sm:px-4 py-2 sm:py-2.5 text-sm font-medium text-amber-700">
           <Info className="h-4 w-4 shrink-0 text-amber-600" />
-          {!range.from
-            ? "Tap a date in the calendar to set the rota start."
-            : !range.to
-            ? "Now tap a later date to set the rota end."
-            : "Rota period set — review and click Continue."}
+          <p className="min-w-0 flex-1 truncate">
+            {!range.from
+              ? "Tap a date to set the rota start."
+              : !range.to
+              ? "Now tap a date to set the rota end."
+              : "Rota period set — review and Continue."}
+          </p>
         </div>
 
         {/* Status strip — uniform 3-col grid: Start | End | Duration. Always visible. */}
