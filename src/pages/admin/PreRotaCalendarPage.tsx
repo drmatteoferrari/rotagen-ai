@@ -1937,6 +1937,9 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
   // CHANGE 4: wrap active cells in Popover; onDoubleClick navigates
   const renderMonthRow = (doctor: CalendarDoctor, i: number, gridDates: string[]) => {
     const rowBg = i % 2 === 0 ? "bg-card" : "bg-muted/10";
+    const nameParts = doctor.doctorName.replace("Dr ", "").trim().split(" ");
+    const firstName = nameParts[0];
+    const lastName = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
     return (
       <tr key={doctor.doctorId} className={`border-b border-border/50 ${rowBg}`}>
         <td
@@ -1945,7 +1948,9 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
           title={doctor.doctorName}
         >
           <div className="font-semibold text-[10px] sm:text-[11px] text-blue-600 break-words whitespace-normal w-full">
-            {doctor.doctorName.replace("Dr ", "")}
+            {lastName && <span className="uppercase">{lastName}</span>}
+            {lastName && " "}
+            <span>{firstName}</span>
           </div>
           <div className="hidden sm:flex items-center gap-1 mt-0.5">
             <GradeBadge grade={doctor.grade} size="xs" />
