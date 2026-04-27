@@ -1,71 +1,37 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "@/components/AdminLayout";
 import { StepNavBar } from "@/components/StepNavBar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarDays, ArrowRight } from "lucide-react";
+import { CalendarDays, ArrowRight, Info, AlertTriangle, CheckCircle } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useAdminSetup } from "@/contexts/AdminSetupContext";
 import { toast } from "sonner";
 import type { DateRange } from "react-day-picker";
 
-// Minimum container width (px) before two months fit comfortably side by side.
-// Each month is ~280px (7 × 36px cells + padding). Two months + gap ≈ 600.
-const TWO_MONTH_MIN_WIDTH = 600;
-
-function StatusCell({ label, value, highlight, error }: {
-  label: string;
-  value: string | null;
-  highlight?: boolean;
-  error?: boolean;
-}) {
-  return (
-    <div className={cn(
-      "min-w-0 px-2 sm:px-4 first:pl-0 last:pr-0",
-      highlight && "animate-pulse",
-    )}>
-      <div className="text-[10px] sm:text-xs font-medium uppercase tracking-wide text-amber-700/70">
-        {label}
-      </div>
-      <div className={cn(
-        "text-sm sm:text-base font-semibold truncate",
-        value ? (error ? "text-red-700" : "text-amber-900") : "text-amber-700/40",
-      )}>
-        {value ?? "—"}
-      </div>
-    </div>
-  );
-}
-
 export default function RotaPeriodStep1() {
   const navigate = useNavigate();
-  const {
-    rotaStartDate, rotaEndDate, setRotaStartDate, setRotaEndDate,
-    setPeriodWorkingStateLoaded,
-  } = useAdminSetup();
+  const { rotaStartDate, rotaEndDate, setRotaStartDate, setRotaEndDate, setPeriodWorkingStateLoaded } = useAdminSetup();
 
   const [range, setRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
     from: rotaStartDate,
     to: rotaEndDate,
   });
 
-  // Pick 1 or 2 months based on actual container width — handles sidebar
-  // collapse, tablet portrait, etc. better than viewport breakpoints.
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [calendarMonths, setCalendarMonths] = useState<1 | 2>(1);
+  // Responsive calendar months
+  const [calendarMonths, setCalendarMonths] = useState(1);
   useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
     const update = () => {
-      setCalendarMonths(el.clientWidth >= TWO_MONTH_MIN_WIDTH ? 2 : 1);
+      if (window.innerWidth >= 1280) setCalendarMonths(3);
+      else if (window.innerWidth >= 768) setCalendarMonths(2);
+      else setCalendarMonths(1);
     };
     update();
-    const ro = new ResizeObserver(update);
-    ro.observe(el);
-    return () => ro.disconnect();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
   }, []);
 
   const handleDayClick = (day: Date) => {
@@ -81,6 +47,7 @@ export default function RotaPeriodStep1() {
     }
     setRange(newRange);
 
+    // Check if dates actually changed — if so, signal Step 2 to recalculate BH
     const prevStart = rotaStartDate?.getTime();
     const prevEnd = rotaEndDate?.getTime();
     const newStart = newRange.from?.getTime();
@@ -97,9 +64,9 @@ export default function RotaPeriodStep1() {
   const durationInfo = (() => {
     if (!range.from || !range.to) return null;
     const days = differenceInDays(range.to, range.from);
-    if (days <= 0) return { error: true, text: "Invalid range" };
+    if (days <= 0) return { error: true, text: "End date must be after start date." };
     const weeks = (days / 7).toFixed(1);
-    return { error: false, text: `${days}d · ${weeks}w` };
+    return { error: false, text: `${days} days · ${weeks} weeks` };
   })();
 
   const handleContinue = () => {
@@ -114,8 +81,14 @@ export default function RotaPeriodStep1() {
     navigate("/admin/rota-period/step-2");
   };
 
+  const calendarHint = !range.from ? "Select a start date" : !range.to ? "Now select an end date" : null;
+
   return (
-    <AdminLayout title="Rota Period" subtitle="Step 1 of 2 — Dates" accentColor="yellow" pageIcon={CalendarDays}
+    <AdminLayout
+      title="Rota Period"
+      subtitle="Step 1 of 2 — Dates"
+      accentColor="yellow"
+      pageIcon={CalendarDays}
       navBar={
         <StepNavBar
           right={
@@ -127,40 +100,56 @@ export default function RotaPeriodStep1() {
         />
       }
     >
-      <div
-        ref={containerRef}
-        className="mx-auto w-full max-w-4xl h-full flex flex-col gap-3 sm:gap-4 animate-fadeSlideUp"
-      >
-        {/* Status strip — uniform 3-col grid: Start | End | Duration. Always visible. */}
-        <div className="shrink-0 grid grid-cols-3 divide-x divide-amber-200 rounded-lg border border-amber-200 bg-amber-50 px-2 sm:px-4 py-2 sm:py-3">
-          <StatusCell
-            label="Start"
-            value={range.from ? format(range.from, "d MMM yyyy") : null}
-            highlight={!range.from}
-          />
-          <StatusCell
-            label="End"
-            value={range.to ? format(range.to, "d MMM yyyy") : null}
-            highlight={!!range.from && !range.to}
-          />
-          <StatusCell
-            label="Duration"
-            value={durationInfo?.text ?? null}
-            error={durationInfo?.error}
-          />
+      <div className="mx-auto max-w-3xl space-y-3 sm:space-y-6 animate-fadeSlideUp">
+        {/* Info banner */}
+        <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-700">
+          <Info className="h-4 w-4 shrink-0 text-amber-600" />
+          Set the rota start and end dates.
         </div>
 
-        {/* Calendar card — fills remaining space, content centered */}
-        <Card className="flex-1 min-h-0 flex flex-col overflow-hidden">
-          <CardContent className="flex-1 min-h-0 flex items-center justify-center p-3 sm:p-4">
-            <Calendar
-              mode="range"
-              selected={{ from: range.from, to: range.to } as DateRange}
-              onDayClick={handleDayClick}
-              numberOfMonths={calendarMonths}
-              className="p-0 pointer-events-auto"
-              classNames={{ months: "flex flex-row gap-6 justify-center" }}
-            />
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CalendarDays className="h-5 w-5 text-amber-600" />
+              Rota Dates
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Hint text */}
+            {calendarHint && <p className="text-sm font-medium text-amber-600 text-center">{calendarHint}</p>}
+
+            {/* Inline range calendar */}
+            <div className="w-full overflow-x-hidden">
+              <Calendar
+                mode="range"
+                selected={{ from: range.from, to: range.to } as DateRange}
+                onDayClick={handleDayClick}
+                numberOfMonths={calendarMonths}
+                className="w-full p-3 pointer-events-auto"
+                classNames={{ months: "flex flex-wrap gap-4 justify-center" }}
+              />
+            </div>
+
+            {/* Duration pill */}
+            {durationInfo && (
+              <div className="flex justify-center">
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold",
+                    durationInfo.error
+                      ? "bg-amber-50 text-amber-700 border border-amber-200"
+                      : "bg-green-50 text-green-700 border border-green-200",
+                  )}
+                >
+                  {durationInfo.error ? (
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                  ) : (
+                    <CheckCircle className="h-3.5 w-3.5" />
+                  )}
+                  {durationInfo.text}
+                </span>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
