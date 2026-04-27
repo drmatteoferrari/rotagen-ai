@@ -1570,7 +1570,7 @@ export default function Roster() {
                     </div>
 
                     {/* Name */}
-                    <div className="shrink-0 min-w-0 font-semibold truncate text-[13px] whitespace-nowrap" style={{maxWidth: '320px'}}>
+                    <div className="shrink-0 min-w-0 font-semibold truncate text-[13px] whitespace-nowrap" style={{width: '320px'}}>
                       {formatDoctorName(doctor.first_name, doctor.last_name)}
                     </div>
 
@@ -1580,7 +1580,7 @@ export default function Roster() {
                     </div>
 
                     {/* Email */}
-                    <div className="flex-1 min-w-0 text-muted-foreground text-xs truncate" style={{maxWidth: '340px'}}>
+                    <div className="shrink-0 min-w-0 text-muted-foreground text-xs truncate text-left" style={{width: '280px'}}>
                       {cached?.nhs_email ?? doctor.email ?? "—"}
                     </div>
 
