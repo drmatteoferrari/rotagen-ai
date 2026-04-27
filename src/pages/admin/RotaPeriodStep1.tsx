@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
 import { AdminLayout } from "@/components/AdminLayout";
 import { StepNavBar } from "@/components/StepNavBar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarDays, ArrowRight } from "lucide-react";
+import { CalendarDays, ArrowRight, Info } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useAdminSetup } from "@/contexts/AdminSetupContext";
@@ -18,7 +18,7 @@ const TWO_MONTH_MIN_WIDTH = 600;
 
 function StatusCell({ label, value, highlight, error }: {
   label: string;
-  value: string | null;
+  value: ReactNode;
   highlight?: boolean;
   error?: boolean;
 }) {
@@ -31,8 +31,8 @@ function StatusCell({ label, value, highlight, error }: {
         {label}
       </div>
       <div className={cn(
-        "text-sm sm:text-base font-semibold truncate",
-        value ? (error ? "text-red-700" : "text-amber-900") : "text-amber-700/40",
+        "text-base sm:text-xl font-bold truncate tracking-tight",
+        value != null ? (error ? "text-red-700" : "text-amber-950") : "text-amber-700/40",
       )}>
         {value ?? "—"}
       </div>
@@ -131,16 +131,36 @@ export default function RotaPeriodStep1() {
         ref={containerRef}
         className="mx-auto w-full max-w-4xl h-full flex flex-col gap-3 sm:gap-4 animate-fadeSlideUp"
       >
+        {/* Hint banner — context-aware guidance. */}
+        <div className="shrink-0 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 sm:px-4 py-2 sm:py-2.5 text-sm font-medium text-amber-700">
+          <Info className="h-4 w-4 shrink-0 text-amber-600" />
+          {!range.from
+            ? "Tap a date in the calendar to set the rota start."
+            : !range.to
+            ? "Now tap a later date to set the rota end."
+            : "Rota period set — review and click Continue."}
+        </div>
+
         {/* Status strip — uniform 3-col grid: Start | End | Duration. Always visible. */}
         <div className="shrink-0 grid grid-cols-3 divide-x divide-amber-200 rounded-lg border border-amber-200 bg-amber-50 px-2 sm:px-4 py-2 sm:py-3">
           <StatusCell
             label="Start"
-            value={range.from ? format(range.from, "d MMM yyyy") : null}
+            value={range.from ? (
+              <>
+                {format(range.from, "d MMM")}
+                <span className="hidden sm:inline"> {format(range.from, "yyyy")}</span>
+              </>
+            ) : null}
             highlight={!range.from}
           />
           <StatusCell
             label="End"
-            value={range.to ? format(range.to, "d MMM yyyy") : null}
+            value={range.to ? (
+              <>
+                {format(range.to, "d MMM")}
+                <span className="hidden sm:inline"> {format(range.to, "yyyy")}</span>
+              </>
+            ) : null}
             highlight={!!range.from && !range.to}
           />
           <StatusCell
