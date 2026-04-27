@@ -326,7 +326,7 @@ export type Database = {
           signature_name: string | null
           signoff_needs: string | null
           signoff_requirements: string | null
-          special_sessions: string[] | null
+          special_sessions: Json | null
           specialties_requested: Json | null
           specialty: string | null
           specific_days_off: string[] | null
@@ -402,7 +402,7 @@ export type Database = {
           signature_name?: string | null
           signoff_needs?: string | null
           signoff_requirements?: string | null
-          special_sessions?: string[] | null
+          special_sessions?: Json | null
           specialties_requested?: Json | null
           specialty?: string | null
           specific_days_off?: string[] | null
@@ -478,7 +478,7 @@ export type Database = {
           signature_name?: string | null
           signoff_needs?: string | null
           signoff_requirements?: string | null
-          special_sessions?: string[] | null
+          special_sessions?: Json | null
           specialties_requested?: Json | null
           specialty?: string | null
           specific_days_off?: string[] | null
