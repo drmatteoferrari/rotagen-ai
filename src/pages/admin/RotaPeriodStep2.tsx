@@ -275,7 +275,7 @@ export default function RotaPeriodStep2() {
             </CardTitle>
             <CardDescription>Auto-populated from your rota dates. Toggle or add custom dates.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3 flex-1 overflow-y-auto min-h-0">
             {/* Add holiday */}
             <div className="rounded-lg border border-dashed border-amber-300 p-3 flex flex-col gap-2 sm:flex-row sm:items-end">
               <div className="flex-1 space-y-2">
