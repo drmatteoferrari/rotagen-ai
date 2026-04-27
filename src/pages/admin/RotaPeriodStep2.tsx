@@ -87,16 +87,32 @@ export default function RotaPeriodStep2() {
     setPeriodWorkingStateLoaded(true);
   }, [periodWorkingStateLoaded, rotaStartDate, rotaEndDate]);
 
-  // Fetch shift types
+  // Fetch shift types + Sunday-specific targets from shift_day_slots.
+  // The global shift_types.target_doctors is the default; Department Setup
+  // step 2 saves the Sunday override in shift_day_slots where day_key='sun'.
   useEffect(() => {
     if (!currentRotaConfigId) return;
     const fetchShifts = async () => {
-      const { data } = await supabase
-        .from("shift_types")
-        .select("id, shift_key, name, start_time, end_time, target_doctors, applicable_sun, sort_order")
-        .eq("rota_config_id", currentRotaConfigId)
-        .order("sort_order", { ascending: true });
-      setShiftTypes(data ?? []);
+      const [shiftRes, slotRes] = await Promise.all([
+        supabase
+          .from("shift_types")
+          .select("id, shift_key, name, start_time, end_time, target_doctors, applicable_sun, sort_order")
+          .eq("rota_config_id", currentRotaConfigId)
+          .order("sort_order", { ascending: true }),
+        supabase
+          .from("shift_day_slots")
+          .select("shift_type_id, target_doctors")
+          .eq("rota_config_id", currentRotaConfigId)
+          .eq("day_key", "sun"),
+      ]);
+      const sundayTargets = new Map(
+        (slotRes.data ?? []).map((s: any) => [s.shift_type_id, s.target_doctors as number])
+      );
+      const merged = (shiftRes.data ?? []).map((t: any) => ({
+        ...t,
+        sunday_target_doctors: sundayTargets.get(t.id) ?? t.target_doctors ?? 1,
+      }));
+      setShiftTypes(merged);
     };
     fetchShifts();
   }, [currentRotaConfigId]);
@@ -117,7 +133,7 @@ export default function RotaPeriodStep2() {
         name: t.name,
         start_time: String(t.start_time).slice(0, 5),
         end_time: String(t.end_time).slice(0, 5),
-        target_doctors: saved ? saved.target_doctors : (t.target_doctors ?? 1),
+        target_doctors: saved ? saved.target_doctors : (t.sunday_target_doctors ?? t.target_doctors ?? 1),
         included: saved ? saved.included : true,
       };
     });
@@ -260,10 +276,10 @@ export default function RotaPeriodStep2() {
       }
     >
       <div className="mx-auto w-full max-w-7xl flex flex-col h-full min-h-0 gap-2 sm:gap-3 animate-fadeSlideUp">
-        {/* Compact info banner — single line. */}
+        {/* Compact info banner — wraps on mobile, single line from sm. */}
         <div className="shrink-0 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 sm:px-4 py-2 text-sm font-medium text-amber-700">
           <Info className="h-4 w-4 shrink-0 text-amber-600" />
-          <p className="min-w-0 flex-1 truncate">
+          <p className="min-w-0 flex-1 leading-snug sm:truncate">
             UK bank holidays are auto-populated. Edit or add custom dates below.
           </p>
         </div>
@@ -323,10 +339,10 @@ export default function RotaPeriodStep2() {
                 </div>
               </div>
 
-              {/* Holiday list — internal scroll only if very long. */}
+              {/* Holiday list — 2-col grid on lg+ to fit more in less vertical space. */}
               <div className="flex-1 md:min-h-0 overflow-y-auto -mx-1 px-1">
                 {rotaBankHolidays.length > 0 ? (
-                  <ul className="space-y-1.5">
+                  <ul className="grid grid-cols-1 lg:grid-cols-2 gap-1.5">
                     {rotaBankHolidays.map((holiday) => (
                       <li
                         key={holiday.id}
@@ -432,7 +448,7 @@ export default function RotaPeriodStep2() {
                   <div className="space-y-1.5">
                     <p className="text-xs text-muted-foreground">Sunday staffing applies to bank holidays:</p>
                     {sundayShifts.length > 0 ? (
-                      <ul className="space-y-1.5">
+                      <ul className="grid grid-cols-1 lg:grid-cols-2 gap-1.5">
                         {sundayShifts.map((s: any) => (
                           <li key={s.id} className="flex items-center justify-between gap-2 rounded-md border border-amber-200 bg-amber-50/50 px-3 py-2">
                             <div className="min-w-0">
@@ -442,7 +458,7 @@ export default function RotaPeriodStep2() {
                               </p>
                             </div>
                             <span className="shrink-0 text-xs font-semibold text-amber-700">
-                              Target: {s.target_doctors ?? 1}
+                              Target: {s.sunday_target_doctors ?? s.target_doctors ?? 1}
                             </span>
                           </li>
                         ))}
@@ -459,7 +475,7 @@ export default function RotaPeriodStep2() {
                   <div className="space-y-1.5">
                     <p className="text-xs text-muted-foreground">Toggle each shift and set the target doctor count for bank holidays:</p>
                     {bhShiftRules.length > 0 ? (
-                      <ul className="space-y-1.5">
+                      <ul className="grid grid-cols-1 lg:grid-cols-2 gap-1.5">
                         {bhShiftRules.map((rule) => (
                           <li
                             key={rule.shift_key}
