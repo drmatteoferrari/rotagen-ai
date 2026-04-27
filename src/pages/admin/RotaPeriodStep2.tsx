@@ -381,8 +381,8 @@ export default function RotaPeriodStep2() {
         </Card>
 
         {/* Bank Holiday Rules Card */}
-        <Card>
-          <CardContent className="pt-6 space-y-4">
+        <Card className="flex flex-col min-h-0 overflow-hidden">
+          <CardContent className="pt-6 space-y-4 flex-1 overflow-y-auto min-h-0">
             <div>
               <p className="text-sm font-semibold text-card-foreground">Bank Holiday Shift Rules</p>
               <p className="text-xs text-muted-foreground mt-1">Do bank holidays follow the same staffing rules as weekends?</p>
