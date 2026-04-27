@@ -259,15 +259,16 @@ export default function RotaPeriodStep2() {
         />
       }
     >
-      <div className="mx-auto max-w-3xl space-y-6 animate-fadeSlideUp">
+      <div className="mx-auto w-full max-w-7xl flex flex-col h-full min-h-0 gap-3 animate-fadeSlideUp">
         {/* Info banner */}
-        <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-700">
+        <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 shrink-0">
           <Info className="h-4 w-4 shrink-0 text-amber-600" />
           Bank holidays within the rota period are auto-populated. You can modify or add custom dates.
         </div>
 
-        <Card>
-          <CardHeader>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1 min-h-0">
+        <Card className="flex flex-col min-h-0 overflow-hidden">
+          <CardHeader className="pb-3 shrink-0">
             <CardTitle className="flex items-center gap-2">
               <CalendarCheck className="h-5 w-5 text-amber-600" />
               Bank Holidays
