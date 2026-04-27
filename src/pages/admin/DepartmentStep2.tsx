@@ -1163,8 +1163,27 @@ export default function DepartmentStep2() {
       if (!user?.id) throw new Error("Not signed in.");
       let configId = currentRotaConfigId;
       if (!configId) {
+        // M1: pull names from account_settings so the new rota_config is
+        // never created with empty department_name / trust_name. Both DB
+        // failure and a missing/blank account_settings row must block the
+        // insert — falling back to "" silently re-creates the original bug.
+        const { data: acct, error: acctErr } = await supabase
+          .from("account_settings")
+          .select("department_name, trust_name")
+          .eq("owned_by", user.id)
+          .maybeSingle();
+        if (acctErr) throw acctErr;
+        if (!acct?.department_name?.trim() || !acct?.trust_name?.trim()) {
+          throw new Error("Complete Department Step 1 before continuing.");
+        }
         const { data, error } = await supabase.from("rota_configs")
-          .insert({ global_oncall_pct: 50, global_non_oncall_pct: 50, owned_by: user.id })
+          .insert({
+            global_oncall_pct: 50,
+            global_non_oncall_pct: 50,
+            owned_by: user.id,
+            department_name: acct.department_name,
+            trust_name: acct.trust_name,
+          })
           .select("id").single();
         if (error) throw error;
         configId = data.id; setCurrentRotaConfigId(configId);

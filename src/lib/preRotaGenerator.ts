@@ -72,11 +72,26 @@ export async function generatePreRota(
     ]);
 
     // ── 8. Fetch account settings (for display names in calendar) ──────
+    // Explicit error rather than silent fallback: account_settings is the
+    // canonical source for display names. A missing or empty row means
+    // Department Step 1 wasn't completed; we'd otherwise embed empty names
+    // into pre_rota_results.calendar_data and ship a confusing UI.
     const { data: accountSettings } = await supabase
       .from("account_settings")
       .select("department_name, trust_name")
       .eq("owned_by", config.owned_by)
       .maybeSingle();
+    if (
+      !accountSettings ||
+      !accountSettings.department_name?.trim() ||
+      !accountSettings.trust_name?.trim()
+    ) {
+      return {
+        success: false,
+        error:
+          "Department or trust name is missing. Complete Department Step 1 before generating.",
+      };
+    }
 
     // ── 9. Build per-day shift slots via buildPreRotaInput ─────────────
     // This handles both the new path (shift_day_slots exist) and the
@@ -180,9 +195,14 @@ export async function generatePreRota(
             location: string;
           }[]);
 
+      // L6: lowercase the JSONB-fallback day names. Pre-fix drafts saved
+      // via SurveyContext stored uppercase day names, but downstream code
+      // (calendar, validation) compares against lowercase. Without this,
+      // legacy in-progress surveys silently miss their LTFT days.
       const fallbackLtftDays = hasNormalized
         ? ltftDaysOff
-        : ((Array.isArray(survey?.ltft_days_off) ? survey.ltft_days_off : []) as string[]);
+        : ((Array.isArray(survey?.ltft_days_off) ? survey.ltft_days_off : []) as string[])
+            .map((d) => (typeof d === "string" ? d.toLowerCase() : d));
 
       const fallbackLtftFlex = hasNormalized
         ? ltftNightFlex
@@ -190,7 +210,10 @@ export async function generatePreRota(
             day: string;
             canStart: boolean | null;
             canEnd: boolean | null;
-          }[]);
+          }[]).map((f) => ({
+            ...f,
+            day: typeof f.day === "string" ? f.day.toLowerCase() : f.day,
+          }));
 
       const fallbackParentalExpected = hasNormalized
         ? parentalLeaveExpected

@@ -1087,8 +1087,10 @@ export default function Roster() {
           ])
         : "";
 
-    const special_sessions: string[] =
+    // M6: special_sessions is now jsonb [{name, notes}]; mirror the shape here.
+    const special_session_names: string[] =
       isSeniorLocal(grade) && Math.random() < 0.3 ? [pick(["Pain medicine", "Pre-op clinics"])] : [];
+    const special_sessions = special_session_names.map((name) => ({ name, notes: "" }));
 
     return {
       doctor_id: doctor.id,
@@ -1133,9 +1135,9 @@ export default function Roster() {
       other_requests: null,
       specialties_requested,
       special_sessions,
-      want_pain_sessions: special_sessions.includes("Pain medicine"),
+      want_pain_sessions: special_session_names.includes("Pain medicine"),
       pain_session_notes: null,
-      want_preop: special_sessions.includes("Pre-op clinics"),
+      want_preop: special_session_names.includes("Pre-op clinics"),
       signoff_needs,
       signoff_requirements: null,
       additional_notes: "",

@@ -71,7 +71,8 @@ interface SurveyRow {
   parental_leave_end: string | null;
   parental_leave_notes: string | null;
   specialties_requested: any;
-  special_sessions: string[] | null;
+  // M6: jsonb [{name, notes}]; legacy text[] string entries also tolerated below.
+  special_sessions: any | null;
   signoff_needs: string | null;
   dual_specialty: boolean | null;
   dual_specialty_types: string[] | null;
@@ -987,16 +988,21 @@ export default function DoctorProfile() {
                           </span>
                         ))}
                       </div>
-                    ) : survey.special_sessions && survey.special_sessions.length > 0 ? (
+                    ) : Array.isArray(survey.special_sessions) && survey.special_sessions.length > 0 ? (
                       <div className="flex flex-wrap gap-1.5">
-                        {survey.special_sessions.map((s: string, i: number) => (
-                          <span
-                            key={i}
-                            className="inline-flex items-center rounded-full bg-teal-100 text-teal-700 border border-teal-200 px-2.5 py-0.5 text-xs font-medium"
-                          >
-                            {s}
-                          </span>
-                        ))}
+                        {survey.special_sessions.map((s: any, i: number) => {
+                          // M6: tolerate both new {name, notes} and legacy string entries.
+                          const name = typeof s === "string" ? s : (s?.name ?? "");
+                          const notes = typeof s === "string" ? "" : (s?.notes ?? "");
+                          return (
+                            <span
+                              key={i}
+                              className="inline-flex items-center rounded-full bg-teal-100 text-teal-700 border border-teal-200 px-2.5 py-0.5 text-xs font-medium"
+                            >
+                              {name}{notes ? ` — ${notes}` : ""}
+                            </span>
+                          );
+                        })}
                       </div>
                     ) : (
                       <p className="text-sm text-muted-foreground">None</p>

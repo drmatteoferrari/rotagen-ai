@@ -254,7 +254,12 @@ function formDataToDbRow(fd: SurveyFormData) {
     specific_days_off: fd.specificDaysOff,
     exemption_details: fd.exemptionDetails,
     specialties_requested: fd.specialtiesRequested as any,
-    special_sessions: fd.specialSessions.map((s) => (s.notes ? `${s.name}: ${s.notes}` : s.name)),
+    // M6: stored as jsonb [{name, notes}] so a session name containing
+    // ': ' no longer gets split incorrectly when normalised into training_requests.
+    special_sessions: fd.specialSessions.map((s) => ({
+      name: s.name,
+      notes: s.notes ?? "",
+    })) as any,
     other_interests: fd.otherInterests as any,
     signoff_needs: fd.signoffNeeds,
     additional_notes: fd.additionalNotes,
@@ -320,11 +325,20 @@ function dbRowToFormData(draft: any, base: SurveyFormData): SurveyFormData {
     specificDaysOff: draft.specific_days_off || [],
     exemptionDetails: draft.exemption_details || "",
     specialtiesRequested: draft.specialties_requested || [],
-    specialSessions: (draft.special_sessions ?? []).map((s: string) => {
-      const colonIdx = s.indexOf(": ");
-      if (colonIdx === -1) return { name: s, notes: "" };
-      return { name: s.slice(0, colonIdx), notes: s.slice(colonIdx + 2) };
-    }),
+    // M6: jsonb [{name, notes}]. Legacy text[] rows pre-migration are
+    // tolerated (string entries) so the UI doesn't blank out if the
+    // migration hasn't yet been applied to a given environment.
+    specialSessions: Array.isArray(draft.special_sessions)
+      ? draft.special_sessions.map((s: any) => {
+          if (typeof s === "string") {
+            const colonIdx = s.indexOf(": ");
+            return colonIdx === -1
+              ? { name: s, notes: "" }
+              : { name: s.slice(0, colonIdx), notes: s.slice(colonIdx + 2) };
+          }
+          return { name: s?.name ?? "", notes: s?.notes ?? "" };
+        })
+      : [],
     otherInterests: draft.other_interests || [],
     signoffNeeds: draft.signoff_needs || "",
     additionalNotes: draft.additional_notes || "",
@@ -537,23 +551,52 @@ export function SurveyProvider({
         throw error;
       }
 
-      // SECONDARY SYNC — doctors table (non-blocking: failure must never prevent navigation)
-      try {
-        const nameParts = fd.fullName.trim().split(/\s+/);
-        const syncFirst = nameParts[0] || "";
-        const syncLast = nameParts.slice(1).join(" ") || "";
-        // NHS email edited in Step 1 is synced here on every auto-save
-        const updatePayload: Record<string, any> = {
-          survey_status: "in_progress",
-        };
-        if (syncFirst) updatePayload.first_name = syncFirst;
-        if (syncLast) updatePayload.last_name = syncLast;
-        if (fd.nhsEmail) updatePayload.email = fd.nhsEmail;
-        if (fd.grade) updatePayload.grade = fd.grade;
-        await supabase.from("doctors").update(updatePayload).eq("id", doc.id);
-      } catch (syncErr) {
-        // Non-blocking: doctors table sync failure is logged but does not fail the save
-        console.warn("doctors table sync failed (non-blocking):", syncErr);
+      // M7: promote status to 'in_progress' on every save. .neq guard
+      // prevents regressing 'submitted' rows back to 'in_progress'
+      // (matters for admin re-edits via SurveyOverride).
+      const { error: statusErr } = await supabase
+        .from("doctor_survey_responses")
+        .update({ status: "in_progress" })
+        .eq("doctor_id", doc.id)
+        .eq("rota_config_id", doc.rotaConfigId)
+        .neq("status", "submitted");
+      if (statusErr) {
+        console.error("saveDraft status promote error:", statusErr.message);
+        throw statusErr;
+      }
+
+      // SECONDARY SYNC — doctors table.
+      // M7: errors here used to be swallowed; the supabase client never
+      // throws on .update(), so the surrounding try/catch never fired.
+      // We now read the returned `error` and propagate it.
+      const nameParts = fd.fullName.trim().split(/\s+/);
+      const syncFirst = nameParts[0] || "";
+      const syncLast = nameParts.slice(1).join(" ") || "";
+      const profilePayload: Record<string, any> = {};
+      if (syncFirst) profilePayload.first_name = syncFirst;
+      if (syncLast) profilePayload.last_name = syncLast;
+      if (fd.nhsEmail) profilePayload.email = fd.nhsEmail;
+      if (fd.grade) profilePayload.grade = fd.grade;
+      if (Object.keys(profilePayload).length > 0) {
+        const { error: profileErr } = await supabase
+          .from("doctors")
+          .update(profilePayload)
+          .eq("id", doc.id);
+        if (profileErr) {
+          console.error("saveDraft doctors profile sync error:", profileErr.message);
+          throw profileErr;
+        }
+      }
+      // Same .neq guard so a re-edit in adminMode doesn't regress
+      // doctors.survey_status from 'submitted' back to 'in_progress'.
+      const { error: docStatusErr } = await supabase
+        .from("doctors")
+        .update({ survey_status: "in_progress" })
+        .eq("id", doc.id)
+        .neq("survey_status", "submitted");
+      if (docStatusErr) {
+        console.error("saveDraft doctors status promote error:", docStatusErr.message);
+        throw docStatusErr;
       }
 
       setDraftSavedAt(new Date());

@@ -97,12 +97,30 @@ function computeActivePcts(shifts: ShiftType[], overrides: Record<string, number
   const pinnedTotal = pinned.reduce((sum, s) => sum + overrides[s.id], 0);
   const remaining = Math.max(0, 100 - pinnedTotal);
   const unpinnedDemand = unpinned.reduce((sum, s) => sum + getWeeklyDemand(s), 0);
+
+  // Pre-compute unpinned pcts with a remainder correction so they sum
+  // to exactly `remaining` (mirroring getDemandWeightedPcts). Without
+  // this, rounding errors leave totals at 99.9 or 100.1.
+  const unpinnedPcts = new Map<string, number>();
+  let cum = 0;
+  unpinned.forEach((s, i) => {
+    const isLast = i === unpinned.length - 1;
+    let pct: number;
+    if (isLast) {
+      pct = Math.round((remaining - cum) * 10) / 10;
+    } else if (unpinnedDemand === 0) {
+      pct = Math.round((remaining / unpinned.length) * 10) / 10;
+    } else {
+      pct = Math.round((getWeeklyDemand(s) / unpinnedDemand) * remaining * 10) / 10;
+    }
+    unpinnedPcts.set(s.id, pct);
+    cum += pct;
+  });
+
   return Object.fromEntries(
     shifts.map((s) => {
       if (overrides[s.id] !== undefined) return [s.id, overrides[s.id]];
-      if (unpinned.length === 0) return [s.id, 0];
-      if (unpinnedDemand === 0) return [s.id, Math.round((remaining / unpinned.length) * 10) / 10];
-      return [s.id, Math.round((getWeeklyDemand(s) / unpinnedDemand) * remaining * 10) / 10];
+      return [s.id, unpinnedPcts.get(s.id) ?? 0];
     }),
   );
 }
