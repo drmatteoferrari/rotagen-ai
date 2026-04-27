@@ -1842,7 +1842,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
             {/* Tablet + Desktop: name row (and on desktop, info inline) */}
             <div className="hidden sm:flex flex-row flex-wrap items-center gap-1 lg:gap-1.5 min-w-0">
               {lastName && (
-                <span className="font-semibold text-[10px] truncate uppercase">{lastName}</span>
+                <span className="text-[10px] truncate uppercase font-extrabold">{lastName}</span>
               )}
               <span className="font-semibold text-[10px] truncate">{firstName}</span>
               {/* Desktop only: inline info */}
