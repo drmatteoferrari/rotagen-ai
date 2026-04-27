@@ -474,7 +474,7 @@ export default function RotaPeriodStep2() {
             )}
           </CardContent>
         </Card>
-
+        </div>
       </div>
     </AdminLayout>
   );
