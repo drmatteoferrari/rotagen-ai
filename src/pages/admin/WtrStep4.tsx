@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { ArrowLeft, ArrowRight, CheckCircle, AlertTriangle, ClipboardCheck, Minus, Plus, ClipboardList } from "lucide-react";
+import { toast } from "sonner";
 
 function MaxWarning({ value, max, label }: { value: number; max: number; label: string }) {
   if (value <= max) return (
@@ -83,7 +84,20 @@ export default function WtrStep4() {
     oncallIfRestNotMetMaxHours, setOncallIfRestNotMetMaxHours,
     oncallNoConsecExceptWknd, setOncallNoConsecExceptWknd,
     oncallNoSimultaneousShift, setOncallNoSimultaneousShift,
+    persistWtrToDb,
   } = useAdminSetup();
+
+  // L1 — persist on Continue so data isn't lost mid-flow.
+  const handleContinue = async () => {
+    try {
+      await persistWtrToDb();
+    } catch (err) {
+      console.error("WTR step 4 persist failed:", err);
+      toast.error("Couldn't save — try again");
+      return;
+    }
+    navigate("/admin/wtr/step-5");
+  };
 
   return (
     <AdminLayout title="Working Time Regulations" subtitle="Step 4 of 5 — On-call" accentColor="red" pageIcon={ClipboardList}
@@ -95,7 +109,7 @@ export default function WtrStep4() {
             </Button>
           }
           right={
-            <Button size="lg" onClick={() => navigate("/admin/wtr/step-5")} className="bg-red-600 hover:bg-red-700">
+            <Button size="lg" onClick={handleContinue} className="bg-red-600 hover:bg-red-700">
               Continue
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>

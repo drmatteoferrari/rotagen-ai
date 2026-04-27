@@ -25,6 +25,7 @@ export default function RotaPeriodSummary() {
   const {
     rotaStartDate, rotaEndDate,
     rotaBankHolidays, bhSameAsWeekend, bhShiftRules,
+    surveyDeadline, setSurveyDeadline,
     setPeriodComplete, setRotaStartDate, setRotaEndDate,
     setRotaBankHolidays, setBhSameAsWeekend, setBhShiftRules,
     setPeriodWorkingStateLoaded,
@@ -48,6 +49,7 @@ export default function RotaPeriodSummary() {
 
   const handleConfirmSave = async () => {
     if (!rotaStartDate || !rotaEndDate) { toast.error("Missing dates — go back and select dates"); return; }
+    if (!surveyDeadline) { toast.error("Survey deadline is required — set it on Step 2"); return; }
     setSaving(true);
     try {
       const startDateStr = format(rotaStartDate, "yyyy-MM-dd");
@@ -65,6 +67,8 @@ export default function RotaPeriodSummary() {
         bh_shift_rules: bhSameAsWeekend === false
           ? bhShiftRules.map(r => ({ shift_key: r.shift_key, name: r.name, start_time: r.start_time, end_time: r.end_time, target_doctors: r.target_doctors, included: r.included }))
           : null,
+        // L4: persist required survey deadline alongside other rota period fields
+        survey_deadline: format(surveyDeadline, "yyyy-MM-dd"),
       };
 
       if (!configId) {
@@ -133,6 +137,7 @@ export default function RotaPeriodSummary() {
         rota_start_date: null, rota_end_date: null,
         rota_duration_days: null, rota_duration_weeks: null,
         bh_same_as_weekend: null, bh_shift_rules: null,
+        survey_deadline: null,
       }).eq('id', currentRotaConfigId);
       await supabase.from('bank_holidays').delete().eq('rota_config_id', currentRotaConfigId);
       setPeriodComplete(false);
@@ -141,6 +146,7 @@ export default function RotaPeriodSummary() {
       setRotaBankHolidays([]);
       setBhSameAsWeekend(null);
       setBhShiftRules([]);
+      setSurveyDeadline(undefined);
       setPeriodWorkingStateLoaded(false);
       toast.success('Rota period reset');
       navigate('/admin/rota-period/step-1');
@@ -203,9 +209,15 @@ export default function RotaPeriodSummary() {
                 <span className="text-muted-foreground">End date</span>
                 <span className="font-medium">{rotaEndDate ? format(rotaEndDate, "EEEE dd MMM yyyy") : "\u2014"}</span>
               </div>
-              <div className="flex justify-between text-sm py-2">
+              <div className="flex justify-between text-sm py-2 border-b border-border">
                 <span className="text-muted-foreground">Duration</span>
                 <span className="font-medium">{durationText}</span>
+              </div>
+              <div className="flex justify-between text-sm py-2">
+                <span className="text-muted-foreground">Survey deadline</span>
+                <span className="font-medium">
+                  {surveyDeadline ? format(surveyDeadline, "EEEE dd MMM yyyy") : "—"}
+                </span>
               </div>
             </CardContent>
           </Card>

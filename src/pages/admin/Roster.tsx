@@ -584,10 +584,7 @@ export default function Roster() {
       toast.error("Please set your department and hospital name on the Dashboard before sending invites.");
       return;
     }
-    if (!formattedDeadline) {
-      toast.error("Set a survey deadline first.");
-      return;
-    }
+    // L4: deadline is guaranteed set during RotaPeriod setup; guard removed.
 
     const surveyLink = buildSurveyLink(doctor.survey_token);
 

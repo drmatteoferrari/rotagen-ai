@@ -5,6 +5,7 @@ import { useAdminSetup } from "@/contexts/AdminSetupContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ArrowLeft, ArrowRight, Minus, Plus, Layers, CheckCircle, AlertTriangle, Info, ClipboardList } from "lucide-react";
+import { toast } from "sonner";
 
 function ConsecWarning({ value, max, label }: { value: number; max: number; label: string }) {
   if (value <= max) {
@@ -44,7 +45,20 @@ export default function WtrStep2() {
   const {
     maxConsecDays, setMaxConsecDays, maxConsecLong, setMaxConsecLong,
     maxConsecNights, setMaxConsecNights, maxLongEveningConsec, setMaxLongEveningConsec,
+    persistWtrToDb,
   } = useAdminSetup();
+
+  // L1 — persist on Continue so data isn't lost mid-flow.
+  const handleContinue = async () => {
+    try {
+      await persistWtrToDb();
+    } catch (err) {
+      console.error("WTR step 2 persist failed:", err);
+      toast.error("Couldn't save — try again");
+      return;
+    }
+    navigate("/admin/wtr/step-3");
+  };
 
   const limits = [
     {
@@ -96,7 +110,7 @@ export default function WtrStep2() {
             </Button>
           }
           right={
-            <Button size="lg" onClick={() => navigate("/admin/wtr/step-3")} className="bg-red-600 hover:bg-red-700">
+            <Button size="lg" onClick={handleContinue} className="bg-red-600 hover:bg-red-700">
               Continue
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>

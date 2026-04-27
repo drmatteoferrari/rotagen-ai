@@ -58,6 +58,7 @@ export default function RotaPeriodStep2() {
     bhSameAsWeekend, setBhSameAsWeekend,
     bhShiftRules, setBhShiftRules,
     periodWorkingStateLoaded, setPeriodWorkingStateLoaded,
+    surveyDeadline, setSurveyDeadline,
   } = useAdminSetup();
   const { currentRotaConfigId, setCurrentRotaConfigId, setRestoredConfig } = useRotaContext();
   const { user } = useAuth();
@@ -267,7 +268,12 @@ export default function RotaPeriodStep2() {
             </Button>
           }
           right={
-            <Button size="lg" disabled={saving} onClick={() => navigate('/admin/rota-period/summary?mode=pre-submit')} className="bg-amber-600 hover:bg-amber-700">
+            <Button
+              size="lg"
+              disabled={saving || !surveyDeadline}
+              onClick={() => navigate('/admin/rota-period/summary?mode=pre-submit')}
+              className="bg-amber-600 hover:bg-amber-700"
+            >
               Review &amp; Save
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
@@ -282,6 +288,48 @@ export default function RotaPeriodStep2() {
           <p className="min-w-0 flex-1 leading-snug sm:truncate">
             UK bank holidays are auto-populated. Edit or add custom dates below.
           </p>
+        </div>
+
+        {/* L4 — Survey deadline (required). Doctors must submit their survey by this date. */}
+        <div className="shrink-0 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card px-3 sm:px-4 py-2.5">
+          <CalendarIcon className="h-4 w-4 shrink-0 text-amber-600" />
+          <span className="text-sm font-medium text-card-foreground">Survey deadline</span>
+          <span className="text-xs text-muted-foreground hidden sm:inline">
+            Date by which doctors must submit their survey
+          </span>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn(
+                  "ml-auto h-8 text-xs font-normal px-3 gap-1.5 min-w-[140px] justify-start",
+                  !surveyDeadline && "text-muted-foreground border-amber-300",
+                )}
+              >
+                <CalendarIcon className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">
+                  {surveyDeadline ? format(surveyDeadline, "EEE, d MMM yyyy") : "Required — set deadline"}
+                </span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0 pointer-events-auto" align="end">
+              <Calendar
+                mode="single"
+                selected={surveyDeadline}
+                onSelect={setSurveyDeadline}
+                disabled={(date) => {
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+                  if (date < today) return true;
+                  if (rotaStartDate && date >= rotaStartDate) return true;
+                  return false;
+                }}
+                initialFocus
+                className="p-3 pointer-events-auto"
+              />
+            </PopoverContent>
+          </Popover>
         </div>
 
         {/* 2-col from md (768+); single col on mobile (allows page scroll). */}

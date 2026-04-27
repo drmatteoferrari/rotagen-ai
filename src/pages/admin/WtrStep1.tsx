@@ -5,6 +5,7 @@ import { useAdminSetup } from "@/contexts/AdminSetupContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ShieldCheck, CheckCircle, AlertTriangle, ArrowRight, Info, Minus, Plus, ClipboardList } from "lucide-react";
+import { toast } from "sonner";
 
 function MaxWarning({ value, max, label }: { value: number; max: number; label: string }) {
   if (value <= max) {
@@ -41,7 +42,23 @@ function Stepper({ value, onDec, onInc }: { value: number; onDec: () => void; on
 
 export default function WtrStep1() {
   const navigate = useNavigate();
-  const { maxAvgWeekly, setMaxAvgWeekly, maxIn7Days, setMaxIn7Days, maxShiftLengthH, setMaxShiftLengthH } = useAdminSetup();
+  const {
+    maxAvgWeekly, setMaxAvgWeekly, maxIn7Days, setMaxIn7Days, maxShiftLengthH, setMaxShiftLengthH,
+    persistWtrToDb,
+  } = useAdminSetup();
+
+  // L1 — save WTR state on each step transition so data isn't lost if the
+  // user closes the tab before reaching Step 5.
+  const handleContinue = async () => {
+    try {
+      await persistWtrToDb();
+    } catch (err) {
+      console.error("WTR step 1 persist failed:", err);
+      toast.error("Couldn't save — try again");
+      return;
+    }
+    navigate("/admin/wtr/step-2");
+  };
 
   const limits = [
     {
@@ -81,7 +98,7 @@ export default function WtrStep1() {
       navBar={
         <StepNavBar
           right={
-            <Button size="lg" onClick={() => navigate("/admin/wtr/step-2")} className="bg-red-600 hover:bg-red-700">
+            <Button size="lg" onClick={handleContinue} className="bg-red-600 hover:bg-red-700">
               Continue
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>

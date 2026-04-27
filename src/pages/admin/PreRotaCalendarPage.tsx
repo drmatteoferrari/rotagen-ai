@@ -800,6 +800,34 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
   // Instead, ViewToggle disables the month button on mobile (change 10),
   // and effectiveViewMode below prevents month rendering even if state is stale.
 
+  // L3: Always read department/trust names live from account_settings.
+  // Cache paths set them from cd.departmentName (the JSONB snapshot embedded
+  // at pre-rota generation time), which goes stale if the coordinator renames
+  // the department afterwards. This effect overrides with the canonical source.
+  useEffect(() => {
+    if (!rotaConfigId) return;
+    let cancelled = false;
+    (async () => {
+      const { data: config } = await supabase
+        .from("rota_configs")
+        .select("owned_by")
+        .eq("id", rotaConfigId)
+        .single();
+      if (cancelled || !config) return;
+      const { data: acct } = await supabase
+        .from("account_settings")
+        .select("department_name, trust_name")
+        .eq("owned_by", (config as any).owned_by)
+        .maybeSingle();
+      if (cancelled) return;
+      if ((acct as any)?.department_name) setDeptName((acct as any).department_name);
+      if ((acct as any)?.trust_name) setHospitalName((acct as any).trust_name);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [rotaConfigId]);
+
   // Data Loading Logic
   useEffect(() => {
     const load = async () => {

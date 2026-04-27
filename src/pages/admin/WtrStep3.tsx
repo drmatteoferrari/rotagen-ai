@@ -5,6 +5,7 @@ import { useAdminSetup } from "@/contexts/AdminSetupContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ArrowLeft, ArrowRight, Minus, Plus, Clock, CheckCircle, AlertTriangle, Info, ClipboardList } from "lucide-react";
+import { toast } from "sonner";
 
 function MinWarning({ value, min, label }: { value: number; min: number; label: string }) {
   if (value >= min) {
@@ -45,7 +46,20 @@ export default function WtrStep3() {
     restPostNights, setRestPostNights, restPostBlock, setRestPostBlock,
     restAfter7, setRestAfter7, weekendFreq, setWeekendFreq,
     restAfterLongEveningH, setRestAfterLongEveningH, minInterShiftRestH, setMinInterShiftRestH,
+    persistWtrToDb,
   } = useAdminSetup();
+
+  // L1 — persist on Continue so data isn't lost mid-flow.
+  const handleContinue = async () => {
+    try {
+      await persistWtrToDb();
+    } catch (err) {
+      console.error("WTR step 3 persist failed:", err);
+      toast.error("Couldn't save — try again");
+      return;
+    }
+    navigate("/admin/wtr/step-4");
+  };
 
   const restFields = [
     {
@@ -95,7 +109,7 @@ export default function WtrStep3() {
             </Button>
           }
           right={
-            <Button size="lg" onClick={() => navigate("/admin/wtr/step-4")} className="bg-red-600 hover:bg-red-700">
+            <Button size="lg" onClick={handleContinue} className="bg-red-600 hover:bg-red-700">
               Continue
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>

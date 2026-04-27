@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode, type Dispatch, type SetStateAction } from "react";
 import { useRotaContext } from "@/contexts/RotaContext";
 import type { RotaConfig } from "@/lib/rotaConfig";
+import { persistWtrSettings } from "@/lib/wtrSettings";
 
 export interface BankHolidayEntry {
   id: string;
@@ -41,6 +42,9 @@ interface AdminSetupContextType {
   setBhShiftRules: Dispatch<SetStateAction<BhShiftRule[]>>;
   periodWorkingStateLoaded: boolean;
   setPeriodWorkingStateLoaded: (v: boolean) => void;
+  // L4 — survey deadline is required to complete RotaPeriod setup
+  surveyDeadline: Date | undefined;
+  setSurveyDeadline: (d: Date | undefined) => void;
   // WTR Step 1
   maxAvgWeekly: number;
   maxIn7Days: number;
@@ -101,6 +105,8 @@ interface AdminSetupContextType {
   restoredFromDb: boolean;
   // Reset
   resetWtr: () => void;
+  // L1 — persist current WTR context state to wtr_settings (used by WTR steps 1–4 on Continue)
+  persistWtrToDb: () => Promise<void>;
 }
 
 const AdminSetupContext = createContext<AdminSetupContextType | undefined>(undefined);
@@ -119,6 +125,7 @@ export function AdminSetupProvider({ children }: { children: ReactNode }) {
   const [bhSameAsWeekend, setBhSameAsWeekend] = useState<boolean | null>(null);
   const [bhShiftRules, setBhShiftRules] = useState<BhShiftRule[]>([]);
   const [periodWorkingStateLoaded, setPeriodWorkingStateLoaded] = useState(false);
+  const [surveyDeadline, setSurveyDeadline] = useState<Date | undefined>();
 
   // WTR Step 1
   const [maxAvgWeekly, setMaxAvgWeekly] = useState(48);
@@ -151,7 +158,7 @@ export function AdminSetupProvider({ children }: { children: ReactNode }) {
   const [oncallBreakReferenceWeeks, setOncallBreakReferenceWeeks] = useState(4);
   const [oncallBreakFineThresholdPct, setOncallBreakFineThresholdPct] = useState(25);
 
-  const { restoredConfig } = useRotaContext();
+  const { restoredConfig, currentRotaConfigId } = useRotaContext();
 
   useEffect(() => {
     if (!restoredConfig) return;
@@ -163,6 +170,10 @@ export function AdminSetupProvider({ children }: { children: ReactNode }) {
     }
     if (config.rotaPeriod.endDate) {
       setRotaEndDate(new Date(config.rotaPeriod.endDate));
+    }
+    if (config.surveyDeadline) {
+      const [y, m, d] = config.surveyDeadline.split("-").map(Number);
+      setSurveyDeadline(new Date(y, m - 1, d));
     }
 
     // Restore bank holidays
@@ -225,6 +236,53 @@ export function AdminSetupProvider({ children }: { children: ReactNode }) {
     setRestoredFromDb(true);
   }, [restoredConfig]);
 
+  // L1 — persist current WTR state to wtr_settings on each step transition,
+  // not just at Step 5 commit. Skips silently if no rota_config exists yet
+  // (Step 5 owns the create-config + completeness flow).
+  const persistWtrToDb = useCallback(async () => {
+    await persistWtrSettings(currentRotaConfigId, {
+      max_hours_per_week: maxAvgWeekly,
+      max_hours_per_168h: maxIn7Days,
+      max_shift_length_h: maxShiftLengthH,
+      max_consec_standard: maxConsecDays,
+      max_consec_long: maxConsecLong,
+      max_long_evening_consec: maxLongEveningConsec,
+      max_consec_nights: maxConsecNights,
+      rest_after_nights_h: restPostNights,
+      rest_after_long_h: restPostBlock,
+      rest_after_long_evening_h: restAfterLongEveningH,
+      rest_after_standard_h: restAfter7,
+      min_inter_shift_rest_h: minInterShiftRestH,
+      weekend_frequency: weekendFreq,
+      oncall_no_consec_except_wknd: oncallNoConsecExceptWknd,
+      oncall_max_per_7_days: oncallMaxPer7Days,
+      oncall_local_agreement_max_consec: oncallLocalAgreementMaxConsec,
+      oncall_day_after_max_hours: oncallDayAfterMaxHours,
+      oncall_rest_per_24h: oncallRestPer24h,
+      oncall_continuous_rest_hours: oncallContinuousRestHours,
+      oncall_continuous_rest_start: oncallContinuousRestStart,
+      oncall_continuous_rest_end: oncallContinuousRestEnd,
+      oncall_if_rest_not_met_max_hours: oncallIfRestNotMetMaxHours,
+      oncall_no_simultaneous_shift: oncallNoSimultaneousShift,
+      oncall_day_after_last_consec_max_h: oncallDayAfterLastConsecMaxH,
+      oncall_break_fine_threshold_pct: oncallBreakFineThresholdPct,
+      oncall_break_reference_weeks: oncallBreakReferenceWeeks,
+      oncall_clinical_exception_allowed: true,
+      oncall_saturday_sunday_paired: true,
+    });
+  }, [
+    currentRotaConfigId,
+    maxAvgWeekly, maxIn7Days, maxShiftLengthH,
+    maxConsecDays, maxConsecLong, maxLongEveningConsec, maxConsecNights,
+    restPostNights, restPostBlock, restAfterLongEveningH, restAfter7, minInterShiftRestH,
+    weekendFreq,
+    oncallNoConsecExceptWknd, oncallMaxPer7Days, oncallLocalAgreementMaxConsec,
+    oncallDayAfterMaxHours, oncallRestPer24h, oncallContinuousRestHours,
+    oncallContinuousRestStart, oncallContinuousRestEnd, oncallIfRestNotMetMaxHours,
+    oncallNoSimultaneousShift, oncallDayAfterLastConsecMaxH,
+    oncallBreakFineThresholdPct, oncallBreakReferenceWeeks,
+  ]);
+
   const resetWtr = useCallback(() => {
     setMaxAvgWeekly(48);
     setMaxIn7Days(72);
@@ -265,6 +323,7 @@ export function AdminSetupProvider({ children }: { children: ReactNode }) {
         bhSameAsWeekend, setBhSameAsWeekend,
         bhShiftRules, setBhShiftRules,
         periodWorkingStateLoaded, setPeriodWorkingStateLoaded,
+        surveyDeadline, setSurveyDeadline,
         maxAvgWeekly, maxIn7Days, maxShiftLengthH, setMaxAvgWeekly, setMaxIn7Days, setMaxShiftLengthH,
         maxConsecDays, maxConsecLong, maxConsecNights, maxLongEveningConsec,
         setMaxConsecDays, setMaxConsecLong, setMaxConsecNights, setMaxLongEveningConsec,
@@ -280,6 +339,7 @@ export function AdminSetupProvider({ children }: { children: ReactNode }) {
         setOncallBreakReferenceWeeks, setOncallBreakFineThresholdPct,
         restoredFromDb,
         resetWtr,
+        persistWtrToDb,
       }}
     >
       {children}
