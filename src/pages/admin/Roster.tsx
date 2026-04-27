@@ -1576,7 +1576,7 @@ export default function Roster() {
 
                     {/* Grade */}
                     <div className="shrink-0 text-xs truncate" style={{width: '80px'}}>
-                      <GradeBadge grade={doctor.grade} />
+                      <GradeBadge grade={cached?.grade ?? doctor.grade} />
                     </div>
 
                     {/* Email */}
@@ -1731,7 +1731,7 @@ export default function Roster() {
                         </span>
                         {/* Grade — always visible after name */}
                         <span className="shrink-0">
-                          <GradeBadge grade={doctor.grade} />
+                          <GradeBadge grade={cached?.grade ?? doctor.grade} />
                         </span>
                       </div>
                       {!isExpanded && (
