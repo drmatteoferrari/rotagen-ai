@@ -127,6 +127,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             clearSession();
           }
 
+          // If the refresh token is rejected by the server (rotated, revoked,
+          // or expired), GoTrue emits TOKEN_REFRESHED with a null session.
+          // Force a clean signOut so the user is taken back to /login instead
+          // of being stuck in a stale-session loop.
+          if (event === "TOKEN_REFRESHED" && !session) {
+            await supabase.auth.signOut();
+          }
+
           if (event === "INITIAL_SESSION") {
             setAuthLoading(false);
           }
