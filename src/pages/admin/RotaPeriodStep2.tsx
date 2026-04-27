@@ -259,221 +259,252 @@ export default function RotaPeriodStep2() {
         />
       }
     >
-      <div className="mx-auto w-full max-w-7xl flex flex-col h-full min-h-0 gap-3 animate-fadeSlideUp">
-        {/* Info banner */}
-        <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 shrink-0">
+      <div className="mx-auto w-full max-w-7xl flex flex-col h-full min-h-0 gap-2 sm:gap-3 animate-fadeSlideUp">
+        {/* Compact info banner — single line. */}
+        <div className="shrink-0 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 sm:px-4 py-2 text-sm font-medium text-amber-700">
           <Info className="h-4 w-4 shrink-0 text-amber-600" />
-          Bank holidays within the rota period are auto-populated. You can modify or add custom dates.
+          <p className="min-w-0 flex-1 truncate">
+            UK bank holidays are auto-populated. Edit or add custom dates below.
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-1 min-h-0">
-        <Card className="flex flex-col min-h-0 overflow-hidden">
-          <CardHeader className="pb-3 shrink-0">
-            <CardTitle className="flex items-center gap-2">
-              <CalendarCheck className="h-5 w-5 text-amber-600" />
-              Bank Holidays
-            </CardTitle>
-            <CardDescription>Auto-populated from your rota dates. Toggle or add custom dates.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3 flex-1 overflow-y-auto min-h-0">
-            {/* Add holiday */}
-            <div className="rounded-lg border border-dashed border-amber-300 p-3 flex flex-col gap-2 sm:flex-row sm:items-end">
-              <div className="flex-1 space-y-2">
-                <Input placeholder="e.g. Easter Monday" value={newHolidayName} onChange={(e) => setNewHolidayName(e.target.value)} />
-              </div>
-              <div className="space-y-2">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className={cn("w-full sm:w-[200px] justify-start text-left font-normal", !newHolidayDate && "text-muted-foreground")}>
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {newHolidayDate ? format(newHolidayDate, "PPP") : "Pick a date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={newHolidayDate} onSelect={setNewHolidayDate} initialFocus className="p-3 pointer-events-auto" />
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <Button onClick={addBankHoliday} disabled={!newHolidayName || !newHolidayDate} className="bg-amber-600 hover:bg-amber-700 text-white">
-                <Plus className="mr-1.5 h-4 w-4" />Add
-              </Button>
-            </div>
-
-            {/* Holiday count banner */}
-            {rotaBankHolidays.length > 0 && (
-              <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-700">
-                <Info className="h-4 w-4 shrink-0 text-amber-600" />
-                {activeHolidayCount} active bank holiday{activeHolidayCount !== 1 ? "s" : ""} included in this rota period.
-                {rotaBankHolidays.length !== activeHolidayCount && (
-                  <span className="text-muted-foreground ml-1">
-                    ({rotaBankHolidays.length - activeHolidayCount} deactivated)
+        {/* 2-col from md (768+); single col on mobile (allows page scroll). */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-3 flex-1 md:min-h-0">
+          {/* Card 1: Bank Holidays */}
+          <Card className="flex flex-col md:min-h-0 overflow-hidden">
+            <CardHeader className="shrink-0 px-3 py-2 sm:px-4 sm:py-3">
+              <CardTitle className="flex items-center justify-between text-base">
+                <span className="flex items-center gap-2">
+                  <CalendarCheck className="h-4 w-4 text-amber-600" />
+                  Bank Holidays
+                </span>
+                {rotaBankHolidays.length > 0 && (
+                  <span className="text-xs font-normal text-muted-foreground">
+                    {activeHolidayCount}/{rotaBankHolidays.length} active
                   </span>
                 )}
-              </div>
-            )}
-
-            {/* Holiday list */}
-            {rotaBankHolidays.length > 0 ? (
-              <div className="space-y-2">
-                {rotaBankHolidays.map((holiday) => (
-                  <div
-                    key={holiday.id}
-                    className={cn(
-                      "rounded-lg border border-border p-2.5 flex items-center justify-between transition-opacity",
-                      !holiday.isActive && "opacity-50"
-                    )}
-                  >
-                    <div>
-                      <p className={cn(
-                        "text-sm font-medium text-card-foreground",
-                        !holiday.isActive && "line-through text-muted-foreground"
-                      )}>
-                        {holiday.name}
-                      </p>
-                      <p className={cn(
-                        "text-xs text-muted-foreground",
-                        !holiday.isActive && "opacity-50"
-                      )}>
-                        {format(holiday.date, "EEEE, d MMMM yyyy")}
-                      </p>
-                    </div>
-                    {holiday.isAutoAdded ? (
-                      holiday.isActive ? (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleToggleBankHoliday(holiday.id)}
-                          className="text-muted-foreground hover:text-destructive min-h-[44px] min-w-[44px]"
-                          title="Deactivate"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleToggleBankHoliday(holiday.id)}
-                          className="text-amber-700 hover:bg-amber-50 min-h-[44px]"
-                          title="Reactivate"
-                        >
-                          <RotateCcw className="h-3.5 w-3.5 mr-1" />
-                          Reactivate
-                        </Button>
-                      )
-                    ) : (
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="flex-1 md:min-h-0 flex flex-col gap-2 px-3 pb-3 sm:px-4 sm:pb-4 pt-0 overflow-hidden">
+              {/* Add holiday — stacks on mobile/tablet (cards are narrow at md), inline on lg+. */}
+              <div className="shrink-0 rounded-md border border-dashed border-amber-300 p-2 flex flex-col lg:flex-row gap-2">
+                <Input
+                  placeholder="Custom holiday name"
+                  value={newHolidayName}
+                  onChange={(e) => setNewHolidayName(e.target.value)}
+                  className="lg:flex-1 h-9"
+                />
+                <div className="flex gap-2">
+                  <Popover>
+                    <PopoverTrigger asChild>
                       <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleRemoveManualHoliday(holiday.id)}
-                        className="text-muted-foreground hover:text-destructive min-h-[44px] min-w-[44px]"
-                        title="Remove"
+                        variant="outline"
+                        className={cn(
+                          "flex-1 lg:flex-none lg:w-[150px] h-9 justify-start text-left font-normal",
+                          !newHolidayDate && "text-muted-foreground"
+                        )}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
+                        <span className="truncate">{newHolidayDate ? format(newHolidayDate, "d MMM yyyy") : "Pick a date"}</span>
                       </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar mode="single" selected={newHolidayDate} onSelect={setNewHolidayDate} initialFocus className="p-3 pointer-events-auto" />
+                    </PopoverContent>
+                  </Popover>
+                  <Button
+                    onClick={addBankHoliday}
+                    disabled={!newHolidayName || !newHolidayDate}
+                    className="h-9 px-3 bg-amber-600 hover:bg-amber-700 text-white"
+                  >
+                    <Plus className="h-4 w-4 sm:mr-1" />
+                    <span className="hidden sm:inline">Add</span>
+                  </Button>
+                </div>
+              </div>
+
+              {/* Holiday list — internal scroll only if very long. */}
+              <div className="flex-1 md:min-h-0 overflow-y-auto -mx-1 px-1">
+                {rotaBankHolidays.length > 0 ? (
+                  <ul className="space-y-1.5">
+                    {rotaBankHolidays.map((holiday) => (
+                      <li
+                        key={holiday.id}
+                        className={cn(
+                          "rounded-md border border-border pl-3 pr-1 py-1 flex items-center justify-between gap-2 transition-opacity",
+                          !holiday.isActive && "opacity-50"
+                        )}
+                      >
+                        <div className="min-w-0">
+                          <p className={cn(
+                            "text-sm font-medium text-card-foreground truncate",
+                            !holiday.isActive && "line-through text-muted-foreground"
+                          )}>
+                            {holiday.name}
+                          </p>
+                          <p className={cn(
+                            "text-xs text-muted-foreground truncate",
+                            !holiday.isActive && "opacity-50"
+                          )}>
+                            {format(holiday.date, "EEE, d MMM yyyy")}
+                          </p>
+                        </div>
+                        {holiday.isAutoAdded ? (
+                          holiday.isActive ? (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleToggleBankHoliday(holiday.id)}
+                              className="shrink-0 h-10 w-10 text-muted-foreground hover:text-destructive"
+                              title="Deactivate"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleToggleBankHoliday(holiday.id)}
+                              className="shrink-0 h-10 text-amber-700 hover:bg-amber-50"
+                              title="Reactivate"
+                            >
+                              <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                              Reactivate
+                            </Button>
+                          )
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleRemoveManualHoliday(holiday.id)}
+                            className="shrink-0 h-10 w-10 text-muted-foreground hover:text-destructive"
+                            title="Remove"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-center text-sm text-muted-foreground py-4">No bank holidays in this rota period.</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Card 2: Bank Holiday Shift Rules */}
+          <Card className="flex flex-col md:min-h-0 overflow-hidden">
+            <CardHeader className="shrink-0 px-3 py-2 sm:px-4 sm:py-3">
+              <CardTitle className="text-base">Bank Holiday Shift Rules</CardTitle>
+              <CardDescription className="text-xs">
+                Should bank holidays use the same staffing as Sundays?
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex-1 md:min-h-0 flex flex-col gap-2 px-3 pb-3 sm:px-4 sm:pb-4 pt-0 overflow-hidden">
+              {/* Yes/No segmented toggle — short labels keep them on one line at any width. */}
+              <div className="shrink-0 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setBhSameAsWeekend(true)}
+                  className={cn(
+                    "h-10 rounded-md text-sm font-semibold border-2 transition-colors",
+                    bhSameAsWeekend === true
+                      ? "border-amber-600 bg-amber-50 text-amber-700"
+                      : "border-border bg-background text-muted-foreground hover:text-foreground"
+                  )}
+                >Yes</button>
+                <button
+                  type="button"
+                  onClick={() => setBhSameAsWeekend(false)}
+                  className={cn(
+                    "h-10 rounded-md text-sm font-semibold border-2 transition-colors",
+                    bhSameAsWeekend === false
+                      ? "border-amber-600 bg-amber-50 text-amber-700"
+                      : "border-border bg-background text-muted-foreground hover:text-foreground"
+                  )}
+                >No</button>
+              </div>
+
+              {/* Conditional panel — internal scroll if needed. */}
+              <div className="flex-1 md:min-h-0 overflow-y-auto -mx-1 px-1">
+                {bhSameAsWeekend === true && (
+                  <div className="space-y-1.5">
+                    <p className="text-xs text-muted-foreground">Sunday staffing applies to bank holidays:</p>
+                    {sundayShifts.length > 0 ? (
+                      <ul className="space-y-1.5">
+                        {sundayShifts.map((s: any) => (
+                          <li key={s.id} className="flex items-center justify-between gap-2 rounded-md border border-amber-200 bg-amber-50/50 px-3 py-2">
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-card-foreground truncate">{s.name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {String(s.start_time).slice(0, 5)} – {String(s.end_time).slice(0, 5)}
+                              </p>
+                            </div>
+                            <span className="shrink-0 text-xs font-semibold text-amber-700">
+                              Target: {s.target_doctors ?? 1}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-xs text-muted-foreground py-2">
+                        No shifts assigned to Sundays. Configure them in Department Setup.
+                      </p>
                     )}
                   </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-center text-sm text-muted-foreground py-6">No bank holidays in this rota period.</p>
-            )}
-          </CardContent>
-        </Card>
+                )}
 
-        {/* Bank Holiday Rules Card */}
-        <Card className="flex flex-col min-h-0 overflow-hidden">
-          <CardContent className="pt-6 space-y-4 flex-1 overflow-y-auto min-h-0">
-            <div>
-              <p className="text-sm font-semibold text-card-foreground">Bank Holiday Shift Rules</p>
-              <p className="text-xs text-muted-foreground mt-1">Do bank holidays follow the same staffing rules as weekends?</p>
-            </div>
-            <div className="flex gap-2.5">
-              <button
-                type="button"
-                onClick={() => setBhSameAsWeekend(true)}
-                className={`px-6 py-2 rounded-lg text-sm font-semibold border-2 transition-colors min-h-[44px] ${
-                  bhSameAsWeekend === true ? 'border-amber-600 bg-amber-50 text-amber-700' : 'border-border bg-background text-muted-foreground'
-                }`}
-              >Yes</button>
-              <button
-                type="button"
-                onClick={() => setBhSameAsWeekend(false)}
-                className={`px-6 py-2 rounded-lg text-sm font-semibold border-2 transition-colors min-h-[44px] ${
-                  bhSameAsWeekend === false ? 'border-amber-600 bg-amber-50 text-amber-700' : 'border-border bg-background text-muted-foreground'
-                }`}
-              >No — different rules apply</button>
-            </div>
-
-            {/* YES — read-only Sunday summary */}
-            {bhSameAsWeekend === true && (
-              <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-4 space-y-3">
-                <p className="text-sm font-medium text-amber-800">Bank holidays will follow Sunday staffing rules:</p>
-                {sundayShifts.length > 0 ? (
-                  <div className="space-y-2">
-                    {sundayShifts.map((s: any) => (
-                      <div key={s.id} className="flex items-center justify-between rounded-md border border-amber-200 bg-white px-3 py-2">
-                        <div>
-                          <span className="text-sm font-medium text-card-foreground">{s.name}</span>
-                          <span className="ml-2 text-xs text-muted-foreground">
-                            {String(s.start_time).slice(0, 5)} – {String(s.end_time).slice(0, 5)}
-                          </span>
-                        </div>
-                        <span className="text-xs font-semibold text-amber-700">
-                          Target: {s.target_doctors ?? 1}
-                        </span>
-                      </div>
-                    ))}
+                {bhSameAsWeekend === false && (
+                  <div className="space-y-1.5">
+                    <p className="text-xs text-muted-foreground">Toggle each shift and set the target doctor count for bank holidays:</p>
+                    {bhShiftRules.length > 0 ? (
+                      <ul className="space-y-1.5">
+                        {bhShiftRules.map((rule) => (
+                          <li
+                            key={rule.shift_key}
+                            className={cn(
+                              "rounded-md border px-3 py-2 flex items-center justify-between gap-3 transition-opacity",
+                              rule.included ? "border-border bg-background" : "border-border bg-muted/30 opacity-60"
+                            )}
+                          >
+                            <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                              <Switch
+                                checked={rule.included}
+                                onCheckedChange={(checked) => updateBhRule(rule.shift_key, { included: checked })}
+                              />
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium text-card-foreground truncate">{rule.name}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {rule.start_time} – {rule.end_time}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <Label className="text-xs text-muted-foreground whitespace-nowrap hidden sm:inline">Target</Label>
+                              <Input
+                                type="number"
+                                min={0}
+                                step={1}
+                                value={rule.target_doctors}
+                                onChange={(e) => updateBhRule(rule.shift_key, { target_doctors: Math.max(0, parseInt(e.target.value) || 0) })}
+                                disabled={!rule.included}
+                                className="w-16 h-9 text-center"
+                              />
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        No shift types defined. Configure them in Department Setup.
+                      </p>
+                    )}
                   </div>
-                ) : (
-                  <p className="text-xs text-muted-foreground">No shifts are assigned to Sundays. Configure day assignments in Department Setup.</p>
                 )}
               </div>
-            )}
-
-            {/* NO — per-shift toggle list */}
-            {bhSameAsWeekend === false && (
-              <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">Toggle shifts on/off and set target doctors for bank holidays:</p>
-                {bhShiftRules.length > 0 ? (
-                  bhShiftRules.map((rule) => (
-                    <div
-                      key={rule.shift_key}
-                      className={cn(
-                        "rounded-lg border p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 transition-opacity",
-                        rule.included ? "border-border bg-background" : "border-border bg-muted/30 opacity-60"
-                      )}
-                    >
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <Switch
-                          checked={rule.included}
-                          onCheckedChange={(checked) => updateBhRule(rule.shift_key, { included: checked })}
-                        />
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-card-foreground truncate">{rule.name}</p>
-                          <p className="text-xs text-muted-foreground">{rule.start_time} – {rule.end_time}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <Label className="text-xs text-muted-foreground whitespace-nowrap">Target doctors</Label>
-                        <Input
-                          type="number"
-                          min={0}
-                          step={1}
-                          value={rule.target_doctors}
-                          onChange={(e) => updateBhRule(rule.shift_key, { target_doctors: Math.max(0, parseInt(e.target.value) || 0) })}
-                          disabled={!rule.included}
-                          className="w-20"
-                        />
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-muted-foreground text-center py-4">No shift types defined. Configure them in Department Setup.</p>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </AdminLayout>
