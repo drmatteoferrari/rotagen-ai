@@ -1948,7 +1948,7 @@ export default function PreRotaCalendarPage({ embedded = false }: { embedded?: b
           title={doctor.doctorName}
         >
           <div className="font-semibold text-[10px] sm:text-[11px] text-blue-600 break-words whitespace-normal w-full">
-            {lastName && <span className="uppercase">{lastName}</span>}
+            {lastName && <span className="uppercase font-extrabold">{lastName}</span>}
             {lastName && " "}
             <span>{firstName}</span>
           </div>
