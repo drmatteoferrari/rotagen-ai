@@ -1570,7 +1570,7 @@ export default function Roster() {
                     </div>
 
                     {/* Name */}
-                    <div className="flex-1 min-w-0 font-semibold truncate text-[13px]" style={{maxWidth: '500px'}}>
+                    <div className="flex-1 min-w-0 font-semibold truncate text-[13px]" style={{minWidth: '320px', maxWidth: '700px'}}>
                       {formatDoctorName(doctor.first_name, doctor.last_name)}
                     </div>
 
