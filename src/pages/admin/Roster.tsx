@@ -68,14 +68,18 @@ interface Doctor {
   is_active: boolean;
 }
 
-/** Display helper — SURNAME in full caps, Firstname in sentence case */
-const formatDoctorName = (first: string, last: string): string => {
+/** Display helper — SURNAME in full caps (extra bold), Firstname in sentence case */
+const formatDoctorName = (first: string, last: string) => {
   const surname = last.toUpperCase();
   const givenName = first
     .split(" ")
     .map((w) => (w.length > 0 ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : ""))
     .join(" ");
-  return `${surname}, ${givenName}`;
+  return (
+    <>
+      <span className="font-extrabold">{surname}</span>, {givenName}
+    </>
+  );
 };
 
 // ── Expanded panel component ──
