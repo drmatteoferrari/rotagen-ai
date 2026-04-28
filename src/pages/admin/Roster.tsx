@@ -341,16 +341,16 @@ export default function Roster() {
   // Deadline picker state
   const [surveyDeadline, setSurveyDeadline] = useState<Date | undefined>(undefined);
   const [deadlineOpen, setDeadlineOpen] = useState(false);
-  const [deadlineInitialized, setDeadlineInitialized] = useState(false);
 
-  // Sync deadline from cached query
+  // Sync deadline from cached query — always reflect latest DB value (single source of truth)
   useEffect(() => {
-    if (configDetails?.survey_deadline && !deadlineInitialized) {
+    if (configDetails?.survey_deadline) {
       const [y, m, d] = configDetails.survey_deadline.split("-").map(Number);
       setSurveyDeadline(new Date(y, m - 1, d));
-      setDeadlineInitialized(true);
+    } else if (configDetails && !configDetails.survey_deadline) {
+      setSurveyDeadline(undefined);
     }
-  }, [configDetails, deadlineInitialized]);
+  }, [configDetails?.survey_deadline]);
 
   // Dialog states for generic actions
   const [doctorToSend, setDoctorToSend] = useState<Doctor | null>(null);
