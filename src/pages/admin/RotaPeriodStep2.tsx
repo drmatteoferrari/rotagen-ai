@@ -18,7 +18,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getRotaConfig } from "@/lib/rotaConfig";
-import { useInvalidateQuery } from "@/hooks/useAdminQueries";
+import { useInvalidateQuery, useRotaConfigDetailsQuery } from "@/hooks/useAdminQueries";
 
 const UK_BANK_HOLIDAYS: { date: [number, number, number]; name: string }[] = [
   // 2025
