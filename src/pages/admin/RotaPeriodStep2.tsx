@@ -352,12 +352,17 @@ export default function RotaPeriodStep2() {
               <Calendar
                 mode="single"
                 selected={surveyDeadline}
+                defaultMonth={surveyDeadline ?? (rotaStartDate ?? new Date())}
                 onSelect={handleDeadlineSelect}
                 disabled={(date) => {
                   const today = new Date();
                   today.setHours(0, 0, 0, 0);
                   if (date < today) return true;
-                  if (rotaStartDate && date >= rotaStartDate) return true;
+                  if (rotaStartDate) {
+                    const start = new Date(rotaStartDate);
+                    start.setHours(0, 0, 0, 0);
+                    if (date >= start) return true;
+                  }
                   return false;
                 }}
                 initialFocus
