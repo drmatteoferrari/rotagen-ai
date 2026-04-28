@@ -331,11 +331,12 @@ export default function RotaPeriodStep2() {
           <span className="text-xs text-muted-foreground hidden sm:inline">
             Date by which doctors must submit their survey
           </span>
-          <Popover>
+          <Popover open={deadlineOpen} onOpenChange={setDeadlineOpen} modal={false}>
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
                 size="sm"
+                disabled={savingDeadline}
                 className={cn(
                   "ml-auto h-8 text-xs font-normal px-3 gap-1.5 min-w-[140px] justify-start",
                   !surveyDeadline && "text-muted-foreground border-amber-300",
@@ -351,7 +352,7 @@ export default function RotaPeriodStep2() {
               <Calendar
                 mode="single"
                 selected={surveyDeadline}
-                onSelect={setSurveyDeadline}
+                onSelect={handleDeadlineSelect}
                 disabled={(date) => {
                   const today = new Date();
                   today.setHours(0, 0, 0, 0);
