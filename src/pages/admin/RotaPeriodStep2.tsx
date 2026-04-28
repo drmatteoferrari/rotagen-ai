@@ -68,6 +68,44 @@ export default function RotaPeriodStep2() {
   const [newHolidayName, setNewHolidayName] = useState("");
   const [newHolidayDate, setNewHolidayDate] = useState<Date>();
   const [saving, setSaving] = useState(false);
+  const [deadlineOpen, setDeadlineOpen] = useState(false);
+  const [savingDeadline, setSavingDeadline] = useState(false);
+
+  // Single source of truth: sync deadline from DB cache (latest change wins,
+  // whether edited here or in Roster).
+  const { data: configDetails } = useRotaConfigDetailsQuery();
+  useEffect(() => {
+    if (configDetails?.survey_deadline) {
+      const [y, m, d] = configDetails.survey_deadline.split("-").map(Number);
+      const dbDate = new Date(y, m - 1, d);
+      setSurveyDeadline((current) => {
+        if (current && format(current, "yyyy-MM-dd") === configDetails.survey_deadline) {
+          return current;
+        }
+        return dbDate;
+      });
+    }
+  }, [configDetails?.survey_deadline]);
+
+  // Save deadline immediately on change (mirrors Roster behaviour).
+  const handleDeadlineSelect = async (date: Date | undefined) => {
+    setSurveyDeadline(date);
+    setDeadlineOpen(false);
+    if (!date || !currentRotaConfigId) return;
+    setSavingDeadline(true);
+    const { error } = await supabase
+      .from("rota_configs")
+      .update({ survey_deadline: format(date, "yyyy-MM-dd"), updated_at: new Date().toISOString() })
+      .eq("id", currentRotaConfigId);
+    setSavingDeadline(false);
+    if (error) {
+      toast.error("Failed to save deadline");
+      console.error(error);
+      return;
+    }
+    invalidateRotaConfigDetails();
+    toast.success("Deadline saved");
+  };
 
   // Bank holiday initialisation — from context or static list
   useEffect(() => {
