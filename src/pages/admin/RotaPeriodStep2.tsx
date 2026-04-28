@@ -75,16 +75,12 @@ export default function RotaPeriodStep2() {
   // whether edited here or in Roster).
   const { data: configDetails } = useRotaConfigDetailsQuery();
   useEffect(() => {
-    if (configDetails?.survey_deadline) {
-      const [y, m, d] = configDetails.survey_deadline.split("-").map(Number);
-      const dbDate = new Date(y, m - 1, d);
-      setSurveyDeadline((current) => {
-        if (current && format(current, "yyyy-MM-dd") === configDetails.survey_deadline) {
-          return current;
-        }
-        return dbDate;
-      });
-    }
+    if (!configDetails?.survey_deadline) return;
+    const dbStr = configDetails.survey_deadline;
+    const currentStr = surveyDeadline ? format(surveyDeadline, "yyyy-MM-dd") : null;
+    if (currentStr === dbStr) return;
+    const [y, m, d] = dbStr.split("-").map(Number);
+    setSurveyDeadline(new Date(y, m - 1, d));
   }, [configDetails?.survey_deadline]);
 
   // Save deadline immediately on change (mirrors Roster behaviour).
