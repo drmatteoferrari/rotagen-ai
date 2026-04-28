@@ -564,7 +564,10 @@ export default function Roster() {
     if (error) {
       toast.error("Failed to save deadline");
       console.error(error);
+      return;
     }
+    invalidateRotaConfigDetails();
+    toast.success("Deadline updated");
   };
 
   // Formatted deadline for email
