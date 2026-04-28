@@ -18,7 +18,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getRotaConfig } from "@/lib/rotaConfig";
-import { useInvalidateQuery } from "@/hooks/useAdminQueries";
+import { useInvalidateQuery, useRotaConfigDetailsQuery } from "@/hooks/useAdminQueries";
 
 const UK_BANK_HOLIDAYS: { date: [number, number, number]; name: string }[] = [
   // 2025
@@ -68,6 +68,40 @@ export default function RotaPeriodStep2() {
   const [newHolidayName, setNewHolidayName] = useState("");
   const [newHolidayDate, setNewHolidayDate] = useState<Date>();
   const [saving, setSaving] = useState(false);
+  const [deadlineOpen, setDeadlineOpen] = useState(false);
+  const [savingDeadline, setSavingDeadline] = useState(false);
+
+  // Single source of truth: sync deadline from DB cache (latest change wins,
+  // whether edited here or in Roster).
+  const { data: configDetails } = useRotaConfigDetailsQuery();
+  useEffect(() => {
+    if (!configDetails?.survey_deadline) return;
+    const dbStr = configDetails.survey_deadline;
+    const currentStr = surveyDeadline ? format(surveyDeadline, "yyyy-MM-dd") : null;
+    if (currentStr === dbStr) return;
+    const [y, m, d] = dbStr.split("-").map(Number);
+    setSurveyDeadline(new Date(y, m - 1, d));
+  }, [configDetails?.survey_deadline]);
+
+  // Save deadline immediately on change (mirrors Roster behaviour).
+  const handleDeadlineSelect = async (date: Date | undefined) => {
+    setSurveyDeadline(date);
+    setDeadlineOpen(false);
+    if (!date || !currentRotaConfigId) return;
+    setSavingDeadline(true);
+    const { error } = await supabase
+      .from("rota_configs")
+      .update({ survey_deadline: format(date, "yyyy-MM-dd"), updated_at: new Date().toISOString() })
+      .eq("id", currentRotaConfigId);
+    setSavingDeadline(false);
+    if (error) {
+      toast.error("Failed to save deadline");
+      console.error(error);
+      return;
+    }
+    invalidateRotaConfigDetails();
+    toast.success("Deadline saved");
+  };
 
   // Bank holiday initialisation — from context or static list
   useEffect(() => {
@@ -297,11 +331,12 @@ export default function RotaPeriodStep2() {
           <span className="text-xs text-muted-foreground hidden sm:inline">
             Date by which doctors must submit their survey
           </span>
-          <Popover>
+          <Popover open={deadlineOpen} onOpenChange={setDeadlineOpen} modal={false}>
             <PopoverTrigger asChild>
               <Button
                 variant="outline"
                 size="sm"
+                disabled={savingDeadline}
                 className={cn(
                   "ml-auto h-8 text-xs font-normal px-3 gap-1.5 min-w-[140px] justify-start",
                   !surveyDeadline && "text-muted-foreground border-amber-300",
@@ -317,7 +352,7 @@ export default function RotaPeriodStep2() {
               <Calendar
                 mode="single"
                 selected={surveyDeadline}
-                onSelect={setSurveyDeadline}
+                onSelect={handleDeadlineSelect}
                 disabled={(date) => {
                   const today = new Date();
                   today.setHours(0, 0, 0, 0);
