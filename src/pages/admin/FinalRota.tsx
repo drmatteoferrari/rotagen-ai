@@ -199,6 +199,32 @@ export default function FinalRota() {
     setErrorMessage(null);
   };
 
+  const handleExportFixture = useCallback(async () => {
+    if (!currentRotaConfigId) return;
+    try {
+      const input = await buildFinalRotaInput(currentRotaConfigId);
+      const fixture = {
+        exportedAt: new Date().toISOString(),
+        configId: currentRotaConfigId,
+        label: `${departmentName} — ${input.preRotaInput.period.startDate} to ${input.preRotaInput.period.endDate}`,
+        doctorCount: input.doctors.length,
+        resolvedAvailabilityCount: input.resolvedAvailability.length,
+        input,
+      };
+      const blob = new Blob([JSON.stringify(fixture, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `rotagen-fixture-${currentRotaConfigId.slice(0, 8)}-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      console.error('Fixture export failed:', err);
+    }
+  }, [currentRotaConfigId, departmentName]);
+
   // ── Render ────────────────────────────────────────────────
 
   const progressPct = progress
@@ -246,6 +272,19 @@ export default function FinalRota() {
         {/* ── STATE A: Idle ── */}
         {(phase === 'idle' || phase === 'error') && (
           <>
+            {import.meta.env.DEV && (
+              <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 flex flex-col sm:flex-row sm:items-center gap-3">
+                <span className="text-sm font-medium text-amber-800">⚙️ DEV TOOLS — not visible in production</span>
+                <button
+                  type="button"
+                  onClick={handleExportFixture}
+                  disabled={!currentRotaConfigId}
+                  className="text-sm font-semibold px-3 py-1.5 rounded-md bg-amber-500 hover:bg-amber-600 text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+                >
+                  ⬇️ Export Test Fixture
+                </button>
+              </div>
+            )}
             {/* Config summary card */}
             <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
               <h3 className="text-sm font-bold text-foreground mb-4 flex items-center gap-2">
