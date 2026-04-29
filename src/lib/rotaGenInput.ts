@@ -548,7 +548,7 @@ export async function buildFinalRotaInput(configId: string): Promise<FinalRotaIn
 
   return {
     preRotaInput,
-    resolvedAvailability: (resolvedRaw.data ?? [])
+    resolvedAvailability: resolvedRows
       .filter(row => activeDoctorIds.has(row.doctor_id))
       .map(row => ({
         doctorId: row.doctor_id,
