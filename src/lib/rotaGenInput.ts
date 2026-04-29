@@ -375,7 +375,7 @@ export async function getSurveyResponsesForConfig(configId: string): Promise<Doc
 
 export async function buildFinalRotaInput(configId: string): Promise<FinalRotaInput> {
   // ── 1. Parallel fetches — zero sequential round trips ──────────────
-  const [preRotaInput, cfg, responsesRaw, preRotaRow, ltftRaw, resolvedRaw] =
+  const [preRotaInput, cfg, responsesRaw, preRotaRow, ltftRaw, resolvedRows] =
     await Promise.all([
       buildPreRotaInput(configId),
       getRotaConfig(configId),
@@ -390,14 +390,26 @@ export async function buildFinalRotaInput(configId: string): Promise<FinalRotaIn
         .select('doctor_id, day, is_day_off, can_start_nights, can_end_nights')
         .eq('rota_config_id', configId)
         .eq('is_day_off', true),
-      supabase
-        .from('resolved_availability')
-        .select('doctor_id, date, status, source, can_start_nights, can_end_nights')
-        .eq('rota_config_id', configId)
-        .limit(50000),
+      (async () => {
+        // Paginated fetch — PostgREST server-side cap is ~1000 rows per request
+        const PAGE = 1000;
+        const all: any[] = [];
+        for (let from = 0; ; from += PAGE) {
+          const { data, error } = await supabase
+            .from('resolved_availability')
+            .select('doctor_id, date, status, source, can_start_nights, can_end_nights')
+            .eq('rota_config_id', configId)
+            .range(from, from + PAGE - 1);
+          if (error) throw error;
+          if (!data || data.length === 0) break;
+          all.push(...data);
+          if (data.length < PAGE) break;
+        }
+        return all;
+      })(),
     ]);
 
-  console.log('RESOLVED_RAW_COUNT:', resolvedRaw.data?.length ?? 0);
+  console.log('RESOLVED_RAW_COUNT:', resolvedRows.length);
 
   const totalWeeks = preRotaInput.period.totalWeeks || 1;
   const maxConsecNights = cfg.wtr?.maxConsecNights ?? 4;
@@ -536,7 +548,7 @@ export async function buildFinalRotaInput(configId: string): Promise<FinalRotaIn
 
   return {
     preRotaInput,
-    resolvedAvailability: (resolvedRaw.data ?? [])
+    resolvedAvailability: resolvedRows
       .filter(row => activeDoctorIds.has(row.doctor_id))
       .map(row => ({
         doctorId: row.doctor_id,
