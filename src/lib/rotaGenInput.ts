@@ -393,7 +393,8 @@ export async function buildFinalRotaInput(configId: string): Promise<FinalRotaIn
       supabase
         .from('resolved_availability')
         .select('doctor_id, date, status, source, can_start_nights, can_end_nights')
-        .eq('rota_config_id', configId),
+        .eq('rota_config_id', configId)
+        .limit(50000),
     ]);
 
   const totalWeeks = preRotaInput.period.totalWeeks || 1;
