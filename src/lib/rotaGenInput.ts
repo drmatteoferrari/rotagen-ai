@@ -397,6 +397,8 @@ export async function buildFinalRotaInput(configId: string): Promise<FinalRotaIn
         .limit(50000),
     ]);
 
+  console.log('RESOLVED_RAW_COUNT:', resolvedRaw.data?.length ?? 0);
+
   const totalWeeks = preRotaInput.period.totalWeeks || 1;
   const maxConsecNights = cfg.wtr?.maxConsecNights ?? 4;
   const maxHoursPerWeek = cfg.wtr?.maxHoursPerWeek ?? 48;
