@@ -675,6 +675,10 @@ export default function Roster() {
 
   // ─── Bulk send handler ───
   const handleBulkSend = async (mode: SendMode) => {
+    if (doctors.length === 0) {
+      toast.error("Add doctors to the roster before sending invites");
+      return;
+    }
     const eligible = getSendModeRecipients(mode);
     if (eligible.length === 0) return;
     setSendModalOpen(false);
@@ -1436,6 +1440,10 @@ export default function Roster() {
                       : "text-muted-foreground",
                   )}
                   onClick={() => {
+                    if (doctors.length === 0) {
+                      toast.error("Add doctors to the roster before sending invites");
+                      return;
+                    }
                     if (!surveyDeadline) {
                       toast.error("Set a survey deadline before sending invites");
                       return;

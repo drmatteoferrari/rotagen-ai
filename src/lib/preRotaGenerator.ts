@@ -1,3 +1,34 @@
+/**
+ * Pre-rota generator — explicit assumptions
+ * ------------------------------------------
+ * These are the implicit constraints baked into the generator and its
+ * downstream consumers (preRotaCalendar, preRotaTargets, resolvedAvailability,
+ * preRotaValidation). Document here so future-you doesn't get caught out;
+ * removing or changing any of these requires touching every consumer.
+ *
+ * 1. UTC date arithmetic.
+ *    All ISO date strings (rota_start_date, rota_end_date, leave start/end,
+ *    bank_holidays.date, etc.) are treated as midnight UTC. Day-of-week is
+ *    derived from UTC, not the user's local TZ. When introducing JS `Date`
+ *    objects, use `getUTCDay()` / `toISOString()` — never `getDay()` /
+ *    `toLocaleDateString()`. Mixing timezones silently shifts a Sunday into
+ *    a Saturday for users east of UTC.
+ *
+ * 2. England-only bank holidays.
+ *    `rota_configs.bank_holidays` has no jurisdiction marker. The auto-fill
+ *    list in RotaPeriodStep2.tsx (UK_BANK_HOLIDAYS) is the England & Wales
+ *    set. Scotland and Northern Ireland have different bank holidays
+ *    (e.g. Scottish New Year, Battle of the Boyne) — those rotas will
+ *    inherit incorrect defaults until per-region support is added.
+ *
+ * 3. No DST handling.
+ *    Rota periods that span the UK clock change (last Sunday of March /
+ *    last Sunday of October) will encounter a "missing" or "doubled" hour
+ *    in scheduled shifts. The generator computes shift hours as if every
+ *    day is exactly 24h. Out-of-bounds for a v1 release; needs explicit
+ *    DST-aware shift accounting in WTR + scheduling logic before this
+ *    becomes correct.
+ */
 import { runPreRotaValidation, type ValidationDoctor } from "./preRotaValidation";
 import { buildPreRotaInput } from "./rotaGenInput";
 import { buildCalendarData } from "./preRotaCalendar";
@@ -64,6 +95,20 @@ export async function generatePreRota(
       .from("doctor_survey_responses")
       .select("*")
       .eq("rota_config_id", rotaConfigId);
+
+    // Block generation if zero surveys are submitted. Without at least one
+    // submitted survey, the algorithm runs against empty WTE / leave / LTFT
+    // input and silently produces a meaningless rota. Surface explicitly.
+    const submittedSurveyCount = (surveyResponses ?? []).filter(
+      (r: any) => r.status === "submitted",
+    ).length;
+    if (submittedSurveyCount === 0) {
+      return {
+        success: false,
+        error:
+          "No surveys submitted yet. Wait for at least one doctor to submit before generating the pre-rota.",
+      };
+    }
 
     // ── 7. Fetch relational availability data (parallel) ──────────────
     const [{ data: unavailabilityBlocks }, { data: ltftPatterns }] = await Promise.all([
