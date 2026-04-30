@@ -1,0 +1,1181 @@
+{
+  "exportedAt": "2026-04-30T09:49:00.611Z",
+  "configId": "t1-config",
+  "label": "T1 — 3 doctors, 4 weeks, no leave, nights only",
+  "doctorCount": 3,
+  "resolvedAvailabilityCount": 84,
+  "input": {
+    "preRotaInput": {
+      "configId": "t1-config",
+      "period": {
+        "startDate": "2026-06-01",
+        "endDate": "2026-06-28",
+        "totalDays": 28,
+        "totalWeeks": 4,
+        "bankHolidayDates": [],
+        "bhSameAsWeekend": false,
+        "bhShiftRules": []
+      },
+      "shiftSlots": [
+        {
+          "shiftId": "shift-night",
+          "shiftKey": "night",
+          "name": "Night Shift",
+          "dayKey": "mon",
+          "startTime": "21:00",
+          "endTime": "08:00",
+          "durationHours": 11,
+          "isOncall": true,
+          "isNonResOncall": false,
+          "badges": [
+            "night",
+            "long",
+            "ooh",
+            "oncall"
+          ],
+          "staffing": {
+            "min": 1,
+            "target": 2,
+            "max": 2
+          },
+          "slots": [
+            {
+              "slotIndex": 0,
+              "label": "Senior",
+              "permittedGrades": [],
+              "reqIac": 1,
+              "reqIaoc": 0,
+              "reqIcu": 0,
+              "reqTransfer": 0
+            },
+            {
+              "slotIndex": 1,
+              "label": "ICU cover",
+              "permittedGrades": [],
+              "reqIac": 0,
+              "reqIaoc": 0,
+              "reqIcu": 1,
+              "reqTransfer": 0
+            }
+          ],
+          "targetPct": 100
+        },
+        {
+          "shiftId": "shift-night",
+          "shiftKey": "night",
+          "name": "Night Shift",
+          "dayKey": "tue",
+          "startTime": "21:00",
+          "endTime": "08:00",
+          "durationHours": 11,
+          "isOncall": true,
+          "isNonResOncall": false,
+          "badges": [
+            "night",
+            "long",
+            "ooh",
+            "oncall"
+          ],
+          "staffing": {
+            "min": 1,
+            "target": 2,
+            "max": 2
+          },
+          "slots": [
+            {
+              "slotIndex": 0,
+              "label": "Senior",
+              "permittedGrades": [],
+              "reqIac": 1,
+              "reqIaoc": 0,
+              "reqIcu": 0,
+              "reqTransfer": 0
+            },
+            {
+              "slotIndex": 1,
+              "label": "ICU cover",
+              "permittedGrades": [],
+              "reqIac": 0,
+              "reqIaoc": 0,
+              "reqIcu": 1,
+              "reqTransfer": 0
+            }
+          ],
+          "targetPct": 100
+        },
+        {
+          "shiftId": "shift-night",
+          "shiftKey": "night",
+          "name": "Night Shift",
+          "dayKey": "wed",
+          "startTime": "21:00",
+          "endTime": "08:00",
+          "durationHours": 11,
+          "isOncall": true,
+          "isNonResOncall": false,
+          "badges": [
+            "night",
+            "long",
+            "ooh",
+            "oncall"
+          ],
+          "staffing": {
+            "min": 1,
+            "target": 2,
+            "max": 2
+          },
+          "slots": [
+            {
+              "slotIndex": 0,
+              "label": "Senior",
+              "permittedGrades": [],
+              "reqIac": 1,
+              "reqIaoc": 0,
+              "reqIcu": 0,
+              "reqTransfer": 0
+            },
+            {
+              "slotIndex": 1,
+              "label": "ICU cover",
+              "permittedGrades": [],
+              "reqIac": 0,
+              "reqIaoc": 0,
+              "reqIcu": 1,
+              "reqTransfer": 0
+            }
+          ],
+          "targetPct": 100
+        },
+        {
+          "shiftId": "shift-night",
+          "shiftKey": "night",
+          "name": "Night Shift",
+          "dayKey": "thu",
+          "startTime": "21:00",
+          "endTime": "08:00",
+          "durationHours": 11,
+          "isOncall": true,
+          "isNonResOncall": false,
+          "badges": [
+            "night",
+            "long",
+            "ooh",
+            "oncall"
+          ],
+          "staffing": {
+            "min": 1,
+            "target": 2,
+            "max": 2
+          },
+          "slots": [
+            {
+              "slotIndex": 0,
+              "label": "Senior",
+              "permittedGrades": [],
+              "reqIac": 1,
+              "reqIaoc": 0,
+              "reqIcu": 0,
+              "reqTransfer": 0
+            },
+            {
+              "slotIndex": 1,
+              "label": "ICU cover",
+              "permittedGrades": [],
+              "reqIac": 0,
+              "reqIaoc": 0,
+              "reqIcu": 1,
+              "reqTransfer": 0
+            }
+          ],
+          "targetPct": 100
+        },
+        {
+          "shiftId": "shift-night",
+          "shiftKey": "night",
+          "name": "Night Shift",
+          "dayKey": "fri",
+          "startTime": "21:00",
+          "endTime": "08:00",
+          "durationHours": 11,
+          "isOncall": true,
+          "isNonResOncall": false,
+          "badges": [
+            "night",
+            "long",
+            "ooh",
+            "oncall"
+          ],
+          "staffing": {
+            "min": 1,
+            "target": 2,
+            "max": 2
+          },
+          "slots": [
+            {
+              "slotIndex": 0,
+              "label": "Senior",
+              "permittedGrades": [],
+              "reqIac": 1,
+              "reqIaoc": 0,
+              "reqIcu": 0,
+              "reqTransfer": 0
+            },
+            {
+              "slotIndex": 1,
+              "label": "ICU cover",
+              "permittedGrades": [],
+              "reqIac": 0,
+              "reqIaoc": 0,
+              "reqIcu": 1,
+              "reqTransfer": 0
+            }
+          ],
+          "targetPct": 100
+        },
+        {
+          "shiftId": "shift-night",
+          "shiftKey": "night",
+          "name": "Night Shift",
+          "dayKey": "sat",
+          "startTime": "21:00",
+          "endTime": "08:00",
+          "durationHours": 11,
+          "isOncall": true,
+          "isNonResOncall": false,
+          "badges": [
+            "night",
+            "long",
+            "ooh",
+            "oncall"
+          ],
+          "staffing": {
+            "min": 1,
+            "target": 2,
+            "max": 2
+          },
+          "slots": [
+            {
+              "slotIndex": 0,
+              "label": "Senior",
+              "permittedGrades": [],
+              "reqIac": 1,
+              "reqIaoc": 0,
+              "reqIcu": 0,
+              "reqTransfer": 0
+            },
+            {
+              "slotIndex": 1,
+              "label": "ICU cover",
+              "permittedGrades": [],
+              "reqIac": 0,
+              "reqIaoc": 0,
+              "reqIcu": 1,
+              "reqTransfer": 0
+            }
+          ],
+          "targetPct": 100
+        },
+        {
+          "shiftId": "shift-night",
+          "shiftKey": "night",
+          "name": "Night Shift",
+          "dayKey": "sun",
+          "startTime": "21:00",
+          "endTime": "08:00",
+          "durationHours": 11,
+          "isOncall": true,
+          "isNonResOncall": false,
+          "badges": [
+            "night",
+            "long",
+            "ooh",
+            "oncall"
+          ],
+          "staffing": {
+            "min": 1,
+            "target": 2,
+            "max": 2
+          },
+          "slots": [
+            {
+              "slotIndex": 0,
+              "label": "Senior",
+              "permittedGrades": [],
+              "reqIac": 1,
+              "reqIaoc": 0,
+              "reqIcu": 0,
+              "reqTransfer": 0
+            },
+            {
+              "slotIndex": 1,
+              "label": "ICU cover",
+              "permittedGrades": [],
+              "reqIac": 0,
+              "reqIaoc": 0,
+              "reqIcu": 1,
+              "reqTransfer": 0
+            }
+          ],
+          "targetPct": 100
+        }
+      ],
+      "wtrConstraints": {
+        "maxAvgHoursPerWeek": 48,
+        "maxHoursIn168h": 72,
+        "maxShiftLengthH": 13,
+        "minInterShiftRestH": 11,
+        "maxConsecutive": {
+          "standard": 7,
+          "long": 4,
+          "nights": 4,
+          "longEvening": 4
+        },
+        "minRestHoursAfter": {
+          "nights": 46,
+          "longShifts": 48,
+          "standardShifts": 11,
+          "longEveningShifts": 11
+        },
+        "weekendFrequencyMax": 0.3333,
+        "oncall": {
+          "maxPer7Days": 3,
+          "localAgreementMaxConsec": 2,
+          "dayAfterMaxHours": 10,
+          "restPer24hHours": 8,
+          "continuousRestHours": 5,
+          "continuousRestStart": "22:00",
+          "continuousRestEnd": "07:00",
+          "ifRestNotMetNextDayMaxHours": 10,
+          "noSimultaneousShift": true,
+          "noConsecExceptWknd": true,
+          "dayAfterLastConsecMaxH": 10
+        }
+      },
+      "distributionTargets": {
+        "globalOncallPct": 100,
+        "globalNonOncallPct": 0,
+        "byShift": [
+          {
+            "shiftKey": "night",
+            "targetPct": 100,
+            "isOncall": true
+          }
+        ]
+      }
+    },
+    "doctors": [
+      {
+        "doctorId": "dr-alpha",
+        "name": "Dr Alpha",
+        "grade": "ST7",
+        "wtePct": 100,
+        "contractedHoursPerWeek": 48,
+        "hasIac": true,
+        "hasIaoc": true,
+        "hasIcu": true,
+        "hasTransfer": false,
+        "ltft": {
+          "isLtft": false,
+          "daysOff": []
+        },
+        "constraints": {
+          "hard": {
+            "exemptFromNights": false,
+            "exemptFromWeekends": false,
+            "exemptFromOncall": false
+          },
+          "soft": {
+            "maxConsecNights": 4,
+            "additionalNotes": ""
+          }
+        },
+        "fairnessTargets": {
+          "targetTotalHours": 192,
+          "targetNightShiftCount": 19,
+          "targetWeekendShiftCount": 5,
+          "targetOncallCount": 19,
+          "proportionFactor": 1
+        },
+        "shiftTargets": [
+          {
+            "shiftTypeId": "shift-night",
+            "shiftName": "Night Shift",
+            "shiftKey": "night",
+            "isOncall": true,
+            "maxTargetHours": 192,
+            "estimatedShiftCount": 19
+          }
+        ],
+        "totalMaxHours": 192,
+        "weekendCap": 1,
+        "hardWeeklyCap": 72
+      },
+      {
+        "doctorId": "dr-beta",
+        "name": "Dr Beta",
+        "grade": "ST5",
+        "wtePct": 100,
+        "contractedHoursPerWeek": 48,
+        "hasIac": true,
+        "hasIaoc": true,
+        "hasIcu": false,
+        "hasTransfer": false,
+        "ltft": {
+          "isLtft": false,
+          "daysOff": []
+        },
+        "constraints": {
+          "hard": {
+            "exemptFromNights": false,
+            "exemptFromWeekends": false,
+            "exemptFromOncall": false
+          },
+          "soft": {
+            "maxConsecNights": 4,
+            "additionalNotes": ""
+          }
+        },
+        "fairnessTargets": {
+          "targetTotalHours": 192,
+          "targetNightShiftCount": 19,
+          "targetWeekendShiftCount": 5,
+          "targetOncallCount": 19,
+          "proportionFactor": 1
+        },
+        "shiftTargets": [
+          {
+            "shiftTypeId": "shift-night",
+            "shiftName": "Night Shift",
+            "shiftKey": "night",
+            "isOncall": true,
+            "maxTargetHours": 192,
+            "estimatedShiftCount": 19
+          }
+        ],
+        "totalMaxHours": 192,
+        "weekendCap": 1,
+        "hardWeeklyCap": 72
+      },
+      {
+        "doctorId": "dr-gamma",
+        "name": "Dr Gamma",
+        "grade": "ST4",
+        "wtePct": 100,
+        "contractedHoursPerWeek": 48,
+        "hasIac": false,
+        "hasIaoc": false,
+        "hasIcu": true,
+        "hasTransfer": false,
+        "ltft": {
+          "isLtft": false,
+          "daysOff": []
+        },
+        "constraints": {
+          "hard": {
+            "exemptFromNights": false,
+            "exemptFromWeekends": false,
+            "exemptFromOncall": false
+          },
+          "soft": {
+            "maxConsecNights": 4,
+            "additionalNotes": ""
+          }
+        },
+        "fairnessTargets": {
+          "targetTotalHours": 192,
+          "targetNightShiftCount": 19,
+          "targetWeekendShiftCount": 5,
+          "targetOncallCount": 19,
+          "proportionFactor": 1
+        },
+        "shiftTargets": [
+          {
+            "shiftTypeId": "shift-night",
+            "shiftName": "Night Shift",
+            "shiftKey": "night",
+            "isOncall": true,
+            "maxTargetHours": 192,
+            "estimatedShiftCount": 19
+          }
+        ],
+        "totalMaxHours": 192,
+        "weekendCap": 1,
+        "hardWeeklyCap": 72
+      }
+    ],
+    "resolvedAvailability": [
+      {
+        "doctorId": "dr-alpha",
+        "date": "2026-06-01",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-alpha",
+        "date": "2026-06-02",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-alpha",
+        "date": "2026-06-03",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-alpha",
+        "date": "2026-06-04",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-alpha",
+        "date": "2026-06-05",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-alpha",
+        "date": "2026-06-06",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-alpha",
+        "date": "2026-06-07",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-alpha",
+        "date": "2026-06-08",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-alpha",
+        "date": "2026-06-09",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-alpha",
+        "date": "2026-06-10",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-alpha",
+        "date": "2026-06-11",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-alpha",
+        "date": "2026-06-12",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-alpha",
+        "date": "2026-06-13",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-alpha",
+        "date": "2026-06-14",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-alpha",
+        "date": "2026-06-15",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-alpha",
+        "date": "2026-06-16",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-alpha",
+        "date": "2026-06-17",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-alpha",
+        "date": "2026-06-18",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-alpha",
+        "date": "2026-06-19",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-alpha",
+        "date": "2026-06-20",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-alpha",
+        "date": "2026-06-21",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-alpha",
+        "date": "2026-06-22",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-alpha",
+        "date": "2026-06-23",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-alpha",
+        "date": "2026-06-24",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-alpha",
+        "date": "2026-06-25",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-alpha",
+        "date": "2026-06-26",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-alpha",
+        "date": "2026-06-27",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-alpha",
+        "date": "2026-06-28",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-beta",
+        "date": "2026-06-01",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-beta",
+        "date": "2026-06-02",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-beta",
+        "date": "2026-06-03",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-beta",
+        "date": "2026-06-04",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-beta",
+        "date": "2026-06-05",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-beta",
+        "date": "2026-06-06",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-beta",
+        "date": "2026-06-07",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-beta",
+        "date": "2026-06-08",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-beta",
+        "date": "2026-06-09",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-beta",
+        "date": "2026-06-10",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-beta",
+        "date": "2026-06-11",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-beta",
+        "date": "2026-06-12",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-beta",
+        "date": "2026-06-13",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-beta",
+        "date": "2026-06-14",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-beta",
+        "date": "2026-06-15",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-beta",
+        "date": "2026-06-16",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-beta",
+        "date": "2026-06-17",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-beta",
+        "date": "2026-06-18",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-beta",
+        "date": "2026-06-19",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-beta",
+        "date": "2026-06-20",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-beta",
+        "date": "2026-06-21",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-beta",
+        "date": "2026-06-22",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-beta",
+        "date": "2026-06-23",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-beta",
+        "date": "2026-06-24",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-beta",
+        "date": "2026-06-25",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-beta",
+        "date": "2026-06-26",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-beta",
+        "date": "2026-06-27",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-beta",
+        "date": "2026-06-28",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-gamma",
+        "date": "2026-06-01",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-gamma",
+        "date": "2026-06-02",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-gamma",
+        "date": "2026-06-03",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-gamma",
+        "date": "2026-06-04",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-gamma",
+        "date": "2026-06-05",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-gamma",
+        "date": "2026-06-06",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-gamma",
+        "date": "2026-06-07",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-gamma",
+        "date": "2026-06-08",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-gamma",
+        "date": "2026-06-09",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-gamma",
+        "date": "2026-06-10",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-gamma",
+        "date": "2026-06-11",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-gamma",
+        "date": "2026-06-12",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-gamma",
+        "date": "2026-06-13",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-gamma",
+        "date": "2026-06-14",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-gamma",
+        "date": "2026-06-15",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-gamma",
+        "date": "2026-06-16",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-gamma",
+        "date": "2026-06-17",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-gamma",
+        "date": "2026-06-18",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-gamma",
+        "date": "2026-06-19",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-gamma",
+        "date": "2026-06-20",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-gamma",
+        "date": "2026-06-21",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-gamma",
+        "date": "2026-06-22",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-gamma",
+        "date": "2026-06-23",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-gamma",
+        "date": "2026-06-24",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-gamma",
+        "date": "2026-06-25",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-gamma",
+        "date": "2026-06-26",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-gamma",
+        "date": "2026-06-27",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      },
+      {
+        "doctorId": "dr-gamma",
+        "date": "2026-06-28",
+        "status": "AVAILABLE",
+        "source": "survey",
+        "canStartNights": null,
+        "canEndNights": null
+      }
+    ]
+  }
+}
