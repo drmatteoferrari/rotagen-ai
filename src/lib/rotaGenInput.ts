@@ -207,7 +207,9 @@ export async function buildPreRotaInput(configId: string): Promise<PreRotaInput>
         standardShifts: cfg.wtr?.restAfterStandardH ?? 48,
         longEveningShifts: cfg.wtr?.restAfterLongEveningH ?? 48,
       },
-      weekendFrequencyMax: cfg.wtr?.weekendFrequency ?? 3,
+      weekendFrequencyMax: cfg.wtr?.weekendFrequency
+        ? 1 / cfg.wtr.weekendFrequency
+        : 1 / 3,
       oncall: {
         maxPer7Days: cfg.wtr?.oncall.maxPer7Days ?? 3,
         localAgreementMaxConsec: cfg.wtr?.oncall.localAgreementMaxConsec ?? 7,
